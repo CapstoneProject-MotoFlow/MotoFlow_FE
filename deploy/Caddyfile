@@ -1,0 +1,22 @@
+# Static file server inside the frontend image. HTTPS and the /api routing are done by the
+# proxy on the server (deploy/server/setup.sh in MotoFlow_BE), so this only listens on :80.
+{
+	admin off
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	# Vite writes content-hashed files under /assets: they never change, so cache them for a year.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# index.html, version.txt and the rest are revalidated, so a new release shows up at once.
+	@other not path /assets/*
+	header @other Cache-Control "no-cache"
+
+	# Client-side routes (/sales-orders, /goods-receipts, ...) all load index.html.
+	try_files {path} /index.html
+	file_server
+}

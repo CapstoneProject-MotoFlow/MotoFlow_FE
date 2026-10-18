@@ -1,0 +1,4 @@
+# The image only needs the build output and its web server config (see Dockerfile).
+*
+!dist
+!deploy/Caddyfile
