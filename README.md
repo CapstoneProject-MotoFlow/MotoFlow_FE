@@ -72,8 +72,20 @@ npm run preview   # xem thử bản build
 
 ## Cấu trúc và lưu ý
 
+- `src/features/README.md`: bản đồ tra cứu màn hình và quy tắc đặt code theo vai trò/nghiệp vụ.
+- `src/features/admin/`: màn riêng của Admin. `AdminDashboardOverview.tsx` phụ trách phần tổng quan; `AdminAccountsPage.tsx` phụ trách danh sách, lọc, tạo tài khoản, quyền, khóa/mật khẩu; `admin.css` là giao diện quản lý tài khoản.
+- `src/app/App.tsx`: điều phối route và trạng thái phiên đăng nhập.
+- `src/features/auth/pages/`: màn đăng nhập và đổi mật khẩu.
+- `src/features/profile/ProfileChangePasswordPage.tsx`: đổi mật khẩu hiện tại trong khu vực dashboard; luồng mật khẩu tạm sau đăng nhập vẫn ở `features/auth/pages/ChangePasswordPage.tsx`.
+- `src/features/auth/PasswordRequirements.tsx` và `passwordPolicy.ts`: hiển thị và kiểm tra quy tắc mật khẩu.
+- `src/features/dashboard/DashboardPage.tsx`: tải dữ liệu, dựng khung dashboard và chọn nội dung theo role; `BusinessOverview` là tổng quan Owner/Quản lý cửa hàng/Nhân viên.
+- `src/features/dashboard/DashboardWidgets.tsx`: icon, thẻ thống kê, danh sách cửa hàng trạng thái được dùng chung.
+- `src/features/dashboard/dashboardService.ts`: lấy dữ liệu qua API hiện có theo role.
+- `src/features/stores/StoresPage.tsx`: danh sách cửa hàng, tìm kiếm/lọc và form thêm/sửa; Admin và Owner dùng chung trang này.
+- `src/shared/components/`: component dùng lại như layout, logo và ô nhập mật khẩu.
 - `src/shared/api/axiosClient.ts`: Axios client dùng chung, `baseURL: '/api'`, gửi cookie.
-- `src/App.tsx`: định tuyến trang và giao diện đăng nhập.
+- `src/shared/types/`: kiểu dữ liệu dùng chung giữa các feature.
+- `src/styles.css`: điểm nạp CSS toàn cục và CSS theo feature.
 - `vite.config.ts`: cấu hình proxy API khi chạy local.
 - Không đặt secret trong biến `VITE_*`; giá trị trong bundle có thể xem được trên trình duyệt.
 - CI dùng `npm ci`, vì vậy cần commit `package-lock.json` khi thay đổi dependency.
