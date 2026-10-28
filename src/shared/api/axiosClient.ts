@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getAccessToken } from '../auth/accessToken'
+import { getAccessToken } from './accessToken'
 
 const axiosClient = axios.create({
   baseURL: '/api',
