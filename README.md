@@ -1,95 +1,80 @@
 # MotoFlow Frontend
 
-Frontend quản lý bán hàng và kho MotoFlow, xây dựng bằng React, TypeScript và Vite.
+Giao diện quản lý bán hàng và kho MotoFlow, xây dựng bằng React, TypeScript và Vite.
 
-## Setup lần đầu sau khi clone
+## Cài đặt và chạy
 
-### 1. Cài công cụ cần thiết
-
-- Cài Node.js **22.12 trở lên** từ [nodejs.org](https://nodejs.org/). npm được cài cùng Node.js.
-- Kiểm tra cài đặt:
+Cần Node.js 22 trở lên và npm. Tại thư mục `MotoFlow_FE`, chạy:
 
 ```bash
-node --version
-npm --version
-```
-
-Nếu terminal chưa nhận lệnh `node` hoặc `npm`, đóng rồi mở lại terminal sau khi cài Node.js.
-
-### 2. Clone repo và cài thư viện
-
-```bash
-git clone https://github.com/CapstoneProject-MotoFlow/MotoFlow_FE.git
-cd MotoFlow_FE
-npm ci
-```
-
-`npm ci` cài đúng các phiên bản đã ghi trong `package-lock.json`. Chạy lại lệnh này sau khi pull code mới nếu `package.json` hoặc `package-lock.json` thay đổi.
-
-### 3. Chạy frontend
-
-```bash
-npm run dev
-```
-
-Mở địa chỉ Vite in trong terminal, thường là <http://localhost:5173/>. Giữ terminal này mở trong lúc làm việc; nhấn `Ctrl+C` để dừng server.
-
-## Pull cập nhật mới nhất
-
-Nếu đã clone repo trước đó, mở terminal tại thư mục `MotoFlow_FE` rồi chạy:
-
-```bash
-git pull origin main
 npm ci
 npm run dev
 ```
 
-Nếu đang dùng nhánh khác, thay `main` bằng tên nhánh của bạn.
+Mở địa chỉ Vite hiện trong terminal (mặc định `http://localhost:5173`). Giữ terminal mở khi sử dụng; nhấn `Ctrl+C` để dừng.
 
-## Chạy cùng backend
-
-Frontend chuyển tiếp request `/api/*` tới backend ở `http://localhost:8080`. Để đăng nhập và gọi API được, backend cần chạy đồng thời.
-
-1. Mở terminal thứ nhất, vào thư mục `MotoFlow_BE` và khởi động backend theo README của backend. Với PostgreSQL nhúng trên Windows:
-
-   ```powershell
-   .\mvnw.cmd spring-boot:test-run
-   ```
-
-   Backend sẽ chạy ở `http://localhost:8080`.
-2. Mở terminal thứ hai, vào `MotoFlow_FE`, chạy `npm run dev` và mở <http://localhost:5173/>.
-
-Khi chỉ cần làm giao diện, vẫn có thể chạy FE riêng; chức năng cần API sẽ không hoạt động nếu backend chưa bật.
+Frontend gửi request `/api/*` đến backend tại `http://localhost:8080`. Các chức năng cần dữ liệu thật sẽ hoạt động khi backend và database đã được khởi chạy theo hướng dẫn riêng của backend. Việc chạy FE không tự tạo hay đồng bộ database.
 
 ## Lệnh thường dùng
 
 ```bash
-npm run dev       # chạy môi trường phát triển
-npm run lint      # kiểm tra ESLint
+npm run dev       # chạy giao diện trong môi trường phát triển
+npm run lint      # kiểm tra quy tắc code
 npm run build     # kiểm tra TypeScript và tạo dist/
 npm run preview   # xem thử bản build
 ```
 
-## Cấu trúc và lưu ý
+Sau khi cập nhật code, thông thường Vite tự tải lại trang. Chạy `npm ci` lại nếu `package.json` hoặc `package-lock.json` thay đổi.
 
-- `src/features/README.md`: bản đồ tra cứu màn hình và quy tắc đặt code theo vai trò/nghiệp vụ.
-- `src/features/admin/`: màn riêng của Admin. `AdminDashboardOverview.tsx` phụ trách phần tổng quan; `AdminAccountsPage.tsx` phụ trách danh sách, lọc, tạo tài khoản, quyền, khóa/mật khẩu; `admin.css` là giao diện quản lý tài khoản.
-- `src/app/App.tsx`: điều phối route và trạng thái phiên đăng nhập.
-- `src/features/auth/pages/`: màn đăng nhập và đổi mật khẩu.
-- `src/features/profile/ProfileChangePasswordPage.tsx`: đổi mật khẩu hiện tại trong khu vực dashboard; luồng mật khẩu tạm sau đăng nhập vẫn ở `features/auth/pages/ChangePasswordPage.tsx`.
-- `src/features/auth/PasswordRequirements.tsx` và `passwordPolicy.ts`: hiển thị và kiểm tra quy tắc mật khẩu.
-- `src/features/dashboard/DashboardPage.tsx`: tải dữ liệu, dựng khung dashboard và chọn nội dung theo role; `BusinessOverview` là tổng quan Owner/Quản lý cửa hàng/Nhân viên.
-- `src/features/dashboard/DashboardWidgets.tsx`: icon, thẻ thống kê, danh sách cửa hàng trạng thái được dùng chung.
-- `src/features/dashboard/dashboardService.ts`: lấy dữ liệu qua API hiện có theo role.
-- `src/features/stores/StoresPage.tsx`: danh sách cửa hàng, tìm kiếm/lọc và form thêm/sửa; Admin và Owner dùng chung trang này.
-- `src/shared/components/`: component dùng lại như layout, logo và ô nhập mật khẩu.
-- `src/shared/api/axiosClient.ts`: Axios client dùng chung, `baseURL: '/api'`, gửi cookie.
-- `src/shared/types/`: kiểu dữ liệu dùng chung giữa các feature.
-- `src/styles.css`: điểm nạp CSS toàn cục và CSS theo feature.
-- `vite.config.ts`: cấu hình proxy API khi chạy local.
-- Không đặt secret trong biến `VITE_*`; giá trị trong bundle có thể xem được trên trình duyệt.
-- CI dùng `npm ci`, vì vậy cần commit `package-lock.json` khi thay đổi dependency.
+## Cấu trúc thư mục
+
+Code nằm trong `src/` và được chia thành ba vùng. Khi tìm hoặc sửa tính năng, bắt đầu ở `modules/<tên-module>/pages/`; phần dùng chung nằm ở `shared/`, còn điều hướng và khung ứng dụng nằm ở `app/`.
+
+```text
+src/
+├── app/                 # Ghép ứng dụng: routes, guards, layouts, AuthProvider
+│   ├── routes/          # Khai báo URL và nối URL với trang
+│   ├── guards/          # Chặn người chưa đăng nhập hoặc sai vai trò
+│   └── layouts/         # Khung xác thực và khung dashboard dùng chung
+├── modules/             # Mỗi khu vực nghiệp vụ giữ trang, component, service và CSS của nó
+│   ├── auth/            # Đăng nhập, quên mật khẩu, đổi mật khẩu tạm
+│   ├── dashboard/       # Tổng quan theo role và các khối thống kê
+│   ├── admin/            # Quản lý tài khoản và lịch sử phân quyền
+│   ├── stores/           # Danh sách và biểu mẫu cửa hàng
+│   └── profile/          # Đổi mật khẩu trong hồ sơ
+└── shared/              # Thành phần, API client, hook, tiện ích và kiểu dùng chung
+    ├── api/              # Axios client và access token
+    ├── hooks/            # Hook dùng chung, gồm useAuth
+    ├── ui/               # Logo, ô mật khẩu, icon và component giao diện
+    ├── types/            # Kiểu dữ liệu dùng chung giữa các module
+    ├── utils/            # Quy tắc mật khẩu và tiện ích thuần
+    └── assets/styles/    # CSS toàn cục
+```
+
+### Tìm file theo việc cần làm
+
+| Việc cần sửa | Bắt đầu từ |
+|---|---|
+| Thêm URL hoặc đổi trang mặc định | `src/app/routes/AppRoutes.tsx` |
+| Đổi quyền truy cập theo role | `src/app/guards/` |
+| Sửa menu, header, bố cục chung | `src/app/layouts/DashboardLayout.tsx` |
+| Sửa đăng nhập / đổi mật khẩu tạm | `src/modules/auth/` |
+| Sửa tổng quan theo từng role | `src/modules/dashboard/` |
+| Sửa tài khoản / lịch sử phân quyền | `src/modules/admin/` |
+| Sửa danh sách cửa hàng | `src/modules/stores/` |
+| Sửa đổi mật khẩu từ hồ sơ | `src/modules/profile/` |
+| Sửa API client hoặc kiểu chia sẻ | `src/shared/` |
+
+## Quy ước phụ thuộc
+
+- `app` ghép route, layout và các module; không chứa nghiệp vụ của riêng một màn hình.
+- Mỗi `modules/<module>` chứa trang và thành phần thuộc nghiệp vụ đó. Module không nhập trực tiếp trang hoặc component nội bộ của module khác.
+- Đưa thứ thật sự dùng ở nhiều nơi vào `shared`; không tạo thêm thư mục shared cho một thành phần chỉ có một nơi dùng.
+- API client dùng chung ở `shared/api/axiosClient.ts`; cấu hình proxy nằm trong `vite.config.ts`.
+- Không sửa BE hoặc database khi chỉ làm giao diện FE. API mà FE gọi cần khớp với backend hiện có.
+- Không đặt secret trong biến `VITE_*`; giá trị này có thể đọc được trong trình duyệt.
+- Khi đổi dependency, cập nhật và commit `package-lock.json` vì cài đặt dùng `npm ci`.
 
 ## Docker
 
-`npm run build` tạo thư mục `dist/`. Dockerfile Caddy trong repo phục vụ nội dung đã build; proxy `/api` ở tầng deploy được cấu hình riêng.
+`npm run build` tạo thư mục `dist/`. Dockerfile trong repo đóng gói frontend đã build; proxy `/api` trong môi trường deploy được cấu hình tại tầng triển khai.

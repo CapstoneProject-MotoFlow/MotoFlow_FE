@@ -5,6 +5,7 @@ export type AuthUser = {
   role?: string
   storeId?: number | null
   storeName?: string
+  permissions?: string[]
   mustChangePassword?: boolean
 }
 

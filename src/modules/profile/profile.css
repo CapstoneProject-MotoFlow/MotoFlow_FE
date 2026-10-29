@@ -1,0 +1,26 @@
+.profile-password-content { padding-top: 20px; }
+.profile-password-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 21px; }
+.profile-password-heading h1 { margin: 0; color: #182740; font: 700 1.5rem/1.35 var(--font-sans); }
+.profile-password-panel { width: min(100%, 480px); overflow: hidden; border: 1px solid #dfe5ed; border-radius: 13px; background: #fff; }
+.profile-password-panel-title { display: flex; min-height: 58px; align-items: center; padding: 0 20px; border-bottom: 1px solid #e7ebf1; }
+.profile-password-panel-title h2 { margin: 0; color: #25344c; font: 700 1.125rem var(--font-sans); }
+.profile-password-form { padding: 18px 20px 19px; }
+.profile-password-form > label { display: block; margin: 0 0 8px; color: #26354e; font-size: 1rem; font-weight: 500; }
+.profile-password-form .password-field { height: 41px; margin-bottom: 17px; }
+.profile-password-form .password-field input { font-size: 1rem; }
+.profile-password-form .password-toggle { width: 38px; }
+.profile-password-form .password-toggle svg { width: 16px; height: 16px; }
+.profile-password-form .password-rules { gap: 7px; margin: -7px 0 17px; padding: 11px 13px; border-radius: 8px; }
+.profile-password-form .password-rule { gap: 8px; font-size: 0.9375rem; }
+.profile-password-form .password-rule > span { width: 12px; flex-basis: 12px; font-size: 1.0625rem; }
+.profile-password-form .confirmation-hint { margin: -8px 0 13px; font-size: 0.9375rem; }
+.profile-password-actions { display: flex; align-items: center; gap: 9px; margin-top: 3px; }
+.profile-password-actions .submit-button { width: auto; min-width: 110px; height: 37px; padding: 0 13px; border-radius: 7px; font-size: 1rem; font-weight: 600; }
+.profile-password-actions .secondary-button { min-height: 37px; }
+.profile-password-error { margin: 0 0 14px; }
+.profile-password-success { margin: 0 0 14px; padding: 10px 12px; border: 1px solid #cfe9dc; border-radius: 7px; color: #14764c; background: #f0fbf5; font-size: 1rem; line-height: 1.5; }
+@media (max-width: 760px) { .profile-password-content { width: calc(100% - 28px); } .profile-password-heading .breadcrumb { display: none; } }
+
+.profile-info-content { max-width: 1000px; }.profile-info-panel { overflow: hidden; margin-bottom: 20px; border: 1px solid #dfe5ed; border-radius: 13px; background: #fff; }.profile-info-list { margin: 0; padding: 0 22px; }.profile-info-list > div { display: grid; grid-template-columns: 220px minmax(0,1fr); gap: 18px; padding: 18px 0; border-bottom: 1px solid #edf0f4; font-size: 1.0625rem; }.profile-info-list > div:last-child { border-bottom: 0; }.profile-info-list dt { color: #65748c; }.profile-info-list dd { margin: 0; color: #25344c; overflow-wrap: anywhere; }.profile-info-list ul { margin: 0; padding-left: 18px; }.profile-info-list li + li { margin-top: 6px; }.profile-info-hint { margin: 8px 0 0; color: #748198; font-size: 1rem; }.profile-security { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; }.profile-security h2 { margin: 0 0 8px; font-size: 1.1875rem; }.profile-security p { margin: 0; color: #65748c; font-size: 1rem; }.profile-password-link { padding: 10px 14px; border-radius: 7px; background: #455bff; color: #fff; font-size: 1.0625rem; text-decoration: none; white-space: nowrap; }@media(max-width: 600px) { .profile-info-list > div { grid-template-columns: 1fr; gap: 8px; }.profile-security { align-items: flex-start; flex-direction: column; } }
+
+.profile-password-heading { gap: 16px; flex-wrap: wrap; }.profile-password-form .password-field { min-height: 46px; }.profile-password-actions { flex-wrap: wrap; }.profile-password-actions .submit-button, .profile-password-actions .secondary-button { min-height: 44px; }

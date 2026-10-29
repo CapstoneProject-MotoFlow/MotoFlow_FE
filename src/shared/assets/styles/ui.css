@@ -1,0 +1,94 @@
+.required { color: #f04452; }
+.password-field { width: 100%; height: 48px; margin-bottom: 21px; border: 1px solid #cbd3e0; border-radius: 8px; background: #fff; box-shadow: 0 1px 2px #16233c0a; }
+.password-field:focus-within { border-color: #5264ff; box-shadow: 0 0 0 3px #5264ff1a; }
+input::placeholder { color: #6e7889; opacity: 1; }
+.password-field { display: flex; align-items: center; overflow: hidden; }
+.password-field input { width: 100%; height: 100%; min-width: 0; padding: 0 14px 0 16px; border: 0; outline: none; color: #18253e; background: transparent; }
+.password-toggle { display: grid; width: 46px; height: 100%; flex: 0 0 auto; place-items: center; padding: 0; border: 0; color: #53627a; background: transparent; cursor: pointer; }
+.password-toggle svg { width: 19px; height: 19px; }
+.submit-button { display: block; width: 100%; height: 49px; border: 0; border-radius: 8px; color: #fff; background: #4b5eff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .15s ease; }
+.submit-button:hover:not(:disabled) { background: #394cf0; }
+.submit-button:active:not(:disabled) { transform: translateY(1px); }
+.submit-button:disabled { opacity: .72; cursor: wait; }
+.form-error { margin: -5px 0 16px; color: #c33440; font-size: 1.0625rem; line-height: 1.5; }
+.password-rules { display: grid; gap: 8px; margin: -9px 0 21px; padding: 13px 17px; border-radius: 10px; background: #f7f8fa; list-style: none; }
+.password-rule { display: flex; align-items: center; gap: 10px; color: #394b65; font-size: 1.125rem; line-height: 1.35; }
+.password-rule > span { width: 13px; flex: 0 0 13px; color: #53627a; font-size: 1.1875rem; }
+.password-rule.is-met { color: #217a55; }
+.password-rule.is-met > span { color: #1a9a65; font-weight: 700; }
+.confirmation-hint { margin: -12px 0 17px; color: #c33440; font-size: 1rem; }
+.confirmation-hint.is-valid { color: #168153; }
+.brand-pane { display: flex; align-items: center; justify-content: center; padding: 64px 40px; background: #edf3ff; }
+.brand-content { width: min(100%, 384px); text-align: center; }
+.brand-description { margin: 21px 0 33px; color: #26354e; font-size: 1.3125rem; line-height: 1.55; }
+.store-list { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; text-align: left; }
+.store-item { display: flex; align-items: center; gap: 13px; min-height: 61px; padding: 10px 16px; border-radius: 13px; color: #18253c; background: #fff; box-shadow: 0 1px 2px #20345a0a; font-size: 1.1875rem; font-weight: 500; }
+.store-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: #4b5eff; background: #eef2ff; }
+.store-icon svg { width: 20px; height: 20px; }
+@media (max-width: 760px) {
+.brand-pane { padding: 48px 28px; }
+.brand-content { max-width: 430px; }
+}
+@media (max-width: 420px) {
+.brand-pane { padding: 42px 22px; }
+}
+.breadcrumb { display: flex; align-items: center; gap: 10px; color: #77849a; font-size: 1rem; }
+.breadcrumb a { color: #53627a; text-decoration: none; }
+.breadcrumb a:hover { color: #4056ff; }
+.secondary-button { min-height: 37px; padding: 0 15px; border: 1px solid transparent; border-radius: 7px; font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
+.secondary-button { border-color: #d7deea; color: #34445d; background: #fff; }
+@media (max-width: 900px) {
+.breadcrumb { display: none; }
+}
+.dashboard-banner { margin: 0 0 18px; padding: 15px 17px; border: 1px solid #d9e3fa; border-radius: 10px; color: #344665; background: #f1f5ff; font-size: 1.0625rem; }
+.error-banner { border-color: #f4c5c9; color: #a32e39; background: #fff5f5; }
+.tone-blue { color: #455bff; background: #edf2ff; }
+.tone-red { color: #f03d3d; background: #fff1f1; }
+.tone-green { color: #0c9f65; background: #eafbf3; }
+.tone-cyan { color: #058acb; background: #edf8ff; }
+.dashboard-panel { min-width: 0; overflow: hidden; border: 1px solid #dfe5ed; border-radius: 13px; background: #fff; }
+.panel-heading { display: flex; min-height: 55px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 17px; border-bottom: 1px solid #edf0f4; }
+.panel-heading h2 { margin: 0; color: #25344c; font: 700 1.125rem var(--font-sans); }
+.panel-action { padding: 7px 10px; border: 1px solid #dce2eb; border-radius: 7px; color: #35445d; background: #fff; font-size: 0.9375rem; text-decoration: none; white-space: nowrap; }
+.panel-action:hover { background: #f8f9fc; }
+.panel-count { color: #718097; font-size: 0.9375rem; }
+.panel-subtitle { color: #77849a; font-size: 0.9375rem; }
+.table-scroll { width: 100%; overflow-x: auto; }
+.dashboard-panel table { width: 100%; border-collapse: collapse; text-align: left; }
+.dashboard-panel thead { background: #f8f9fb; }
+.dashboard-panel th { padding: 11px 15px; color: #63718a; font-size: 0.875rem; font-weight: 500; white-space: nowrap; }
+.dashboard-panel td { padding: 11px 15px; border-top: 1px solid #edf0f4; color: #34435c; font-size: 0.9375rem; vertical-align: middle; }
+.dashboard-panel td strong, .dashboard-panel td small { display: block; }
+.dashboard-panel td strong { color: #23334c; font-size: 0.9375rem; font-weight: 600; }
+.dashboard-panel td small { margin-top: 4px; color: #6e7b91; font-size: 0.875rem; }
+.date-cell { white-space: nowrap; }
+.change-badge { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: 0.875rem; white-space: nowrap; }
+.change-badge.tone-blue { color: #374df4; background: #edf1ff; }
+.change-badge.tone-green { color: #058451; background: #e8faf1; }
+.change-badge.tone-red { color: #d13c3c; background: #fff0f0; }
+.change-badge.tone-cyan { color: #087eb7; background: #edf8ff; }
+.status-badge { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 4px 9px; border-radius: 999px; font-size: 0.875rem; white-space: nowrap; }
+.store-active, .account-active { color: #07824f; background: #eafaf2; }
+.store-planned { color: #0780bd; background: #edf8ff; }
+.store-inactive, .account-locked { color: #bd3838; background: #fff0f0; }
+.account-temporarily-locked { color: #9b6500; background: #fff6df; }
+.empty-state { margin: 0; padding: 24px 18px; color: #77849a; font-size: 1rem; text-align: center; }
+@media (max-width: 520px) {
+.panel-heading { padding: 0 12px; }
+.panel-heading h2 { font-size: 1rem; }
+.dashboard-panel th, .dashboard-panel td { padding-right: 10px; padding-left: 10px; }
+}
+.admin-dashboard .table-scroll table { min-width: 760px; }
+.admin-dashboard .panel-heading { min-height: 64px; padding-top: 10px; padding-bottom: 10px; }
+.admin-dashboard .panel-heading h2 { line-height: 1.4; }
+.admin-dashboard .status-badge, .admin-dashboard .change-badge { line-height: 1.5; }
+.admin-dashboard .pagination-controls button, .admin-dashboard .pagination-controls > span { min-width: 44px; min-height: 44px; }
+
+.pagination-controls { display: flex; align-items: center; gap: 7px; }
+.pagination-controls button { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 7px; color: #586780; background: transparent; font-size: 1.3125rem; cursor: pointer; }
+.pagination-controls button:hover:not(:disabled) { background: #f2f4f8; }
+.pagination-controls button:disabled { opacity: .4; cursor: default; }
+.pagination-controls > span { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 7px; color: #fff; background: #4b5eff; font-weight: 600; }.dashboard-greeting { margin: 0 0 20px; color: #182740; font: 700 1.5rem/1.35 var(--font-sans); letter-spacing: -.35px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+
+.ui-dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: #17243b66; }.ui-confirm-dialog { width: min(100%, 500px); max-height: calc(100dvh - 40px); overflow: auto; padding: 26px; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px #17243b33; }.ui-confirm-dialog h2 { margin: 0 0 16px; font-size: 1.375rem; }.ui-confirm-dialog p { margin: 0 0 24px; color: #475569; line-height: 1.6; }.ui-confirm-dialog > div { display: flex; justify-content: flex-end; gap: 10px; }.ui-confirm-dialog button { min-height: 44px; }.ui-confirm-button { padding: 0 18px; border: 0; border-radius: 7px; background: #4b5eff; color: #fff; font: inherit; cursor: pointer; }.ui-confirm-dialog button:disabled { opacity: .6; cursor: wait; }
