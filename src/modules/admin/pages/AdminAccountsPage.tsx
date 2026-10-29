@@ -1,3 +1,4 @@
+import HeaderSearch from '../../../shared/ui/HeaderSearch'
 /**
  * Admin account screen: loads accounts/stores, handles search and filters,
  * creates accounts, changes catalog permission, resets passwords and locks users.
@@ -12,7 +13,7 @@ import type { AuthUser } from '../../../shared/types/auth'
 import type { Account, AccountRole } from '../../../shared/types/account'
 import type { DashboardStore } from '../../../shared/types/store'
 import { changeAccountLock, createAccount as createAccountRequest, getAccount, listAccounts, listStores, resetAccountPassword, updatePermissions } from '../services/accountService'
-import '../admin.css'
+
 
 type CreatedAccount = { account: Account; temporaryPassword: string; kind: 'created' | 'reset' }
 type AccountForm = { fullName: string; username: string; phone: string; email: string; role: AccountRole; storeId: string }
@@ -202,7 +203,7 @@ export default function AccountsPage() {
   const end = Math.min(page * pageSize, filtered.length)
 
   return <>
-    <main className="dashboard-content accounts-content">
+    <HeaderSearch loading={loading} placeholder="Tìm tài khoản..." items={accounts.map(item => ({ id: item.id, label: item.fullName, meta: item.username, select: () => { setQuery(item.username); setPage(1) } }))} /><main className="dashboard-content accounts-content">
       <div className="accounts-page-heading"><h1>Tài khoản</h1><div className="accounts-breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><span>Tài khoản</span></div></div>
       {error && <div className="dashboard-banner error-banner" role="alert">{error}<button type="button" onClick={() => { setLoading(true); void loadAccounts() }}>Thử lại</button></div>}
       {notice && <div className="account-notice" role="status">{notice}<button type="button" aria-label="Đóng thông báo" onClick={() => setNotice('')}>×</button></div>}

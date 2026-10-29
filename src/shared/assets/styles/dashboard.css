@@ -141,9 +141,8 @@
   .panel-heading { padding: 0 12px; }
   .panel-heading h2 { font-size: 12px; }
   .dashboard-panel th, .dashboard-panel td { padding-right: 10px; padding-left: 10px; }
-  .stores-page-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
-  .stores-toolbar { align-items: stretch; flex-direction: column; }
-  .store-filter-search { width: 100%; }
-  .stores-toolbar select { width: 100%; }
-  .stores-table { min-width: 760px; }
 }
+
+.search-selected-row, .product-panel tr:focus { background: #edf2ff; outline: 2px solid #455bff; outline-offset: -2px; }
+#header-search { min-width: 0; }
+@media (max-width: 520px) { #header-search { flex: 1; } }

@@ -2,7 +2,7 @@ import type { AuthUser } from '../../../shared/types/auth'
 import type { DashboardData, DashboardProduct } from '../types/dashboardTypes'
 import { DashboardIcon, MetricCard, StoreStatusPanel } from './DashboardWidgets'
 
-const roleNames: Record<string, string> = { OWNER: 'Chủ cửa hàng', BRANCH_MANAGER: 'Quản lý cửa hàng', STAFF: 'Nhân viên' }
+import { roleNames } from '../../../shared/utils/roles'
 
 export default function BusinessOverview({ data, user, role }: { data: DashboardData; user: AuthUser; role: string }) {
   const productsWithStock = data.products.filter((product) => (product.availableQty ?? 0) > 0).length
@@ -18,7 +18,7 @@ export default function BusinessOverview({ data, user, role }: { data: Dashboard
 
 function ProductPanel({ products }: { products: DashboardProduct[] }) {
   return <section className="dashboard-panel product-panel" id="products"><div className="panel-heading"><h2>Sản phẩm gần đây</h2><span className="panel-subtitle">Dữ liệu theo phạm vi cửa hàng của bạn</span></div>
-    {products.length ? <div className="table-scroll"><table><thead><tr><th>Sản phẩm</th><th>Mã SKU</th><th>Tồn khả dụng</th><th>Vị trí</th></tr></thead><tbody>{products.map((product) => <tr key={product.id}><td><strong>{product.partName}</strong><small>{product.brand || product.categoryName}</small></td><td>{product.sku}</td><td>{product.availableQty ?? '—'} {product.availableQty !== null ? product.baseUnit : ''}</td><td>{[product.storageArea, product.binLocation].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody></table></div> : <p className="empty-state">Chưa có sản phẩm phù hợp.</p>}
+    {products.length ? <div className="table-scroll"><table><thead><tr><th>Sản phẩm</th><th>Mã SKU</th><th>Tồn khả dụng</th><th>Vị trí</th></tr></thead><tbody>{products.map((product) => <tr key={product.id} id={`product-${product.id}`} tabIndex={-1}><td><strong>{product.partName}</strong><small>{product.brand || product.categoryName}</small></td><td>{product.sku}</td><td>{product.availableQty ?? '—'} {product.availableQty !== null ? product.baseUnit : ''}</td><td>{[product.storageArea, product.binLocation].filter(Boolean).join(' · ') || '—'}</td></tr>)}</tbody></table></div> : <p className="empty-state">Chưa có sản phẩm phù hợp.</p>}
   </section>
 }
 

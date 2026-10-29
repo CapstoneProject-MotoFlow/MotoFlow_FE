@@ -50,3 +50,10 @@
 .central-checkbox input { width: 16px; height: 16px; accent-color: #4b5eff; }
 .store-modal-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 5px; }
 .store-modal-actions .edit-store-button, .store-modal-actions .add-store-button { min-height: 36px; padding: 0 15px; }
+@media (max-width: 520px) {
+  .stores-page-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .stores-toolbar { align-items: stretch; flex-direction: column; }
+  .store-filter-search { width: 100%; }
+  .stores-toolbar select { width: 100%; }
+  .stores-table { min-width: 760px; }
+}

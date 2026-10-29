@@ -1,3 +1,4 @@
+import HeaderSearch from '../../../shared/ui/HeaderSearch'
 /** Shared store management page for Admin and Owner; store data comes from the existing API. */
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
@@ -5,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { default as DashboardIcon } from '../../../shared/ui/Icon'
 import type { DashboardStore } from '../../../shared/types/store'
 import { listStores, saveStoreRequest } from '../services/storeService'
-import '../../dashboard/dashboard.css'
+
 import '../stores.css'
 
 type StoreStatus = DashboardStore['status']
@@ -112,7 +113,7 @@ export default function StoresPage() {
 
   return (
     <>
-      <main className="stores-page dashboard-content">
+      <HeaderSearch loading={loading} placeholder="Tìm cửa hàng..." items={stores.map(item => ({ id: item.id, label: item.storeName, meta: item.address, select: () => { setQuery(item.storeName); setPage(1) } }))} /><main className="stores-page dashboard-content">
         <div className="stores-page-heading">
           <h1>Cửa hàng</h1>
           <div className="breadcrumbs"><Link to="/dashboard">Trang chủ</Link><span>›</span><strong>Cửa hàng</strong></div>

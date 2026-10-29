@@ -5,9 +5,9 @@ import type { DashboardAccount, PermissionHistoryItem } from '../../../shared/ty
 import { formatDate } from '../../../shared/utils/format'
 import { Link } from 'react-router-dom'
 
-const roleNames: Record<string, string> = { ADMIN: 'Admin', OWNER: 'Chủ cửa hàng', BRANCH_MANAGER: 'Quản lý cửa hàng', STAFF: 'Nhân viên' }
+import { roleNames } from '../../../shared/utils/roles'
 
-export default function AdminDashboardOverview({ data }: { data: DashboardData }) {
+export default function AdminDashboardOverview({ data, selectedAccount }: { data: DashboardData; selectedAccount: number | null }) {
   const activeAccounts = data.accounts.filter((account) => account.status === 'ACTIVE' && account.state === 'ACTIVE').length
   const lockedAccounts = data.accounts.filter((account) => account.status === 'LOCKED' || account.state === 'TEMPORARILY_LOCKED').length
   const activeStores = data.stores.filter((store) => store.status === 'ACTIVE').length
@@ -24,7 +24,7 @@ export default function AdminDashboardOverview({ data }: { data: DashboardData }
       <RecentPermissionPanel history={data.permissionHistory} accounts={data.accounts} />
       <StoreStatusPanel stores={data.stores} />
     </section>
-    <RecentLoginPanel accounts={data.accounts} />
+    <RecentLoginPanel accounts={data.accounts} selectedAccount={selectedAccount} />
   </>
 }
 
@@ -59,13 +59,13 @@ function ChangeType({ change }: { change: PermissionHistoryItem }) {
   return <><span className={`change-badge tone-${detail.tone}`}>{detail.label}</span>{detail.description && <small>{detail.description}</small>}</>
 }
 
-function RecentLoginPanel({ accounts }: { accounts: DashboardAccount[] }) {
-  const recent = accounts.filter((account) => account.lastLoginAt).sort((a, b) => (b.lastLoginAt || '').localeCompare(a.lastLoginAt || '')).slice(0, 6)
+function RecentLoginPanel({ accounts, selectedAccount }: { accounts: DashboardAccount[]; selectedAccount: number | null }) {
+  const recent = selectedAccount !== null ? accounts.filter(account => account.id === selectedAccount) : accounts.filter((account) => account.lastLoginAt).sort((a, b) => (b.lastLoginAt || '').localeCompare(a.lastLoginAt || '')).slice(0, 6)
   return <section className="dashboard-panel recent-login-panel" id="accounts">
     <div className="panel-heading"><h2>Tài khoản đăng nhập gần đây</h2><span className="panel-subtitle">Theo lần đăng nhập gần nhất</span></div>
     {recent.length ? <div className="table-scroll"><table>
       <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Đăng nhập lúc</th><th>Trạng thái</th></tr></thead>
-      <tbody>{recent.map((account) => <tr key={account.id}>
+      <tbody>{recent.map((account) => <tr key={account.id} id={`account-${account.id}`} className={selectedAccount === account.id ? 'search-selected-row' : undefined}>
         <td><strong>{account.fullName}</strong><small>{account.username}</small></td>
         <td>{roleNames[account.role] || account.role}</td>
         <td className="date-cell">{formatDate(account.lastLoginAt!)}</td>

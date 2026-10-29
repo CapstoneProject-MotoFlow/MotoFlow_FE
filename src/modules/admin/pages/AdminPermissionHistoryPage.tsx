@@ -1,3 +1,4 @@
+import HeaderSearch from '../../../shared/ui/HeaderSearch'
 /** Admin permission audit screen. Combines each account's existing history endpoint for display/export. */
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
@@ -5,12 +6,12 @@ import { Link } from 'react-router-dom'
 import type { DashboardAccount, PermissionHistoryItem } from '../../../shared/types/account'
 import type { DashboardStore } from '../../../shared/types/store'
 import { listAccountSummaries, listPermissionHistory, listStores } from '../services/accountService'
-import '../admin.css'
+
 import { formatDate } from '../../../shared/utils/format'
 
 type ChangeFilter = '' | 'ACCOUNT_CREATED' | 'ROLE_CHANGED' | 'STORE_CHANGED' | 'PERMISSION_GRANTED' | 'PERMISSION_REVOKED'
 
-const roleNames: Record<string, string> = { ADMIN: 'Admin', OWNER: 'Owner', BRANCH_MANAGER: 'Branch Manager', STAFF: 'Staff' }
+import { roleNames } from '../../../shared/utils/roles'
 const changeNames: Record<string, string> = {
   ACCOUNT_CREATED: 'Tạo tài khoản', ROLE_CHANGED: 'Đổi vai trò', STORE_CHANGED: 'Đổi cửa hàng',
   PERMISSION_GRANTED: 'Cấp quyền', PERMISSION_REVOKED: 'Thu hồi quyền',
@@ -98,7 +99,7 @@ export default function AdminPermissionHistoryPage() {
   }
 
   return <>
-    <main className="dashboard-content history-content">
+    <HeaderSearch loading={loading} placeholder="Tìm tài khoản trong lịch sử phân quyền..." items={accounts.map(item => ({ id: item.id, label: item.fullName, meta: item.username, select: () => { setQuery(item.username); setPage(1) } }))} /><main className="dashboard-content history-content">
       <div className="history-page-heading"><h1>Lịch sử phân quyền</h1><div className="accounts-breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><Link to="/accounts">Tài khoản</Link><span>›</span><span>Lịch sử phân quyền</span></div></div>
       {error && <div className="dashboard-banner error-banner" role="alert">{error}</div>}
       <section className="accounts-panel history-page-panel">

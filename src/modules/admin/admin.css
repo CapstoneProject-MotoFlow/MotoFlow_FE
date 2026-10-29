@@ -33,7 +33,7 @@
 .accounts-table td strong { display: block; color: #17243b; font-size: 12px; font-weight: 550; }
 .accounts-table td small { display: block; margin-top: 4px; color: #586982; font-size: 10px; }
 .accounts-table td small em { display: inline-block; margin-left: 7px; padding: 2px 7px; border-radius: 10px; color: #53637c; background: #f0f2f6; font-size: 9px; font-style: normal; }
-.status-badge { display: inline-flex; min-height: 21px; align-items: center; padding: 0 9px; border-radius: 12px; font-size: 10px; white-space: nowrap; }
+.accounts-content .status-badge { display: inline-flex; min-height: 21px; align-items: center; padding: 0 9px; border-radius: 12px; font-size: 10px; white-space: nowrap; }
 .account-state-active { color: #00965d; background: #e9fbf2; }
 .account-state-locked { color: #d94848; background: #fff0f0; }
 .account-state-temporarily-locked { color: #b56d00; background: #fff6e5; }
