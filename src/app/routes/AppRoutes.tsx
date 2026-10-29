@@ -1,3 +1,5 @@
+import ProfilePage from '../../modules/profile/pages/ProfilePage'
+import OwnerWorkspacePage from '../../modules/owner/pages/OwnerWorkspacePage'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import LoginPage from '../../modules/auth/pages/LoginPage'
@@ -33,6 +35,8 @@ export default function AppRoutes() {
     <Route element={<RequireAuth />}>
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route element={<RequireRole roles={['OWNER']} />}><Route path="/owner/products" element={<OwnerWorkspacePage />} /></Route>
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/change-password" element={<ProfileChangePasswordPage />} />
         <Route element={<RequireRole roles={['ADMIN', 'OWNER']} />}><Route path="/stores" element={<StoresPage />} /></Route>
         <Route element={<RequireRole roles={['ADMIN']} />}>

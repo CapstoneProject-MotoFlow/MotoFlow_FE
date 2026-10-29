@@ -1,7 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import './ui.css';
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://cdn-kvweb-website.kiotviet.vn/_nuxt/GoogleSansFlex-opsz_wght-VF.BDL34TXe.woff2') format('woff2');
+}
 
 :root {
-  font-family: 'DM Sans', sans-serif;
+  --font-sans: 'Google Sans Flex', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-sans);
   color: #14213a;
   background: #fff;
   font-synthesis: none;
@@ -14,9 +22,9 @@
 }
 
 * { box-sizing: border-box; }
-body { min-width: 320px; min-height: 100vh; margin: 0; }
-button, input { font: inherit; }
+body { line-height: 1.5; min-width: 320px; min-height: 100vh; margin: 0; }
+button, input, select, textarea { font: inherit; }
 
-.brand { display: inline-flex; align-items: center; justify-content: center; gap: 11px; color: #111c31; font: 800 27px 'Manrope', sans-serif; letter-spacing: -.9px; }
+.brand { display: inline-flex; align-items: center; justify-content: center; gap: 11px; color: #111c31; font: 800 1.875rem var(--font-sans); letter-spacing: -.9px; }
 .brand-mark { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; color: #fff; background: #4b5eff; }
 .brand-mark svg { width: 25px; height: 25px; }

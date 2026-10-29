@@ -1,17 +1,17 @@
-import HeaderSearch from '../../../shared/ui/HeaderSearch'
 /** Admin permission audit screen. Combines each account's existing history endpoint for display/export. */
+import '../admin.css'
+import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import type { DashboardAccount, PermissionHistoryItem } from '../../../shared/types/account'
 import type { DashboardStore } from '../../../shared/types/store'
 import { listAccountSummaries, listPermissionHistory, listStores } from '../services/accountService'
-
 import { formatDate } from '../../../shared/utils/format'
+import { roleNames } from '../../../shared/utils/roles'
 
 type ChangeFilter = '' | 'ACCOUNT_CREATED' | 'ROLE_CHANGED' | 'STORE_CHANGED' | 'PERMISSION_GRANTED' | 'PERMISSION_REVOKED'
 
-import { roleNames } from '../../../shared/utils/roles'
 const changeNames: Record<string, string> = {
   ACCOUNT_CREATED: 'Tạo tài khoản', ROLE_CHANGED: 'Đổi vai trò', STORE_CHANGED: 'Đổi cửa hàng',
   PERMISSION_GRANTED: 'Cấp quyền', PERMISSION_REVOKED: 'Thu hồi quyền',
@@ -100,10 +100,10 @@ export default function AdminPermissionHistoryPage() {
 
   return <>
     <HeaderSearch loading={loading} placeholder="Tìm tài khoản trong lịch sử phân quyền..." items={accounts.map(item => ({ id: item.id, label: item.fullName, meta: item.username, select: () => { setQuery(item.username); setPage(1) } }))} /><main className="dashboard-content history-content">
-      <div className="history-page-heading"><h1>Lịch sử phân quyền</h1><div className="accounts-breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><Link to="/accounts">Tài khoản</Link><span>›</span><span>Lịch sử phân quyền</span></div></div>
+      <div className="history-page-heading"><h1>Lịch sử phân quyền</h1><div className="breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><Link to="/accounts">Tài khoản</Link><span>›</span><span>Lịch sử phân quyền</span></div></div>
       {error && <div className="dashboard-banner error-banner" role="alert">{error}</div>}
       <section className="accounts-panel history-page-panel">
-        <div className="accounts-panel-heading"><h2>Lịch sử cấp, đổi và thu hồi quyền</h2><button className="account-secondary-button history-export" type="button" disabled={loading || filtered.length === 0} onClick={exportCsv}><span aria-hidden="true">⇧</span> Xuất CSV</button></div>
+        <div className="accounts-panel-heading"><h2>Lịch sử cấp, đổi và thu hồi quyền</h2><button className="secondary-button history-export" type="button" disabled={loading || filtered.length === 0} onClick={exportCsv}><span aria-hidden="true">⇧</span> Xuất CSV</button></div>
         <div className="history-filters">
           <label className="accounts-filter-search"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10.8 18a7.2 7.2 0 110-14.4 7.2 7.2 0 010 14.4zm5.2-1l4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} placeholder="Tìm theo tên hoặc tên đăng nhập" aria-label="Tìm theo tên tài khoản" /></label>
           <select aria-label="Lọc loại thay đổi" value={changeFilter} onChange={(event) => { setChangeFilter(event.target.value as ChangeFilter); setPage(1) }}><option value="">Mọi loại thay đổi</option>{Object.entries(changeNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>

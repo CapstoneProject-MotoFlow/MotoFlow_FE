@@ -1,7 +1,6 @@
 import type { AuthUser } from '../../../shared/types/auth'
 import type { DashboardData, DashboardProduct } from '../types/dashboardTypes'
 import { DashboardIcon, MetricCard, StoreStatusPanel } from './DashboardWidgets'
-
 import { roleNames } from '../../../shared/utils/roles'
 
 export default function BusinessOverview({ data, user, role }: { data: DashboardData; user: AuthUser; role: string }) {

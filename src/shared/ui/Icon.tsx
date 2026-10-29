@@ -1,6 +1,14 @@
-export type IconName = 'menu' | 'grid' | 'store' | 'users' | 'shield' | 'clock' | 'search' | 'lock' | 'box' | 'key' | 'logout'
+export type IconName = 'menu' | 'grid' | 'store' | 'users' | 'shield' | 'clock' | 'search' | 'lock' | 'box' | 'key' | 'logout' | 'bell' | 'clipboard' | 'alert' | 'inventory' | 'layers' | 'truck' | 'tool' | 'bike'
 
 const paths: Record<IconName, string> = {
+  bell: 'M5 17h14l-2-3V9a5 5 0 00-10 0v5l-2 3zm5 3h4',
+  clipboard: 'M9 4H5v17h14V4h-4M9 3h6v4H9zM8 11h8m-8 4h6',
+  alert: 'M12 3L2 21h20L12 3zm0 6v5m0 3v1',
+  inventory: 'M3 20h18M6 17V9m6 8V4m6 13V7M4 12h4m2-4h4m2 4h4',
+  layers: 'M12 3L2 8l10 5 10-5-10-5zM2 12l10 5 10-5M2 16l10 5 10-5',
+  truck: 'M3 5h11v12H3zM14 9h4l3 4v4h-7M7 21a2 2 0 100-4 2 2 0 000 4zm11 0a2 2 0 100-4 2 2 0 000 4z',
+  tool: 'M14 4a5 5 0 00-5 6L3 16a3 3 0 004 4l6-6a5 5 0 006-6l-4 3-3-3 2-4z',
+  bike: 'M5 20a4 4 0 110-8 4 4 0 010 8zm14 0a4 4 0 110-8 4 4 0 010 8zM5 16l5-9 5 9h4l-4-12h-3M8 7h4',
   menu: 'M4 6h16M4 12h16M4 18h16', grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   store: 'M4 10h16M5 10v9h14v-9M3.5 10l1.6-5h13.8l1.6 5M9 19v-5h6v5',
   users: 'M16 20v-1.5a3.5 3.5 0 00-3.5-3.5h-5A3.5 3.5 0 004 18.5V20m6-8a4 4 0 110-8 4 4 0 010 8zm6-7a4 4 0 010 7m2 3h1a3 3 0 013 3v2',
