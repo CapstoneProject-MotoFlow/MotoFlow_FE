@@ -1,39 +1,175 @@
-.dashboard-role-caption { margin: -14px 0 20px; color: #738097; font-size: 1rem; }
-.metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
-.business-metrics { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.metric-card { min-width: 0; min-height: 136px; padding: 16px 17px 13px; border: 1px solid #dfe5ed; border-radius: 13px; background: #fff; }
-.metric-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 10px; }
-.metric-icon svg { width: 18px; height: 18px; }
-.metric-card > p { overflow: hidden; margin: 12px 0 7px; color: #35445d; font-size: 1.0625rem; text-overflow: ellipsis; white-space: nowrap; }
-.metric-footer { display: flex; align-items: center; justify-content: space-between; }
-.metric-footer strong { color: #16253e; font: 700 1.6875rem var(--font-sans); }
-.metric-footer a { color: #3d51ff; font-size: 1rem; text-decoration: none; }
-.metric-footer a:hover { text-decoration: underline; }
-.dashboard-columns { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .95fr); gap: 16px; margin-bottom: 18px; align-items: start; }
-.business-columns { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr); gap: 16px; align-items: start; }
-.store-status-list { margin: 0; padding: 0; list-style: none; }
-.store-status-list li { display: flex; min-height: 54px; align-items: center; gap: 10px; padding: 8px 15px; border-top: 1px solid #edf0f4; }
-.store-status-icon { display: grid; width: 29px; height: 29px; flex: 0 0 auto; place-items: center; border-radius: 7px; color: #5f6d83; background: #f0f2f6; }
-.store-status-icon svg { width: 16px; height: 16px; }
-.store-status-name { min-width: 0; overflow: hidden; color: #29384f; font-size: 0.9375rem; text-overflow: ellipsis; white-space: nowrap; }
-.recent-login-panel { margin-bottom: 20px; }
-.scope-content { display: grid; justify-items: start; gap: 10px; padding: 18px; }
-.scope-content strong { color: #25344c; font-size: 1.0625rem; }
-.scope-content p { margin: 0; color: #68758b; font-size: 1rem; }
+.dashboard-role-caption {
+  margin: -14px 0 20px;
+  color: #738097;
+  font-size: 1rem;
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.business-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.metric-card {
+  min-width: 0;
+  min-height: 136px;
+  padding: 16px 17px 13px;
+  border: 1px solid #dfe5ed;
+  border-radius: 13px;
+  background: #fff;
+}
+.metric-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+}
+.metric-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.metric-card > p {
+  overflow: hidden;
+  margin: 12px 0 7px;
+  color: #35445d;
+  font-size: 1.0625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metric-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.metric-footer strong {
+  color: #16253e;
+  font: 700 1.6875rem var(--font-sans);
+}
+.metric-footer a {
+  color: #3d51ff;
+  font-size: 1rem;
+  text-decoration: none;
+}
+.metric-footer a:hover {
+  text-decoration: underline;
+}
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .95fr);
+  gap: 16px;
+  margin-bottom: 18px;
+  align-items: start;
+}
+.business-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr);
+  gap: 16px;
+  align-items: start;
+}
+.store-status-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.store-status-list li {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 15px;
+  border-top: 1px solid #edf0f4;
+}
+.store-status-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  color: #5f6d83;
+  background: #f0f2f6;
+}
+.store-status-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.store-status-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #29384f;
+  font-size: 0.9375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-login-panel {
+  margin-bottom: 20px;
+}
+.scope-content {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 18px;
+}
+.scope-content strong {
+  color: #25344c;
+  font-size: 1.0625rem;
+}
+.scope-content p {
+  margin: 0;
+  color: #68758b;
+  font-size: 1rem;
+}
 @media (max-width: 1160px) {
-.metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.dashboard-columns { grid-template-columns: minmax(0, 1fr); }
-.business-columns { grid-template-columns: minmax(0, 1fr); }
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .business-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @media (max-width: 520px) {
-.metrics-grid { gap: 10px; }
-.metric-card { min-height: 128px; padding: 13px; }
-.metric-card > p { font-size: 0.9375rem; white-space: normal; }
-.metric-footer strong { font-size: 1.5rem; }
-.metric-footer a { font-size: 0.875rem; }
+  .metrics-grid {
+    gap: 10px;
+  }
+  .metric-card {
+    min-height: 128px;
+    padding: 13px;
+  }
+  .metric-card > p {
+    font-size: 0.9375rem;
+    white-space: normal;
+  }
+  .metric-footer strong {
+    font-size: 1.5rem;
+  }
+  .metric-footer a {
+    font-size: 0.875rem;
+  }
 }
-.search-selected-row, .product-panel tr:focus { background: #edf2ff; outline: 2px solid #455bff; outline-offset: -2px; }
-.admin-dashboard .metric-card > p { white-space: normal; overflow: visible; }
-.admin-dashboard .metric-footer { flex-wrap: wrap; gap: 10px; }
-.admin-dashboard .store-status-list li { min-height: 64px; flex-wrap: wrap; }
-.admin-dashboard .store-status-name { white-space: normal; flex: 1; }
+.search-selected-row, .product-panel tr:focus {
+  background: #edf2ff;
+  outline: 2px solid #455bff;
+  outline-offset: -2px;
+}
+.admin-dashboard .metric-card > p {
+  white-space: normal;
+  overflow: visible;
+}
+.admin-dashboard .metric-footer {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.admin-dashboard .store-status-list li {
+  min-height: 64px;
+  flex-wrap: wrap;
+}
+.admin-dashboard .store-status-name {
+  white-space: normal;
+  flex: 1;
+}

@@ -22,5 +22,5 @@ function ProductPanel({ products }: { products: DashboardProduct[] }) {
 }
 
 function WorkScopePanel({ user, role }: { user: AuthUser; role: string }) {
-  return <section className="dashboard-panel work-scope-panel"><div className="panel-heading"><h2>Phạm vi làm việc</h2></div><div className="scope-content"><span className="metric-icon tone-blue"><DashboardIcon name="users" /></span><strong>{roleNames[role] || role}</strong><p>{user.storeId ? `Cửa hàng ID ${user.storeId}` : 'Chuỗi cửa hàng Nga Minh'}</p></div></section>
+  return <section className="dashboard-panel"><div className="panel-heading"><h2>Phạm vi làm việc</h2></div><div className="scope-content"><span className="metric-icon tone-blue"><DashboardIcon name="users" /></span><strong>{roleNames[role] || role}</strong><p>{user.storeId ? `Cửa hàng ID ${user.storeId}` : 'Chuỗi cửa hàng Nga Minh'}</p></div></section>
 }
