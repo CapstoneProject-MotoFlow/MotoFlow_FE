@@ -4,10 +4,10 @@ import type { DashboardData } from '../types/dashboardTypes'
 import type { DashboardAccount, PermissionHistoryItem } from '../../../shared/types/account'
 import { formatDate } from '../../../shared/utils/format'
 import { Link } from 'react-router-dom'
-
+import { recentAccounts } from '../utils/recentAccounts'
 import { roleNames } from '../../../shared/utils/roles'
 
-export default function AdminDashboardOverview({ data, selectedAccount }: { data: DashboardData; selectedAccount: number | null }) {
+export default function AdminDashboardOverview({ data, selectedAccount, onClear }: { data: DashboardData; selectedAccount: number | null; onClear: () => void }) {
   const activeAccounts = data.accounts.filter((account) => account.status === 'ACTIVE' && account.state === 'ACTIVE').length
   const lockedAccounts = data.accounts.filter((account) => account.status === 'LOCKED' || account.state === 'TEMPORARILY_LOCKED').length
   const activeStores = data.stores.filter((store) => store.status === 'ACTIVE').length
@@ -24,7 +24,7 @@ export default function AdminDashboardOverview({ data, selectedAccount }: { data
       <RecentPermissionPanel history={data.permissionHistory} accounts={data.accounts} />
       <StoreStatusPanel stores={data.stores} />
     </section>
-    <RecentLoginPanel accounts={data.accounts} selectedAccount={selectedAccount} />
+    <RecentLoginPanel accounts={data.accounts} selectedAccount={selectedAccount} onClear={onClear} />
   </>
 }
 
@@ -59,16 +59,16 @@ function ChangeType({ change }: { change: PermissionHistoryItem }) {
   return <><span className={`change-badge tone-${detail.tone}`}>{detail.label}</span>{detail.description && <small>{detail.description}</small>}</>
 }
 
-function RecentLoginPanel({ accounts, selectedAccount }: { accounts: DashboardAccount[]; selectedAccount: number | null }) {
-  const recent = selectedAccount !== null ? accounts.filter(account => account.id === selectedAccount) : accounts.filter((account) => account.lastLoginAt).sort((a, b) => (b.lastLoginAt || '').localeCompare(a.lastLoginAt || '')).slice(0, 6)
+function RecentLoginPanel({ accounts, selectedAccount, onClear }: { accounts: DashboardAccount[]; selectedAccount: number | null; onClear: () => void }) {
+  const recent = recentAccounts(accounts, selectedAccount)
   return <section className="dashboard-panel recent-login-panel" id="accounts">
-    <div className="panel-heading"><h2>Tài khoản đăng nhập gần đây</h2><span className="panel-subtitle">Theo lần đăng nhập gần nhất</span></div>
+    <div className="panel-heading"><h2>{selectedAccount === null ? 'Tài khoản đăng nhập gần đây' : 'Tài khoản đã chọn'}</h2>{selectedAccount !== null ? <button type="button" className="panel-action" onClick={onClear}>Bỏ lọc</button> : <span className="panel-subtitle">Theo lần đăng nhập gần nhất</span>}</div>
     {recent.length ? <div className="table-scroll"><table>
       <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Đăng nhập lúc</th><th>Trạng thái</th></tr></thead>
       <tbody>{recent.map((account) => <tr key={account.id} id={`account-${account.id}`} className={selectedAccount === account.id ? 'search-selected-row' : undefined}>
         <td><strong>{account.fullName}</strong><small>{account.username}</small></td>
         <td>{roleNames[account.role] || account.role}</td>
-        <td className="date-cell">{formatDate(account.lastLoginAt!)}</td>
+        <td className="date-cell">{account.lastLoginAt ? formatDate(account.lastLoginAt) : 'Chưa đăng nhập'}</td>
         <td><span className={`status-badge account-${account.state.toLowerCase().replace('_', '-')}`}>{formatAccountState(account.state)}</span></td>
       </tr>)}</tbody>
     </table></div> : <p className="empty-state">Chưa có thông tin đăng nhập gần đây.</p>}

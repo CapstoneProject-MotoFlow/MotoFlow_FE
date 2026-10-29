@@ -43,7 +43,7 @@ export default function ProfileChangePasswordPage() {
 
   return <>
     <main className="dashboard-content profile-password-content">
-      <div className="profile-password-heading"><h1>Đổi mật khẩu</h1><div className="accounts-breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><span>Đổi mật khẩu</span></div></div>
+      <div className="profile-password-heading"><h1>Đổi mật khẩu</h1><div className="breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><Link to="/profile">Thông tin cá nhân</Link><span>›</span><span>Đổi mật khẩu</span></div></div>
       <section className="profile-password-panel">
         <div className="profile-password-panel-title"><h2>Đặt mật khẩu mới</h2></div>
         <form className="profile-password-form" onSubmit={submit}>
@@ -54,7 +54,7 @@ export default function ProfileChangePasswordPage() {
           <PasswordRequirements password={newPassword} temporaryPassword={currentPassword} username={user!.username} differentFromLabel="Khác mật khẩu hiện tại" />
           <PasswordField id="profile-confirm-password" label="Nhập lại mật khẩu mới" value={confirmation} onChange={(value) => { setConfirmation(value); setError(''); setSuccess('') }} autoComplete="new-password" />
           {confirmation && <p className={matches ? 'confirmation-hint is-valid' : 'confirmation-hint'}>{matches ? 'Mật khẩu đã khớp.' : 'Mật khẩu nhập lại chưa khớp.'}</p>}
-          <div className="profile-password-actions"><button className="submit-button" type="submit" disabled={submitting}>{submitting ? 'Đang cập nhật…' : 'Đổi mật khẩu'}</button><button className="account-secondary-button" type="button" disabled={submitting} onClick={() => navigate('/dashboard')}>Hủy</button></div>
+          <div className="profile-password-actions"><button className="submit-button" type="submit" disabled={submitting}>{submitting ? 'Đang cập nhật…' : 'Đổi mật khẩu'}</button><button className="secondary-button" type="button" disabled={submitting} onClick={() => navigate('/profile')}>Hủy</button></div>
         </form>
       </section>
     </main>

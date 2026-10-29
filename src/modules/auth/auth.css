@@ -1,62 +1,24 @@
-.login-layout { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
-.login-pane { display: flex; align-items: center; justify-content: center; padding: 64px 48px; background: #fff; }
 .login-form { width: min(100%, 400px); }
-.login-form h1 { margin: 0 0 34px; color: #14213a; font: 700 29px/1.25 'Manrope', sans-serif; letter-spacing: -.8px; }
-.login-form > label:not(.remember-row) { display: block; margin: 0 0 9px; color: #19263d; font-size: 15px; font-weight: 500; }
-.required { color: #f04452; }
-.login-form > input, .password-field { width: 100%; height: 48px; margin-bottom: 21px; border: 1px solid #cbd3e0; border-radius: 8px; background: #fff; box-shadow: 0 1px 2px #16233c0a; }
+.login-form h1 { margin: 0 0 34px; color: #14213a; font: 700 2rem/1.25 var(--font-sans); letter-spacing: -.8px; }
+.login-form > label:not(.remember-row) { display: block; margin: 0 0 9px; color: #19263d; font-size: 1.1875rem; font-weight: 500; }
+.login-form > input { width: 100%; height: 48px; margin-bottom: 21px; border: 1px solid #cbd3e0; border-radius: 8px; background: #fff; box-shadow: 0 1px 2px #16233c0a; }
 .login-form > input { padding: 0 16px; color: #18253e; outline: none; }
-.login-form > input:focus, .password-field:focus-within { border-color: #5264ff; box-shadow: 0 0 0 3px #5264ff1a; }
-input::placeholder { color: #6e7889; opacity: 1; }
-.password-field { display: flex; align-items: center; overflow: hidden; }
-.password-field input { width: 100%; height: 100%; min-width: 0; padding: 0 14px 0 16px; border: 0; outline: none; color: #18253e; background: transparent; }
-.password-toggle { display: grid; width: 46px; height: 100%; flex: 0 0 auto; place-items: center; padding: 0; border: 0; color: #53627a; background: transparent; cursor: pointer; }
-.password-toggle svg { width: 19px; height: 19px; }
-.remember-row { display: inline-flex; align-items: center; gap: 12px; margin: 1px 0 20px; color: #1c2940; font-size: 15px; cursor: pointer; }
+.login-form > input:focus { border-color: #5264ff; box-shadow: 0 0 0 3px #5264ff1a; }
+.remember-row { display: inline-flex; align-items: center; gap: 12px; margin: 1px 0 20px; color: #1c2940; font-size: 1.1875rem; cursor: pointer; }
 .remember-row input { width: 20px; height: 20px; margin: 0; accent-color: #4b5eff; cursor: pointer; }
-.submit-button { display: block; width: 100%; height: 49px; border: 0; border-radius: 8px; color: #fff; background: #4b5eff; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .15s ease; }
-.submit-button:hover:not(:disabled) { background: #394cf0; }
-.submit-button:active:not(:disabled) { transform: translateY(1px); }
-.submit-button:disabled { opacity: .72; cursor: wait; }
-.forgot-note { margin: 23px 0 0; color: #39465e; font-size: 15px; line-height: 1.65; }
+.forgot-note { margin: 23px 0 0; color: #39465e; font-size: 1.1875rem; line-height: 1.65; }
 .forgot-note a { color: #394fff; text-decoration: none; }
 .forgot-note a:hover { text-decoration: underline; }
 .forgot-password-page h1 { margin-bottom: 32px; }
 .forgot-back-button { display: grid; margin-top: 24px; place-items: center; color: #fff; text-decoration: none; }
-.form-error { margin: -5px 0 16px; color: #c33440; font-size: 13px; line-height: 1.5; }
-
 .change-password-form h1 { margin-bottom: 32px; }
-.password-notice { display: flex; align-items: flex-start; gap: 13px; margin: 0 0 24px; padding: 14px 16px; border: 1px solid #1598f6; border-radius: 12px; color: #263b59; background: #f1f9ff; font-size: 14px; line-height: 1.65; }
+.password-notice { display: flex; align-items: flex-start; gap: 13px; margin: 0 0 24px; padding: 14px 16px; border: 1px solid #1598f6; border-radius: 12px; color: #263b59; background: #f1f9ff; font-size: 1.125rem; line-height: 1.65; }
 .password-notice svg { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 2px; color: #008beb; }
 .change-password-form .password-field { margin-bottom: 21px; }
-.password-rules { display: grid; gap: 8px; margin: -9px 0 21px; padding: 13px 17px; border-radius: 10px; background: #f7f8fa; list-style: none; }
-.password-rule { display: flex; align-items: center; gap: 10px; color: #394b65; font-size: 14px; line-height: 1.35; }
-.password-rule > span { width: 13px; flex: 0 0 13px; color: #53627a; font-size: 15px; }
-.password-rule.is-met { color: #217a55; }
-.password-rule.is-met > span { color: #1a9a65; font-weight: 700; }
-.confirmation-hint { margin: -12px 0 17px; color: #c33440; font-size: 12px; }
-.confirmation-hint.is-valid { color: #168153; }
 .text-button { padding: 0; border: 0; color: #394fff; background: transparent; font: inherit; cursor: pointer; }
-.logout-link { margin-top: 24px; font-size: 14px; }
-
-.brand-pane { display: flex; align-items: center; justify-content: center; padding: 64px 40px; background: #edf3ff; }
-.brand-content { width: min(100%, 384px); text-align: center; }
-.brand-description { margin: 21px 0 33px; color: #26354e; font-size: 17px; line-height: 1.55; }
-.store-list { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; text-align: left; }
-.store-item { display: flex; align-items: center; gap: 13px; min-height: 61px; padding: 10px 16px; border-radius: 13px; color: #18253c; background: #fff; box-shadow: 0 1px 2px #20345a0a; font-size: 15px; font-weight: 500; }
-.store-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: #4b5eff; background: #eef2ff; }
-.store-icon svg { width: 20px; height: 20px; }
-
-@media (max-width: 760px) {
-  .login-layout { grid-template-columns: 1fr; }
-  .login-pane { min-height: 100vh; padding: 48px 28px; }
-  .brand-pane { padding: 48px 28px; }
-  .brand-content { max-width: 430px; }
-}
-
+.logout-link { margin-top: 24px; font-size: 1.125rem; }
 @media (max-width: 420px) {
-  .login-pane { padding: 36px 22px; }
-  .brand-pane { padding: 42px 22px; }
-  .desktop-break { display: none; }
-  .change-password-form h1 { font-size: 27px; }
+.desktop-break { display: none; }
+.change-password-form h1 { font-size: 1.875rem; }
 }
+.login-form input:not([type=checkbox]), .login-form button { min-height: 44px; }

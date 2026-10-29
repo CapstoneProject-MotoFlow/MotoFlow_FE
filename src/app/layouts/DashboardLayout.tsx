@@ -1,3 +1,4 @@
+import './layouts.css'
 import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
@@ -26,6 +27,10 @@ export default function DashboardLayout() {
   )
   else if (role === 'OWNER') items.push({ label: 'Cửa hàng', href: '/stores', icon: 'store', group: 'HOẠT ĐỘNG' })
   if (role !== 'ADMIN') items.push({ label: 'Sản phẩm', href: '/dashboard#products', icon: 'box', group: role === 'OWNER' ? undefined : 'HOẠT ĐỘNG' })
+  function isNavActive(href: string) {
+    if (href === '/dashboard' && location.pathname.startsWith('/profile')) return true
+    return location.pathname + location.hash === href
+  }
   const initials = (user.fullName || user.username).split(/\s+/).slice(-2).map((part) => part[0]).join('').toLocaleUpperCase('vi')
 
   return <div className={collapsed ? 'admin-dashboard sidebar-collapsed' : 'admin-dashboard'}>
@@ -33,7 +38,7 @@ export default function DashboardLayout() {
       <div className="sidebar-brand"><Brand compact /></div>
       <nav className="sidebar-nav" aria-label="Điều hướng dashboard">{items.map((item) => <div key={item.href}>
         {item.group && !collapsed && <p className="nav-group-title">{item.group}</p>}
-        <Link className={((location.pathname + location.hash === item.href) || (location.pathname === item.href && !location.hash) || (item.href === '/dashboard' && location.pathname === '/profile/change-password')) ? 'sidebar-link is-active' : 'sidebar-link'} to={item.href} title={collapsed ? item.label : undefined}><Icon name={item.icon} />{!collapsed && <span>{item.label}</span>}</Link>
+        <Link className={isNavActive(item.href) ? 'sidebar-link is-active' : 'sidebar-link'} to={item.href} title={collapsed ? item.label : undefined}><Icon name={item.icon} />{!collapsed && <span>{item.label}</span>}</Link>
       </div>)}</nav>
       {!collapsed && <div className="sidebar-scope"><span>Phạm vi làm việc</span><strong>{roleNames[role] || role}</strong></div>}
     </aside>
@@ -43,7 +48,7 @@ export default function DashboardLayout() {
         <div id="header-search" ref={setSearchTarget} />
       </div><div className="profile-area">
         <button className="profile-button" type="button" onClick={() => setProfileOpen((open) => !open)}><span className="profile-avatar">{initials}</span><span className="profile-text"><strong>{user.fullName || user.username}</strong><small>{roleNames[role] || role}</small></span><span className="profile-caret">⌄</span></button>
-        {profileOpen && <div className="profile-menu"><div className="profile-menu-heading"><strong>{user.fullName || user.username}</strong><small>{user.username} · {roleNames[role] || role}</small></div><Link to="/profile/change-password" className="profile-menu-link"><Icon name="key" />Đổi mật khẩu</Link><button className="profile-menu-logout" type="button" onClick={() => void signOut()}><Icon name="logout" />Đăng xuất</button></div>}
+        {profileOpen && <div className="profile-menu"><div className="profile-menu-heading"><strong>{user.fullName || user.username}</strong><small>{user.username} · {roleNames[role] || role}</small></div><Link to="/profile" className="profile-menu-link" onClick={() => setProfileOpen(false)}><Icon name="users" />Thông tin cá nhân</Link><button className="profile-menu-logout" type="button" onClick={() => void signOut()}><Icon name="logout" />Đăng xuất</button></div>}
       </div></header>
       <HeaderSearchTarget.Provider value={searchTarget}><Outlet key={location.pathname} /></HeaderSearchTarget.Provider>
     </div>

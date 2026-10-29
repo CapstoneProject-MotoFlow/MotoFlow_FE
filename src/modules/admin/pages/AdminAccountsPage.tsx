@@ -1,9 +1,11 @@
-import HeaderSearch from '../../../shared/ui/HeaderSearch'
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 /**
  * Admin account screen: loads accounts/stores, handles search and filters,
  * creates accounts, changes catalog permission, resets passwords and locks users.
  * Shared dashboard navigation and API client are imported rather than duplicated.
  */
+import '../admin.css'
+import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
@@ -13,7 +15,6 @@ import type { AuthUser } from '../../../shared/types/auth'
 import type { Account, AccountRole } from '../../../shared/types/account'
 import type { DashboardStore } from '../../../shared/types/store'
 import { changeAccountLock, createAccount as createAccountRequest, getAccount, listAccounts, listStores, resetAccountPassword, updatePermissions } from '../services/accountService'
-
 
 type CreatedAccount = { account: Account; temporaryPassword: string; kind: 'created' | 'reset' }
 type AccountForm = { fullName: string; username: string; phone: string; email: string; role: AccountRole; storeId: string }
@@ -46,6 +47,7 @@ export default function AccountsPage() {
   const [permissionSaving, setPermissionSaving] = useState(false)
   const [permissionError, setPermissionError] = useState('')
   const [confirmation, setConfirmation] = useState<AccountConfirmation | null>(null)
+  const [permissionConfirm, setPermissionConfirm] = useState<{ title: string; message: string; run: () => Promise<void> } | null>(null)
   const [notice, setNotice] = useState('')
   const [workingId, setWorkingId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
@@ -121,17 +123,13 @@ export default function AccountsPage() {
       setAccounts((current) => current.map((account) => account.id === updatedAccount.id ? updatedAccount : account))
       setEditingPermission(null)
       setPermissionForm(null)
-      setNotice('Đã cập nhật phân quyền tài khoản.')
+      setNotice(`Đã cập nhật phân quyền cho tài khoản ${updatedAccount.username}.`)
     } catch (requestError) {
       if (axios.isAxiosError(requestError) && requestError.response?.status === 409) {
         const data = requestError.response.data as { code?: string; message?: string; detail?: string }
         if (data.code === 'MSG18' && !releaseAssignedTasks) {
           const message = typeof data.message === 'string' ? data.message : (typeof data.detail === 'string' ? data.detail : 'Tài khoản còn các chứng từ đang được giao. Nếu tiếp tục, các chứng từ sẽ trở về trạng thái chờ giao việc.')
-          if (window.confirm(`${message}\n\nBạn có muốn tiếp tục thay đổi phân quyền không?`)) {
-            setPermissionSaving(false)
-            await savePermissions(true)
-            return
-          }
+          setPermissionConfirm({ title: 'Tiếp tục thay đổi phân quyền?', message, run: async () => { await savePermissions(true); setPermissionConfirm(null) } })
         } else setPermissionError(getErrorMessage(requestError, 'Không thể cập nhật phân quyền.'))
       } else setPermissionError(getErrorMessage(requestError, 'Không thể cập nhật phân quyền.'))
     } finally { setPermissionSaving(false) }
@@ -152,16 +150,24 @@ export default function AccountsPage() {
     finally { setSaving(false) }
   }
 
-  async function toggleCatalogPermission(account: Account) {
+  function toggleCatalogPermission(account: Account) {
     const allowed = !account.permissions.includes('CATALOG_EDIT')
-    if (!window.confirm(`${allowed ? 'Cấp' : 'Thu hồi'} quyền sửa danh mục ${allowed ? 'cho' : 'của'} ${account.fullName}?`)) return
+    setPermissionConfirm({
+      title: allowed ? 'Cấp quyền sửa danh mục' : 'Thu hồi quyền sửa danh mục',
+      message: `${allowed ? 'Cấp' : 'Thu hồi'} quyền sửa danh mục ${allowed ? 'cho' : 'của'} ${account.fullName}?`,
+      run: async () => { await applyCatalogPermission(account); setPermissionConfirm(null) },
+    })
+  }
+
+  async function applyCatalogPermission(account: Account) {
+    const allowed = !account.permissions.includes('CATALOG_EDIT')
     setWorkingId(account.id)
     try {
       await updatePermissions(account.id, {
         role: account.role, storeId: account.storeId, catalogEdit: allowed,
         reason: allowed ? 'Cấp quyền từ danh sách tài khoản' : 'Thu hồi quyền từ danh sách tài khoản', releaseAssignedTasks: false,
       })
-      await loadAccounts(); setNotice('Đã cập nhật quyền sửa danh mục.')
+      await loadAccounts(); setNotice(`Đã cập nhật phân quyền cho tài khoản ${account.username}.`)
     } catch (requestError) { setNotice(getErrorMessage(requestError, 'Không thể cập nhật quyền tài khoản.')) }
     finally { setWorkingId(null) }
   }
@@ -204,9 +210,9 @@ export default function AccountsPage() {
 
   return <>
     <HeaderSearch loading={loading} placeholder="Tìm tài khoản..." items={accounts.map(item => ({ id: item.id, label: item.fullName, meta: item.username, select: () => { setQuery(item.username); setPage(1) } }))} /><main className="dashboard-content accounts-content">
-      <div className="accounts-page-heading"><h1>Tài khoản</h1><div className="accounts-breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><span>Tài khoản</span></div></div>
+      <div className="accounts-page-heading"><h1>Tài khoản</h1><div className="breadcrumb"><Link to="/dashboard">Trang chủ</Link><span>›</span><span>Tài khoản</span></div></div>
       {error && <div className="dashboard-banner error-banner" role="alert">{error}<button type="button" onClick={() => { setLoading(true); void loadAccounts() }}>Thử lại</button></div>}
-      {notice && <div className="account-notice" role="status">{notice}<button type="button" aria-label="Đóng thông báo" onClick={() => setNotice('')}>×</button></div>}
+      {notice && <div className={`account-toast ${notice.startsWith('Đã ') ? 'is-success' : 'is-error'}`} role="status"><span className="account-toast-symbol" aria-hidden="true">{notice.startsWith('Đã ') ? '✓' : '!'}</span><span>{notice}</span><button type="button" aria-label="Đóng thông báo" onClick={() => setNotice('')}>×</button></div>}
       <section className="accounts-panel">
         <div className="accounts-panel-heading"><h2>Tài khoản người dùng</h2><button className="accounts-primary-button" type="button" onClick={openCreate}><span>＋</span> Tạo tài khoản</button></div>
         <div className="accounts-toolbar">
@@ -224,7 +230,7 @@ export default function AccountsPage() {
             <td><span>{account.phone || '—'}</span><small>{account.email || 'Chưa có email'}</small></td>
             <td>{account.role === 'BRANCH_MANAGER' ? <button type="button" role="switch" aria-checked={account.permissions.includes('CATALOG_EDIT')} className={`permission-switch ${account.permissions.includes('CATALOG_EDIT') ? 'is-on' : ''}`} disabled={workingId === account.id || account.id === user.id} onClick={() => void toggleCatalogPermission(account)}><span /></button> : '—'}</td>
             <td><span className={`status-badge account-state-${account.state.toLowerCase().replaceAll('_', '-')}`}>{account.state === 'ACTIVE' ? 'Hoạt động' : account.state === 'LOCKED' ? 'Đã khóa' : 'Tạm khóa'}</span></td>
-            <td><div className="account-row-actions"><button type="button" title="Cập nhật phân quyền" aria-label={`Cập nhật phân quyền ${account.fullName}`} disabled={workingId === account.id || account.id === user.id} onClick={() => void openPermissionEditor(account)}><DashboardIcon name="shield" /></button><button type="button" title="Cấp mật khẩu tạm" aria-label={`Cấp lại mật khẩu ${account.fullName}`} disabled={workingId === account.id} onClick={() => void resetPassword(account)}>⚿</button><button type="button" title={account.state !== 'ACTIVE' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'} aria-label={`${account.state !== 'ACTIVE' ? 'Mở khóa' : 'Khóa'} ${account.fullName}`} disabled={workingId === account.id || account.id === user.id} onClick={() => void setLocked(account)}><DashboardIcon name="lock" /></button></div></td>
+            <td><div className="account-row-actions"><button type="button" title="Cập nhật phân quyền" aria-label={`Cập nhật phân quyền ${account.fullName}`} disabled={workingId === account.id || account.id === user.id} onClick={() => void openPermissionEditor(account)}><DashboardIcon name="shield" /></button><button type="button" title="Cấp mật khẩu tạm" aria-label={`Cấp lại mật khẩu ${account.fullName}`} disabled={workingId === account.id} onClick={() => void resetPassword(account)}><DashboardIcon name="key" /></button><button type="button" title={account.state !== 'ACTIVE' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'} aria-label={`${account.state !== 'ACTIVE' ? 'Mở khóa' : 'Khóa'} ${account.fullName}`} disabled={workingId === account.id || account.id === user.id} onClick={() => void setLocked(account)}><DashboardIcon name="lock" /></button></div></td>
           </tr>) : <tr><td colSpan={7} className="accounts-empty">Không tìm thấy tài khoản phù hợp.</td></tr>}</tbody></table></div>
         <div className="accounts-pagination"><span>Hiển thị {start}–{end} trên {filtered.length} tài khoản</span><div><button type="button" aria-label="Trang trước" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>‹</button><strong>{page}</strong><button type="button" aria-label="Trang sau" disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)}>›</button></div></div>
       </section>
@@ -239,22 +245,23 @@ export default function AccountsPage() {
         <fieldset className="account-choice-group"><legend>Vai trò <b>*</b></legend><div className="account-choice-grid">{Object.entries(roleLabels).map(([value, label]) => <label key={value} className={form.role === value ? 'is-checked' : ''}><input type="radio" name="role" value={value} checked={form.role === value} onChange={() => setForm({ ...form, role: value as AccountRole, storeId: '' })} />{label}</label>)}</div></fieldset>
         {['STAFF', 'BRANCH_MANAGER'].includes(form.role) && <fieldset className="account-choice-group"><legend>Cửa hàng làm việc <b>*</b></legend><div className="account-choice-grid">{stores.map((store) => <label key={store.id} className={form.storeId === String(store.id) ? 'is-checked' : ''}><input type="radio" name="store" value={store.id} checked={form.storeId === String(store.id)} onChange={() => setForm({ ...form, storeId: String(store.id) })} />{store.storeName}</label>)}</div>{!stores.length && <small>Chưa có cửa hàng khả dụng.</small>}</fieldset>}
         <div className="temporary-password-note"><DashboardIcon name="lock" /><span>Mật khẩu tạm sẽ được hệ thống tạo và chỉ hiển thị một lần sau khi tạo tài khoản.</span></div>
-        <div className="account-modal-actions"><button type="button" className="account-secondary-button" onClick={closeModal}>Hủy</button><button type="submit" className="accounts-primary-button" disabled={saving || (['STAFF', 'BRANCH_MANAGER'].includes(form.role) && !stores.length)}>{saving ? 'Đang tạo…' : 'Tạo tài khoản'}</button></div>
+        <div className="account-modal-actions"><button type="button" className="secondary-button" onClick={closeModal}>Hủy</button><button type="submit" className="accounts-primary-button" disabled={saving || (['STAFF', 'BRANCH_MANAGER'].includes(form.role) && !stores.length)}>{saving ? 'Đang tạo…' : 'Tạo tài khoản'}</button></div>
       </form>}
     </section></div>}
     {editingPermission && <div className="account-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !permissionSaving) { setEditingPermission(null); setPermissionForm(null) } }}><section className="account-modal permission-modal" role="dialog" aria-modal="true" aria-labelledby="permission-modal-title">
       <button className="account-modal-close" type="button" disabled={permissionSaving} onClick={() => { setEditingPermission(null); setPermissionForm(null) }} aria-label="Đóng">×</button>
       <h2 id="permission-modal-title">Cập nhật phân quyền · {editingPermission.fullName}</h2>
-      {permissionLoading ? <p className="permission-loading">Đang tải thông tin phân quyền…</p> : !permissionForm ? <div className="permission-load-error" role="alert"><p>{permissionError || 'Không tải được thông tin phân quyền.'}</p><button type="button" className="account-secondary-button" onClick={() => void openPermissionEditor(editingPermission)}>Thử lại</button></div> : <>
+      {permissionLoading ? <p className="permission-loading">Đang tải thông tin phân quyền…</p> : !permissionForm ? <div className="permission-load-error" role="alert"><p>{permissionError || 'Không tải được thông tin phân quyền.'}</p><button type="button" className="secondary-button" onClick={() => void openPermissionEditor(editingPermission)}>Thử lại</button></div> : <>
         {permissionError && <p className="account-form-error" role="alert">{permissionError}</p>}
         <fieldset className="account-choice-group permission-roles"><legend>Vai trò <b>*</b></legend><div className="account-choice-grid">{Object.entries(roleLabels).map(([value, label]) => <label key={value} className={permissionForm.role === value ? 'is-checked' : ''}><input type="radio" name="permission-role" value={value} checked={permissionForm.role === value} onChange={() => setPermissionForm((current) => current ? { ...current, role: value as AccountRole, storeId: ['STAFF', 'BRANCH_MANAGER'].includes(value) ? current.storeId : '', catalogEdit: value === 'BRANCH_MANAGER' && current.catalogEdit } : current)} />{label}</label>)}</div></fieldset>
         <fieldset className={`account-choice-group permission-stores ${['STAFF', 'BRANCH_MANAGER'].includes(permissionForm.role) ? '' : 'is-disabled'}`}><legend>Cửa hàng làm việc {['STAFF', 'BRANCH_MANAGER'].includes(permissionForm.role) && <b>*</b>}</legend><div className="account-choice-grid">{stores.map((store) => <label key={store.id} className={`${permissionForm.storeId === String(store.id) ? 'is-checked' : ''} ${store.status === 'INACTIVE' && String(store.id) !== permissionForm.storeId ? 'is-unavailable' : ''}`}><input type="radio" name="permission-store" value={store.id} disabled={!['STAFF', 'BRANCH_MANAGER'].includes(permissionForm.role) || (store.status === 'INACTIVE' && String(store.id) !== permissionForm.storeId)} checked={permissionForm.storeId === String(store.id)} onChange={() => setPermissionForm((current) => current ? { ...current, storeId: String(store.id) } : current)} />{store.storeName}</label>)}</div>{!['STAFF', 'BRANCH_MANAGER'].includes(permissionForm.role) && <small>Admin và Owner không được gán cửa hàng.</small>}</fieldset>
         <button type="button" role="switch" aria-checked={permissionForm.catalogEdit} disabled={permissionForm.role !== 'BRANCH_MANAGER'} className="permission-modal-toggle" onClick={() => setPermissionForm((current) => current ? { ...current, catalogEdit: !current.catalogEdit } : current)}><span className={`permission-switch ${permissionForm.catalogEdit ? 'is-on' : ''}`}><span /></span><span>Được sửa danh mục phụ tùng</span></button>
         <div className="permission-readonly"><DashboardIcon name="lock"/><span>Quyền sửa giá bán lẻ: {editingPermission.permissions.includes('RETAIL_PRICE_EDIT') ? 'Đã được Owner cấp' : 'Chưa có (do Owner cấp)'}</span></div>
         <label className="permission-reason">Lý do thay đổi<textarea maxLength={255} value={permissionForm.reason} onChange={(event) => setPermissionForm((current) => current ? { ...current, reason: event.target.value } : current)} placeholder="Ví dụ: điều động sang cửa hàng Long Biên…" /></label>
-        <div className="account-modal-actions"><button type="button" className="account-secondary-button" disabled={permissionSaving} onClick={() => { setEditingPermission(null); setPermissionForm(null) }}>Hủy</button><button type="button" className="accounts-primary-button" disabled={permissionSaving} onClick={() => void savePermissions()}>{permissionSaving ? 'Đang lưu…' : 'Lưu thay đổi'}</button></div>
+        <div className="account-modal-actions"><button type="button" className="secondary-button" disabled={permissionSaving} onClick={() => { setEditingPermission(null); setPermissionForm(null) }}>Hủy</button><button type="button" className="accounts-primary-button" disabled={permissionSaving} onClick={() => void savePermissions()}>{permissionSaving ? 'Đang lưu…' : 'Lưu thay đổi'}</button></div>
       </>}
     </section></div>}
+    {permissionConfirm && <ConfirmDialog title={permissionConfirm.title} message={permissionConfirm.message} onConfirm={permissionConfirm.run} onCancel={() => setPermissionConfirm(null)} />}
     {confirmation && <div className="account-modal-backdrop account-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmation(null) }}><section className="account-modal account-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="account-confirm-title" aria-describedby="account-confirm-description">
       <button className="account-modal-close" type="button" onClick={() => setConfirmation(null)} aria-label="Đóng">×</button>
       <h2 id="account-confirm-title">{confirmation.action === 'reset' ? `Cấp lại mật khẩu cho ${confirmation.account.username}?` : confirmation.action === 'lock' ? `Khóa tài khoản ${confirmation.account.username}?` : `Mở khóa tài khoản ${confirmation.account.username}?`}</h2>
@@ -264,7 +271,7 @@ export default function AccountsPage() {
         : confirmation.action === 'lock'
           ? 'Người dùng không đăng nhập được cho tới khi Admin mở khóa. Tài khoản không bị xóa và chứng từ đã lập vẫn giữ tên người lập.'
           : 'Người dùng có thể đăng nhập lại sau khi Admin mở khóa tài khoản.'}</p>
-      <div className="account-modal-actions"><button type="button" className="account-secondary-button" onClick={() => setConfirmation(null)}>Hủy</button><button type="button" className={`account-confirm-submit ${confirmation.action === 'lock' ? 'is-danger' : ''}`} onClick={() => void confirmAccountAction()}>{confirmation.action === 'reset' ? 'Cấp mật khẩu tạm' : confirmation.action === 'lock' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}</button></div>
+      <div className="account-modal-actions"><button type="button" className="secondary-button" onClick={() => setConfirmation(null)}>Hủy</button><button type="button" className={`account-confirm-submit ${confirmation.action === 'lock' ? 'is-danger' : ''}`} onClick={() => void confirmAccountAction()}>{confirmation.action === 'reset' ? 'Cấp mật khẩu tạm' : confirmation.action === 'lock' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}</button></div>
     </section></div>}
   </>
 }

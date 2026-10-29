@@ -1,8 +1,8 @@
+/** Small reusable presentation pieces shared by role dashboards. */
 import type { DashboardStore } from '../types/dashboardTypes'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
 import { formatStoreStatus } from '../../../shared/utils/format'
 
-/** Small reusable presentation pieces shared by role dashboards. */
 export type { IconName }
 
 export const DashboardIcon = Icon
