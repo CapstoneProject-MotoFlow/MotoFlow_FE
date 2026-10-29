@@ -1,24 +1,122 @@
-.login-form { width: min(100%, 400px); }
-.login-form h1 { margin: 0 0 34px; color: #14213a; font: 700 2rem/1.25 var(--font-sans); letter-spacing: -.8px; }
-.login-form > label:not(.remember-row) { display: block; margin: 0 0 9px; color: #19263d; font-size: 1.1875rem; font-weight: 500; }
-.login-form > input { width: 100%; height: 48px; margin-bottom: 21px; border: 1px solid #cbd3e0; border-radius: 8px; background: #fff; box-shadow: 0 1px 2px #16233c0a; }
-.login-form > input { padding: 0 16px; color: #18253e; outline: none; }
-.login-form > input:focus { border-color: #5264ff; box-shadow: 0 0 0 3px #5264ff1a; }
-.remember-row { display: inline-flex; align-items: center; gap: 12px; margin: 1px 0 20px; color: #1c2940; font-size: 1.1875rem; cursor: pointer; }
-.remember-row input { width: 20px; height: 20px; margin: 0; accent-color: #4b5eff; cursor: pointer; }
-.forgot-note { margin: 23px 0 0; color: #39465e; font-size: 1.1875rem; line-height: 1.65; }
-.forgot-note a { color: #394fff; text-decoration: none; }
-.forgot-note a:hover { text-decoration: underline; }
-.forgot-password-page h1 { margin-bottom: 32px; }
-.forgot-back-button { display: grid; margin-top: 24px; place-items: center; color: #fff; text-decoration: none; }
-.change-password-form h1 { margin-bottom: 32px; }
-.password-notice { display: flex; align-items: flex-start; gap: 13px; margin: 0 0 24px; padding: 14px 16px; border: 1px solid #1598f6; border-radius: 12px; color: #263b59; background: #f1f9ff; font-size: 1.125rem; line-height: 1.65; }
-.password-notice svg { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 2px; color: #008beb; }
-.change-password-form .password-field { margin-bottom: 21px; }
-.text-button { padding: 0; border: 0; color: #394fff; background: transparent; font: inherit; cursor: pointer; }
-.logout-link { margin-top: 24px; font-size: 1.125rem; }
-@media (max-width: 420px) {
-.desktop-break { display: none; }
-.change-password-form h1 { font-size: 1.875rem; }
+.login-form {
+  width: min(100%, 400px);
 }
-.login-form input:not([type=checkbox]), .login-form button { min-height: 44px; }
+.login-form h1 {
+  margin: 0 0 34px;
+  color: #14213a;
+  font: 700 2rem/1.25 var(--font-sans);
+  letter-spacing: -.8px;
+}
+.login-form > label:not(.remember-row) {
+  display: block;
+  margin: 0 0 9px;
+  color: #19263d;
+  font-size: 1.1875rem;
+  font-weight: 500;
+}
+.login-form > input {
+  width: 100%;
+  height: 48px;
+  margin-bottom: 21px;
+  border: 1px solid #cbd3e0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px #16233c0a;
+}
+.login-form > input {
+  padding: 0 16px;
+  color: #18253e;
+  outline: none;
+}
+.login-form > input:focus {
+  border-color: #5264ff;
+  box-shadow: 0 0 0 3px #5264ff1a;
+}
+.remember-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1px 0 20px;
+  color: #1c2940;
+  font-size: 1.1875rem;
+  cursor: pointer;
+}
+.remember-row input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #4b5eff;
+  cursor: pointer;
+}
+.forgot-note {
+  margin: 23px 0 0;
+  color: #39465e;
+  font-size: 1.1875rem;
+  line-height: 1.65;
+}
+.forgot-note a {
+  color: #394fff;
+  text-decoration: none;
+}
+.forgot-note a:hover {
+  text-decoration: underline;
+}
+.forgot-password-page h1 {
+  margin-bottom: 32px;
+}
+.forgot-back-button {
+  display: grid;
+  margin-top: 24px;
+  place-items: center;
+  color: #fff;
+  text-decoration: none;
+}
+.change-password-form h1 {
+  margin-bottom: 32px;
+}
+.password-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid #1598f6;
+  border-radius: 12px;
+  color: #263b59;
+  background: #f1f9ff;
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+.password-notice svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #008beb;
+}
+.change-password-form .password-field {
+  margin-bottom: 21px;
+}
+.text-button {
+  padding: 0;
+  border: 0;
+  color: #394fff;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.logout-link {
+  margin-top: 24px;
+  font-size: 1.125rem;
+}
+@media (max-width: 420px) {
+  .desktop-break {
+    display: none;
+  }
+  .change-password-form h1 {
+    font-size: 1.875rem;
+  }
+}
+.login-form input:not([type=checkbox]), .login-form button {
+  min-height: 44px;
+}

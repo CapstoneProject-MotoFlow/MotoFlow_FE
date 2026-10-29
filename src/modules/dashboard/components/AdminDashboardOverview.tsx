@@ -30,7 +30,7 @@ export default function AdminDashboardOverview({ data, selectedAccount, onClear 
 
 function RecentPermissionPanel({ history, accounts }: { history: PermissionHistoryItem[]; accounts: DashboardAccount[] }) {
   const accountById = new Map(accounts.map((account) => [account.id, account]))
-  return <section className="dashboard-panel history-panel" id="permission-history">
+  return <section className="dashboard-panel" id="permission-history">
     <div className="panel-heading"><h2>Thay đổi phân quyền gần đây</h2><Link className="panel-action" to="/permission-history">Xem lịch sử</Link></div>
     {history.length ? <div className="table-scroll"><table>
       <thead><tr><th>Thời điểm</th><th>Tài khoản</th><th>Thay đổi</th><th>Người thực hiện</th></tr></thead>

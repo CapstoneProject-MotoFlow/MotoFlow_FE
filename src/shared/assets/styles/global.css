@@ -6,7 +6,6 @@
   font-display: swap;
   src: url('https://cdn-kvweb-website.kiotviet.vn/_nuxt/GoogleSansFlex-opsz_wght-VF.BDL34TXe.woff2') format('woff2');
 }
-
 :root {
   --font-sans: 'Google Sans Flex', -apple-system, 'Segoe UI', system-ui, sans-serif;
   font-family: var(--font-sans);
@@ -20,11 +19,37 @@
   font-weight: 400;
   font-size: 16px;
 }
-
-* { box-sizing: border-box; }
-body { line-height: 1.5; min-width: 320px; min-height: 100vh; margin: 0; }
-button, input, select, textarea { font: inherit; }
-
-.brand { display: inline-flex; align-items: center; justify-content: center; gap: 11px; color: #111c31; font: 800 1.875rem var(--font-sans); letter-spacing: -.9px; }
-.brand-mark { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; color: #fff; background: #4b5eff; }
-.brand-mark svg { width: 25px; height: 25px; }
+* {
+  box-sizing: border-box;
+}
+body {
+  line-height: 1.5;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+button, input, select, textarea {
+  font: inherit;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  color: #111c31;
+  font: 800 1.875rem var(--font-sans);
+  letter-spacing: -.9px;
+}
+.brand-mark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: #4b5eff;
+}
+.brand-mark svg {
+  width: 25px;
+  height: 25px;
+}

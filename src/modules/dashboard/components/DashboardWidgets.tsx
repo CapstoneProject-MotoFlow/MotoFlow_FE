@@ -16,7 +16,7 @@ export function MetricCard({ title, value, icon, color, href }: { title: string;
 }
 
 export function StoreStatusPanel({ stores }: { stores: DashboardStore[] }) {
-  return <section className="dashboard-panel stores-panel" id="stores">
+  return <section className="dashboard-panel" id="stores">
     <div className="panel-heading"><h2>Cửa hàng</h2><span className="panel-count">{stores.length}</span></div>
     {stores.length ? <ul className="store-status-list">{stores.map((store) => <li key={store.id}>
       <span className="store-status-icon"><DashboardIcon name="store" /></span>
