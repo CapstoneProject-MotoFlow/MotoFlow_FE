@@ -5,10 +5,9 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import Brand from '../../shared/ui/Brand'
 import Icon from '../../shared/ui/Icon'
-import type { IconName } from '../../shared/ui/Icon'
+import { ownerNavigation, type NavItem } from './ownerNavigation'
 import { roleNames } from '../../shared/utils/roles'
 
-type NavItem = { label: string; href: string; icon: IconName; group?: string; pending?: boolean }
 
 export default function DashboardLayout() {
   const { user, signOut } = useAuth()
@@ -25,20 +24,11 @@ export default function DashboardLayout() {
     { label: 'Cửa hàng', href: '/stores', icon: 'store' },
     { label: 'Lịch sử phân quyền', href: '/permission-history', icon: 'shield' },
   )
-  else if (role === 'OWNER') items.push(
-    { label: 'Thông báo', href: '#notifications', icon: 'bell', pending: true },
-    { label: 'Yêu cầu nhập hàng', href: '/dashboard#owner-requests', icon: 'clipboard', group: 'NHẬP HÀNG' },
-    { label: 'Tồn kho', href: '/dashboard#owner-stock', icon: 'box', group: 'KHO HÀNG' },
-    { label: 'Lịch sử xuất nhập', href: '#movements', icon: 'clock', pending: true },
-    { label: 'Phụ tùng', href: '/owner/products', icon: 'tool', group: 'DANH MỤC' },
-    { label: 'Nhóm phụ tùng', href: '#categories', icon: 'layers', pending: true },
-    { label: 'Dòng xe', href: '#vehicles', icon: 'bike', pending: true },
-    { label: 'Nhà cung cấp', href: '#suppliers', icon: 'truck', pending: true },
-    { label: 'Cửa hàng', href: '/stores', icon: 'store', group: 'HỆ THỐNG' },
-  )
+  else if (role === 'OWNER') items.push(...ownerNavigation)
   if (role !== 'ADMIN' && role !== 'OWNER') items.push({ label: 'Sản phẩm', href: '/dashboard#products', icon: 'box', group: role === 'OWNER' ? undefined : 'HOẠT ĐỘNG' })
   function isNavActive(href: string) {
     if (href === '/dashboard' && location.pathname.startsWith('/profile')) return true
+    if (href === '/owner/customers' && location.pathname.startsWith('/owner/customers/')) return true
     return location.pathname + location.hash === href
   }
   const initials = (user.fullName || user.username).split(/\s+/).slice(-2).map((part) => part[0]).join('').toLocaleUpperCase('vi')
@@ -54,7 +44,7 @@ export default function DashboardLayout() {
     </aside>
     <div className="dashboard-main">
       <header className="dashboard-header"><div className="header-tools">
-        <button className="icon-button sidebar-toggle" type="button" onClick={() => setCollapsed((value) => !value)} aria-label="Thu gọn menu"><Icon name="menu" /></button>
+        <button className="icon-button sidebar-toggle" type="button" onClick={() => setCollapsed((value) => !value)} aria-expanded={!collapsed} aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}><Icon name="menu" /></button>
         <div id="header-search" ref={setSearchTarget} />
       </div><div className="header-profile-tools">{role === 'OWNER' && <button className="icon-button owner-bell" type="button" aria-label="Thông báo" onClick={() => setOwnerNotice('Chưa có dữ liệu thông báo.')}><Icon name="bell" /></button>}<div className="profile-area">
         <button className="profile-button" type="button" onClick={() => setProfileOpen((open) => !open)}><span className="profile-avatar">{initials}</span><span className="profile-text"><strong>{user.fullName || user.username}</strong><small>{roleNames[role] || role}</small></span><span className="profile-caret">⌄</span></button>

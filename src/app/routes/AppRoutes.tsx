@@ -1,3 +1,5 @@
+import CustomersPage from '../../modules/customers/pages/CustomersPage'
+import CustomerDetailPage from '../../modules/customers/pages/CustomerDetailPage'
 import ProfilePage from '../../modules/profile/pages/ProfilePage'
 import OwnerWorkspacePage from '../../modules/owner/pages/OwnerWorkspacePage'
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -35,7 +37,7 @@ export default function AppRoutes() {
     <Route element={<RequireAuth />}>
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route element={<RequireRole roles={['OWNER']} />}><Route path="/owner/products" element={<OwnerWorkspacePage />} /></Route>
+        <Route element={<RequireRole roles={['OWNER']} />}><Route path="/owner/products" element={<OwnerWorkspacePage />} /><Route path="/owner/customers" element={<CustomersPage />} /><Route path="/owner/customers/:id" element={<CustomerDetailPage />} /></Route>
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/change-password" element={<ProfileChangePasswordPage />} />
         <Route element={<RequireRole roles={['ADMIN', 'OWNER']} />}><Route path="/stores" element={<StoresPage />} /></Route>

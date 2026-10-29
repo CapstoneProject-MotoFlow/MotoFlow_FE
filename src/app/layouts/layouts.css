@@ -120,3 +120,17 @@
 .profile-text strong { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media(max-width: 760px) { .account-search { width: min(440px, 46vw); } }
 @media(max-width: 520px) { .account-search { width: 100%; } }
+
+/* Owner navigation scrolls independently; brand and scope remain visible. */
+.admin-dashboard.owner-dashboard .admin-sidebar { height: 100dvh; overflow: hidden; }
+.owner-dashboard .sidebar-brand { flex-shrink: 0; padding-bottom: 12px; }
+.owner-dashboard .sidebar-nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5ddea transparent; margin-top: 8px; padding-bottom: 12px; }
+.owner-dashboard .sidebar-nav > div { min-width: 0; }
+.owner-dashboard .sidebar-link { min-height: 44px; padding-top: 8px; padding-bottom: 8px; line-height: 1.4; }
+.owner-dashboard .sidebar-link > span { min-width: 0; overflow-wrap: anywhere; }
+.owner-dashboard .sidebar-link svg { width: 18px; height: 18px; }
+.owner-dashboard .nav-group-title { margin: 20px 11px 8px; font-size: .875rem; font-weight: 500; }
+.owner-dashboard .sidebar-scope { flex-shrink: 0; margin-top: 10px; }
+.owner-dashboard .is-collapsed .sidebar-brand { padding-left: 0; }
+.owner-dashboard .is-collapsed .sidebar-nav { width: 100%; }
+.owner-dashboard .is-collapsed .sidebar-link { padding-right: 0; padding-left: 0; }
