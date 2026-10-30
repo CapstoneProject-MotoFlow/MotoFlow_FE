@@ -19,7 +19,10 @@ export type DashboardData = {
   productCount: number
   permissionHistory: PermissionHistoryItem[]
 }
-import type { DashboardAccount, PermissionHistoryItem } from '../../../shared/types/account'
+import type {
+  DashboardAccount,
+  PermissionHistoryItem,
+} from '../../../shared/types/account'
 import type { DashboardStore } from '../../../shared/types/store'
 
 export type { DashboardAccount, DashboardStore, PermissionHistoryItem }

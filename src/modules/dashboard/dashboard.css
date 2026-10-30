@@ -58,14 +58,14 @@
 }
 .dashboard-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .95fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.95fr);
   gap: 16px;
   margin-bottom: 18px;
   align-items: start;
 }
 .business-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
   gap: 16px;
   align-items: start;
 }
@@ -152,7 +152,8 @@
     font-size: 0.875rem;
   }
 }
-.search-selected-row, .product-panel tr:focus {
+.search-selected-row,
+.product-panel tr:focus {
   background: #edf2ff;
   outline: 2px solid #455bff;
   outline-offset: -2px;
@@ -173,6 +174,203 @@
   white-space: normal;
   flex: 1;
 }
-.admin-role-dashboard .dashboard-content{max-width:none;width:calc(100% - 60px);padding-top:30px}.admin-role-dashboard .dashboard-role-caption{display:none}.admin-role-dashboard .dashboard-greeting{margin-bottom:30px;font-size:28px}.admin-role-dashboard .metrics-grid{gap:24px;margin-bottom:28px}.admin-role-dashboard .metric-card{border-radius:18px;padding:26px 24px;min-height:210px}.admin-role-dashboard .metric-icon{width:52px;height:52px;border-radius:14px}.admin-role-dashboard .metric-card>p{margin-top:22px;font-size:18px;white-space:normal}.admin-role-dashboard .metric-footer strong{font-size:34px}.admin-role-dashboard .dashboard-columns{grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);gap:26px}.admin-role-dashboard .dashboard-panel{border-radius:18px}.admin-role-dashboard .panel-heading{padding:22px 24px;min-height:82px}.admin-role-dashboard .panel-heading h2{font-size:21px}.admin-role-dashboard .sidebar-scope{border-radius:18px;background:#f8f9fb;padding:20px 16px}.admin-role-dashboard .sidebar-nav{overflow-y:auto;min-height:0}.admin-role-dashboard .sidebar-brand{flex-shrink:0}.admin-role-dashboard .dashboard-panel th,.admin-role-dashboard .dashboard-panel td{padding:18px 24px}.admin-role-dashboard .store-status-list li{padding:18px 24px}.admin-role-dashboard .store-status-name{white-space:normal}.admin-role-dashboard .is-collapsed .sidebar-link{justify-content:center;padding:12px}@media(max-width:1100px){.admin-role-dashboard .metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-role-dashboard .dashboard-columns{grid-template-columns:1fr}}@media(max-width:650px){.admin-role-dashboard .dashboard-content{width:calc(100% - 28px)}.admin-role-dashboard .metrics-grid{grid-template-columns:1fr}}
-.admin-role-dashboard .admin-recent-permissions table{width:100%;min-width:0;table-layout:fixed}.admin-role-dashboard .admin-recent-permissions th:nth-child(1){width:22%}.admin-role-dashboard .admin-recent-permissions th:nth-child(2){width:27%}.admin-role-dashboard .admin-recent-permissions th:nth-child(3){width:25%}.admin-role-dashboard .admin-recent-permissions th:nth-child(4){width:26%}.admin-role-dashboard .admin-recent-permissions th,.admin-role-dashboard .admin-recent-permissions td{padding:16px 18px;white-space:normal;overflow-wrap:anywhere}.admin-role-dashboard .admin-recent-permissions td strong{font-weight:500;white-space:normal}.admin-role-dashboard .admin-recent-permissions td small{white-space:normal;margin-top:6px}.admin-role-dashboard .admin-recent-permissions .date-cell{white-space:nowrap;font-size:14px}.admin-role-dashboard .admin-recent-permissions .change-badge{white-space:normal;font-size:13px}.admin-role-dashboard .admin-recent-permissions .panel-heading{gap:12px}.admin-role-dashboard .admin-recent-permissions .panel-heading h2{font-size:20px}.admin-role-dashboard .admin-recent-permissions .panel-action{white-space:nowrap;flex-shrink:0}@media(max-width:550px){.admin-role-dashboard .admin-recent-permissions table{min-width:580px}}
-.admin-role-dashboard .admin-recent-sessions table{width:100%;table-layout:fixed;min-width:900px}.admin-role-dashboard .admin-recent-sessions th:nth-child(1){width:19%}.admin-role-dashboard .admin-recent-sessions th:nth-child(2){width:16%}.admin-role-dashboard .admin-recent-sessions th:nth-child(3){width:20%}.admin-role-dashboard .admin-recent-sessions th:nth-child(4){width:14%}.admin-role-dashboard .admin-recent-sessions th:nth-child(5){width:17%}.admin-role-dashboard .admin-recent-sessions th:nth-child(6){width:14%}.admin-role-dashboard .admin-recent-sessions th,.admin-role-dashboard .admin-recent-sessions td{padding:20px 18px;white-space:normal;overflow-wrap:anywhere}.admin-role-dashboard .admin-recent-sessions td strong{font-weight:500}.admin-role-dashboard .admin-recent-sessions td small{margin-top:5px}.admin-role-dashboard .admin-recent-sessions .date-cell{white-space:nowrap}.session-unavailable{color:#8492a6}.session-unknown{display:inline-block;background:#f3f5f8;color:#66758b;padding:4px 10px;border-radius:20px;font-size:12px}.session-data-note{border-top:1px solid #edf0f4;margin:0;padding:14px 18px;color:#74849a;font-size:12px}
+.admin-role-dashboard .dashboard-content {
+  max-width: none;
+  width: calc(100% - 60px);
+  padding-top: 30px;
+}
+.admin-role-dashboard .dashboard-role-caption {
+  display: none;
+}
+.admin-role-dashboard .dashboard-greeting {
+  margin-bottom: 30px;
+  font-size: 28px;
+}
+.admin-role-dashboard .metrics-grid {
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.admin-role-dashboard .metric-card {
+  border-radius: 18px;
+  padding: 26px 24px;
+  min-height: 210px;
+}
+.admin-role-dashboard .metric-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+}
+.admin-role-dashboard .metric-card > p {
+  margin-top: 22px;
+  font-size: 18px;
+  white-space: normal;
+}
+.admin-role-dashboard .metric-footer strong {
+  font-size: 34px;
+}
+.admin-role-dashboard .dashboard-columns {
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 26px;
+}
+.admin-role-dashboard .dashboard-panel {
+  border-radius: 18px;
+}
+.admin-role-dashboard .panel-heading {
+  padding: 22px 24px;
+  min-height: 82px;
+}
+.admin-role-dashboard .panel-heading h2 {
+  font-size: 21px;
+}
+.admin-role-dashboard .sidebar-scope {
+  border-radius: 18px;
+  background: #f8f9fb;
+  padding: 20px 16px;
+}
+.admin-role-dashboard .sidebar-nav {
+  overflow-y: auto;
+  min-height: 0;
+}
+.admin-role-dashboard .sidebar-brand {
+  flex-shrink: 0;
+}
+.admin-role-dashboard .dashboard-panel th,
+.admin-role-dashboard .dashboard-panel td {
+  padding: 18px 24px;
+}
+.admin-role-dashboard .store-status-list li {
+  padding: 18px 24px;
+}
+.admin-role-dashboard .store-status-name {
+  white-space: normal;
+}
+.admin-role-dashboard .is-collapsed .sidebar-link {
+  justify-content: center;
+  padding: 12px;
+}
+@media (max-width: 1100px) {
+  .admin-role-dashboard .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-role-dashboard .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .admin-role-dashboard .dashboard-content {
+    width: calc(100% - 28px);
+  }
+  .admin-role-dashboard .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-role-dashboard .admin-recent-permissions table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+.admin-role-dashboard .admin-recent-permissions th:nth-child(1) {
+  width: 22%;
+}
+.admin-role-dashboard .admin-recent-permissions th:nth-child(2) {
+  width: 27%;
+}
+.admin-role-dashboard .admin-recent-permissions th:nth-child(3) {
+  width: 25%;
+}
+.admin-role-dashboard .admin-recent-permissions th:nth-child(4) {
+  width: 26%;
+}
+.admin-role-dashboard .admin-recent-permissions th,
+.admin-role-dashboard .admin-recent-permissions td {
+  padding: 16px 18px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.admin-role-dashboard .admin-recent-permissions td strong {
+  font-weight: 500;
+  white-space: normal;
+}
+.admin-role-dashboard .admin-recent-permissions td small {
+  white-space: normal;
+  margin-top: 6px;
+}
+.admin-role-dashboard .admin-recent-permissions .date-cell {
+  white-space: nowrap;
+  font-size: 14px;
+}
+.admin-role-dashboard .admin-recent-permissions .change-badge {
+  white-space: normal;
+  font-size: 13px;
+}
+.admin-role-dashboard .admin-recent-permissions .panel-heading {
+  gap: 12px;
+}
+.admin-role-dashboard .admin-recent-permissions .panel-heading h2 {
+  font-size: 20px;
+}
+.admin-role-dashboard .admin-recent-permissions .panel-action {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 550px) {
+  .admin-role-dashboard .admin-recent-permissions table {
+    min-width: 580px;
+  }
+}
+.admin-role-dashboard .admin-recent-sessions table {
+  width: 100%;
+  table-layout: fixed;
+  min-width: 900px;
+}
+.admin-role-dashboard .admin-recent-sessions th:nth-child(1) {
+  width: 19%;
+}
+.admin-role-dashboard .admin-recent-sessions th:nth-child(2) {
+  width: 16%;
+}
+.admin-role-dashboard .admin-recent-sessions th:nth-child(3) {
+  width: 20%;
+}
+.admin-role-dashboard .admin-recent-sessions th:nth-child(4) {
+  width: 14%;
+}
+.admin-role-dashboard .admin-recent-sessions th:nth-child(5) {
+  width: 17%;
+}
+.admin-role-dashboard .admin-recent-sessions th:nth-child(6) {
+  width: 14%;
+}
+.admin-role-dashboard .admin-recent-sessions th,
+.admin-role-dashboard .admin-recent-sessions td {
+  padding: 20px 18px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.admin-role-dashboard .admin-recent-sessions td strong {
+  font-weight: 500;
+}
+.admin-role-dashboard .admin-recent-sessions td small {
+  margin-top: 5px;
+}
+.admin-role-dashboard .admin-recent-sessions .date-cell {
+  white-space: nowrap;
+}
+.session-unavailable {
+  color: #8492a6;
+}
+.session-unknown {
+  display: inline-block;
+  background: #f3f5f8;
+  color: #66758b;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+.session-data-note {
+  border-top: 1px solid #edf0f4;
+  margin: 0;
+  padding: 14px 18px;
+  color: #74849a;
+  font-size: 12px;
+}

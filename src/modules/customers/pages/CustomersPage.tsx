@@ -1,16 +1,4 @@
-import { useCallback, useState } from 'react'
-import { Link } from 'react-router-dom'
-import Icon from '../../../shared/ui/Icon'
-import CustomerForm from '../components/CustomerForm'
-import { customerApiMessage, type Customer } from '../types'
-import '../customers.css'
+import CustomerListPage from './CustomerListPage'
 export default function CustomersPage() {
-  const [query, setQuery] = useState('')
-  const [creditOnly, setCreditOnly] = useState(false)
-  const [editing, setEditing] = useState<Customer | null | undefined>(undefined)
-  const close = useCallback(() => setEditing(undefined), [])
-  // There is no customer read API yet. Do not synthesize records or debt amounts.
-  const customers: Customer[] = []
-  const visible = customers.filter(customer => (!creditOnly || customer.creditStatus === 'ELIGIBLE') && [customer.customerName, customer.phone, String(customer.id)].join(' ').toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')))
-  return <main className="dashboard-content customers-page"><div className="customers-page-heading"><h1>Khách hàng</h1><nav className="breadcrumb" aria-label="Đường dẫn"><Link to="/dashboard">Trang chủ</Link><span>›</span><span>Bán hàng</span><span>›</span><span>Khách hàng</span></nav></div><section className="customers-panel"><header className="customers-panel-heading"><h2>Danh sách khách hàng</h2><button type="button" className="customer-primary" onClick={() => setEditing(null)}><span aria-hidden="true">＋</span> Thêm khách hàng</button></header><div className="customers-toolbar"><label className="customers-search"><Icon name="search" /><input aria-label="Tìm khách hàng" placeholder="Tìm tên, số điện thoại hoặc mã khách" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Lọc hạng khách hàng" disabled title="Dữ liệu hiện tại không có hạng khách hàng"><option>Mọi hạng</option></select><label className="customers-credit-filter"><input type="checkbox" checked={creditOnly} onChange={event => setCreditOnly(event.target.checked)} />Chỉ khách được mua chịu</label></div><p className="customer-api-note" role="status">{customerApiMessage}</p><div className="customers-table-scroll"><table className="customers-table"><thead><tr><th>Khách hàng</th><th>Điện thoại</th><th>Hạng</th><th>Mua chịu</th><th className="customers-money">Nợ toàn chuỗi</th><th aria-label="Thao tác" /></tr></thead><tbody>{visible.length ? visible.map(customer => <tr key={customer.id}><td><Link to={'/owner/customers/' + customer.id}>{customer.customerName}</Link><small>#{customer.id}</small></td><td>{customer.phone || '—'}</td><td>—</td><td>{customer.creditStatus}</td><td className="customers-money">—</td><td><button className="secondary-button" onClick={() => setEditing(customer)}>Sửa</button></td></tr>) : <tr><td colSpan={6} className="customers-empty">Chưa có dữ liệu khách hàng để hiển thị.</td></tr>}</tbody></table></div><footer className="customers-footer"><span>Chưa có dữ liệu khách hàng</span><div className="pagination-controls"><button disabled aria-label="Trang trước">‹</button><span aria-current="page">1</span><button disabled aria-label="Trang sau">›</button></div></footer></section>{editing !== undefined && <CustomerForm customer={editing || undefined} onClose={close} />}</main>
+  return <CustomerListPage scope="chain" />
 }

@@ -1,0 +1,232 @@
+.notifications-page {
+  max-width: 1100px;
+  padding-top: 24px;
+}
+.notifications-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 20px;
+}
+.notifications-heading h1 {
+  font-size: 22px;
+  margin: 0;
+}
+.notifications-heading nav {
+  font-size: 13px;
+  color: #526681;
+}
+.notifications-heading a {
+  color: inherit;
+  text-decoration: none;
+}
+.notifications-panel {
+  background: white;
+  border: 1px solid #dfe5ed;
+  border-radius: 13px;
+  overflow: hidden;
+  max-width: 850px;
+}
+.notifications-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #edf0f4;
+}
+.notifications-panel h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.notifications-panel button {
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid #d0d8e5;
+  border-radius: 5px;
+  padding: 8px 10px;
+  background: white;
+  color: inherit;
+}
+.notifications-panel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.notifications-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+.notifications-tabs {
+  display: flex;
+  background: #f1f3f7;
+  padding: 3px;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+.notifications-tabs button {
+  border: 0;
+  background: transparent;
+  padding: 7px;
+  font-size: 11px;
+}
+.notifications-tabs button[aria-pressed='true'] {
+  background: white;
+  color: #4b5eff;
+}
+.notifications-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #526681;
+}
+.notifications-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.notifications-list li {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  background: #f1f5ff;
+  padding: 16px 20px;
+  border-top: 1px solid #edf0f4;
+}
+.notifications-list li > div {
+  flex: 1;
+}
+.notifications-list p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0 0 5px;
+}
+.notifications-list small {
+  font-size: 11px;
+  color: #64748b;
+}
+.notifications-list strong {
+  color: #4b5eff;
+  font-weight: 400;
+}
+.notifications-symbol {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: #edf2ff;
+  color: #4b5eff;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.notifications-symbol svg {
+  width: 15px;
+  height: 15px;
+}
+.notifications-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4b5eff;
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+.notifications-panel > footer {
+  font-size: 11px;
+  color: #74849a;
+  line-height: 1.7;
+  text-align: center;
+  padding: 14px 20px;
+  border-top: 1px solid #edf0f4;
+}
+.notifications-empty {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+}
+.notification-anchor {
+  position: relative;
+}
+.notification-trigger {
+  position: relative;
+}
+.notification-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 310px;
+  max-width: calc(100vw - 32px);
+  background: white;
+  border: 1px solid #dfe5ed;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px #17243b14;
+  z-index: 80;
+  overflow: hidden;
+}
+.notification-popover > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f4;
+  font-size: 14px;
+}
+.notification-popover small {
+  font-size: 10px;
+  color: #64748b;
+}
+.notification-popover-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+.notification-popover-list article {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f4;
+}
+.notification-popover-list article > div {
+  flex: 1;
+  min-width: 0;
+}
+.notification-popover-list p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.notification-popover-list > p {
+  padding: 20px;
+}
+.notification-popover footer {
+  padding: 10px;
+}
+.notification-popover footer a {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: #33445f;
+  font-size: 12px;
+  border: 1px solid #d0d8e5;
+  border-radius: 5px;
+  padding: 8px;
+}
+.notification-popover footer a:hover {
+  background: #f8fafc;
+}
+@media (max-width: 650px) {
+  .notifications-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .notifications-panel > header {
+    flex-wrap: wrap;
+  }
+}

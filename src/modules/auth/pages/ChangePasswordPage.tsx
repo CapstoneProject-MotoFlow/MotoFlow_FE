@@ -14,8 +14,13 @@ export default function ChangePasswordPage() {
   const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const passwordValidation = validateNewPassword(newPassword, temporaryPassword, user!.username)
-  const matchesConfirmation = confirmation.length > 0 && newPassword === confirmation
+  const passwordValidation = validateNewPassword(
+    newPassword,
+    temporaryPassword,
+    user!.username,
+  )
+  const matchesConfirmation =
+    confirmation.length > 0 && newPassword === confirmation
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -38,35 +43,85 @@ export default function ChangePasswordPage() {
       const message = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message
         : undefined
-      setError(typeof message === 'string' ? message : 'Không thể đổi mật khẩu. Vui lòng thử lại.')
+      setError(
+        typeof message === 'string'
+          ? message
+          : 'Không thể đổi mật khẩu. Vui lòng thử lại.',
+      )
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-      <form className="login-form change-password-form" onSubmit={handleSubmit}>
-        <h1>Đổi mật khẩu</h1>
-        <PasswordNotice />
+    <form className="login-form change-password-form" onSubmit={handleSubmit}>
+      <h1>Đổi mật khẩu</h1>
+      <PasswordNotice />
 
-        <PasswordField id="temporary-password" label="Mật khẩu tạm" value={temporaryPassword} onChange={setTemporaryPassword} autoComplete="current-password" />
-        <PasswordField id="new-password" label="Mật khẩu mới" value={newPassword} onChange={(value) => { setNewPassword(value); setError('') }} autoComplete="new-password" />
+      <PasswordField
+        id="temporary-password"
+        label="Mật khẩu tạm"
+        value={temporaryPassword}
+        onChange={setTemporaryPassword}
+        autoComplete="current-password"
+      />
+      <PasswordField
+        id="new-password"
+        label="Mật khẩu mới"
+        value={newPassword}
+        onChange={(value) => {
+          setNewPassword(value)
+          setError('')
+        }}
+        autoComplete="new-password"
+      />
 
-        <PasswordRequirements password={newPassword} temporaryPassword={temporaryPassword} username={user!.username} />
+      <PasswordRequirements
+        password={newPassword}
+        temporaryPassword={temporaryPassword}
+        username={user!.username}
+      />
 
-        <PasswordField id="confirm-password" label="Nhập lại mật khẩu mới" value={confirmation} onChange={(value) => { setConfirmation(value); setError('') }} autoComplete="new-password" />
-        {confirmation && (
-          <p className={matchesConfirmation ? 'confirmation-hint is-valid' : 'confirmation-hint'}>
-            {matchesConfirmation ? 'Mật khẩu đã khớp.' : 'Mật khẩu nhập lại chưa khớp.'}
-          </p>
-        )}
+      <PasswordField
+        id="confirm-password"
+        label="Nhập lại mật khẩu mới"
+        value={confirmation}
+        onChange={(value) => {
+          setConfirmation(value)
+          setError('')
+        }}
+        autoComplete="new-password"
+      />
+      {confirmation && (
+        <p
+          className={
+            matchesConfirmation
+              ? 'confirmation-hint is-valid'
+              : 'confirmation-hint'
+          }
+        >
+          {matchesConfirmation
+            ? 'Mật khẩu đã khớp.'
+            : 'Mật khẩu nhập lại chưa khớp.'}
+        </p>
+      )}
 
-        {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="submit-button" type="submit" disabled={submitting}>
-          {submitting ? 'Đang cập nhật…' : 'Đổi mật khẩu'}
-        </button>
-        <button className="text-button logout-link" type="button" onClick={() => void signOut()}>Đăng xuất</button>
-      </form>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <button className="submit-button" type="submit" disabled={submitting}>
+        {submitting ? 'Đang cập nhật…' : 'Đổi mật khẩu'}
+      </button>
+      <button
+        className="text-button logout-link"
+        type="button"
+        onClick={() => void signOut()}
+      >
+        Đăng xuất
+      </button>
+    </form>
   )
 }
 
@@ -75,9 +130,16 @@ function PasswordNotice() {
     <div className="password-notice" role="note">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M12 11v5m0-8h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <path
+          d="M12 11v5m0-8h.01"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
       </svg>
-      <span>Bạn đang dùng mật khẩu tạm. Vui lòng đổi mật khẩu trước khi tiếp tục.</span>
+      <span>
+        Bạn đang dùng mật khẩu tạm. Vui lòng đổi mật khẩu trước khi tiếp tục.
+      </span>
     </div>
   )
 }

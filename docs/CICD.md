@@ -17,7 +17,7 @@ Image frontend là **Caddy + thư mục `dist/`** (`Dockerfile`, `deploy/Caddyfi
 3. **Gọi API bằng đường dẫn tương đối `/api`**, không hard-code `http://localhost:8080`:
    ```js
    // shared/api/axiosClient.js
-   const axiosClient = axios.create({ baseURL: '/api', withCredentials: true });
+   const axiosClient = axios.create({ baseURL: '/api', withCredentials: true })
    ```
    Khi chạy ở máy, dùng proxy của Vite để mọi thứ giống trên server (không cần CORS, cookie refresh vẫn hoạt động):
    ```js
@@ -25,7 +25,7 @@ Image frontend là **Caddy + thư mục `dist/`** (`Dockerfile`, `deploy/Caddyfi
    export default defineConfig({
      plugins: [react()],
      server: { proxy: { '/api': 'http://localhost:8080' } },
-   });
+   })
    ```
    Nhờ đó **một bản build chạy được ở mọi môi trường**: CI không cần biến `VITE_*` nào, và image đã test ở dev được đưa nguyên lên production.
 4. **Không đặt secret trong biến `VITE_*`.** Mọi thứ trong bundle đều đọc được bằng F12.
@@ -36,6 +36,7 @@ Image frontend là **Caddy + thư mục `dist/`** (`Dockerfile`, `deploy/Caddyfi
 ## Smoke test sau mỗi lần deploy
 
 `.github/scripts/smoke-test.sh` kiểm tra ba điều:
+
 - `<URL>/version.txt` chứa đúng commit SHA vừa build (CI ghi file này vào `dist/`). Điều này xác nhận server đang phục vụ **đúng bản mới**, chứ không phải bản cũ còn trong cache.
 - `<URL>/` trả về HTML có `id="root"`.
 - Một deep link (`/smoke-test/deep-link`) cũng trả về `index.html`.

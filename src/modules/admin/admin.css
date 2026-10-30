@@ -49,7 +49,7 @@
   background: #3949e8;
 }
 .accounts-primary-button:disabled {
-  opacity: .62;
+  opacity: 0.62;
   cursor: wait;
 }
 .accounts-primary-button span {
@@ -171,7 +171,8 @@
   font-weight: 550;
   white-space: nowrap;
 }
-.accounts-table th:first-child, .accounts-table td:first-child {
+.accounts-table th:first-child,
+.accounts-table td:first-child {
   padding-left: 20px;
 }
 .accounts-table td {
@@ -242,7 +243,7 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 2px #0002;
-  transition: transform .16s ease;
+  transition: transform 0.16s ease;
   width: 20px;
   height: 20px;
   top: 3px;
@@ -255,7 +256,7 @@
   transform: translateX(18px);
 }
 .permission-switch:disabled {
-  opacity: .55;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .account-row-actions {
@@ -284,7 +285,7 @@
   background: #f0f3ff;
 }
 .account-row-actions button:disabled {
-  opacity: .38;
+  opacity: 0.38;
   cursor: not-allowed;
 }
 .account-row-actions svg {
@@ -311,7 +312,8 @@
   align-items: center;
   gap: 6px;
 }
-.accounts-pagination button, .accounts-pagination strong {
+.accounts-pagination button,
+.accounts-pagination strong {
   display: grid;
   place-items: center;
   border: 0;
@@ -327,7 +329,7 @@
   cursor: pointer;
 }
 .accounts-pagination button:disabled {
-  opacity: .4;
+  opacity: 0.4;
   cursor: default;
 }
 .accounts-pagination strong {
@@ -380,13 +382,15 @@
   grid-template-columns: 1fr 1fr;
   gap: 15px 14px;
 }
-.account-form-grid label, .created-password > label {
+.account-form-grid label,
+.created-password > label {
   display: grid;
   gap: 7px;
   color: #394860;
   font-size: 1rem;
 }
-.account-form-grid label b, .account-choice-group legend b {
+.account-form-grid label b,
+.account-choice-group legend b {
   color: #ee4a57;
 }
 .account-form-grid input {
@@ -537,9 +541,10 @@
   background: #fafbfc;
 }
 .account-choice-grid label.is-unavailable {
-  opacity: .55;
+  opacity: 0.55;
 }
-.permission-modal-toggle, .permission-readonly {
+.permission-modal-toggle,
+.permission-readonly {
   display: flex;
   width: 100%;
   min-height: 51px;
@@ -640,7 +645,8 @@
   font-size: 0.9375rem;
   font-weight: 700;
 }
-.confirm-account-card strong, .confirm-account-card small {
+.confirm-account-card strong,
+.confirm-account-card small {
   display: block;
 }
 .confirm-account-card strong {
@@ -898,7 +904,8 @@
 .accounts-table th:last-child {
   width: 120px;
 }
-.accounts-primary-button, .accounts-panel-heading .secondary-button {
+.accounts-primary-button,
+.accounts-panel-heading .secondary-button {
   min-height: 44px;
 }
 .account-toast {
