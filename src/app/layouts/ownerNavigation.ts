@@ -26,6 +26,6 @@ export const ownerNavigation: NavItem[] = [
   { label: 'Phụ tùng', href: '/owner/products', icon: 'tool', group: 'DANH MỤC' },
   { label: 'Nhóm phụ tùng', href: '#categories', icon: 'layers', pending: true },
   { label: 'Dòng xe', href: '#vehicles', icon: 'bike', pending: true },
-  { label: 'Nhà cung cấp', href: '#suppliers', icon: 'truck', pending: true },
+  { label: 'Nhà cung cấp', href: '/owner/suppliers', icon: 'truck' },
   { label: 'Cửa hàng', href: '/stores', icon: 'store', group: 'HỆ THỐNG' },
 ]
