@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 /** Small reusable presentation pieces shared by role dashboards. */
 import type { DashboardStore } from '../types/dashboardTypes'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
@@ -15,9 +16,9 @@ export function MetricCard({ title, value, icon, color, href }: { title: string;
   </article>
 }
 
-export function StoreStatusPanel({ stores }: { stores: DashboardStore[] }) {
+export function StoreStatusPanel({ stores, management = false }: { stores: DashboardStore[]; management?: boolean }) {
   return <section className="dashboard-panel" id="stores">
-    <div className="panel-heading"><h2>Cửa hàng</h2><span className="panel-count">{stores.length}</span></div>
+    <div className="panel-heading"><h2>Cửa hàng</h2><>{management ? <Link className="panel-action" to="/stores">Quản lý</Link> : <span className="panel-count">{stores.length}</span>}</></div>
     {stores.length ? <ul className="store-status-list">{stores.map((store) => <li key={store.id}>
       <span className="store-status-icon"><DashboardIcon name="store" /></span>
       <span className="store-status-name">{store.storeName}</span>
@@ -25,3 +26,4 @@ export function StoreStatusPanel({ stores }: { stores: DashboardStore[] }) {
     </li>)}</ul> : <p className="empty-state">Chưa có cửa hàng.</p>}
   </section>
 }
+

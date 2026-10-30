@@ -2,7 +2,7 @@
 import { MetricCard, StoreStatusPanel } from './DashboardWidgets'
 import type { DashboardData } from '../types/dashboardTypes'
 import type { DashboardAccount, PermissionHistoryItem } from '../../../shared/types/account'
-import { formatDate } from '../../../shared/utils/format'
+
 import { Link } from 'react-router-dom'
 import { recentAccounts } from '../utils/recentAccounts'
 import { roleNames } from '../../../shared/utils/roles'
@@ -22,7 +22,7 @@ export default function AdminDashboardOverview({ data, selectedAccount, onClear 
     </section>
     <section className="dashboard-columns">
       <RecentPermissionPanel history={data.permissionHistory} accounts={data.accounts} />
-      <StoreStatusPanel stores={data.stores} />
+      <StoreStatusPanel stores={data.stores} management />
     </section>
     <RecentLoginPanel accounts={data.accounts} selectedAccount={selectedAccount} onClear={onClear} />
   </>
@@ -30,17 +30,17 @@ export default function AdminDashboardOverview({ data, selectedAccount, onClear 
 
 function RecentPermissionPanel({ history, accounts }: { history: PermissionHistoryItem[]; accounts: DashboardAccount[] }) {
   const accountById = new Map(accounts.map((account) => [account.id, account]))
-  return <section className="dashboard-panel" id="permission-history">
+  return <section className="dashboard-panel admin-recent-permissions" id="permission-history">
     <div className="panel-heading"><h2>Thay đổi phân quyền gần đây</h2><Link className="panel-action" to="/permission-history">Xem lịch sử</Link></div>
     {history.length ? <div className="table-scroll"><table>
       <thead><tr><th>Thời điểm</th><th>Tài khoản</th><th>Thay đổi</th><th>Người thực hiện</th></tr></thead>
       <tbody>{history.slice(0, 5).map((change) => {
         const account = accountById.get(change.accountId)
         return <tr key={`${change.accountId}-${change.id}`}>
-          <td className="date-cell">{formatDate(change.changedAt)}</td>
+          <td className="date-cell">{new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(change.changedAt)).replace(',', '')}</td>
           <td><strong>{account?.fullName || account?.username || `Tài khoản #${change.accountId}`}</strong><small>{account?.username}</small></td>
           <td><ChangeType change={change} /></td>
-          <td><strong>{change.changedByName || '—'}</strong><small>{change.changedByName ? 'Admin' : ''}</small></td>
+          <td><strong>{change.changedByName || '—'}</strong><small>{roleNames[accountById.get(change.changedBy)?.role || ''] || ''}</small></td>
         </tr>
       })}</tbody>
     </table></div> : <p className="empty-state">Chưa có lịch sử phân quyền.</p>}
@@ -61,20 +61,23 @@ function ChangeType({ change }: { change: PermissionHistoryItem }) {
 
 function RecentLoginPanel({ accounts, selectedAccount, onClear }: { accounts: DashboardAccount[]; selectedAccount: number | null; onClear: () => void }) {
   const recent = recentAccounts(accounts, selectedAccount)
-  return <section className="dashboard-panel recent-login-panel" id="accounts">
-    <div className="panel-heading"><h2>{selectedAccount === null ? 'Tài khoản đăng nhập gần đây' : 'Tài khoản đã chọn'}</h2>{selectedAccount !== null ? <button type="button" className="panel-action" onClick={onClear}>Bỏ lọc</button> : <span className="panel-subtitle">Theo lần đăng nhập gần nhất</span>}</div>
+  const date = (value: string) => {
+    const parts = new Intl.DateTimeFormat('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }).formatToParts(new Date(value))
+    const get = (type: string) => parts.find(part => part.type === type)?.value || ''
+    return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}`
+  }
+  return <section className="dashboard-panel recent-login-panel admin-recent-sessions" id="accounts">
+    <div className="panel-heading"><h2>{selectedAccount === null ? 'Phiên đăng nhập gần đây' : 'Tài khoản đã chọn'}</h2>{selectedAccount !== null && <button type="button" className="panel-action" onClick={onClear}>Bỏ lọc</button>}</div>
     {recent.length ? <div className="table-scroll"><table>
-      <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Đăng nhập lúc</th><th>Trạng thái</th></tr></thead>
-      <tbody>{recent.map((account) => <tr key={account.id} id={`account-${account.id}`} className={selectedAccount === account.id ? 'search-selected-row' : undefined}>
+      <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Đăng nhập lúc</th><th>Địa chỉ IP</th><th>Thiết bị</th><th>Phiên</th></tr></thead>
+      <tbody>{recent.map(account => <tr key={account.id} id={`account-${account.id}`} className={selectedAccount === account.id ? 'search-selected-row' : undefined}>
         <td><strong>{account.fullName}</strong><small>{account.username}</small></td>
-        <td>{roleNames[account.role] || account.role}</td>
-        <td className="date-cell">{account.lastLoginAt ? formatDate(account.lastLoginAt) : 'Chưa đăng nhập'}</td>
-        <td><span className={`status-badge account-${account.state.toLowerCase().replace('_', '-')}`}>{formatAccountState(account.state)}</span></td>
+        <td>{({ ADMIN:'Admin', OWNER:'Owner', BRANCH_MANAGER:'Branch Manager', STAFF:'Staff' })[account.role]}</td>
+        <td className="date-cell">{account.lastLoginAt ? date(account.lastLoginAt) : 'Chưa đăng nhập'}</td>
+        <td className="session-unavailable">—</td><td className="session-unavailable">—</td><td><span className="session-unknown">Chưa có dữ liệu</span></td>
       </tr>)}</tbody>
     </table></div> : <p className="empty-state">Chưa có thông tin đăng nhập gần đây.</p>}
+    <p className="session-data-note">Hiện hiển thị lần đăng nhập gần nhất của từng tài khoản. Hệ thống chưa cung cấp IP, thiết bị và trạng thái phiên.</p>
   </section>
 }
 
-function formatAccountState(state: DashboardAccount['state']) {
-  return { ACTIVE: 'Đang hoạt động', LOCKED: 'Đã khóa', TEMPORARILY_LOCKED: 'Tạm khóa' }[state]
-}

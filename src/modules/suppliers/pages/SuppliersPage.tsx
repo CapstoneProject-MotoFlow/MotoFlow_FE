@@ -1,0 +1,16 @@
+import { useCallback, useState } from 'react'
+import { Link } from 'react-router-dom'
+import Icon from '../../../shared/ui/Icon'
+import SupplierForm from '../components/SupplierForm'
+import { supplierApiMessage, type Supplier } from '../types'
+import '../suppliers.css'
+export default function SuppliersPage() {
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('ACTIVE')
+  const [editing, setEditing] = useState<Supplier | null | undefined>(undefined)
+  const close = useCallback(() => setEditing(undefined), [])
+  // No supplier controller exists yet; no fake rows or invented API calls.
+  const suppliers: Supplier[] = []
+  const visible = suppliers.filter(supplier => (!status || supplier.status === status) && [supplier.supplierName, supplier.phone].join(' ').toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')))
+  return <main className="dashboard-content suppliers-page"><div className="suppliers-page-heading"><h1>Nhà cung cấp</h1><nav className="breadcrumb" aria-label="Đường dẫn"><Link to="/dashboard">Trang chủ</Link><span>›</span><span>Danh mục</span><span>›</span><span>Nhà cung cấp</span></nav></div><section className="suppliers-panel"><header className="suppliers-panel-heading"><h2>Nhà cung cấp</h2><button type="button" className="suppliers-primary" onClick={() => setEditing(null)}><span aria-hidden="true">＋</span> Thêm nhà cung cấp</button></header><div className="suppliers-toolbar"><label className="suppliers-search"><Icon name="search" /><input aria-label="Tìm nhà cung cấp" placeholder="Tìm theo tên hoặc số điện thoại" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="Lọc trạng thái" value={status} onChange={event => setStatus(event.target.value)}><option value="">Mọi trạng thái</option><option value="ACTIVE">Đang giao dịch</option><option value="INACTIVE">Ngừng giao dịch</option></select></div><p className="suppliers-api-note" role="status">{supplierApiMessage}</p><div className="table-scroll"><table className="suppliers-table"><thead><tr><th>Nhà cung cấp</th><th>Liên hệ</th><th className="suppliers-number">Phiếu đang mở</th><th>Trạng thái</th><th aria-label="Thao tác" /></tr></thead><tbody>{visible.length ? visible.map(supplier => <tr key={supplier.id}><td><strong>{supplier.supplierName}</strong></td><td>{[supplier.contactName, supplier.phone].filter(Boolean).join(' · ') || '—'}<small>{supplier.email || 'Chưa có email'}</small></td><td className="suppliers-number">—</td><td><span className={'status-badge ' + (supplier.status === 'ACTIVE' ? 'store-active' : 'store-inactive')}>{supplier.status === 'ACTIVE' ? 'Đang giao dịch' : 'Ngừng giao dịch'}</span></td><td><button className="secondary-button" type="button" onClick={() => setEditing(supplier)}>Sửa</button></td></tr>) : <tr><td colSpan={5} className="suppliers-empty">Chưa có dữ liệu nhà cung cấp để hiển thị.</td></tr>}</tbody></table></div><footer className="suppliers-footer"><span>Chưa có dữ liệu nhà cung cấp</span><div className="pagination-controls"><button type="button" disabled aria-label="Trang trước">‹</button><span aria-current="page">1</span><button type="button" disabled aria-label="Trang sau">›</button></div></footer></section>{editing !== undefined && <SupplierForm supplier={editing || undefined} onClose={close} />}</main>
+}

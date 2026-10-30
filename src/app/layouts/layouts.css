@@ -260,8 +260,9 @@
 }
 .profile-avatar {
   display: grid;
-  width: 37px;
-  height: 37px;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
   place-items: center;
   border-radius: 50%;
   color: #4056fa;
@@ -282,10 +283,14 @@
   font-size: 0.9375rem;
 }
 .profile-caret {
-  padding-left: 2px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-self: center;
   color: #708099;
-  font-size: 1.3125rem;
+  transition: transform .15s ease;
 }
+.profile-button[aria-expanded="true"] .profile-caret { transform: rotate(180deg); }
 .profile-menu {
   position: absolute;
   top: calc(100% + 8px);
@@ -597,3 +602,7 @@
   font-size: 1.5rem;
   cursor: pointer;
 }
+
+.profile-text { line-height: 1.35; }
+.profile-button:focus-visible { outline: 2px solid #455bff; outline-offset: 5px; border-radius: 6px; }
+.owner-accordion{display:flex;flex-direction:column;gap:4px}.owner-accordion .sidebar-link{min-height:46px;gap:16px;margin:0;border-radius:9px;padding:11px 16px;font-size:16px;width:100%;text-align:left;text-decoration:none}.owner-group-toggle{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;display:flex;align-items:center}.owner-group-toggle span{flex:1}.owner-group-toggle.is-open{background:#f3f4f6}.owner-nav-caret{width:18px;height:18px;margin-left:auto;transition:transform .15s}.owner-nav-caret.expanded{transform:rotate(180deg)}.owner-accordion .owner-child-link{padding-left:54px;font-size:15px;min-height:46px}.owner-submenu{display:flex;flex-direction:column;gap:3px;margin-top:3px}.owner-accordion .sidebar-link:hover{background:#f3f4f6}.owner-accordion .sidebar-link.is-active{background:#edf2ff;color:#4b5eff}.owner-dashboard .sidebar-scope{border-radius:18px;background:#f8f9fb;padding:18px 16px}.owner-dashboard .sidebar-brand{flex-shrink:0}.owner-dashboard .owner-accordion{overflow-y:auto;min-height:0;padding-bottom:12px}.owner-dashboard .is-collapsed .owner-accordion .sidebar-link{justify-content:center;padding:12px}.owner-group-toggle:focus-visible{outline:2px solid #4b5eff;outline-offset:-2px}

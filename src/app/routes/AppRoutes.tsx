@@ -1,3 +1,9 @@
+import StaffProductsPage from '../../modules/staff/pages/StaffProductsPage'
+import StaffOverview from '../../modules/staff/pages/StaffOverview'
+import BranchProductsPage from '../../modules/branch-manager/pages/BranchProductsPage'
+import BranchManagerOverview from '../../modules/branch-manager/pages/BranchManagerOverview'
+import ProductCreatePage from '../../modules/owner/pages/ProductCreatePage'
+import SuppliersPage from '../../modules/suppliers/pages/SuppliersPage'
 import CustomersPage from '../../modules/customers/pages/CustomersPage'
 import CustomerDetailPage from '../../modules/customers/pages/CustomerDetailPage'
 import ProfilePage from '../../modules/profile/pages/ProfilePage'
@@ -36,9 +42,9 @@ export default function AppRoutes() {
     </Route>
     <Route element={<RequireAuth />}>
       <Route element={<DashboardLayout />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route element={<RequireRole roles={['OWNER']} />}><Route path="/owner/products" element={<OwnerWorkspacePage />} /><Route path="/owner/customers" element={<CustomersPage />} /><Route path="/owner/customers/:id" element={<CustomerDetailPage />} /></Route>
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/dashboard" element={user?.role === 'BRANCH_MANAGER' ? <BranchManagerOverview /> : user?.role === 'STAFF' ? <StaffOverview /> : <DashboardPage />} />
+        <Route element={<RequireRole roles={['OWNER']} />}><Route path="/owner/suppliers" element={<SuppliersPage />} /><Route path="/owner/products" element={<OwnerWorkspacePage />} /><Route path="/owner/products/new" element={<ProductCreatePage />} /><Route path="/owner/customers" element={<CustomersPage />} /><Route path="/owner/customers/:id" element={<CustomerDetailPage />} /></Route>
+        <Route element={<RequireRole roles={['BRANCH_MANAGER']} />}><Route path="/branch-manager/products" element={<BranchProductsPage />} /></Route><Route element={<RequireRole roles={['STAFF']} />}><Route path="/staff/products" element={<StaffProductsPage />} /></Route><Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/change-password" element={<ProfileChangePasswordPage />} />
         <Route element={<RequireRole roles={['ADMIN', 'OWNER']} />}><Route path="/stores" element={<StoresPage />} /></Route>
         <Route element={<RequireRole roles={['ADMIN']} />}>
@@ -50,3 +56,8 @@ export default function AppRoutes() {
     <Route path="*" element={<RootRedirect />} />
   </Routes>
 }
+
+
+
+
+
