@@ -11,7 +11,6 @@ export default function LoginPage() {
   const { signIn } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [rememberSession, setRememberSession] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -62,15 +61,6 @@ export default function LoginPage() {
         onChange={setPassword}
         autoComplete="current-password"
       />
-
-      <label className="remember-row">
-        <input
-          type="checkbox"
-          checked={rememberSession}
-          onChange={(event) => setRememberSession(event.target.checked)}
-        />
-        <span>Ghi nhớ phiên đăng nhập</span>
-      </label>
 
       {error && (
         <p className="form-error" role="alert">

@@ -156,6 +156,11 @@ export default function DashboardLayout() {
             </button>
           </div>
         )}
+        {location.state?.accessDenied && (
+          <p className="owner-notice" role="alert">
+            Bạn không có quyền truy cập chức năng này. (MSG05)
+          </p>
+        )}
         <HeaderSearchTarget.Provider value={searchTarget}>
           <Outlet key={location.pathname} />
         </HeaderSearchTarget.Provider>

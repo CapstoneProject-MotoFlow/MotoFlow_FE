@@ -1,8 +1,8 @@
-import axiosClient from '../../../shared/api/axiosClient'
+import { getHome } from '../../../shared/api/homeService'
 export type BranchHome = {
   storeName: string | null
   shortcuts: { key: string; count: number }[]
 }
 export async function loadBranchHome() {
-  return (await axiosClient.get<BranchHome>('/home')).data
+  return (await getHome()).data
 }

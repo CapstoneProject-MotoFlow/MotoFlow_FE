@@ -1,3 +1,4 @@
+import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import ProductImageUrls from '../../catalog/components/ProductImageUrls'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
@@ -13,7 +14,12 @@ type Category = {
   children: Category[]
   status: string
 }
-type Model = { id: number; manufacturer: string; modelName: string }
+type Model = {
+  id: number
+  manufacturer: string
+  modelName: string
+  status: string
+}
 function Codes({
   label,
   values,
@@ -67,11 +73,7 @@ export default function ProductCreatePage() {
   const { user } = useAuth()
   const base =
     user?.role === 'OWNER' ? '/owner/products' : '/branch-manager/products'
-  const canEdit =
-    user?.role === 'OWNER' ||
-    !!user?.permissions?.some(
-      (p) => p === 'CATALOG_EDIT' || p === 'PERM_CATALOG_EDIT',
-    )
+  const canEdit = canEditCatalog(user)
   const { id } = useParams()
   const [initial, setInitial] = useState<Record<string, unknown> | null>(null)
   const [ready, setReady] = useState(!id)
@@ -156,7 +158,7 @@ export default function ProductCreatePage() {
     setSaving(true)
     setError('')
     try {
-      await axiosClient.request({
+      const response = await axiosClient.request<{ id: number }>({
         method: id ? 'PUT' : 'POST',
         url: id ? '/products/' + id : '/products',
         data: {
@@ -173,7 +175,7 @@ export default function ProductCreatePage() {
           imageUrls: images,
         },
       })
-      navigate(id ? base + '/' + id : base)
+      navigate(`${base}/${id || response.data.id}`)
     } catch (err) {
       const response = (err as { response?: { data?: { message?: string } } })
         .response
@@ -357,6 +359,7 @@ export default function ProductCreatePage() {
                       {models
                         .filter(
                           (m) =>
+                            m.status === 'ACTIVE' &&
                             !selected.includes(m.id) &&
                             `${m.manufacturer} ${m.modelName}`
                               .toLowerCase()

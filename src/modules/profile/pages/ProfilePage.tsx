@@ -1,3 +1,4 @@
+import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
@@ -10,6 +11,7 @@ const permissionNames: Record<string, string> = {
   RETAIL_PRICE_EDIT: 'Chỉnh sửa giá bán lẻ',
 }
 export default function ProfilePage() {
+  const { user } = useAuth()
   const [profile, setProfile] = useState<AuthUser | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -78,6 +80,7 @@ export default function ProfilePage() {
               <dt>Cửa hàng / phạm vi làm việc</dt>
               <dd>
                 {profile.storeName ||
+                  user?.storeName ||
                   (profile.storeId != null
                     ? 'Cửa hàng #' + profile.storeId
                     : profile.role === 'OWNER' || profile.role === 'ADMIN'

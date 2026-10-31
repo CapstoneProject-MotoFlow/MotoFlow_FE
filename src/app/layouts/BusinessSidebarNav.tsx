@@ -1,3 +1,4 @@
+import { canEditCatalog as hasCatalogPermission } from '../../shared/utils/roles'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Icon, { type IconName } from '../../shared/ui/Icon'
@@ -59,11 +60,7 @@ export default function BusinessSidebarNav({
   onNotice: (message: string) => void
 }) {
   const { user } = useAuth()
-  const canEditCatalog =
-    user?.role === 'BRANCH_MANAGER' &&
-    user.permissions?.some((permission) =>
-      ['CATALOG_EDIT', 'PERM_CATALOG_EDIT'].includes(permission),
-    )
+  const canEditCatalog = hasCatalogPermission(user)
   const ownerNavigation: NavItem[] = owner
     ? ownerItems
     : [

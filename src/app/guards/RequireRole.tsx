@@ -6,6 +6,6 @@ export default function RequireRole({ roles }: { roles: string[] }) {
   return user && roles.includes(user.role || '') ? (
     <Outlet />
   ) : (
-    <Navigate to="/dashboard" replace />
+    <Navigate to="/dashboard" state={{ accessDenied: true }} replace />
   )
 }

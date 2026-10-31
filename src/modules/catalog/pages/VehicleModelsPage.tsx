@@ -13,6 +13,7 @@ type Model = {
   vehicleType: string
   yearFrom: number | null
   yearTo: number | null
+  productCount: number
   status: string
 }
 const types: Record<string, string> = {
@@ -48,23 +49,13 @@ export default function VehicleModelsPage() {
             status: status || undefined,
           },
         })
-        .then(async (r) => {
+        .then((r) => {
           if (!active) return
           setRows(r.data)
           setLoading(false)
-          const values: Record<number, number> = {}
-          for (const row of r.data) {
-            if (!active) return
-            try {
-              const result = await axiosClient.get('/products', {
-                params: { vehicleModelId: row.id, size: 1 },
-              })
-              values[row.id] = result.data.totalItems
-            } catch {
-              /* A missing count is not zero. */
-            }
-          }
-          if (active) setCounts(values)
+          setCounts(
+            Object.fromEntries(r.data.map((row) => [row.id, row.productCount])),
+          )
         })
         .catch((e) => {
           if (active) {
@@ -264,6 +255,7 @@ export default function VehicleModelsPage() {
       </section>
       {editing !== undefined && (
         <FormDialog
+          busy={busy}
           title={editing ? 'Sửa dòng xe' : 'Thêm dòng xe'}
           formId="vehicle-model-form"
           submitLabel={

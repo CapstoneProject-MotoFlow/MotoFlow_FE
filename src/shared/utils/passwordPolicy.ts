@@ -20,8 +20,8 @@ export function validateNewPassword(
       met: password.length >= 8 && password.length <= 50,
     },
     {
-      label: 'Có chữ hoa và chữ thường',
-      met: /\p{Lu}/u.test(password) && /\p{Ll}/u.test(password),
+      label: 'Có ít nhất 1 chữ cái',
+      met: /\p{L}/u.test(password),
     },
     { label: 'Có ít nhất 1 chữ số', met: /\p{Nd}/u.test(password) },
     {

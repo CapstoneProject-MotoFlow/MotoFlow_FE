@@ -1,3 +1,4 @@
+import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -12,11 +13,7 @@ const flatten = (nodes: Category[]): Category[] =>
   nodes.flatMap((node) => [node, ...flatten(node.children || [])])
 export default function PartsSearchPage() {
   const { user } = useAuth()
-  const canCreate =
-    user?.role === 'BRANCH_MANAGER' &&
-    user.permissions?.some((permission) =>
-      ['CATALOG_EDIT', 'PERM_CATALOG_EDIT'].includes(permission),
-    )
+  const canCreate = canEditCatalog(user)
   const base =
     user?.role === 'STAFF' ? '/staff/products' : '/branch-manager/products'
   const [q, setQ] = useState('')

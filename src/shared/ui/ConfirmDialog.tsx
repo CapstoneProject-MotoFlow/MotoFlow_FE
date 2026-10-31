@@ -17,13 +17,16 @@ export default function ConfirmDialog({
 }) {
   const ref = useRef<HTMLElement>(null)
   const [busy, setBusy] = useState(false)
+  const latest = useRef({ busy, onCancel })
+  latest.current = { busy, onCancel }
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     ref.current?.querySelector<HTMLButtonElement>('button')?.focus()
     const key = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) onCancel()
+      if (event.key === 'Escape' && !latest.current.busy)
+        latest.current.onCancel()
       if (event.key === 'Tab') {
         const buttons = Array.from(
           ref.current?.querySelectorAll<HTMLButtonElement>(
@@ -51,7 +54,7 @@ export default function ConfirmDialog({
       document.removeEventListener('keydown', key)
       previous?.focus()
     }
-  }, [busy, onCancel])
+  }, [])
   return createPortal(
     <div
       className="ui-dialog-backdrop"

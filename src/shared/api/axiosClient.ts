@@ -11,15 +11,26 @@ const refreshClient = axios.create({ baseURL: '/api', withCredentials: true })
 let pendingRefresh: Promise<LoginResponse> | null = null
 export function refreshSession() {
   if (!pendingRefresh)
-    pendingRefresh = refreshClient
-      .post<LoginResponse>('/auth/refresh')
+    pendingRefresh = Promise.resolve(
+      navigator.locks
+        ? navigator.locks.request('motoflow-refresh', () =>
+            refreshClient.post<LoginResponse>('/auth/refresh'),
+          )
+        : refreshClient.post<LoginResponse>('/auth/refresh'),
+    )
       .then((response) => {
         setAccessToken(response.data.accessToken)
         return response.data
       })
       .catch((error) => {
-        clearAccessToken()
-        window.dispatchEvent(new Event('auth-session-expired'))
+        // Network failures and server outages do not prove that the session expired.
+        if (
+          axios.isAxiosError(error) &&
+          [401, 403].includes(error.response?.status ?? 0)
+        ) {
+          clearAccessToken()
+          window.dispatchEvent(new Event('auth-session-expired'))
+        }
         throw error
       })
       .finally(() => {
