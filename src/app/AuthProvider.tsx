@@ -1,5 +1,5 @@
-import axiosClient from '../shared/api/axiosClient'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { getHome } from '../shared/api/homeService'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../shared/hooks/useAuth'
 import type { AuthUser } from '../shared/types/auth'
@@ -7,6 +7,8 @@ import { logout, restoreSession } from '../modules/auth/services/authService'
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const currentUser = useRef(user)
+  currentUser.current = user
   const navigate = useNavigate()
   const [restoring, setRestoring] = useState(true)
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
   useEffect(() => {
     const expired = () => {
+      if (!currentUser.current) return
       setUser(null)
       navigate('/login', { replace: true })
     }
@@ -37,8 +40,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     if (!user?.storeId) return
     let active = true
     const accountId = user.id
-    axiosClient
-      .get<{ storeName: string | null }>('/home')
+    getHome()
       .then((response) => {
         if (active && response.data.storeName)
           setUser((current) =>

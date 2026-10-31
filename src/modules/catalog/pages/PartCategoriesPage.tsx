@@ -12,6 +12,7 @@ type Category = {
   vehicleType: string
   parentId: number | null
   description: string | null
+  productCount: number
   status: string
   children: Category[]
 }
@@ -46,23 +47,15 @@ export default function PartCategoriesPage() {
     setError('')
     axiosClient
       .get<Category[]>('/part-categories')
-      .then(async (response) => {
+      .then((response) => {
         if (!active) return
         setRows(response.data)
         setLoading(false)
-        const values: Record<number, number> = {}
-        for (const row of flatten(response.data)) {
-          if (!active) return
-          try {
-            const result = await axiosClient.get('/products', {
-              params: { categoryId: row.id, size: 1 },
-            })
-            values[row.id] = result.data.totalItems
-          } catch {
-            /* Keep unavailable counts distinct from zero. */
-          }
-        }
-        if (active) setCounts(values)
+        setCounts(
+          Object.fromEntries(
+            flatten(response.data).map((row) => [row.id, row.productCount]),
+          ),
+        )
       })
       .catch((e) => {
         if (active) {
@@ -253,6 +246,7 @@ export default function PartCategoriesPage() {
       </section>
       {editing !== undefined && (
         <FormDialog
+          busy={busy}
           title={
             editing
               ? 'Sửa nhóm phụ tùng'
@@ -284,7 +278,7 @@ export default function PartCategoriesPage() {
                       name="vehicleType"
                       value={key}
                       checked={vehicle === key}
-                      disabled={!!parent}
+                      disabled={!!parent || editing?.parentId != null}
                       onChange={() => setVehicle(key)}
                     />
                     {label}
@@ -399,7 +393,19 @@ function CategoryRow({
               aria-expanded={expanded}
               onClick={onExpand}
             >
-              {expanded ? '⌄' : '›'}
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m9 5 7 7-7 7" />
+              </svg>
             </button>
           ) : (
             <span className="category-leaf" />

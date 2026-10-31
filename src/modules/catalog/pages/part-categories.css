@@ -292,3 +292,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+.category-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  height: 30px;
+}
+.category-expand svg {
+  transition: transform 0.15s ease;
+}
+.category-expand[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}

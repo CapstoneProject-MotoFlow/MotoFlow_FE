@@ -1,3 +1,6 @@
+import { mapConcurrent } from '../../../shared/utils/mapConcurrent'
+import { canEditCatalog } from '../../../shared/utils/roles'
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -68,11 +71,7 @@ export default function ProductDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const owner = user?.role === 'OWNER'
-  const canEdit =
-    owner ||
-    !!user?.permissions?.some(
-      (p) => p === 'CATALOG_EDIT' || p === 'PERM_CATALOG_EDIT',
-    )
+  const canEdit = canEditCatalog(user)
   const base = owner
     ? '/owner/products'
     : user?.role === 'BRANCH_MANAGER'
@@ -86,6 +85,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [image, setImage] = useState(0)
   useEffect(() => {
     let active = true
@@ -106,15 +106,18 @@ export default function ProductDetailPage() {
       axiosClient
         .get<Store[]>('/stores')
         .then(async (r) => {
-          const result = await Promise.all(
-            r.data.map(async (store) => ({
+          const result = await mapConcurrent(
+            r.data,
+            4,
+            async (store) => ({
               store,
               stock: (
                 await axiosClient.get<Product>(`/products/${id}`, {
                   params: { storeId: store.id },
                 })
               ).data.stock,
-            })),
+            }),
+            () => active,
           )
           if (active) setStocks(result)
         })
@@ -132,6 +135,7 @@ export default function ProductDetailPage() {
       await axiosClient.post(
         `/products/${id}/${data.status === 'ACTIVE' ? 'discontinue' : 'reactivate'}`,
       )
+      setConfirming(false)
       setRevision((x) => x + 1)
     } catch (e) {
       setError(apiMessage(e))
@@ -289,12 +293,12 @@ export default function ProductDetailPage() {
                   </div>
                 ))}
               </dl>
-              {owner && (
+              {canEdit && (
                 <footer>
                   <button
                     className="product-danger"
                     disabled={busy}
-                    onClick={() => void toggle()}
+                    onClick={() => setConfirming(true)}
                   >
                     {data.status === 'ACTIVE'
                       ? '⊘ Ngừng kinh doanh'
@@ -419,6 +423,23 @@ export default function ProductDetailPage() {
             )}
           </div>
         </div>
+      )}
+      {confirming && data && (
+        <ConfirmDialog
+          title={
+            data.status === 'ACTIVE'
+              ? 'Ngừng kinh doanh phụ tùng?'
+              : 'Mở lại kinh doanh?'
+          }
+          message={
+            data.status === 'ACTIVE'
+              ? 'Phụ tùng sẽ không được bán hoặc nhập mới. Lịch sử giao dịch được giữ lại.'
+              : 'Phụ tùng sẽ được phép bán và nhập mới.'
+          }
+          danger={data.status === 'ACTIVE'}
+          onCancel={() => setConfirming(false)}
+          onConfirm={toggle}
+        />
       )}
     </main>
   )

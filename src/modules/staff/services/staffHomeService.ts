@@ -1,9 +1,9 @@
-import axiosClient from '../../../shared/api/axiosClient'
+import { getHome } from '../../../shared/api/homeService'
 export type StaffHome = {
   storeName: string | null
   shortcuts: { key: string; count: number }[]
   notifications: { unread: number } | null
 }
 export async function loadStaffHome() {
-  return (await axiosClient.get<StaffHome>('/home')).data
+  return (await getHome()).data
 }

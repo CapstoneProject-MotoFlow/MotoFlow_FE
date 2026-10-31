@@ -1,4 +1,4 @@
-import axiosClient from '../../../shared/api/axiosClient'
+import { getHome } from '../../../shared/api/homeService'
 import { useEffect, useState } from 'react'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
 import '../owner.css'
@@ -49,8 +49,7 @@ export default function OwnerOverview() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   useEffect(() => {
     let active = true
-    axiosClient
-      .get('/home')
+    getHome()
       .then((response) => {
         if (active)
           setCounts(

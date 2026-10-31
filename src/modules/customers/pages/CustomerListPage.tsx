@@ -23,6 +23,7 @@ export default function CustomerListPage({
   const scopeLabel = chain
     ? 'Công nợ toàn chuỗi cửa hàng'
     : 'Công nợ tại cửa hàng của bạn'
+  const [totalItems, setTotalItems] = useState(0)
   const [rows, setRows] = useState<Row[]>([])
   const [q, setQ] = useState('')
   const [debt, setDebt] = useState(false)
@@ -39,28 +40,22 @@ export default function CustomerListPage({
       setLoading(true)
       setError('')
       try {
-        const all: Row[] = []
-        let current = 0
-        let total = 1
-        while (all.length < total) {
-          const response = await axiosClient.get<{
-            items: Row[]
-            totalItems: number
-          }>('/customers', {
-            params: {
-              q,
-              creditStatus: creditOnly ? 'ELIGIBLE' : undefined,
-              page: current,
-              size: 100,
-            },
-          })
-          if (!active) return
-          all.push(...response.data.items)
-          total = response.data.totalItems
-          if (!response.data.items.length) break
-          current++
+        const response = await axiosClient.get<{
+          items: Row[]
+          totalItems: number
+        }>('/customers', {
+          params: {
+            q,
+            creditStatus: creditOnly ? 'ELIGIBLE' : undefined,
+            hasDebt: debt,
+            page,
+            size: 20,
+          },
+        })
+        if (active) {
+          setRows(response.data.items)
+          setTotalItems(response.data.totalItems)
         }
-        if (active) setRows(all)
       } catch (e) {
         if (active) setError(apiMessage(e))
       } finally {
@@ -71,9 +66,8 @@ export default function CustomerListPage({
       active = false
       clearTimeout(timer)
     }
-  }, [q, creditOnly, revision])
-  const filtered = rows.filter((row) => !debt || (debtOf(row) ?? 0) > 0)
-  const visible = filtered.slice(page * 20, (page + 1) * 20)
+  }, [q, creditOnly, debt, page, revision])
+  const visible = rows
   return (
     <main className="dashboard-content branch-customers">
       <header className="branch-customers-heading">
@@ -205,17 +199,16 @@ export default function CustomerListPage({
                 </p>
               )}
             </div>
-            {filtered.length > 20 && (
+            {totalItems > 20 && (
               <footer>
                 <button disabled={!page} onClick={() => setPage((x) => x - 1)}>
                   Trang trước
                 </button>
                 <span>
-                  Trang {page + 1} /{' '}
-                  {Math.max(1, Math.ceil(filtered.length / 20))}
+                  Trang {page + 1} / {Math.max(1, Math.ceil(totalItems / 20))}
                 </span>
                 <button
-                  disabled={(page + 1) * 20 >= filtered.length}
+                  disabled={(page + 1) * 20 >= totalItems}
                   onClick={() => setPage((x) => x + 1)}
                 >
                   Trang sau

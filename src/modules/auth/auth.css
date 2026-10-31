@@ -7,7 +7,7 @@
   font: 700 2rem/1.25 var(--font-sans);
   letter-spacing: -0.8px;
 }
-.login-form > label:not(.remember-row) {
+.login-form > label {
   display: block;
   margin: 0 0 9px;
   color: #19263d;
@@ -31,22 +31,6 @@
 .login-form > input:focus {
   border-color: #5264ff;
   box-shadow: 0 0 0 3px #5264ff1a;
-}
-.remember-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  margin: 1px 0 20px;
-  color: #1c2940;
-  font-size: 1.1875rem;
-  cursor: pointer;
-}
-.remember-row input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: #4b5eff;
-  cursor: pointer;
 }
 .forgot-note {
   margin: 23px 0 0;

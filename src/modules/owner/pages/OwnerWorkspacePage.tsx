@@ -26,6 +26,7 @@ export default function OwnerWorkspacePage() {
   const [params] = useSearchParams()
   const [q, setQ] = useState(params.get('sku') || '')
   const [filters, setFilters] = useState({
+    storeId: '',
     vehicleType: '',
     categoryId: '',
     vehicleModelId: '',
@@ -39,6 +40,7 @@ export default function OwnerWorkspacePage() {
     totalItems: number
   }>({ items: [], totalItems: 0 })
   const [categories, setCategories] = useState<Category[]>([])
+  const [stores, setStores] = useState<{ id: number; storeName: string }[]>([])
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -49,11 +51,13 @@ export default function OwnerWorkspacePage() {
     Promise.all([
       axiosClient.get<Category[]>('/part-categories'),
       axiosClient.get<Model[]>('/vehicle-models'),
+      axiosClient.get<{ id: number; storeName: string }[]>('/stores'),
     ])
-      .then(([a, b]) => {
+      .then(([a, b, c]) => {
         if (active) {
           setCategories(flatten(a.data))
           setModels(b.data)
+          setStores(c.data)
         }
       })
       .catch(() => {
@@ -131,6 +135,21 @@ export default function OwnerWorkspacePage() {
           />
           <div className="parts-filter-row">
             <select
+              aria-label="Cửa hàng"
+              value={filters.storeId}
+              onChange={(e) => {
+                filter('storeId', e.target.value)
+                if (!e.target.value) filter('inStockOnly', false)
+              }}
+            >
+              <option value="">Chọn cửa hàng để xem tồn</option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.storeName}
+                </option>
+              ))}
+            </select>
+            <select
               aria-label="Loại xe"
               value={filters.vehicleType}
               onChange={(e) => filter('vehicleType', e.target.value)}
@@ -184,6 +203,7 @@ export default function OwnerWorkspacePage() {
             <label>
               <input
                 type="checkbox"
+                disabled={!filters.storeId}
                 checked={filters.inStockOnly}
                 onChange={(e) => filter('inStockOnly', e.target.checked)}
               />{' '}

@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react'
-import axiosClient from '../../shared/api/axiosClient'
-export type Notice = {
-  id: number
-  type: string
-  message: string
-  refType: string | null
-  refId: number | null
-  createdAt: string
-}
-export type Notices = { unread: number; latest: Notice[] }
+import { getHome, type Home } from '../../shared/api/homeService'
+export type Notices = NonNullable<Home['notifications']>
+export type Notice = Notices['latest'][number]
 export function useNotifications() {
   const [data, setData] = useState<Notices | null>(null)
   const [error, setError] = useState('')
@@ -16,8 +9,7 @@ export function useNotifications() {
   useEffect(() => {
     let active = true
     setError('')
-    axiosClient
-      .get<{ notifications: Notices | null }>('/home')
+    getHome()
       .then((r) => {
         if (active) setData(r.data.notifications || { unread: 0, latest: [] })
       })

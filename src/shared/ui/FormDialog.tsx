@@ -6,21 +6,30 @@ export default function FormDialog({
   children,
   submitLabel,
   onClose,
+  busy = false,
 }: {
   title: string
   formId: string
   children: ReactNode
   submitLabel: string
+  busy?: boolean
   onClose: () => void
 }) {
   const ref = useRef<HTMLElement>(null)
+  const callback = useRef({ onClose, busy })
+  callback.current = { onClose, busy }
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    ref.current?.querySelector<HTMLInputElement>('input')?.focus()
+    ref.current
+      ?.querySelector<HTMLElement>(
+        'input:not(:disabled):not([type="hidden"]), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)',
+      )
+      ?.focus()
     const key = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape' && !callback.current.busy)
+        callback.current.onClose()
       if (event.key !== 'Tab') return
       const controls = Array.from(
         ref.current?.querySelectorAll<HTMLElement>(
@@ -43,12 +52,12 @@ export default function FormDialog({
       document.removeEventListener('keydown', key)
       previous?.focus()
     }
-  }, [onClose])
+  }, [])
   return createPortal(
     <div
       className="ui-form-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (event.target === event.currentTarget && !busy) onClose()
       }}
     >
       <section
@@ -60,16 +69,31 @@ export default function FormDialog({
       >
         <header>
           <h2 id={formId + '-title'}>{title}</h2>
-          <button type="button" aria-label="Đóng" onClick={onClose}>
+          <button
+            type="button"
+            aria-label="Đóng"
+            disabled={busy}
+            onClick={onClose}
+          >
             ×
           </button>
         </header>
         <div className="ui-form-body">{children}</div>
         <footer>
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            onClick={onClose}
+          >
             Hủy
           </button>
-          <button type="submit" form={formId} className="ui-confirm-button">
+          <button
+            type="submit"
+            form={formId}
+            disabled={busy}
+            className="ui-confirm-button"
+          >
             {submitLabel}
           </button>
         </footer>

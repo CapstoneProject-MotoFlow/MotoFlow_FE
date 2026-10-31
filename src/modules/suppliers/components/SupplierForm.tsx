@@ -39,6 +39,7 @@ export default function SupplierForm({
   }
   return (
     <FormDialog
+      busy={busy}
       title={supplier ? `Sửa ${supplier.supplierName}` : 'Thêm nhà cung cấp'}
       formId="supplier-form"
       submitLabel={

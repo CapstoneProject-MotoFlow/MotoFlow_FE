@@ -26,6 +26,14 @@ type Payment = {
   receivableIds: number[]
 }
 type Data = {
+  unmetDemand?: {
+    sku: string
+    partName: string
+    missingQty: number
+    salesOrderId: number
+    storeId: number
+    storeName: string
+  }[]
   customer: Customer
   debts: Debt[]
   orders: {
@@ -56,13 +64,13 @@ const credit: Record<string, string> = {
 }
 const status: Record<string, string> = {
   AWAITING_PICKING: 'Chờ lấy hàng',
-  PICKING: 'Đang lấy hàng',
-  AWAITING_CONFIRMATION: 'Chờ xác nhận',
+  PICKED: 'Đã lấy hàng',
+  REJECTED: 'Bị từ chối',
   CONFIRMED: 'Đã xác nhận',
   COMPLETED: 'Hoàn tất',
   CANCELLED: 'Đã hủy',
   VERIFIED: 'Đã xác minh',
-  PENDING: 'Chờ xác minh',
+  UNVERIFIED: 'Chờ xác minh',
   CASH: 'Tiền mặt',
   BANK_TRANSFER: 'Chuyển khoản',
   ORDER_PAYMENT: 'Thanh toán đơn bán',
@@ -385,6 +393,40 @@ export default function CustomerDetailPage({
             </div>
           </aside>
         </div>
+      )}
+      {data && (
+        <section className="cp-panel">
+          <h2>Nhu cầu chưa đáp ứng</h2>
+          <div className="cp-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Phụ tùng</th>
+                  <th>Số lượng thiếu</th>
+                  <th>Đơn gốc</th>
+                  <th>Cửa hàng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.unmetDemand?.map((row, index) => (
+                  <tr key={index}>
+                    <td>{row.sku}</td>
+                    <td>{row.partName}</td>
+                    <td>{row.missingQty}</td>
+                    <td>#{row.salesOrderId}</td>
+                    <td>{row.storeName}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {data.unmetDemand == null ? (
+            <p>Chưa có dữ liệu nhu cầu chưa đáp ứng từ hệ thống.</p>
+          ) : (
+            !data.unmetDemand.length && <p>Không có nhu cầu chưa đáp ứng.</p>
+          )}
+        </section>
       )}
       {editing && (
         <CustomerForm

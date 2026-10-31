@@ -37,6 +37,7 @@ export default function CustomerForm({
   }
   return (
     <FormDialog
+      busy={busy}
       title={customer ? 'Sửa khách hàng' : 'Thêm khách hàng'}
       formId="customer-form"
       submitLabel={busy ? 'Đang lưu…' : 'Lưu khách hàng'}
