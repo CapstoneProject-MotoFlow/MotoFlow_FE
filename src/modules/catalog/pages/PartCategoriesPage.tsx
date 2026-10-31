@@ -1,3 +1,9 @@
+/**
+ * File: modules/catalog/pages/PartCategoriesPage.tsx
+ * Loại: MÀN HÌNH — Quản lý nhóm phụ tùng.
+ * Đường dẫn: /owner/categories, /branch-manager/categories.
+ * Công dụng: Cây nhóm phụ tùng; mở/đóng nhóm con; tạo/sửa/đổi trạng thái. CategoryRow dựng mỗi dòng; khóa loại xe khi sửa nhóm con.
+ */
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -24,6 +30,7 @@ const types: Record<string, string> = {
 }
 const flatten = (rows: Category[]): Category[] =>
   rows.flatMap((row) => [row, ...flatten(row.children || [])])
+/** PartCategoriesPage: Cây nhóm phụ tùng; mở/đóng nhóm con; tạo/sửa/đổi trạng thái. CategoryRow dựng mỗi dòng; khóa loại xe khi sửa nhóm con. */
 export default function PartCategoriesPage() {
   const [rows, setRows] = useState<Category[]>([])
   const [counts, setCounts] = useState<Record<number, number>>({})
@@ -361,6 +368,7 @@ export default function PartCategoriesPage() {
     </main>
   )
 }
+/** CategoryRow: Hiển thị một dòng nhóm phụ tùng, nút mở nhóm con và các thao tác quản lý. */
 function CategoryRow({
   row,
   depth,

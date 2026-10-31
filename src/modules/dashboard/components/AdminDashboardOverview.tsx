@@ -1,3 +1,8 @@
+/**
+ * File: modules/dashboard/components/AdminDashboardOverview.tsx
+ * Loại: THÀNH PHẦN MÀN HÌNH — nội dung được các trang dùng lại, không có route riêng.
+ * Công dụng: Khối tổng quan Admin: chỉ số tài khoản/cửa hàng, lịch sử và đăng nhập gần đây.
+ */
 /** Admin-only dashboard content: account/store metrics, permission history, and recent logins. */
 import { MetricCard, StoreStatusPanel } from './DashboardWidgets'
 import type { DashboardData } from '../types/dashboardTypes'
@@ -10,6 +15,7 @@ import { Link } from 'react-router-dom'
 import { recentAccounts } from '../utils/recentAccounts'
 import { roleNames } from '../../../shared/utils/roles'
 
+/** AdminDashboardOverview: Khối tổng quan Admin: chỉ số tài khoản/cửa hàng, lịch sử và đăng nhập gần đây. */
 export default function AdminDashboardOverview({
   data,
   selectedAccount,

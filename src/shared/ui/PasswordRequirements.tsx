@@ -1,3 +1,8 @@
+/**
+ * File: shared/ui/PasswordRequirements.tsx
+ * Loại: THÀNH PHẦN GIAO DIỆN DÙNG CHUNG — không phải màn hình.
+ * Công dụng: Hiển thị các điều kiện mật khẩu và trạng thái đã đạt/chưa đạt.
+ */
 import type { ReactNode } from 'react'
 import { validateNewPassword } from '../utils/passwordPolicy'
 
@@ -8,11 +13,12 @@ type PasswordRequirementsProps = {
   differentFromLabel?: string
 }
 
+/** PasswordRequirements: Hiển thị các điều kiện mật khẩu và trạng thái đã đạt/chưa đạt. */
 export default function PasswordRequirements({
   password,
   temporaryPassword,
   username,
-  differentFromLabel = 'Khác mật khẩu tạm',
+  differentFromLabel = 'Khác mật khẩu hiện tại',
 }: PasswordRequirementsProps) {
   const { requirements } = validateNewPassword(
     password,
@@ -24,7 +30,7 @@ export default function PasswordRequirements({
     <ul className="password-rules" aria-label="Yêu cầu mật khẩu mới">
       {requirements.map((requirement) => (
         <Requirement key={requirement.label} met={requirement.met}>
-          {requirement.label === 'Khác mật khẩu tạm'
+          {requirement.label === 'Khác mật khẩu hiện tại'
             ? differentFromLabel
             : requirement.label}
         </Requirement>

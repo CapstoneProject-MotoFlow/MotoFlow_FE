@@ -1,3 +1,10 @@
+import { searchProducts } from '../../catalog/api/searchProducts'
+/**
+ * File: modules/owner/pages/OwnerWorkspacePage.tsx
+ * Loại: MÀN HÌNH — Tìm kiếm phụ tùng của Owner.
+ * Đường dẫn: /owner/products.
+ * Công dụng: Tìm phụ tùng toàn danh mục cho Owner; bộ lọc cửa hàng để xem tồn; mở tạo/chi tiết phụ tùng.
+ */
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
@@ -15,24 +22,26 @@ type Category = {
 type Model = { id: number; manufacturer: string; modelName: string }
 const flatten = (nodes: Category[]): Category[] =>
   nodes.flatMap((node) => [node, ...flatten(node.children || [])])
-const vehicleTypes = {
-  MOTORCYCLE: 'Xe máy',
-  BICYCLE: 'Xe đạp',
-  E_MOTORCYCLE: 'Xe máy điện',
-  E_BICYCLE: 'Xe đạp điện',
-}
-export default function OwnerWorkspacePage() {
+/** OwnerWorkspacePage: Tìm phụ tùng toàn danh mục cho Owner; bộ lọc cửa hàng để xem tồn; mở tạo/chi tiết phụ tùng. */
+export default function OwnerWorkspacePage({
+  inventory = false,
+}: {
+  inventory?: boolean
+}) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const [vehicleText, setVehicleText] = useState('')
+  const [modelText, setModelText] = useState('')
+  const [categoryText, setCategoryText] = useState('')
   const [q, setQ] = useState(params.get('sku') || '')
   const [filters, setFilters] = useState({
-    storeId: '',
+    storeId: inventory ? params.get('storeId') || '' : '',
     vehicleType: '',
     categoryId: '',
     vehicleModelId: '',
     brand: '',
     status: 'ACTIVE',
-    inStockOnly: false,
+    inStockOnly: inventory && params.get('inStockOnly') === 'true',
   })
   const [page, setPage] = useState(0)
   const [data, setData] = useState<{
@@ -70,22 +79,28 @@ export default function OwnerWorkspacePage() {
   }, [])
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
     const timer = setTimeout(() => {
       setLoading(true)
       setError('')
-      axiosClient
-        .get('/products', {
-          params: {
-            ...Object.fromEntries(
-              Object.entries(filters).filter(([, value]) => value !== ''),
-            ),
-            q,
-            page,
-            size: 20,
-          },
-        })
-        .then((response) => {
-          if (active) setData(response.data)
+      searchProducts(
+        {
+          ...Object.fromEntries(
+            Object.entries(filters).filter(([, value]) => value !== ''),
+          ),
+          q,
+          page,
+          size: 20,
+        },
+        categoryText,
+        categories,
+        controller.signal,
+        vehicleText,
+        modelText,
+        models,
+      )
+        .then((result) => {
+          if (active) setData(result)
         })
         .catch(() => {
           if (active) setError('Không tải được phụ tùng. Vui lòng thử lại.')
@@ -96,9 +111,20 @@ export default function OwnerWorkspacePage() {
     }, 250)
     return () => {
       active = false
+      controller.abort()
       clearTimeout(timer)
     }
-  }, [q, filters, page, revision])
+  }, [
+    q,
+    filters,
+    page,
+    revision,
+    categoryText,
+    categories,
+    vehicleText,
+    modelText,
+    models,
+  ])
   function filter(key: string, value: string | boolean) {
     setFilters((old) => ({ ...old, [key]: value }))
     setPage(0)
@@ -106,22 +132,27 @@ export default function OwnerWorkspacePage() {
   return (
     <main className="dashboard-content owner-content parts-page">
       <div className="parts-heading">
-        <h1 className="dashboard-greeting">Phụ tùng</h1>
+        <h1 className="dashboard-greeting">
+          {inventory ? 'Tồn kho' : 'Phụ tùng'}
+        </h1>
         <span>
-          <Link to="/dashboard">Trang chủ</Link> › Phụ tùng
+          <Link to="/dashboard">Trang chủ</Link> ›{' '}
+          {inventory ? 'Tồn kho' : 'Phụ tùng'}
         </span>
       </div>
       <section className="owner-panel">
         <header className="parts-panel-heading">
-          <h2>Tìm phụ tùng</h2>
-          <button
-            className="ui-confirm-button"
-            onClick={() => {
-              navigate('/owner/products/new')
-            }}
-          >
-            ＋ Thêm phụ tùng
-          </button>
+          <h2>{inventory ? 'Tra cứu tồn kho' : 'Tìm phụ tùng'}</h2>
+          {!inventory && (
+            <button
+              className="ui-confirm-button"
+              onClick={() => {
+                navigate('/owner/products/new')
+              }}
+            >
+              ＋ Thêm phụ tùng
+            </button>
+          )}
         </header>
         <div className="parts-filters">
           <input
@@ -134,60 +165,53 @@ export default function OwnerWorkspacePage() {
             }}
           />
           <div className="parts-filter-row">
-            <select
-              aria-label="Cửa hàng"
-              value={filters.storeId}
-              onChange={(e) => {
-                filter('storeId', e.target.value)
-                if (!e.target.value) filter('inStockOnly', false)
+            {inventory && (
+              <select
+                aria-label="Cửa hàng"
+                value={filters.storeId}
+                onChange={(e) => {
+                  filter('storeId', e.target.value)
+                  if (!e.target.value) filter('inStockOnly', false)
+                }}
+              >
+                <option value="">Chọn cửa hàng</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.storeName}
+                  </option>
+                ))}
+              </select>
+            )}
+            <input
+              aria-label="Tìm loại xe"
+              placeholder="Loại xe"
+              value={vehicleText}
+              onChange={(event) => {
+                setVehicleText(event.target.value)
+                setPage(0)
               }}
-            >
-              <option value="">Chọn cửa hàng để xem tồn</option>
-              {stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.storeName}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Loại xe"
-              value={filters.vehicleType}
-              onChange={(e) => filter('vehicleType', e.target.value)}
-            >
-              <option value="">Mọi loại xe</option>
-              {Object.entries(vehicleTypes).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Nhóm phụ tùng"
-              value={filters.categoryId}
-              onChange={(e) => filter('categoryId', e.target.value)}
-            >
-              <option value="">Mọi nhóm phụ tùng</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.categoryName}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Dòng xe"
-              value={filters.vehicleModelId}
-              onChange={(e) => filter('vehicleModelId', e.target.value)}
-            >
-              <option value="">Mọi dòng xe</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.manufacturer} {m.modelName}
-                </option>
-              ))}
-            </select>
+            />
+            <input
+              aria-label="Tìm nhóm phụ tùng"
+              placeholder="Nhóm phụ tùng"
+              value={categoryText}
+              onChange={(event) => {
+                setCategoryText(event.target.value)
+                setPage(0)
+              }}
+            />
+            <input
+              aria-label="Tìm dòng xe"
+              placeholder="Dòng xe"
+              value={modelText}
+              onChange={(event) => {
+                setModelText(event.target.value)
+                setPage(0)
+              }}
+            />
             <input
               aria-label="Nhà sản xuất"
-              placeholder="Mọi nhà sản xuất"
+              placeholder="Nhà sản xuất"
               value={filters.brand}
               onChange={(e) => filter('brand', e.target.value)}
             />
@@ -196,19 +220,21 @@ export default function OwnerWorkspacePage() {
               value={filters.status}
               onChange={(e) => filter('status', e.target.value)}
             >
-              <option value="">Mọi trạng thái</option>
+              <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang kinh doanh</option>
               <option value="DISCONTINUED">Ngừng kinh doanh</option>
             </select>
-            <label>
-              <input
-                type="checkbox"
-                disabled={!filters.storeId}
-                checked={filters.inStockOnly}
-                onChange={(e) => filter('inStockOnly', e.target.checked)}
-              />{' '}
-              Chỉ hiện hàng còn bán được
-            </label>
+            {inventory && (
+              <label>
+                <input
+                  type="checkbox"
+                  disabled={!filters.storeId}
+                  checked={filters.inStockOnly}
+                  onChange={(e) => filter('inStockOnly', e.target.checked)}
+                />{' '}
+                Chỉ hiện hàng còn bán được
+              </label>
+            )}
           </div>
           <p className="parts-count" aria-live="polite">
             {loading ? 'Đang tìm…' : `Tìm thấy ${data.totalItems} phụ tùng`}
@@ -231,7 +257,7 @@ export default function OwnerWorkspacePage() {
                     <th>Nhóm</th>
                     <th>Nhà sản xuất</th>
                     <th>Giá lẻ chuẩn</th>
-                    <th>Khả dụng</th>
+                    {inventory && <th>Khả dụng</th>}
                     <th>Trạng thái</th>
                   </tr>
                 </thead>
@@ -251,11 +277,13 @@ export default function OwnerWorkspacePage() {
                           ? '—'
                           : item.retailPrice.toLocaleString('vi-VN') + ' ₫'}
                       </td>
-                      <td className="parts-number">
-                        {item.availableQty == null
-                          ? '—'
-                          : `${item.availableQty.toLocaleString('vi-VN')} ${item.baseUnit}`}
-                      </td>
+                      {inventory && (
+                        <td className="parts-number">
+                          {item.availableQty == null
+                            ? '—'
+                            : `${item.availableQty.toLocaleString('vi-VN')} ${item.baseUnit}`}
+                        </td>
+                      )}
                       <td>
                         <span
                           className={

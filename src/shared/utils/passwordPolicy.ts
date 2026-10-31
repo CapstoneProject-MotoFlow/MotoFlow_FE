@@ -1,3 +1,8 @@
+/**
+ * File: shared/utils/passwordPolicy.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Hàm kiểm tra mật khẩu; trả danh sách điều kiện, isValid và thông báo lỗi.
+ */
 export type PasswordRequirement = {
   label: string
   met: boolean
@@ -9,6 +14,7 @@ export type PasswordValidation = {
   error: string
 }
 
+/** validateNewPassword: Kiểm tra các điều kiện mật khẩu và trả danh sách yêu cầu, trạng thái hợp lệ cùng thông báo lỗi. */
 export function validateNewPassword(
   password: string,
   temporaryPassword: string,
@@ -29,7 +35,7 @@ export function validateNewPassword(
       met: /[^\p{L}\p{N}\s]/u.test(password),
     },
     {
-      label: 'Khác mật khẩu tạm',
+      label: 'Khác mật khẩu hiện tại',
       met: password.length > 0 && password !== temporaryPassword,
     },
   ]

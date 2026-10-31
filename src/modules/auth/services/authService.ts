@@ -1,3 +1,8 @@
+/**
+ * File: modules/auth/services/authService.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Gọi API login, logout, refresh/restore session và change-password; cập nhật token dùng cho request.
+ */
 import axiosClient, { refreshSession } from '../../../shared/api/axiosClient'
 import {
   clearAccessToken,

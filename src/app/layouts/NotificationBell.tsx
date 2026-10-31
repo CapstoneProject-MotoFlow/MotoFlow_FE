@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/NotificationBell.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Nút chuông, số thông báo chưa đọc và danh sách thông báo gần đây.
+ */
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
@@ -6,6 +11,7 @@ import {
   noticeTime,
 } from '../../modules/notifications/notificationService'
 import '../../modules/notifications/notifications.css'
+/** NotificationBell: Nút chuông, số thông báo chưa đọc và danh sách thông báo gần đây. */
 export default function NotificationBell() {
   const { data, error, reload } = useNotifications()
   const [open, setOpen] = useState(false)

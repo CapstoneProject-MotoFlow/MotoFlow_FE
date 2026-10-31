@@ -1,3 +1,8 @@
+/**
+ * File: shared/assets/styles/global.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS toàn cục: font, biến màu/font, thiết lập nền tảng; import ui.css.
+ */
 @import './ui.css';
 @font-face {
   font-family: 'Google Sans Flex';

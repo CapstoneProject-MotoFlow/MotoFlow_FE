@@ -1,3 +1,9 @@
+/**
+ * File: modules/customers/pages/CustomerDetailPage.tsx
+ * Loại: MÀN HÌNH — Chi tiết khách hàng / công nợ.
+ * Đường dẫn: /owner/customers/:id/debts, /owner/customers/:id, /branch-manager/customers/:id/debts, /branch-manager/customers/:id.
+ * Công dụng: Hồ sơ, công nợ, đơn, thanh toán, lịch sử mua chịu, nhu cầu chưa đáp ứng; hỗ trợ debtView để ưu tiên màn công nợ. PaymentTable là component con hiển thị giao dịch thanh toán.
+ */
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -83,6 +89,7 @@ const status: Record<string, string> = {
   GRANTED: 'Cấp quyền mua chịu',
   REVOKED: 'Thu hồi quyền mua chịu',
 }
+/** CustomerDetailPage: Hồ sơ, công nợ, đơn, thanh toán, lịch sử mua chịu, nhu cầu chưa đáp ứng; hỗ trợ debtView để ưu tiên màn công nợ. PaymentTable là component con hiển thị giao dịch thanh toán. */
 export default function CustomerDetailPage({
   debtView = false,
 }: {
@@ -441,6 +448,7 @@ export default function CustomerDetailPage({
     </main>
   )
 }
+/** PaymentTable: Hiển thị bảng thanh toán, số tiền, trạng thái và liên kết chứng từ liên quan. */
 function PaymentTable({
   rows,
   total,

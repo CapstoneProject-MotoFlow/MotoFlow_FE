@@ -1,3 +1,9 @@
+/**
+ * File: modules/profile/pages/ProfilePage.tsx
+ * Loại: MÀN HÌNH — Thông tin cá nhân.
+ * Đường dẫn: /profile.
+ * Công dụng: Đọc thông tin tài khoản hiện tại, vai trò/quyền, tên cửa hàng; mở đổi mật khẩu.
+ */
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -10,6 +16,7 @@ const permissionNames: Record<string, string> = {
   CATALOG_EDIT: 'Chỉnh sửa danh mục',
   RETAIL_PRICE_EDIT: 'Chỉnh sửa giá bán lẻ',
 }
+/** ProfilePage: Đọc thông tin tài khoản hiện tại, vai trò/quyền, tên cửa hàng; mở đổi mật khẩu. */
 export default function ProfilePage() {
   const { user } = useAuth()
   const [profile, setProfile] = useState<AuthUser | null>(null)

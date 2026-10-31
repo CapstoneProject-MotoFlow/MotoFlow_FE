@@ -1,7 +1,14 @@
+/**
+ * File: modules/notifications/NotificationsPage.tsx
+ * Loại: MÀN HÌNH — Thông báo.
+ * Đường dẫn: /notifications.
+ * Công dụng: Màn hiển thị thông báo hiện được API home cung cấp; không đồng nghĩa đã có API phân trang/đánh dấu đọc riêng.
+ */
 import { Link } from 'react-router-dom'
 import { useNotifications, noticeTime } from './notificationService'
 import Icon from '../../shared/ui/Icon'
 import './notifications.css'
+/** NotificationsPage: Màn hiển thị thông báo hiện được API home cung cấp; không đồng nghĩa đã có API phân trang/đánh dấu đọc riêng. */
 export default function NotificationsPage() {
   const { data, error, reload } = useNotifications()
   return (

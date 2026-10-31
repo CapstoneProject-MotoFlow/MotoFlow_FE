@@ -1,3 +1,9 @@
+/**
+ * File: modules/catalog/pages/VehicleModelsPage.tsx
+ * Loại: MÀN HÌNH — Quản lý dòng xe.
+ * Đường dẫn: /owner/vehicles, /branch-manager/vehicles.
+ * Công dụng: Danh sách dòng xe; lọc hãng/tên, loại xe, trạng thái; tạo/sửa và kích hoạt/ngừng dùng.
+ */
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -22,6 +28,7 @@ const types: Record<string, string> = {
   E_MOTORCYCLE: 'Xe máy điện',
   E_BICYCLE: 'Xe đạp điện',
 }
+/** VehicleModelsPage: Danh sách dòng xe; lọc hãng/tên, loại xe, trạng thái; tạo/sửa và kích hoạt/ngừng dùng. */
 export default function VehicleModelsPage() {
   const [rows, setRows] = useState<Model[]>([])
   const [counts, setCounts] = useState<Record<number, number>>({})
@@ -162,7 +169,7 @@ export default function VehicleModelsPage() {
             value={type}
             onChange={(e) => setType(e.target.value)}
           >
-            <option value="">Mọi loại xe</option>
+            <option value="">Chọn loại xe</option>
             {Object.entries(types).map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
@@ -174,7 +181,7 @@ export default function VehicleModelsPage() {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="">Mọi trạng thái</option>
+            <option value="">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang dùng</option>
             <option value="INACTIVE">Ngừng dùng</option>
           </select>

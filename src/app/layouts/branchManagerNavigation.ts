@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/branchManagerNavigation.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Cấu hình tương tự cho BM.
+ */
 import type { NavItem } from './ownerNavigation'
 // Unimplemented screens remain in the menu without linking to Owner-only routes.
 export const branchManagerNavigation: NavItem[] = [

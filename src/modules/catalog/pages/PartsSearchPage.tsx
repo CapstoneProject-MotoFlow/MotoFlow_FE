@@ -1,3 +1,9 @@
+import { searchProducts } from '../api/searchProducts'
+/**
+ * File: modules/catalog/pages/PartsSearchPage.tsx
+ * Loại: THÀNH PHẦN MÀN HÌNH — nội dung được các trang dùng lại, không có route riêng.
+ * Công dụng: Tìm phụ tùng cho BM/Staff; lọc loại xe, nhóm, dòng xe, thương hiệu và hàng còn tồn; mở chi tiết; hiện nút tạo nếu được phép.
+ */
 import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
@@ -11,11 +17,15 @@ type Category = { id: number; categoryName: string; children: Category[] }
 type Model = { id: number; manufacturer: string; modelName: string }
 const flatten = (nodes: Category[]): Category[] =>
   nodes.flatMap((node) => [node, ...flatten(node.children || [])])
+/** PartsSearchPage: Tìm phụ tùng cho BM/Staff; lọc loại xe, nhóm, dòng xe, thương hiệu và hàng còn tồn; mở chi tiết; hiện nút tạo nếu được phép. */
 export default function PartsSearchPage() {
   const { user } = useAuth()
   const canCreate = canEditCatalog(user)
   const base =
     user?.role === 'STAFF' ? '/staff/products' : '/branch-manager/products'
+  const [vehicleText, setVehicleText] = useState('')
+  const [modelText, setModelText] = useState('')
+  const [categoryText, setCategoryText] = useState('')
   const [q, setQ] = useState('')
   const [filters, setFilters] = useState({
     vehicleType: '',
@@ -23,7 +33,6 @@ export default function PartsSearchPage() {
     vehicleModelId: '',
     brand: '',
     status: 'ACTIVE',
-    inStockOnly: true,
   })
   const [expanded, setExpanded] = useState(true)
   const [page, setPage] = useState(0)
@@ -61,22 +70,28 @@ export default function PartsSearchPage() {
   }, [])
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
     const timer = setTimeout(() => {
       setLoading(true)
       setError('')
-      axiosClient
-        .get('/products', {
-          params: {
-            ...Object.fromEntries(
-              Object.entries(filters).filter(([, value]) => value !== ''),
-            ),
-            q,
-            page,
-            size: 20,
-          },
-        })
-        .then((response) => {
-          if (active) setData(response.data)
+      searchProducts(
+        {
+          ...Object.fromEntries(
+            Object.entries(filters).filter(([, value]) => value !== ''),
+          ),
+          q,
+          page,
+          size: 20,
+        },
+        categoryText,
+        categories,
+        controller.signal,
+        vehicleText,
+        modelText,
+        models,
+      )
+        .then((result) => {
+          if (active) setData(result)
         })
         .catch(() => {
           if (active) setError('Không tải được phụ tùng. Vui lòng thử lại.')
@@ -87,9 +102,20 @@ export default function PartsSearchPage() {
     }, 250)
     return () => {
       active = false
+      controller.abort()
       clearTimeout(timer)
     }
-  }, [q, filters, page, revision])
+  }, [
+    q,
+    filters,
+    page,
+    revision,
+    categoryText,
+    categories,
+    vehicleText,
+    modelText,
+    models,
+  ])
   function filter(key: string, value: string | boolean) {
     setFilters((old) => ({ ...old, [key]: value }))
     setPage(0)
@@ -147,14 +173,7 @@ export default function PartsSearchPage() {
               <Icon name="sliders" />
               {expanded ? 'Thu gọn bộ lọc' : 'Mở bộ lọc'}
             </button>
-            <label className="bm-stock-checkbox">
-              <input
-                type="checkbox"
-                checked={filters.inStockOnly}
-                onChange={(e) => filter('inStockOnly', e.target.checked)}
-              />
-              Chỉ hiện hàng còn bán được
-            </label>
+
             <span className="bm-product-count" aria-live="polite">
               {loading
                 ? 'Đang tìm…'
@@ -165,41 +184,33 @@ export default function PartsSearchPage() {
           </div>
           {expanded && (
             <div id="bm-product-filters" className="bm-product-filters">
-              <select
-                aria-label="Loại xe"
-                value={filters.vehicleType}
-                onChange={(e) => filter('vehicleType', e.target.value)}
-              >
-                <option value="">Mọi loại xe</option>
-                <option value="MOTORCYCLE">Xe máy</option>
-                <option value="BICYCLE">Xe đạp</option>
-                <option value="E_MOTORCYCLE">Xe máy điện</option>
-                <option value="E_BICYCLE">Xe đạp điện</option>
-              </select>
-              <select
-                aria-label="Nhóm phụ tùng"
-                value={filters.categoryId}
-                onChange={(e) => filter('categoryId', e.target.value)}
-              >
-                <option value="">Nhóm phụ tùng</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.categoryName}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Dòng xe"
-                value={filters.vehicleModelId}
-                onChange={(e) => filter('vehicleModelId', e.target.value)}
-              >
-                <option value="">Dòng xe</option>
-                {models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.manufacturer} {m.modelName}
-                  </option>
-                ))}
-              </select>
+              <input
+                aria-label="Tìm loại xe"
+                placeholder="Loại xe"
+                value={vehicleText}
+                onChange={(event) => {
+                  setVehicleText(event.target.value)
+                  setPage(0)
+                }}
+              />
+              <input
+                aria-label="Tìm nhóm phụ tùng"
+                placeholder="Nhóm phụ tùng"
+                value={categoryText}
+                onChange={(event) => {
+                  setCategoryText(event.target.value)
+                  setPage(0)
+                }}
+              />
+              <input
+                aria-label="Tìm dòng xe"
+                placeholder="Dòng xe"
+                value={modelText}
+                onChange={(event) => {
+                  setModelText(event.target.value)
+                  setPage(0)
+                }}
+              />
               <input
                 aria-label="Nhà sản xuất"
                 placeholder="Nhà sản xuất"
@@ -211,7 +222,7 @@ export default function PartsSearchPage() {
                 value={filters.status}
                 onChange={(e) => filter('status', e.target.value)}
               >
-                <option value="">Mọi trạng thái</option>
+                <option value="">Tất cả trạng thái</option>
                 <option value="ACTIVE">Đang kinh doanh</option>
                 <option value="DISCONTINUED">Ngừng kinh doanh</option>
               </select>
@@ -241,7 +252,6 @@ export default function PartsSearchPage() {
                       <th>Nhóm</th>
                       <th>Nhà sản xuất</th>
                       <th>Giá lẻ chuẩn</th>
-                      <th>Khả dụng</th>
                       <th>Vị trí</th>
                     </tr>
                   </thead>
@@ -259,11 +269,7 @@ export default function PartsSearchPage() {
                             ? '—'
                             : item.retailPrice.toLocaleString('vi-VN') + ' ₫'}
                         </td>
-                        <td>
-                          {item.availableQty == null
-                            ? '—'
-                            : `${item.availableQty.toLocaleString('vi-VN')} ${item.baseUnit}`}
-                        </td>
+
                         <td>
                           {[item.storageArea, item.binLocation]
                             .filter(Boolean)
@@ -277,8 +283,6 @@ export default function PartsSearchPage() {
               {!data.items.length && (
                 <p className="bm-products-message">
                   Không tìm thấy phụ tùng phù hợp.
-                  {filters.inStockOnly &&
-                    ' Thử bỏ chọn “Chỉ hiện hàng còn bán được” để xem cả phụ tùng hết hàng.'}
                 </p>
               )}
               <footer>

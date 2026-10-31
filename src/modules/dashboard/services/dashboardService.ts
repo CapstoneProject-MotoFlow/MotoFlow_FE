@@ -1,3 +1,8 @@
+/**
+ * File: modules/dashboard/services/dashboardService.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Tải và ghép dữ liệu dashboard; Admin lấy tài khoản/cửa hàng/lịch sử, luồng nghiệp vụ lấy sản phẩm và dữ liệu cần thiết theo role.
+ */
 import axiosClient from '../../../shared/api/axiosClient'
 import type {
   DashboardAccount,

@@ -1,3 +1,8 @@
+/**
+ * File: shared/types/auth.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: AuthUser và LoginResponse. Type chỉ giúp kiểm tra lúc phát triển, không tự xác minh JSON lúc chạy.
+ */
 export type AuthUser = {
   id?: number
   username: string

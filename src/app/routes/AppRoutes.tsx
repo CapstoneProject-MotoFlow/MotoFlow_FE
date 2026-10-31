@@ -1,3 +1,8 @@
+/**
+ * File: app/routes/AppRoutes.tsx
+ * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
+ * Công dụng: Ánh xạ URL sang page; chọn trang chủ theo vai trò; ghép guard/layout; lazy-load page và hiển thị trạng thái chờ bằng Suspense.
+ */
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
@@ -80,6 +85,7 @@ const ProfileChangePasswordPage = lazy(
   () => import('../../modules/profile/pages/ProfileChangePasswordPage'),
 )
 
+/** RootRedirect: Chọn trang đích theo trạng thái đăng nhập và yêu cầu đổi mật khẩu. */
 function RootRedirect() {
   const { user } = useAuth()
   return (
@@ -96,6 +102,7 @@ function RootRedirect() {
   )
 }
 
+/** AppRoutes: Ánh xạ URL sang page; chọn trang chủ theo vai trò; ghép guard/layout; lazy-load page và hiển thị trạng thái chờ bằng Suspense. */
 export default function AppRoutes() {
   const { user } = useAuth()
   return (
@@ -159,6 +166,10 @@ export default function AppRoutes() {
                 element={<ProductDetailPage />}
               />
               <Route path="/owner/products" element={<OwnerWorkspacePage />} />
+              <Route
+                path="/owner/inventory"
+                element={<OwnerWorkspacePage inventory />}
+              />
               <Route
                 path="/owner/products/new"
                 element={<ProductCreatePage />}

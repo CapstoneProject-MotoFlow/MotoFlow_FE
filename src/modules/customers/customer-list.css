@@ -1,3 +1,8 @@
+/**
+ * File: modules/customers/customer-list.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS danh sách và bộ lọc.
+ */
 .branch-customers {
   max-width: 1400px;
   padding-top: 26px;

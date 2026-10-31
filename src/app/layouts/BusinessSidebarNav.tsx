@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/BusinessSidebarNav.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Dựng menu nghiệp vụ dạng nhóm mở/đóng; lọc mục theo quyền; xử lý mục chưa có màn nghiệp vụ hoàn chỉnh.
+ */
 import { canEditCatalog as hasCatalogPermission } from '../../shared/utils/roles'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
@@ -50,6 +55,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
     labels: ['Phụ tùng', 'Nhóm phụ tùng', 'Dòng xe', 'Nhà cung cấp'],
   },
 ]
+/** BusinessSidebarNav: Dựng menu nghiệp vụ dạng nhóm mở/đóng; lọc mục theo quyền; xử lý mục chưa có màn nghiệp vụ hoàn chỉnh. */
 export default function BusinessSidebarNav({
   owner,
   collapsed,

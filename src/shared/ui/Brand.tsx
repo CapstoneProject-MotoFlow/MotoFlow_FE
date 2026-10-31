@@ -1,7 +1,13 @@
+/**
+ * File: shared/ui/Brand.tsx
+ * Loại: THÀNH PHẦN GIAO DIỆN DÙNG CHUNG — không phải màn hình.
+ * Công dụng: Logo và tên MotoFlow, hỗ trợ dạng gọn.
+ */
 type BrandProps = {
   compact?: boolean
 }
 
+/** Brand: Logo và tên MotoFlow, hỗ trợ dạng gọn. */
 export default function Brand({ compact = false }: BrandProps) {
   return (
     <div className={`brand${compact ? ' brand-compact' : ''}`}>

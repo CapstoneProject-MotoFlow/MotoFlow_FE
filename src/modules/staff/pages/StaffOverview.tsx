@@ -1,3 +1,9 @@
+/**
+ * File: modules/staff/pages/StaffOverview.tsx
+ * Loại: MÀN HÌNH — Tổng quan nhân viên.
+ * Đường dẫn: /dashboard.
+ * Công dụng: Tổng quan công việc/phạm vi của Staff.
+ */
 import { useEffect, useState } from 'react'
 import { loadStaffHome, type StaffHome } from '../services/staffHomeService'
 import './staff-overview.css'
@@ -7,6 +13,7 @@ const taskLabels: Record<string, string> = {
   DISPATCH_PREPARATION_TASKS: 'Chuẩn bị điều chuyển',
   COUNTING_TASKS: 'Đếm kiểm kê',
 }
+/** StaffOverview: Tổng quan công việc/phạm vi của Staff. */
 export default function StaffOverview() {
   const [data, setData] = useState<StaffHome | null>(null)
   const [loading, setLoading] = useState(true)

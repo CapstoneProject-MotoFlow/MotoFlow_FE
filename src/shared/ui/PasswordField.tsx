@@ -1,3 +1,8 @@
+/**
+ * File: shared/ui/PasswordField.tsx
+ * Loại: THÀNH PHẦN GIAO DIỆN DÙNG CHUNG — không phải màn hình.
+ * Công dụng: Ô mật khẩu có nút hiện/ẩn và nhãn.
+ */
 import { useState } from 'react'
 
 type PasswordFieldProps = {
@@ -8,6 +13,7 @@ type PasswordFieldProps = {
   autoComplete: string
 }
 
+/** PasswordField: Ô mật khẩu có nút hiện/ẩn và nhãn. */
 export default function PasswordField({
   id,
   label,

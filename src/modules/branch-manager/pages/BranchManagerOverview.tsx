@@ -1,3 +1,9 @@
+/**
+ * File: modules/branch-manager/pages/BranchManagerOverview.tsx
+ * Loại: MÀN HÌNH — Tổng quan quản lý chi nhánh.
+ * Đường dẫn: /dashboard.
+ * Công dụng: Tổng quan việc chờ và phạm vi cửa hàng của BM.
+ */
 import { useEffect, useState } from 'react'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -50,6 +56,7 @@ const cards: {
     color: 'orange',
   },
 ]
+/** BranchManagerOverview: Tổng quan việc chờ và phạm vi cửa hàng của BM. */
 export default function BranchManagerOverview() {
   const { user } = useAuth()
   const [data, setData] = useState<BranchHome | null>(null)

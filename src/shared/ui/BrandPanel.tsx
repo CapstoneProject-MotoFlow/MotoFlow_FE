@@ -1,3 +1,8 @@
+/**
+ * File: shared/ui/BrandPanel.tsx
+ * Loại: THÀNH PHẦN GIAO DIỆN DÙNG CHUNG — không phải màn hình.
+ * Công dụng: Vùng giới thiệu thương hiệu bên màn xác thực.
+ */
 import Brand from './Brand'
 
 const stores = ['Nga Minh Yên Viên', 'Nga Minh Long Biên', 'Nga Minh Đông Anh']
@@ -18,6 +23,7 @@ function StoreIcon() {
   )
 }
 
+/** BrandPanel: Vùng giới thiệu thương hiệu bên màn xác thực. */
 export default function BrandPanel() {
   return (
     <aside className="brand-pane">

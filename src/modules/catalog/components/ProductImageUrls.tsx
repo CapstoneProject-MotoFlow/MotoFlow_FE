@@ -1,4 +1,10 @@
+/**
+ * File: modules/catalog/components/ProductImageUrls.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Nhập, thêm/bỏ và kiểm tra URL ảnh phụ tùng; không phải trình tải file ảnh lên máy chủ.
+ */
 import { useState } from 'react'
+/** ProductImageUrls: Nhập, thêm/bỏ và kiểm tra URL ảnh phụ tùng; không phải trình tải file ảnh lên máy chủ. */
 export default function ProductImageUrls({
   values,
   onChange,

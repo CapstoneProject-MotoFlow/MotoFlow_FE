@@ -1,3 +1,8 @@
+/**
+ * File: shared/utils/mapConcurrent.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Chạy tác vụ bất đồng bộ có giới hạn số tác vụ đồng thời; giữ thứ tự kết quả, ngừng xếp thêm khi hủy/lỗi.
+ */
 /** Preserve input order while limiting parallel requests; stop scheduling after cancellation. */
 export async function mapConcurrent<T, R>(
   items: readonly T[],
