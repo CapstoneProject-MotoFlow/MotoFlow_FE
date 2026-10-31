@@ -1,3 +1,9 @@
+/**
+ * File: modules/owner/pages/OwnerPermissionsPage.tsx
+ * Loại: MÀN HÌNH — Quyền danh mục và giá.
+ * Đường dẫn: /owner/catalog-permissions.
+ * Công dụng: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ.
+ */
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
@@ -13,6 +19,7 @@ type Manager = {
   storeName: string
   permissions: string[]
 }
+/** OwnerPermissionsPage: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ. */
 export default function OwnerPermissionsPage() {
   const { user } = useAuth()
   const [history, setHistory] = useState<

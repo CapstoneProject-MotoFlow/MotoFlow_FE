@@ -1,9 +1,15 @@
+/**
+ * File: modules/customers/components/CustomerForm.tsx
+ * Loại: FORM / POPUP — mở bên trong màn hình, không phải trang riêng.
+ * Công dụng: Form tạo/sửa thông tin liên hệ; lưu bằng POST/PUT; báo lỗi; khóa khi gửi.
+ */
 import { useState, type FormEvent } from 'react'
 import FormDialog from '../../../shared/ui/FormDialog'
 import axiosClient from '../../../shared/api/axiosClient'
 import type { Customer } from '../types'
 import { apiMessage } from '../../suppliers/supplierService'
 import '../customer-form.css'
+/** CustomerForm: Form tạo/sửa thông tin liên hệ; lưu bằng POST/PUT; báo lỗi; khóa khi gửi. */
 export default function CustomerForm({
   customer,
   onClose,

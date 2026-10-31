@@ -1,8 +1,14 @@
+/**
+ * File: modules/dashboard/components/BusinessOverview.tsx
+ * Loại: THÀNH PHẦN MÀN HÌNH — nội dung được các trang dùng lại, không có route riêng.
+ * Công dụng: Các khối tổng quan nghiệp vụ dùng dữ liệu sản phẩm, tồn và cửa hàng.
+ */
 import type { AuthUser } from '../../../shared/types/auth'
 import type { DashboardData, DashboardProduct } from '../types/dashboardTypes'
 import { DashboardIcon, MetricCard, StoreStatusPanel } from './DashboardWidgets'
 import { roleNames } from '../../../shared/utils/roles'
 
+/** BusinessOverview: Các khối tổng quan nghiệp vụ dùng dữ liệu sản phẩm, tồn và cửa hàng. */
 export default function BusinessOverview({
   data,
   user,

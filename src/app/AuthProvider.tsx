@@ -1,3 +1,8 @@
+/**
+ * File: app/AuthProvider.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Quản lý user đăng nhập trong React Context; khôi phục phiên; xử lý hết phiên, đăng nhập, đăng xuất và hoàn tất đổi mật khẩu; bổ sung tên cửa hàng từ dữ liệu home.
+ */
 import { getHome } from '../shared/api/homeService'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -5,6 +10,7 @@ import { AuthContext } from '../shared/hooks/useAuth'
 import type { AuthUser } from '../shared/types/auth'
 import { logout, restoreSession } from '../modules/auth/services/authService'
 
+/** AuthProvider: Quản lý user đăng nhập trong React Context; khôi phục phiên; xử lý hết phiên, đăng nhập, đăng xuất và hoàn tất đổi mật khẩu; bổ sung tên cửa hàng từ dữ liệu home. */
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const currentUser = useRef(user)

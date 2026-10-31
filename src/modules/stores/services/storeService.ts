@@ -1,3 +1,8 @@
+/**
+ * File: modules/stores/services/storeService.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Kiểu payload và API danh sách/lưu cửa hàng, chọn tạo mới/sao chép/cập nhật theo thao tác.
+ */
 import axiosClient from '../../../shared/api/axiosClient'
 import type { DashboardStore } from '../../../shared/types/store'
 

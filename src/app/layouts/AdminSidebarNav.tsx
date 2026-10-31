@@ -1,6 +1,12 @@
+/**
+ * File: app/layouts/AdminSidebarNav.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Menu Admin: tổng quan, cửa hàng, tài khoản, lịch sử phân quyền.
+ */
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
+/** AdminSidebarNav: Menu Admin: tổng quan, cửa hàng, tài khoản, lịch sử phân quyền. */
 export default function AdminSidebarNav({ collapsed }: { collapsed: boolean }) {
   const location = useLocation()
   const [open, setOpen] = useState(true)

@@ -1,3 +1,8 @@
+/**
+ * File: shared/types/store.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Kiểu dữ liệu cửa hàng dùng nhiều module.
+ */
 export type DashboardStore = {
   id: number
   storeName: string

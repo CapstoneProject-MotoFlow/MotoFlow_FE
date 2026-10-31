@@ -1,3 +1,8 @@
+/**
+ * File: modules/auth/auth.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: Định dạng các màn xác thực.
+ */
 .login-form {
   width: min(100%, 400px);
 }
@@ -104,4 +109,32 @@
 .login-form input:not([type='checkbox']),
 .login-form button {
   min-height: 44px;
+}
+
+.login-layout.login-layout-centered {
+  grid-template-columns: 1fr;
+}
+.login-layout-centered .login-pane {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 32px 24px;
+}
+.login-system-name {
+  margin: 0 0 12px;
+  color: #394fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.login-form > label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.login-form > label .required {
+  display: inline;
+  width: auto;
+}
+.login-layout-centered .profile-password-content {
+  width: min(100%, 600px);
+  padding: 0;
 }

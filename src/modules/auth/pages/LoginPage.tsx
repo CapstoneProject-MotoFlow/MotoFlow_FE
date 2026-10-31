@@ -1,3 +1,9 @@
+/**
+ * File: modules/auth/pages/LoginPage.tsx
+ * Loại: MÀN HÌNH — Đăng nhập.
+ * Đường dẫn: /login.
+ * Công dụng: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công.
+ */
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -6,6 +12,7 @@ import { login } from '../services/authService'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import '../auth.css'
 
+/** LoginPage: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công. */
 export default function LoginPage() {
   const navigate = useNavigate()
   const { signIn } = useAuth()
@@ -39,6 +46,7 @@ export default function LoginPage() {
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
+      <p className="login-system-name">MotoFlow</p>
       <h1>Đăng nhập</h1>
       <label htmlFor="username">
         Tên đăng nhập <span className="required">*</span>
@@ -71,8 +79,7 @@ export default function LoginPage() {
         {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
       </button>
       <p className="forgot-note">
-        <Link to="/forgot-password">Quên mật khẩu?</Link> Liên hệ Admin để được
-        cấp mật khẩu tạm.
+        <Link to="/forgot-password">Quên mật khẩu</Link>
       </p>
     </form>
   )

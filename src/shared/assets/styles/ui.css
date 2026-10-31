@@ -1,3 +1,8 @@
+/**
+ * File: shared/assets/styles/ui.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS thành phần dùng chung như nút, ô nhập, dialog và trạng thái giao diện.
+ */
 .required {
   color: #f04452;
 }

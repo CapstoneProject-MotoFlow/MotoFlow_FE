@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/DashboardLayout.tsx
+ * Loại: KHUNG GIAO DIỆN — bao quanh màn hình, không phải trang nghiệp vụ.
+ * Công dụng: Khung sau đăng nhập: sidebar, header, menu tài khoản, chuông, ô tìm kiếm và Outlet chứa page; quản lý thu gọn menu và thông báo giao diện.
+ */
 import NotificationBell from './NotificationBell'
 import AdminSidebarNav from './AdminSidebarNav'
 import StaffSidebarNav from './StaffSidebarNav'
@@ -12,6 +17,7 @@ import Brand from '../../shared/ui/Brand'
 import Icon from '../../shared/ui/Icon'
 import { roleNames } from '../../shared/utils/roles'
 
+/** DashboardLayout: Khung sau đăng nhập: sidebar, header, menu tài khoản, chuông, ô tìm kiếm và Outlet chứa page; quản lý thu gọn menu và thông báo giao diện. */
 export default function DashboardLayout() {
   const { user, signOut } = useAuth()
   const location = useLocation()

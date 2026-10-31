@@ -1,3 +1,9 @@
+/**
+ * File: modules/dashboard/pages/DashboardPage.tsx
+ * Loại: MÀN HÌNH — Trang chủ / tổng quan Admin và Owner.
+ * Đường dẫn: /dashboard.
+ * Công dụng: Điều phối dữ liệu và nội dung dashboard theo role phù hợp; ô tìm kiếm và các khối tổng quan.
+ */
 import '../dashboard.css'
 import { useNavigate } from 'react-router-dom'
 import OwnerOverview from '../../owner/pages/OwnerOverview'
@@ -10,6 +16,7 @@ import AdminDashboardOverview from '../components/AdminDashboardOverview'
 import BusinessOverview from '../components/BusinessOverview'
 import { roleNames } from '../../../shared/utils/roles'
 
+/** DashboardPage: Điều phối dữ liệu và nội dung dashboard theo role phù hợp; ô tìm kiếm và các khối tổng quan. */
 export default function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()

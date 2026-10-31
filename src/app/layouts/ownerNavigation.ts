@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/ownerNavigation.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Dữ liệu cấu hình menu Owner: nhãn, liên kết, nhóm, biểu tượng. Đây là cấu hình, không phải màn hình.
+ */
 import type { IconName } from '../../shared/ui/Icon'
 export type NavItem = {
   label: string
@@ -44,7 +49,7 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Tồn kho',
-    href: '/dashboard#owner-stock',
+    href: '/owner/inventory',
     icon: 'box',
     group: 'KHO HÀNG',
   },

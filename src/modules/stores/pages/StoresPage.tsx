@@ -1,3 +1,9 @@
+/**
+ * File: modules/stores/pages/StoresPage.tsx
+ * Loại: MÀN HÌNH — Quản lý cửa hàng.
+ * Đường dẫn: /stores.
+ * Công dụng: Danh sách cửa hàng; tìm/lọc; tạo, sửa và tạo từ cửa hàng có sẵn; hiển thị kho tổng, BM và trạng thái.
+ */
 import axiosClient from '../../../shared/api/axiosClient'
 /** Shared store management page for Admin and Owner; store data comes from the existing API. */
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
@@ -7,6 +13,7 @@ import { Link } from 'react-router-dom'
 import { default as DashboardIcon } from '../../../shared/ui/Icon'
 import type { DashboardStore } from '../../../shared/types/store'
 import { listStores, saveStoreRequest } from '../services/storeService'
+import { useAuth } from '../../../shared/hooks/useAuth'
 import '../stores.css'
 
 type StoreStatus = DashboardStore['status']
@@ -26,7 +33,9 @@ const emptyForm: StoreFormValues = {
   status: 'PLANNED',
 }
 
+/** StoresPage: Danh sách cửa hàng; tìm/lọc; tạo, sửa và tạo từ cửa hàng có sẵn; hiển thị kho tổng, BM và trạng thái. */
 export default function StoresPage() {
+  const { user } = useAuth()
   const [copyOpen, setCopyOpen] = useState(false)
   const [templates, setTemplates] = useState<DashboardStore[]>([])
   const [templateLoading, setTemplateLoading] = useState(false)
@@ -293,7 +302,7 @@ export default function StoresPage() {
               }}
               aria-label="Lọc trạng thái"
             >
-              <option value="">Mọi trạng thái</option>
+              <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="PLANNED">Đang chuẩn bị</option>
               <option value="INACTIVE">Ngừng hoạt động</option>
@@ -306,7 +315,7 @@ export default function StoresPage() {
               }}
               aria-label="Lọc loại kho"
             >
-              <option value="">Mọi loại kho</option>
+              <option value="">Tất cả loại kho</option>
               <option value="central">Kho tổng</option>
               <option value="branch">Kho cửa hàng</option>
             </select>
@@ -333,7 +342,7 @@ export default function StoresPage() {
                   <th>Địa chỉ</th>
                   <th>Điện thoại</th>
                   <th>Loại kho</th>
-                  <th>BM phụ trách</th>
+                  <th>Người quản lý</th>
                   <th>Trạng thái</th>
                   <th aria-label="Thao tác" />
                 </tr>
@@ -362,7 +371,11 @@ export default function StoresPage() {
                           {store.central ? 'Kho tổng' : 'Kho cửa hàng'}
                         </span>
                       </td>
-                      <td>{store.managers?.[0]?.fullName || 'Chưa gán'}</td>
+                      <td>
+                        {store.managers
+                          ?.map((manager) => manager.fullName)
+                          .join(', ') || 'Chưa gán'}
+                      </td>
                       <td>
                         <span
                           className={`status-badge store-${store.status.toLowerCase()}`}
@@ -378,6 +391,14 @@ export default function StoresPage() {
                         >
                           Sửa
                         </button>
+                        {user?.role === 'OWNER' && (
+                          <Link
+                            className="edit-store-button"
+                            to={`/owner/inventory?storeId=${store.id}&inStockOnly=true`}
+                          >
+                            Xem tồn kho
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -636,6 +657,12 @@ export default function StoresPage() {
                 />
               </label>
 
+              {editingStore?.status === 'PLANNED' && (
+                <p className="store-copy-note">
+                  Để hoạt động, cửa hàng cần có người quản lý, cấu hình hàng bán
+                  và giá bán.
+                </p>
+              )}
               {editingStore && (
                 <label>
                   Trạng thái

@@ -1,5 +1,11 @@
+/**
+ * File: shared/ui/FormDialog.tsx
+ * Loại: FORM / POPUP — mở bên trong màn hình, không phải trang riêng.
+ * Công dụng: Khung popup chứa form; header/body/footer, nút submit theo formId, focus, khóa đóng/lưu lúc busy và portal lên body. Form nghiệp vụ được truyền bằng children.
+ */
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+/** FormDialog: Khung popup chứa form; header/body/footer, nút submit theo formId, focus, khóa đóng/lưu lúc busy và portal lên body. Form nghiệp vụ được truyền bằng children. */
 export default function FormDialog({
   title,
   formId,

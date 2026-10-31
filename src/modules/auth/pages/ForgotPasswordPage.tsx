@@ -1,6 +1,13 @@
+/**
+ * File: modules/auth/pages/ForgotPasswordPage.tsx
+ * Loại: MÀN HÌNH — Quên mật khẩu.
+ * Đường dẫn: /forgot-password.
+ * Công dụng: Hướng dẫn liên hệ Admin lấy mật khẩu được cấp; không tự gửi email khôi phục.
+ */
 import { Link } from 'react-router-dom'
 import '../auth.css'
 
+/** ForgotPasswordPage: Hướng dẫn liên hệ Admin lấy mật khẩu được cấp; không tự gửi email khôi phục. */
 export default function ForgotPasswordPage() {
   return (
     <section
@@ -25,8 +32,7 @@ export default function ForgotPasswordPage() {
           />
         </svg>
         <span>
-          Vui lòng liên hệ Admin để được cấp mật khẩu tạm. Sau khi đăng nhập
-          bằng mật khẩu tạm, hệ thống sẽ yêu cầu bạn đổi mật khẩu.
+          Liên hệ quản trị viên để được hỗ trợ khôi phục quyền truy cập tài khoản.
         </span>
       </div>
       <Link className="submit-button forgot-back-button" to="/login">

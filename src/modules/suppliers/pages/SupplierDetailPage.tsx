@@ -1,3 +1,9 @@
+/**
+ * File: modules/suppliers/pages/SupplierDetailPage.tsx
+ * Loại: MÀN HÌNH — Chi tiết nhà cung cấp.
+ * Đường dẫn: /owner/suppliers/:id.
+ * Công dụng: Thông tin chi tiết nhà cung cấp và các dữ liệu liên quan API cung cấp.
+ */
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
@@ -58,6 +64,7 @@ const labels: Record<string, string> = {
 }
 const date = (value: string | null) =>
   value ? new Date(value).toLocaleDateString('vi-VN') : '—'
+/** SupplierDetailPage: Thông tin chi tiết nhà cung cấp và các dữ liệu liên quan API cung cấp. */
 export default function SupplierDetailPage() {
   const { id } = useParams()
   const [data, setData] = useState<Detail | null>(null)

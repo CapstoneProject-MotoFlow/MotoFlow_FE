@@ -1,3 +1,8 @@
+/**
+ * File: modules/owner/pages/owner-permissions.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS bảng quyền, avatar, switch và timeline.
+ */
 .owner-permissions-page {
   width: 100%;
   max-width: 1120px;

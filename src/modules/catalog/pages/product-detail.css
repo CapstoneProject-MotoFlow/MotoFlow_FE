@@ -1,3 +1,8 @@
+/**
+ * File: modules/catalog/pages/product-detail.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS thông tin, ảnh, giá và tồn trong chi tiết phụ tùng.
+ */
 .product-detail {
   max-width: 1200px;
 }
@@ -321,4 +326,11 @@
   margin: 0;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.product-info-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }

@@ -1,3 +1,8 @@
+/**
+ * File: modules/owner/pages/OwnerOverview.tsx
+ * Loại: THÀNH PHẦN MÀN HÌNH — nội dung được các trang dùng lại, không có route riêng.
+ * Công dụng: Các chỉ số/shortcut tổng quan công việc Owner từ home.
+ */
 import { getHome } from '../../../shared/api/homeService'
 import { useEffect, useState } from 'react'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
@@ -44,6 +49,7 @@ const metrics: {
     action: 'Xem',
   },
 ]
+/** OwnerOverview: Các chỉ số/shortcut tổng quan công việc Owner từ home. */
 export default function OwnerOverview() {
   const [notice, setNotice] = useState('')
   const [counts, setCounts] = useState<Record<string, number>>({})

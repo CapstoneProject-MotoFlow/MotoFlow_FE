@@ -1,3 +1,9 @@
+/**
+ * File: modules/admin/pages/AdminPermissionHistoryPage.tsx
+ * Loại: MÀN HÌNH — Lịch sử phân quyền Admin.
+ * Đường dẫn: /permission-history.
+ * Công dụng: Lịch sử phân quyền; gom dữ liệu lịch sử theo tài khoản, lọc người/loại thay đổi/ngày, phân trang và chức năng xuất dữ liệu trong màn.
+ */
 /** Admin permission audit screen. Combines each account's existing history endpoint for display/export. */
 import '../admin.css'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
@@ -33,6 +39,7 @@ const changeNames: Record<string, string> = {
   PERMISSION_REVOKED: 'Thu hồi quyền',
 }
 
+/** AdminPermissionHistoryPage: Lịch sử phân quyền; gom dữ liệu lịch sử theo tài khoản, lọc người/loại thay đổi/ngày, phân trang và chức năng xuất dữ liệu trong màn. */
 export default function AdminPermissionHistoryPage() {
   const [accounts, setAccounts] = useState<DashboardAccount[]>([])
   const [stores, setStores] = useState<DashboardStore[]>([])

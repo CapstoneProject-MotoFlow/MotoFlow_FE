@@ -1,3 +1,8 @@
+/**
+ * File: modules/customers/pages/CustomerListPage.tsx
+ * Loại: THÀNH PHẦN MÀN HÌNH — nội dung được các trang dùng lại, không có route riêng.
+ * Công dụng: Danh sách khách; tìm kiếm, lọc mua chịu/đang nợ, phân trang API, mở tạo/sửa. scope quyết định nhãn và cột công nợ theo toàn chuỗi hay cửa hàng.
+ */
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
@@ -12,6 +17,7 @@ const credit: Record<string, string> = {
   ELIGIBLE: 'Được mua chịu',
   REVOKED: 'Đã thu hồi',
 }
+/** CustomerListPage: Danh sách khách; tìm kiếm, lọc mua chịu/đang nợ, phân trang API, mở tạo/sửa. scope quyết định nhãn và cột công nợ theo toàn chuỗi hay cửa hàng. */
 export default function CustomerListPage({
   scope,
 }: {

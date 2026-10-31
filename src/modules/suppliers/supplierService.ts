@@ -1,6 +1,36 @@
+/**
+ * File: modules/suppliers/supplierService.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Gọi API nhà cung cấp; apiMessage chuẩn hóa thông báo lỗi API để màn hình hiển thị.
+ */
 import axiosClient from '../../shared/api/axiosClient'
 import type { Supplier } from './types'
 export const supplierService = {
+  nameExists: async (name: string, exceptId?: number) => {
+    const normalize = (value: string) =>
+      value.trim().normalize('NFC').toLocaleLowerCase('vi')
+    let page = 0
+    let loaded = 0
+    while (true) {
+      const { data } = await axiosClient.get<{
+        items: Supplier[]
+        totalItems: number
+      }>('/suppliers', {
+        params: { q: name, page, size: 100 },
+      })
+      if (
+        data.items.some(
+          (item) =>
+            item.id !== exceptId &&
+            normalize(item.supplierName) === normalize(name),
+        )
+      )
+        return true
+      loaded += data.items.length
+      if (!data.items.length || loaded >= data.totalItems) return false
+      page++
+    }
+  },
   list: async (params: { q: string; status: string; page: number }) =>
     (
       await axiosClient.get<{ items: Supplier[]; totalItems: number }>(

@@ -1,3 +1,8 @@
+/**
+ * File: modules/dashboard/components/DashboardWidgets.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Khối UI nhỏ dùng lại: MetricCard (thẻ chỉ số), StoreStatusPanel (trạng thái cửa hàng), DashboardIcon (dùng lại Icon).
+ */
 import { Link } from 'react-router-dom'
 /** Small reusable presentation pieces shared by role dashboards. */
 import type { DashboardStore } from '../types/dashboardTypes'
@@ -8,6 +13,7 @@ export type { IconName }
 
 export const DashboardIcon = Icon
 
+/** MetricCard: Hiển thị thẻ chỉ số với tiêu đề, giá trị, biểu tượng và liên kết. */
 export function MetricCard({
   title,
   value,
@@ -37,6 +43,7 @@ export function MetricCard({
   )
 }
 
+/** StoreStatusPanel: Hiển thị tình trạng các cửa hàng trong khối tổng quan. */
 export function StoreStatusPanel({
   stores,
   management = false,

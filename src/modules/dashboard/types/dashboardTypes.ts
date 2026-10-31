@@ -1,3 +1,8 @@
+/**
+ * File: modules/dashboard/types/dashboardTypes.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Kiểu DashboardData, sản phẩm và các kiểu dashboard dùng hoặc xuất lại.
+ */
 export type DashboardProduct = {
   id: number
   sku: string

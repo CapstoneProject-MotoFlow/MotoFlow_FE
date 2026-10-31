@@ -1,3 +1,9 @@
+/**
+ * File: modules/owner/pages/ProductCreatePage.tsx
+ * Loại: MÀN HÌNH — Tạo mới / chỉnh sửa phụ tùng.
+ * Đường dẫn: /owner/products/:id/edit, /owner/products/new, /branch-manager/products/new, /branch-manager/products/:id/edit.
+ * Công dụng: Dùng chung cho tạo và sửa phụ tùng tùy URL có id; nhập mã, nhóm, thương hiệu, đơn vị, thông số, OEM/barcode, dòng xe và ảnh. Codes là component con quản lý danh sách mã nhập bằng Enter.
+ */
 import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import ProductImageUrls from '../../catalog/components/ProductImageUrls'
@@ -20,6 +26,7 @@ type Model = {
   modelName: string
   status: string
 }
+/** Codes: Quản lý danh sách mã OEM hoặc barcode: nhập mã, thêm bằng Enter và bỏ mã. */
 function Codes({
   label,
   values,
@@ -68,6 +75,7 @@ function Codes({
     </div>
   )
 }
+/** ProductCreatePage: Dùng chung cho tạo và sửa phụ tùng tùy URL có id; nhập mã, nhóm, thương hiệu, đơn vị, thông số, OEM/barcode, dòng xe và ảnh. Codes là component con quản lý danh sách mã nhập bằng Enter. */
 export default function ProductCreatePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -321,7 +329,7 @@ export default function ProductCreatePage() {
                   </div>
                 </section>
                 <section className="owner-panel">
-                  <h2>Mã bổ sung</h2>
+                  <h2>Mã vạch</h2>
                   <div className="part-create-codes">
                     <Codes label="Mã OEM" values={oem} onChange={setOem} />
                     <Codes

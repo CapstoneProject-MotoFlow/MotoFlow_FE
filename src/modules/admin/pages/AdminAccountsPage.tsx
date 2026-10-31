@@ -1,3 +1,9 @@
+/**
+ * File: modules/admin/pages/AdminAccountsPage.tsx
+ * Loại: MÀN HÌNH — Quản lý tài khoản Admin.
+ * Đường dẫn: /accounts.
+ * Công dụng: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp mật khẩu được cấp.
+ */
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 /**
  * Admin account screen: loads accounts/stores, handles search and filters,
@@ -64,6 +70,7 @@ const emptyForm: AccountForm = {
   storeId: '',
 }
 
+/** AccountsPage: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp mật khẩu được cấp. */
 export default function AccountsPage() {
   const { user: authenticatedUser } = useAuth()
   const user = authenticatedUser as AuthUser
@@ -379,7 +386,7 @@ export default function AccountsPage() {
         getErrorMessage(
           requestError,
           action === 'reset'
-            ? 'Không thể cấp lại mật khẩu tạm.'
+            ? 'Không thể cấp lại mật khẩu được cấp.'
             : `Không thể ${action === 'lock' ? 'khóa' : 'mở khóa'} tài khoản.`,
         ),
       )
@@ -391,7 +398,7 @@ export default function AccountsPage() {
   async function copyPassword(password: string) {
     try {
       await navigator.clipboard.writeText(password)
-      setNotice('Đã sao chép mật khẩu tạm.')
+      setNotice('Đã sao chép mật khẩu được cấp.')
     } catch {
       setNotice(
         'Trình duyệt không cho phép sao chép. Hãy chọn và sao chép mật khẩu trên màn hình.',
@@ -638,7 +645,7 @@ export default function AccountsPage() {
                           </button>
                           <button
                             type="button"
-                            title="Cấp mật khẩu tạm"
+                            title="Cấp mật khẩu được cấp"
                             aria-label={`Cấp lại mật khẩu ${account.fullName}`}
                             disabled={workingId === account.id}
                             onClick={() => void resetPassword(account)}
@@ -726,7 +733,7 @@ export default function AccountsPage() {
               <div className="created-password">
                 <h2 id="account-modal-title">
                   {created.kind === 'reset'
-                    ? 'Mật khẩu tạm mới'
+                    ? 'Mật khẩu được cấp mới'
                     : 'Tài khoản đã được tạo'}
                 </h2>
                 <p>
@@ -734,7 +741,7 @@ export default function AccountsPage() {
                   <strong>{created.account.fullName}</strong>. Mật khẩu chỉ hiển
                   thị lần này và người dùng cần đổi sau khi đăng nhập.
                 </p>
-                <label>Mật khẩu tạm</label>
+                <label>Mật khẩu được cấp</label>
                 <div className="temporary-password-value">
                   <code>{created.temporaryPassword}</code>
                   <button
@@ -765,7 +772,9 @@ export default function AccountsPage() {
                 )}
                 <div className="account-form-grid">
                   <label>
-                    Họ và tên <b>*</b>
+                    <span>
+                      Họ và tên <b aria-hidden="true">*</b>
+                    </span>
                     <input
                       required
                       maxLength={100}
@@ -777,7 +786,9 @@ export default function AccountsPage() {
                     />
                   </label>
                   <label>
-                    Tên đăng nhập <b>*</b>
+                    <span>
+                      Tên đăng nhập <b aria-hidden="true">*</b>
+                    </span>
                     <input
                       required
                       minLength={3}
@@ -876,8 +887,8 @@ export default function AccountsPage() {
                 <div className="temporary-password-note">
                   <DashboardIcon name="lock" />
                   <span>
-                    Mật khẩu tạm sẽ được hệ thống tạo và chỉ hiển thị một lần
-                    sau khi tạo tài khoản.
+                    Mật khẩu được cấp sẽ được hệ thống tạo và chỉ hiển thị một
+                    lần sau khi tạo tài khoản.
                   </span>
                 </div>
                 <div className="account-modal-actions">
@@ -1176,8 +1187,8 @@ export default function AccountsPage() {
                 <>
                   Mật khẩu hiện tại của{' '}
                   <strong>{confirmation.account.fullName}</strong> hết hiệu lực
-                  ngay. Người dùng phải đổi mật khẩu tạm trước khi dùng chức
-                  năng khác.
+                  ngay. Người dùng phải đổi mật khẩu được cấp trước khi dùng
+                  chức năng khác.
                 </>
               ) : confirmation.action === 'lock' ? (
                 'Người dùng không đăng nhập được cho tới khi Admin mở khóa. Tài khoản không bị xóa và chứng từ đã lập vẫn giữ tên người lập.'
@@ -1199,7 +1210,7 @@ export default function AccountsPage() {
                 onClick={() => void confirmAccountAction()}
               >
                 {confirmation.action === 'reset'
-                  ? 'Cấp mật khẩu tạm'
+                  ? 'Cấp mật khẩu được cấp'
                   : confirmation.action === 'lock'
                     ? 'Khóa tài khoản'
                     : 'Mở khóa tài khoản'}

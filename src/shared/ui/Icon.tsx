@@ -1,3 +1,8 @@
+/**
+ * File: shared/ui/Icon.tsx
+ * Loại: THÀNH PHẦN GIAO DIỆN DÙNG CHUNG — không phải màn hình.
+ * Công dụng: Bộ SVG theo IconName; paths ánh xạ tên biểu tượng sang nét vẽ SVG.
+ */
 export type IconName =
   | 'menu'
   | 'grid'
@@ -73,6 +78,7 @@ const paths: Record<IconName, string> = {
   logout: 'M10 17l5-5-5-5m5 5H3m9-9h7a2 2 0 012 2v14a2 2 0 01-2 2h-7',
 }
 
+/** Icon: Bộ SVG theo IconName; paths ánh xạ tên biểu tượng sang nét vẽ SVG. */
 export default function Icon({ name }: { name: IconName }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">

@@ -1,3 +1,8 @@
+/**
+ * File: modules/suppliers/types.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Kiểu dữ liệu nhà cung cấp và dữ liệu liên quan.
+ */
 export type Supplier = {
   id: number
   supplierCode: string

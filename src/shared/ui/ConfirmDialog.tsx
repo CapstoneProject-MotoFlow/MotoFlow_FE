@@ -1,5 +1,11 @@
+/**
+ * File: shared/ui/ConfirmDialog.tsx
+ * Loại: FORM / POPUP — mở bên trong màn hình, không phải trang riêng.
+ * Công dụng: Popup xác nhận hành động; trạng thái đang xử lý, focus, Escape, Tab và khôi phục focus sau đóng.
+ */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+/** ConfirmDialog: Popup xác nhận hành động; trạng thái đang xử lý, focus, Escape, Tab và khôi phục focus sau đóng. */
 export default function ConfirmDialog({
   confirmLabel = 'Xác nhận',
   danger = false,

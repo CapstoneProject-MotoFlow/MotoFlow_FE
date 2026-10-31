@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/layouts.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS cho khung dashboard, sidebar/header/menu, trạng thái thu gọn và responsive.
+ */
 .login-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;

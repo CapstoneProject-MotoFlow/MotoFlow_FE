@@ -1,3 +1,9 @@
+/**
+ * File: modules/catalog/pages/ProductDetailPage.tsx
+ * Loại: MÀN HÌNH — Chi tiết phụ tùng.
+ * Đường dẫn: /owner/products/:id, /branch-manager/products/:id, /staff/products/:id.
+ * Công dụng: Thông tin phụ tùng, hình ảnh, giá, tương thích xe, tồn; Owner xem nhiều kho; sửa và xác nhận ngừng/mở kinh doanh theo quyền. StockBreakdown là component con giải thích các loại tồn không khả dụng.
+ */
 import { mapConcurrent } from '../../../shared/utils/mapConcurrent'
 import { canEditCatalog } from '../../../shared/utils/roles'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
@@ -50,6 +56,7 @@ const stockStates = [
   ['inTransitQty', 'Đang điều chuyển'],
 ] as const
 
+/** StockBreakdown: Hiển thị chi tiết số lượng tồn không khả dụng theo từng trạng thái kho. */
 function StockBreakdown({ stock, unit }: { stock: Stock; unit: string }) {
   return (
     <details className="product-stock-breakdown">
@@ -67,6 +74,7 @@ function StockBreakdown({ stock, unit }: { stock: Stock; unit: string }) {
     </details>
   )
 }
+/** ProductDetailPage: Thông tin phụ tùng, hình ảnh, giá, tương thích xe, tồn; Owner xem nhiều kho; sửa và xác nhận ngừng/mở kinh doanh theo quyền. StockBreakdown là component con giải thích các loại tồn không khả dụng. */
 export default function ProductDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
@@ -271,9 +279,20 @@ export default function ProductDetailPage() {
                   <h2>Thông tin phụ tùng</h2>
                 </div>
                 {canEdit && (
-                  <Link className="product-outline" to={`${base}/${id}/edit`}>
-                    ✎ Sửa
-                  </Link>
+                  <div className="product-info-actions">
+                    <Link className="product-outline" to={`${base}/${id}/edit`}>
+                      ✎ Sửa
+                    </Link>
+                    <button
+                      className="product-danger"
+                      disabled={busy}
+                      onClick={() => setConfirming(true)}
+                    >
+                      {data.status === 'ACTIVE'
+                        ? '⊘ Ngừng kinh doanh'
+                        : 'Mở lại kinh doanh'}
+                    </button>
+                  </div>
                 )}
               </div>
               <dl className="product-info-grid">
@@ -293,19 +312,6 @@ export default function ProductDetailPage() {
                   </div>
                 ))}
               </dl>
-              {canEdit && (
-                <footer>
-                  <button
-                    className="product-danger"
-                    disabled={busy}
-                    onClick={() => setConfirming(true)}
-                  >
-                    {data.status === 'ACTIVE'
-                      ? '⊘ Ngừng kinh doanh'
-                      : 'Mở lại kinh doanh'}
-                  </button>
-                </footer>
-              )}
             </section>
             <section className="product-detail-panel">
               <h2>Giá bán</h2>

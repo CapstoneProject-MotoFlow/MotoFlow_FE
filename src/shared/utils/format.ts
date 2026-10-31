@@ -1,3 +1,9 @@
+/**
+ * File: shared/utils/format.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Tiện ích định dạng, ví dụ hiển thị ngày; xử lý trường hợp không có dữ liệu.
+ */
+/** formatDate: Định dạng ngày để hiển thị, xử lý trường hợp giá trị ngày không có. */
 export function formatDate(value: string | null | undefined) {
   if (value == null || value === '') return '—'
   const date = new Date(value)

@@ -1,3 +1,9 @@
+/**
+ * File: modules/profile/pages/ProfileChangePasswordPage.tsx
+ * Loại: MÀN HÌNH — Đổi mật khẩu từ hồ sơ.
+ * Đường dẫn: /profile/change-password.
+ * Công dụng: Form đổi mật khẩu chủ động từ hồ sơ; khác màn đổi bắt buộc sau mật khẩu được cấp.
+ */
 /** Password change form for an already signed-in user. The temporary-password flow stays on the auth page. */
 import { useState, type FormEvent } from 'react'
 import axios from 'axios'
@@ -9,8 +15,10 @@ import { useAuth } from '../../../shared/hooks/useAuth'
 import '../profile.css'
 import { changePassword } from '../services/profileService'
 
+/** ProfileChangePasswordPage: Form đổi mật khẩu chủ động từ hồ sơ; khác màn đổi bắt buộc sau mật khẩu được cấp. */
 export default function ProfileChangePasswordPage() {
-  const { user } = useAuth()
+  const { user, finishPasswordChange, signOut } = useAuth()
+  const forced = Boolean(user?.mustChangePassword)
   const navigate = useNavigate()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -41,6 +49,11 @@ export default function ProfileChangePasswordPage() {
     setSubmitting(true)
     try {
       await changePassword(currentPassword, newPassword)
+      if (forced) {
+        finishPasswordChange()
+        navigate('/dashboard', { replace: true })
+        return
+      }
       setCurrentPassword('')
       setNewPassword('')
       setConfirmation('')
@@ -66,19 +79,26 @@ export default function ProfileChangePasswordPage() {
       <main className="dashboard-content profile-password-content">
         <div className="profile-password-heading">
           <h1>Đổi mật khẩu</h1>
-          <div className="breadcrumb">
-            <Link to="/dashboard">Trang chủ</Link>
-            <span>›</span>
-            <Link to="/profile">Thông tin cá nhân</Link>
-            <span>›</span>
-            <span>Đổi mật khẩu</span>
-          </div>
+          {!forced && (
+            <div className="breadcrumb">
+              <Link to="/dashboard">Trang chủ</Link>
+              <span>›</span>
+              <Link to="/profile">Thông tin cá nhân</Link>
+              <span>›</span>
+              <span>Đổi mật khẩu</span>
+            </div>
+          )}
         </div>
         <section className="profile-password-panel">
           <div className="profile-password-panel-title">
             <h2>Đặt mật khẩu mới</h2>
           </div>
           <form className="profile-password-form" onSubmit={submit}>
+            {forced && (
+              <p className="password-notice" role="note">
+                Vui lòng đổi mật khẩu trước khi sử dụng
+              </p>
+            )}
             {success && (
               <p className="profile-password-success" role="status">
                 {success}
@@ -149,9 +169,9 @@ export default function ProfileChangePasswordPage() {
                 className="secondary-button"
                 type="button"
                 disabled={submitting}
-                onClick={() => navigate('/profile')}
+                onClick={() => (forced ? void signOut() : navigate('/profile'))}
               >
-                Hủy
+                {forced ? 'Đăng xuất' : 'Hủy'}
               </button>
             </div>
           </form>

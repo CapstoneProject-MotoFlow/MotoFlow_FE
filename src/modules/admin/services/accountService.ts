@@ -1,3 +1,8 @@
+/**
+ * File: modules/admin/services/accountService.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Hàm gọi API tài khoản/cửa hàng/lịch sử: listAccounts, listAccountSummaries, getAccount, createAccount, updatePermissions, resetAccountPassword, changeAccountLock, listPermissionHistory.
+ */
 import axiosClient from '../../../shared/api/axiosClient'
 import type { Account, DashboardAccount } from '../../../shared/types/account'
 import type { DashboardStore } from '../../../shared/types/store'

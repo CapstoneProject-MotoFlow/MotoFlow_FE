@@ -1,3 +1,8 @@
+/**
+ * File: shared/types/account.ts
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Kiểu tài khoản, thông tin và sự kiện lịch sử phân quyền.
+ */
 export type AccountRole = 'ADMIN' | 'OWNER' | 'BRANCH_MANAGER' | 'STAFF'
 export type AccountState = 'ACTIVE' | 'TEMPORARILY_LOCKED' | 'LOCKED'
 export type DashboardAccount = {

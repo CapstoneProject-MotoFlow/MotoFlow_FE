@@ -1,3 +1,8 @@
+/**
+ * File: shared/ui/HeaderSearch.tsx
+ * Loại: THÀNH PHẦN GIAO DIỆN DÙNG CHUNG — không phải màn hình.
+ * Công dụng: Ô tìm kiếm đưa lên vị trí header khi có vùng đích; hỗ trợ màn hình dùng tìm kiếm chung.
+ */
 import { useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
@@ -9,6 +14,7 @@ export type SearchItem = {
   meta?: string
   select: () => void
 }
+/** HeaderSearch: Ô tìm kiếm đưa lên vị trí header khi có vùng đích; hỗ trợ màn hình dùng tìm kiếm chung. */
 export default function HeaderSearch({
   items,
   placeholder,

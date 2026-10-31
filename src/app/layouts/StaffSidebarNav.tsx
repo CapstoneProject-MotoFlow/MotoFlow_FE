@@ -1,3 +1,8 @@
+/**
+ * File: app/layouts/StaffSidebarNav.tsx
+ * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
+ * Công dụng: Menu dành cho nhân viên.
+ */
 import { Link, useLocation } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
 import type { NavItem } from './ownerNavigation'
@@ -24,6 +29,7 @@ const items: NavItem[] = [
   { label: 'Kiểm kê', href: '#staff-counts', icon: 'checklist', pending: true },
   { label: 'Phụ tùng', href: '/staff/products', icon: 'tool' },
 ]
+/** StaffSidebarNav: Menu dành cho nhân viên. */
 export default function StaffSidebarNav({
   collapsed,
   onNotice,

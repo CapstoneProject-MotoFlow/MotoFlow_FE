@@ -1,3 +1,9 @@
+/**
+ * File: modules/suppliers/pages/SuppliersPage.tsx
+ * Loại: MÀN HÌNH — Danh sách nhà cung cấp.
+ * Đường dẫn: /owner/suppliers.
+ * Công dụng: Danh sách/tìm/lọc nhà cung cấp; mở form và thao tác đổi trạng thái.
+ */
 import '../supplier-redesign.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -5,6 +11,7 @@ import SupplierForm from '../components/SupplierForm'
 import type { Supplier } from '../types'
 import { supplierService, apiMessage } from '../supplierService'
 import '../suppliers.css'
+/** SuppliersPage: Danh sách/tìm/lọc nhà cung cấp; mở form và thao tác đổi trạng thái. */
 export default function SuppliersPage() {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('ACTIVE')
