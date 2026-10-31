@@ -22,11 +22,11 @@ export default function FormDialog({
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    ref.current
-      ?.querySelector<HTMLElement>(
-        'input:not(:disabled):not([type="hidden"]), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)',
-      )
-      ?.focus()
+    const initial =
+      ref.current?.querySelector<HTMLElement>(
+        'input:not(:disabled):not([type="hidden"]), textarea:not(:disabled), select:not(:disabled)',
+      ) || ref.current?.querySelector<HTMLElement>('button:not(:disabled)')
+    initial?.focus()
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !callback.current.busy)
         callback.current.onClose()

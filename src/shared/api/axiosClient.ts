@@ -23,8 +23,14 @@ export function refreshSession() {
         return response.data
       })
       .catch((error) => {
-        clearAccessToken()
-        window.dispatchEvent(new Event('auth-session-expired'))
+        // Network failures and server outages do not prove that the session expired.
+        if (
+          axios.isAxiosError(error) &&
+          [401, 403].includes(error.response?.status ?? 0)
+        ) {
+          clearAccessToken()
+          window.dispatchEvent(new Event('auth-session-expired'))
+        }
         throw error
       })
       .finally(() => {
