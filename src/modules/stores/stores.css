@@ -65,7 +65,7 @@
   background: #394cf0;
 }
 .add-store-button:disabled {
-  opacity: .7;
+  opacity: 0.7;
   cursor: wait;
 }
 .add-store-button > span {
@@ -104,7 +104,8 @@
   background: transparent;
   font-size: 0.9375rem;
 }
-.stores-toolbar select, .store-form select {
+.stores-toolbar select,
+.store-form select {
   height: 37px;
   padding: 0 30px 0 11px;
   border: 1px solid #d8dfeb;
@@ -236,7 +237,8 @@
 .store-form .store-required {
   color: #ed4a53;
 }
-.store-form input:not([type='checkbox']), .store-form select {
+.store-form input:not([type='checkbox']),
+.store-form select {
   width: 100%;
   height: 39px;
   padding: 0 11px;
@@ -249,7 +251,8 @@
   font-weight: 400;
   outline: 0;
 }
-.store-form input:focus, .store-form select:focus {
+.store-form input:focus,
+.store-form select:focus {
   border-color: #596aff;
   box-shadow: 0 0 0 3px #5264ff1a;
 }
@@ -272,7 +275,8 @@
   gap: 9px;
   padding-top: 5px;
 }
-.store-modal-actions .edit-store-button, .store-modal-actions .add-store-button {
+.store-modal-actions .edit-store-button,
+.store-modal-actions .add-store-button {
   min-height: 36px;
   padding: 0 15px;
 }
@@ -342,7 +346,8 @@
 .store-copy-modal .store-form > label:not(.central-checkbox) {
   font-size: 1.0625rem;
 }
-.store-copy-modal .store-form input:not([type=checkbox]), .store-copy-modal .store-form select {
+.store-copy-modal .store-form input:not([type='checkbox']),
+.store-copy-modal .store-form select {
   height: 44px;
   font-size: 1.0625rem;
 }
@@ -410,7 +415,8 @@
   padding-top: 18px;
   padding-bottom: 18px;
 }
-.owner-dashboard .stores-table th, .owner-dashboard .stores-table td {
+.owner-dashboard .stores-table th,
+.owner-dashboard .stores-table td {
   font-size: 1rem;
 }
 .owner-dashboard .stores-table td strong {
@@ -419,7 +425,7 @@
 .owner-dashboard .stores-table-footer {
   min-height: 64px;
 }
-@media(max-width: 760px) {
+@media (max-width: 760px) {
   .stores-panel-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -433,7 +439,7 @@
     width: calc(100% - 28px);
   }
 }
-@media(max-width: 520px) {
+@media (max-width: 520px) {
   .store-copy-modal .store-modal-heading {
     padding: 20px 18px 8px;
   }
@@ -473,7 +479,7 @@
   display: block;
   line-height: 1.4;
 }
-@media(max-width: 520px) {
+@media (max-width: 520px) {
   .store-copy-modal .store-copy-actions {
     padding: 14px 18px;
   }
@@ -495,7 +501,9 @@
 .stores-page .stores-table {
   min-width: 1160px;
 }
-.store-modal input:not([type=checkbox]), .store-modal select, .store-modal-actions button {
+.store-modal input:not([type='checkbox']),
+.store-modal select,
+.store-modal-actions button {
   min-height: 44px;
 }
 .store-copy-modal .store-form {

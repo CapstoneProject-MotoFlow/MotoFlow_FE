@@ -1,0 +1,224 @@
+.branch-customers {
+  max-width: 1400px;
+  padding-top: 26px;
+}
+.branch-customers-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.branch-customers-heading h1 {
+  font-size: 24px;
+  margin: 0;
+}
+.branch-customers-heading nav {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  color: #526681;
+}
+.branch-customers-heading a {
+  color: inherit;
+  text-decoration: none;
+}
+.branch-customers-panel {
+  border: 1px solid #dfe5ed;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+.branch-customers-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #edf0f4;
+  gap: 16px;
+}
+.branch-customers-panel h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.branch-customers-panel h2 span {
+  font-size: 15px;
+  font-weight: 400;
+  color: #526681;
+  margin-left: 10px;
+}
+.branch-customer-primary {
+  background: #4b5eff;
+  border: 0;
+  border-radius: 7px;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+.branch-customers-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  flex-wrap: wrap;
+}
+.branch-customers-search {
+  width: 395px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid #ccd5e3;
+  border-radius: 7px;
+}
+.branch-customers-search svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.branch-customers-search input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 0;
+}
+.branch-customers-search:focus-within {
+  outline: 2px solid #4b5eff;
+}
+.branch-customers-debt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+}
+.branch-customers-debt input {
+  width: 18px;
+  height: 18px;
+  accent-color: #4b5eff;
+}
+.branch-customers-table {
+  overflow-x: auto;
+}
+.branch-customers-table table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 900px;
+  font-size: 14px;
+  text-align: left;
+}
+.branch-customers-table th {
+  padding: 15px 24px;
+  background: #f8fafc;
+  color: #526681;
+  font-weight: 500;
+  font-size: 13px;
+}
+.branch-customers-table td {
+  padding: 15px 24px;
+  border-top: 1px solid #edf0f4;
+  height: 68px;
+}
+.branch-customers-table th:first-child {
+  width: 25%;
+}
+.branch-customers-table a {
+  color: #4b5eff;
+  text-decoration: none;
+  font-weight: 500;
+}
+.branch-customers-table small {
+  display: block;
+  margin-top: 4px;
+  color: #526681;
+  font-size: 12px;
+}
+.branch-credit {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-size: 12px;
+  background: #f1f3f7;
+  color: #33445f;
+}
+.branch-credit.eligible {
+  background: #ecfcf3;
+  color: #008263;
+}
+.branch-credit.revoked {
+  background: #fff1f1;
+  color: #d32020;
+}
+.branch-customer-money {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.branch-customer-money.zero {
+  color: #94a3b8;
+  font-weight: 400;
+}
+.branch-customer-actions {
+  text-align: right;
+}
+.branch-customer-actions button,
+.branch-customers-panel footer button {
+  background: white;
+  border: 1px solid #d0d8e5;
+  border-radius: 6px;
+  padding: 8px 13px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.branch-customers-message {
+  padding: 30px;
+  text-align: center;
+  color: #74849a;
+}
+.branch-customers-panel footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #edf0f4;
+}
+.branch-customers-panel footer button:disabled {
+  opacity: 0.4;
+}
+.branch-customer-note {
+  padding: 12px 24px;
+  margin: 0;
+  border-top: 1px solid #edf0f4;
+  font-size: 12px;
+  color: #74849a;
+}
+@media (max-width: 700px) {
+  .branch-customers-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .branch-customers-heading nav {
+    font-size: 12px;
+  }
+  .branch-customers-panel > header {
+    padding: 16px;
+  }
+  .branch-customers-panel h2 {
+    font-size: 17px;
+  }
+  .branch-customer-primary {
+    font-size: 13px;
+  }
+  .branch-customers-toolbar {
+    padding: 16px;
+  }
+}

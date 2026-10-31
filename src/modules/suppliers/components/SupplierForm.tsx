@@ -1,16 +1,142 @@
 import { useState, type FormEvent } from 'react'
 import FormDialog from '../../../shared/ui/FormDialog'
-import { supplierApiMessage, type Supplier } from '../types'
-type Fields = 'supplierName' | 'taxCode' | 'contactName' | 'phone' | 'email' | 'address'
-export default function SupplierForm({ supplier, onClose }: { supplier?: Supplier; onClose: () => void }) {
-  const [values, setValues] = useState<Record<Fields, string>>({ supplierName: supplier?.supplierName || '', taxCode: supplier?.taxCode || '', contactName: supplier?.contactName || '', phone: supplier?.phone || '', email: supplier?.email || '', address: supplier?.address || '' })
-  const [status, setStatus] = useState<Supplier['status']>(supplier?.status || 'ACTIVE')
+import type { Supplier } from '../types'
+import { supplierService, apiMessage } from '../supplierService'
+import '../supplier-redesign.css'
+export default function SupplierForm({
+  supplier,
+  onClose,
+  onSaved,
+}: {
+  supplier?: Supplier
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const input = (name: Fields, label: string, maxLength: number, type = 'text') => <label key={name}><span>{label} <b>*</b></span><input name={name} required maxLength={maxLength} type={type} pattern={name === 'phone' ? '[0-9+ ()-]{8,20}' : undefined} title={name === 'phone' ? 'Nhập số điện thoại từ 8 đến 20 ký tự.' : undefined} value={values[name]} onChange={event => { setValues(current => ({ ...current, [name]: event.target.value })); setError('') }} /></label>
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (Object.values(values).some(value => !value.trim())) { setError('Vui lòng nhập đầy đủ các trường bắt buộc.'); return }
-    setError(supplierApiMessage)
+  const [status, setStatus] = useState(supplier?.status || 'ACTIVE')
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (busy) return
+    const values = Object.fromEntries(new FormData(e.currentTarget))
+    setBusy(true)
+    setError('')
+    let saved = false
+    try {
+      await supplierService.save(supplier?.id, values)
+      saved = true
+      if (supplier && status !== supplier.status)
+        await supplierService.status(supplier)
+      onSaved()
+    } catch (e) {
+      setError(
+        (saved ? 'Thông tin đã lưu, nhưng chưa đổi được trạng thái. ' : '') +
+          apiMessage(e),
+      )
+    } finally {
+      setBusy(false)
+    }
   }
-  return <FormDialog title={supplier ? `Sửa ${supplier.supplierName}` : 'Thêm nhà cung cấp'} formId="supplier-form" submitLabel={supplier ? 'Lưu thay đổi' : 'Thêm nhà cung cấp'} onClose={onClose}><form id="supplier-form" className="supplier-form" onSubmit={submit}>{input('supplierName', 'Tên nhà cung cấp', 150)}<div className="supplier-form-row">{input('taxCode', 'Mã số thuế', 20)}{input('contactName', 'Người liên hệ', 100)}</div><div className="supplier-form-row">{input('phone', 'Điện thoại', 20, 'tel')}{input('email', 'Email', 100, 'email')}</div>{input('address', 'Địa chỉ', 255)}{supplier && <div className="supplier-form-row"><label><span>Trạng thái <b>*</b></span><select name="status" required value={status} onChange={event => { setStatus(event.target.value as Supplier['status']); setError('') }}><option value="ACTIVE">Đang giao dịch</option><option value="INACTIVE">Ngừng giao dịch</option></select></label></div>}<p className="suppliers-api-note">{supplierApiMessage}</p>{error && <p className="form-error" role="alert">{error}</p>}</form></FormDialog>
+  return (
+    <FormDialog
+      title={supplier ? `Sửa ${supplier.supplierName}` : 'Thêm nhà cung cấp'}
+      formId="supplier-form"
+      submitLabel={
+        busy ? 'Đang lưu…' : supplier ? 'Lưu thay đổi' : 'Thêm nhà cung cấp'
+      }
+      onClose={() => {
+        if (!busy) onClose()
+      }}
+    >
+      <form id="supplier-form" className="supplier-edit" onSubmit={save}>
+        <fieldset disabled={busy}>
+          {!supplier && (
+            <label>
+              Mã nhà cung cấp *
+              <input
+                name="supplierCode"
+                required
+                maxLength={20}
+                pattern="[A-Za-z0-9._-]{1,20}"
+              />
+            </label>
+          )}
+          <label>
+            Tên nhà cung cấp *
+            <input
+              name="supplierName"
+              required
+              maxLength={150}
+              defaultValue={supplier?.supplierName}
+            />
+          </label>
+          <div className="supplier-edit-row">
+            <label>
+              Người liên hệ
+              <input
+                name="contactName"
+                maxLength={100}
+                defaultValue={supplier?.contactName || ''}
+              />
+            </label>
+            <label>
+              Điện thoại
+              <input
+                name="phone"
+                type="tel"
+                pattern="[0-9+ ]{8,20}"
+                maxLength={20}
+                defaultValue={supplier?.phone || ''}
+              />
+            </label>
+          </div>
+          <div className="supplier-edit-row">
+            <label>
+              Email
+              <input
+                name="email"
+                type="email"
+                maxLength={100}
+                defaultValue={supplier?.email || ''}
+              />
+            </label>
+            <label>
+              Mã số thuế
+              <input
+                name="taxCode"
+                pattern="[0-9]{10}(-?[0-9]{3})?"
+                maxLength={14}
+                defaultValue={supplier?.taxCode || ''}
+              />
+            </label>
+          </div>
+          <label>
+            Địa chỉ
+            <input
+              name="address"
+              maxLength={255}
+              defaultValue={supplier?.address || ''}
+            />
+          </label>
+          {supplier && (
+            <div className="supplier-edit-row">
+              <label>
+                Trạng thái
+                <select
+                  value={status}
+                  onChange={(e) =>
+                    setStatus(e.target.value as Supplier['status'])
+                  }
+                >
+                  <option value="ACTIVE">Đang giao dịch</option>
+                  <option value="INACTIVE">Ngừng giao dịch</option>
+                </select>
+              </label>
+            </div>
+          )}
+        </fieldset>
+        {error && <p role="alert">{error}</p>}
+      </form>
+    </FormDialog>
+  )
 }

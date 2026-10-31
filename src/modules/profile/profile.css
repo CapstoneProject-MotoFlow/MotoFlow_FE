@@ -129,7 +129,7 @@
 }
 .profile-info-list > div {
   display: grid;
-  grid-template-columns: 220px minmax(0,1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 18px;
   padding: 18px 0;
   border-bottom: 1px solid #edf0f4;
@@ -183,7 +183,7 @@
   text-decoration: none;
   white-space: nowrap;
 }
-@media(max-width: 600px) {
+@media (max-width: 600px) {
   .profile-info-list > div {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -203,6 +203,7 @@
 .profile-password-actions {
   flex-wrap: wrap;
 }
-.profile-password-actions .submit-button, .profile-password-actions .secondary-button {
+.profile-password-actions .submit-button,
+.profile-password-actions .secondary-button {
   min-height: 44px;
 }

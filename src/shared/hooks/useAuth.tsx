@@ -12,6 +12,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth phải được dùng bên trong AuthProvider.')
+  if (!context)
+    throw new Error('useAuth phải được dùng bên trong AuthProvider.')
   return context
 }

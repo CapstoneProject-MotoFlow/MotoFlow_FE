@@ -5,7 +5,7 @@
   margin: 0 0 34px;
   color: #14213a;
   font: 700 2rem/1.25 var(--font-sans);
-  letter-spacing: -.8px;
+  letter-spacing: -0.8px;
 }
 .login-form > label:not(.remember-row) {
   display: block;
@@ -117,6 +117,7 @@
     font-size: 1.875rem;
   }
 }
-.login-form input:not([type=checkbox]), .login-form button {
+.login-form input:not([type='checkbox']),
+.login-form button {
   min-height: 44px;
 }

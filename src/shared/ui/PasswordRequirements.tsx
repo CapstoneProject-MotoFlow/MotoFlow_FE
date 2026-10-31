@@ -8,13 +8,26 @@ type PasswordRequirementsProps = {
   differentFromLabel?: string
 }
 
-export default function PasswordRequirements({ password, temporaryPassword, username, differentFromLabel = 'Khác mật khẩu tạm' }: PasswordRequirementsProps) {
-  const { requirements } = validateNewPassword(password, temporaryPassword, username)
+export default function PasswordRequirements({
+  password,
+  temporaryPassword,
+  username,
+  differentFromLabel = 'Khác mật khẩu tạm',
+}: PasswordRequirementsProps) {
+  const { requirements } = validateNewPassword(
+    password,
+    temporaryPassword,
+    username,
+  )
 
   return (
     <ul className="password-rules" aria-label="Yêu cầu mật khẩu mới">
       {requirements.map((requirement) => (
-        <Requirement key={requirement.label} met={requirement.met}>{requirement.label === 'Khác mật khẩu tạm' ? differentFromLabel : requirement.label}</Requirement>
+        <Requirement key={requirement.label} met={requirement.met}>
+          {requirement.label === 'Khác mật khẩu tạm'
+            ? differentFromLabel
+            : requirement.label}
+        </Requirement>
       ))}
     </ul>
   )

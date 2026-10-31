@@ -1,0 +1,53 @@
+.customer-edit-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.customer-edit-form label {
+  display: block;
+  color: #33445f;
+  font-size: 14px;
+  min-width: 0;
+}
+.customer-edit-form b {
+  color: #ed4747;
+}
+.customer-edit-form input,
+.customer-edit-form textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  border: 1px solid #ccd5e3;
+  border-radius: 7px;
+  padding: 12px;
+  font: inherit;
+  color: inherit;
+}
+.customer-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.customer-edit-form input:disabled,
+.customer-edit-form textarea:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+.customer-edit-form > small {
+  display: block;
+  margin-top: 14px;
+  color: #74849a;
+  font-size: 12px;
+}
+.customer-edit-form p[role='alert'] {
+  color: #b42318;
+}
+@media (max-width: 550px) {
+  .customer-edit-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -53,17 +53,17 @@ src/
 
 ### Tìm file theo việc cần làm
 
-| Việc cần sửa | Bắt đầu từ |
-|---|---|
-| Thêm URL hoặc đổi trang mặc định | `src/app/routes/AppRoutes.tsx` |
-| Đổi quyền truy cập theo role | `src/app/guards/` |
-| Sửa menu, header, bố cục chung | `src/app/layouts/DashboardLayout.tsx` |
-| Sửa đăng nhập / đổi mật khẩu tạm | `src/modules/auth/` |
-| Sửa tổng quan theo từng role | `src/modules/dashboard/` |
-| Sửa tài khoản / lịch sử phân quyền | `src/modules/admin/` |
-| Sửa danh sách cửa hàng | `src/modules/stores/` |
-| Sửa đổi mật khẩu từ hồ sơ | `src/modules/profile/` |
-| Sửa API client hoặc kiểu chia sẻ | `src/shared/` |
+| Việc cần sửa                       | Bắt đầu từ                            |
+| ---------------------------------- | ------------------------------------- |
+| Thêm URL hoặc đổi trang mặc định   | `src/app/routes/AppRoutes.tsx`        |
+| Đổi quyền truy cập theo role       | `src/app/guards/`                     |
+| Sửa menu, header, bố cục chung     | `src/app/layouts/DashboardLayout.tsx` |
+| Sửa đăng nhập / đổi mật khẩu tạm   | `src/modules/auth/`                   |
+| Sửa tổng quan theo từng role       | `src/modules/dashboard/`              |
+| Sửa tài khoản / lịch sử phân quyền | `src/modules/admin/`                  |
+| Sửa danh sách cửa hàng             | `src/modules/stores/`                 |
+| Sửa đổi mật khẩu từ hồ sơ          | `src/modules/profile/`                |
+| Sửa API client hoặc kiểu chia sẻ   | `src/shared/`                         |
 
 ## Quy ước phụ thuộc
 
