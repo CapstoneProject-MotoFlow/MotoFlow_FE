@@ -203,3 +203,33 @@
   outline-offset: 4px;
   border-radius: 2px;
 }
+
+.parts-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.parts-row-actions a,
+.parts-row-actions button {
+  padding: 8px 10px;
+  border: 1px solid #d0d8e5;
+  border-radius: 6px;
+  background: white;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.parts-row-actions button {
+  color: #c62828;
+}
+
+.parts-row-actions a:link,
+.parts-row-actions a:visited {
+  color: #394fff;
+}
+.parts-row-actions a:hover,
+.parts-row-actions a:focus-visible {
+  color: #394fff;
+  background: #f3f5ff;
+}

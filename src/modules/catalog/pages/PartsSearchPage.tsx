@@ -156,6 +156,26 @@ export default function PartsSearchPage() {
           <div className="bm-products-search">
             <label className="bm-product-query">
               <Icon name="search" />
+              <datalist id="vehicle-options">
+                {['Xe máy', 'Xe đạp', 'Xe máy điện', 'Xe đạp điện'].map(
+                  (label) => (
+                    <option key={label} value={label} />
+                  ),
+                )}
+              </datalist>
+              <datalist id="category-options">
+                {categories.map((category) => (
+                  <option key={category.id} value={category.categoryName} />
+                ))}
+              </datalist>
+              <datalist id="model-options">
+                {models.map((model) => (
+                  <option
+                    key={model.id}
+                    value={model.manufacturer + ' ' + model.modelName}
+                  />
+                ))}
+              </datalist>
               <input
                 type="search"
                 aria-label="Tìm phụ tùng"
@@ -186,6 +206,8 @@ export default function PartsSearchPage() {
             <div id="bm-product-filters" className="bm-product-filters">
               <input
                 aria-label="Tìm loại xe"
+                className="text-search-filter"
+                list="vehicle-options"
                 placeholder="Loại xe"
                 value={vehicleText}
                 onChange={(event) => {
@@ -195,6 +217,8 @@ export default function PartsSearchPage() {
               />
               <input
                 aria-label="Tìm nhóm phụ tùng"
+                className="text-search-filter"
+                list="category-options"
                 placeholder="Nhóm phụ tùng"
                 value={categoryText}
                 onChange={(event) => {
@@ -204,6 +228,8 @@ export default function PartsSearchPage() {
               />
               <input
                 aria-label="Tìm dòng xe"
+                className="text-search-filter"
+                list="model-options"
                 placeholder="Dòng xe"
                 value={modelText}
                 onChange={(event) => {

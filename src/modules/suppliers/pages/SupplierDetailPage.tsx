@@ -199,7 +199,7 @@ export default function SupplierDetailPage() {
                     <option value="open">Đang mở</option>
                     <option value="FULLY_RECEIVED">Đã nhận đủ</option>
                     <option value="CANCELLED">Đã hủy</option>
-                    <option value="all">Mọi trạng thái</option>
+                    <option value="all">Tất cả trạng thái</option>
                   </select>
                 </div>
                 <div className="table-scroll">

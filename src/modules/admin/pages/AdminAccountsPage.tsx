@@ -2,7 +2,7 @@
  * File: modules/admin/pages/AdminAccountsPage.tsx
  * Loại: MÀN HÌNH — Quản lý tài khoản Admin.
  * Đường dẫn: /accounts.
- * Công dụng: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp mật khẩu được cấp.
+ * Công dụng: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp lại mật khẩu.
  */
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 /**
@@ -70,7 +70,7 @@ const emptyForm: AccountForm = {
   storeId: '',
 }
 
-/** AccountsPage: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp mật khẩu được cấp. */
+/** AccountsPage: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp lại mật khẩu. */
 export default function AccountsPage() {
   const { user: authenticatedUser } = useAuth()
   const user = authenticatedUser as AuthUser
@@ -386,7 +386,7 @@ export default function AccountsPage() {
         getErrorMessage(
           requestError,
           action === 'reset'
-            ? 'Không thể cấp lại mật khẩu được cấp.'
+            ? 'Không thể cấp lại mật khẩu.'
             : `Không thể ${action === 'lock' ? 'khóa' : 'mở khóa'} tài khoản.`,
         ),
       )
@@ -398,7 +398,7 @@ export default function AccountsPage() {
   async function copyPassword(password: string) {
     try {
       await navigator.clipboard.writeText(password)
-      setNotice('Đã sao chép mật khẩu được cấp.')
+      setNotice('Đã sao chép mật khẩu.')
     } catch {
       setNotice(
         'Trình duyệt không cho phép sao chép. Hãy chọn và sao chép mật khẩu trên màn hình.',
@@ -526,7 +526,7 @@ export default function AccountsPage() {
                   setPage(1)
                 }}
               >
-                <option value="">Mọi vai trò</option>
+                <option value="">Tất cả vai trò</option>
                 {Object.entries(roleLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -541,7 +541,7 @@ export default function AccountsPage() {
                   setPage(1)
                 }}
               >
-                <option value="">Mọi cửa hàng</option>
+                <option value="">Tất cả cửa hàng</option>
                 {stores.map((store) => (
                   <option key={store.id} value={store.id}>
                     {store.storeName}
@@ -645,7 +645,7 @@ export default function AccountsPage() {
                           </button>
                           <button
                             type="button"
-                            title="Cấp mật khẩu được cấp"
+                            title="Cấp lại mật khẩu"
                             aria-label={`Cấp lại mật khẩu ${account.fullName}`}
                             disabled={workingId === account.id}
                             onClick={() => void resetPassword(account)}
@@ -733,7 +733,7 @@ export default function AccountsPage() {
               <div className="created-password">
                 <h2 id="account-modal-title">
                   {created.kind === 'reset'
-                    ? 'Mật khẩu được cấp mới'
+                    ? 'Mật khẩu mới'
                     : 'Tài khoản đã được tạo'}
                 </h2>
                 <p>
@@ -1210,7 +1210,7 @@ export default function AccountsPage() {
                 onClick={() => void confirmAccountAction()}
               >
                 {confirmation.action === 'reset'
-                  ? 'Cấp mật khẩu được cấp'
+                  ? 'Cấp lại mật khẩu'
                   : confirmation.action === 'lock'
                     ? 'Khóa tài khoản'
                     : 'Mở khóa tài khoản'}

@@ -725,3 +725,16 @@
   border-top: 1px solid #edf0f4;
   font-size: 13px;
 }
+
+.login-layout.login-layout-centered {
+  grid-template-columns: 1fr;
+}
+.login-layout-centered .login-pane {
+  width: 100%;
+  min-height: 100dvh;
+  padding: 32px 24px;
+}
+.login-layout-centered .profile-password-content {
+  width: min(100%, 600px);
+  padding: 0;
+}

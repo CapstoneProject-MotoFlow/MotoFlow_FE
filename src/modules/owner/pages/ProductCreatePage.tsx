@@ -329,7 +329,7 @@ export default function ProductCreatePage() {
                   </div>
                 </section>
                 <section className="owner-panel">
-                  <h2>Mã vạch</h2>
+                  <h2>Mã OEM và mã vạch</h2>
                   <div className="part-create-codes">
                     <Codes label="Mã OEM" values={oem} onChange={setOem} />
                     <Codes

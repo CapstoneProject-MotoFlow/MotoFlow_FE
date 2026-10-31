@@ -63,26 +63,7 @@
 .change-password-form h1 {
   margin-bottom: 32px;
 }
-.password-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 13px;
-  margin: 0 0 24px;
-  padding: 14px 16px;
-  border: 1px solid #1598f6;
-  border-radius: 12px;
-  color: #263b59;
-  background: #f1f9ff;
-  font-size: 1.125rem;
-  line-height: 1.65;
-}
-.password-notice svg {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-  margin-top: 2px;
-  color: #008beb;
-}
+
 .change-password-form .password-field {
   margin-bottom: 21px;
 }
@@ -111,14 +92,6 @@
   min-height: 44px;
 }
 
-.login-layout.login-layout-centered {
-  grid-template-columns: 1fr;
-}
-.login-layout-centered .login-pane {
-  width: 100%;
-  min-height: 100dvh;
-  padding: 32px 24px;
-}
 .login-system-name {
   margin: 0 0 12px;
   color: #394fff;
@@ -133,8 +106,4 @@
 .login-form > label .required {
   display: inline;
   width: auto;
-}
-.login-layout-centered .profile-password-content {
-  width: min(100%, 600px);
-  padding: 0;
 }
