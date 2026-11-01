@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import './inventory.css'
+// TODO(BE/API): Bổ sung phân trang và lọc loại biến động/lô ở API lịch sử khi dữ liệu tăng.
+// Response cần thêm mã lô và mã/loại chứng từ nguồn để mở chi tiết chứng từ.
+// FE hiện chỉ nhận lotId và đang hiển thị “Lô #id”.
 type Movement = {
   id: number
   lotId: number | null

@@ -10,6 +10,12 @@ import {
   type Category,
 } from '../../catalog/api/searchProducts'
 import './inventory.css'
+// TODO(BE/API): Cung cấp API tồn kho có phân trang, bộ lọc khu vực và sắp xếp phía server.
+// Response cần gồm tồn theo từng kho để FE không phải gọi chi tiết từng phụ tùng/kho.
+// TODO(BE/API): Cung cấp số tổng hợp trên toàn bộ phạm vi lọc (không chỉ trang hiện tại):
+// số mã có tồn, số mã dưới ngưỡng và số mã có hàng không khả dụng.
+// TODO(BE/API): Bổ sung giá trị tồn theo phụ tùng/kho/toàn chuỗi và cảnh báo lô sắp hết/hết hạn.
+// Các ô giá trị tồn và hạn lô đang để “—”; không dùng giá bán lẻ để thay cho giá vốn tồn kho.
 type Store = { id: number; storeName: string }
 type Stock = {
   availableQty: number
