@@ -9,7 +9,9 @@ export default function ProductRowActions({
   name,
   status,
   onChanged,
+  editHref,
 }: {
+  editHref: string
   id: number
   name: string
   status: string
@@ -40,7 +42,7 @@ export default function ProductRowActions({
   return (
     <>
       <div className="parts-row-actions">
-        <Link to={'/owner/products/' + id + '/edit'} aria-label={'Sửa ' + name}>
+        <Link to={editHref} aria-label={'Sửa ' + name}>
           Sửa
         </Link>
         <button

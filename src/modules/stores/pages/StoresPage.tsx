@@ -7,7 +7,7 @@
 import axiosClient from '../../../shared/api/axiosClient'
 /** Shared store management page for Admin and Owner; store data comes from the existing API. */
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { default as DashboardIcon } from '../../../shared/ui/Icon'
@@ -16,6 +16,13 @@ import { listStores, saveStoreRequest } from '../services/storeService'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import '../stores.css'
 
+type StoreEmployee = {
+  id: number
+  fullName: string
+  role: string
+  phone: string | null
+  status: string
+}
 type StoreStatus = DashboardStore['status']
 type StoreFormValues = {
   storeName: string
@@ -36,6 +43,33 @@ const emptyForm: StoreFormValues = {
 /** StoresPage: Danh sách cửa hàng; tìm/lọc; tạo, sửa và tạo từ cửa hàng có sẵn; hiển thị kho tổng, BM và trạng thái. */
 export default function StoresPage() {
   const { user } = useAuth()
+  const personnelDialog = useRef<HTMLDialogElement>(null)
+  const [personnelStore, setPersonnelStore] = useState<DashboardStore | null>(
+    null,
+  )
+  const [employees, setEmployees] = useState<StoreEmployee[]>([])
+  const [personnelLoading, setPersonnelLoading] = useState(false)
+  const [personnelError, setPersonnelError] = useState('')
+  useEffect(() => {
+    if (!personnelStore) return
+    personnelDialog.current?.showModal()
+    const controller = new AbortController()
+    axiosClient
+      .get<StoreEmployee[]>('/stores/' + personnelStore.id + '/employees', {
+        signal: controller.signal,
+      })
+      .then((response) => {
+        if (!controller.signal.aborted) setEmployees(response.data)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setPersonnelError('Không tải được nhân sự. Vui lòng đóng và thử lại.')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPersonnelLoading(false)
+      })
+    return () => controller.abort()
+  }, [personnelStore])
   const [copyOpen, setCopyOpen] = useState(false)
   const [templates, setTemplates] = useState<DashboardStore[]>([])
   const [templateLoading, setTemplateLoading] = useState(false)
@@ -342,7 +376,6 @@ export default function StoresPage() {
                   <th>Địa chỉ</th>
                   <th>Điện thoại</th>
                   <th>Loại kho</th>
-                  <th>Người quản lý</th>
                   <th>Trạng thái</th>
                   <th aria-label="Thao tác" />
                 </tr>
@@ -350,7 +383,7 @@ export default function StoresPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td className="stores-placeholder" colSpan={7}>
+                    <td className="stores-placeholder" colSpan={6}>
                       Đang tải danh sách cửa hàng…
                     </td>
                   </tr>
@@ -372,11 +405,6 @@ export default function StoresPage() {
                         </span>
                       </td>
                       <td>
-                        {store.managers
-                          ?.map((manager) => manager.fullName)
-                          .join(', ') || 'Chưa gán'}
-                      </td>
-                      <td>
                         <span
                           className={`status-badge store-${store.status.toLowerCase()}`}
                         >
@@ -384,27 +412,41 @@ export default function StoresPage() {
                         </span>
                       </td>
                       <td>
-                        <button
-                          className="edit-store-button"
-                          type="button"
-                          onClick={() => openEditForm(store)}
-                        >
-                          Sửa
-                        </button>
-                        {user?.role === 'OWNER' && (
-                          <Link
+                        <div className="store-row-actions">
+                          <button
                             className="edit-store-button"
-                            to={`/owner/inventory?storeId=${store.id}&inStockOnly=true`}
+                            type="button"
+                            onClick={() => openEditForm(store)}
                           >
-                            Xem tồn kho
-                          </Link>
-                        )}
+                            Sửa
+                          </button>
+                          {user?.role === 'OWNER' && (
+                            <Link
+                              className="edit-store-button"
+                              to={`/owner/inventory?storeId=${store.id}&inStockOnly=true`}
+                            >
+                              Xem tồn kho
+                            </Link>
+                          )}
+                          <button
+                            className="edit-store-button"
+                            type="button"
+                            onClick={() => {
+                              setEmployees([])
+                              setPersonnelError('')
+                              setPersonnelLoading(true)
+                              setPersonnelStore({ ...store })
+                            }}
+                          >
+                            Xem nhân sự
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="stores-placeholder" colSpan={7}>
+                    <td className="stores-placeholder" colSpan={6}>
                       Không có cửa hàng phù hợp.
                     </td>
                   </tr>
@@ -442,6 +484,58 @@ export default function StoresPage() {
         </section>
       </main>
 
+      {personnelStore && (
+        <dialog
+          ref={personnelDialog}
+          className="store-personnel-dialog"
+          aria-labelledby="personnel-title"
+          onCancel={() => setPersonnelStore(null)}
+        >
+          <div className="store-modal-heading">
+            <h2 id="personnel-title">Nhân sự — {personnelStore.storeName}</h2>
+            <button
+              type="button"
+              aria-label="Đóng nhân sự"
+              onClick={() => setPersonnelStore(null)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="store-personnel-body">
+            {personnelLoading ? (
+              <p role="status">Đang tải nhân sự…</p>
+            ) : personnelError ? (
+              <p role="alert">{personnelError}</p>
+            ) : employees.length === 0 ? (
+              <p>Chưa có nhân sự được gán cho cửa hàng.</p>
+            ) : (
+              [...employees]
+                .sort(
+                  (a, b) =>
+                    Number(b.role === 'BRANCH_MANAGER') -
+                      Number(a.role === 'BRANCH_MANAGER') ||
+                    a.fullName.localeCompare(b.fullName, 'vi'),
+                )
+                .map((employee) => (
+                  <article className="store-personnel-card" key={employee.id}>
+                    <strong>{employee.fullName}</strong>
+                    <span>
+                      {employee.role === 'BRANCH_MANAGER'
+                        ? 'Quản lý chi nhánh'
+                        : 'Nhân viên'}
+                    </span>
+                    <span>Điện thoại: {employee.phone || '—'}</span>
+                    <span>
+                      {employee.status === 'ACTIVE'
+                        ? 'Đang hoạt động'
+                        : 'Ngừng hoạt động'}
+                    </span>
+                  </article>
+                ))
+            )}
+          </div>
+        </dialog>
+      )}
       {copyOpen && (
         <div
           className="modal-backdrop stores-copy-backdrop"

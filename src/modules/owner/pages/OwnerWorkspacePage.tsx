@@ -1,3 +1,8 @@
+import {
+  categoryOptions,
+  visibleCategories,
+  type Category,
+} from '../../catalog/api/searchProducts'
 import ProductRowActions from '../../catalog/components/ProductRowActions'
 import { searchProducts } from '../../catalog/api/searchProducts'
 /**
@@ -14,15 +19,7 @@ import type { DashboardProduct } from '../../dashboard/types/dashboardTypes'
 import '../owner.css'
 import './products.css'
 
-type Category = {
-  id: number
-  categoryName: string
-  children: Category[]
-  status: string
-}
 type Model = { id: number; manufacturer: string; modelName: string }
-const flatten = (nodes: Category[]): Category[] =>
-  nodes.flatMap((node) => [node, ...flatten(node.children || [])])
 /** OwnerWorkspacePage: Tìm phụ tùng toàn danh mục cho Owner; bộ lọc cửa hàng để xem tồn; mở tạo/chi tiết phụ tùng. */
 export default function OwnerWorkspacePage({
   inventory = false,
@@ -48,6 +45,7 @@ export default function OwnerWorkspacePage({
   const [data, setData] = useState<{
     items: DashboardProduct[]
     totalItems: number
+    filterPending?: boolean
   }>({ items: [], totalItems: 0 })
   const [categories, setCategories] = useState<Category[]>([])
   const [stores, setStores] = useState<{ id: number; storeName: string }[]>([])
@@ -65,7 +63,7 @@ export default function OwnerWorkspacePage({
     ])
       .then(([a, b, c]) => {
         if (active) {
-          setCategories(flatten(a.data))
+          setCategories(categoryOptions(a.data))
           setModels(b.data)
           setStores(c.data)
         }
@@ -191,8 +189,8 @@ export default function OwnerWorkspacePage({
               )}
             </datalist>
             <datalist id="category-options">
-              {categories.map((category) => (
-                <option key={category.id} value={category.categoryName} />
+              {visibleCategories(categories, vehicleText).map((category) => (
+                <option key={category.id} value={category.label} />
               ))}
             </datalist>
             <datalist id="model-options">
@@ -211,6 +209,7 @@ export default function OwnerWorkspacePage({
               value={vehicleText}
               onChange={(event) => {
                 setVehicleText(event.target.value)
+                setCategoryText('')
                 setPage(0)
               }}
             />
@@ -264,7 +263,11 @@ export default function OwnerWorkspacePage({
             )}
           </div>
           <p className="parts-count" aria-live="polite">
-            {loading ? 'Đang tìm…' : `Tìm thấy ${data.totalItems} phụ tùng`}
+            {loading
+              ? 'Đang tìm…'
+              : data.filterPending
+                ? 'Chọn một gợi ý trong danh sách để lọc'
+                : `Tìm thấy ${data.totalItems} phụ tùng`}
           </p>
         </div>
         {error ? (
@@ -328,6 +331,7 @@ export default function OwnerWorkspacePage({
                         <td>
                           <ProductRowActions
                             id={item.id}
+                            editHref={`/owner/products/${item.id}/edit`}
                             name={item.partName}
                             status={item.status}
                             onChanged={() => setRevision((value) => value + 1)}
@@ -340,7 +344,11 @@ export default function OwnerWorkspacePage({
               </table>
             </div>
             {!data.items.length && (
-              <p className="empty-state">Không tìm thấy phụ tùng phù hợp.</p>
+              <p className="empty-state">
+                {data.filterPending
+                  ? 'Chọn một gợi ý trong danh sách để lọc'
+                  : 'Không tìm thấy phụ tùng phù hợp.'}
+              </p>
             )}
             <footer className="parts-pagination">
               <button disabled={!page} onClick={() => setPage((x) => x - 1)}>

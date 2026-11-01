@@ -1,3 +1,9 @@
+import ProductRowActions from '../components/ProductRowActions'
+import {
+  categoryOptions,
+  visibleCategories,
+  type Category,
+} from '../api/searchProducts'
 import { searchProducts } from '../api/searchProducts'
 /**
  * File: modules/catalog/pages/PartsSearchPage.tsx
@@ -13,10 +19,7 @@ import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import Icon from '../../../shared/ui/Icon'
 import type { DashboardProduct } from '../../dashboard/types/dashboardTypes'
 import './parts-search.css'
-type Category = { id: number; categoryName: string; children: Category[] }
 type Model = { id: number; manufacturer: string; modelName: string }
-const flatten = (nodes: Category[]): Category[] =>
-  nodes.flatMap((node) => [node, ...flatten(node.children || [])])
 /** PartsSearchPage: Tìm phụ tùng cho BM/Staff; lọc loại xe, nhóm, dòng xe, thương hiệu và hàng còn tồn; mở chi tiết; hiện nút tạo nếu được phép. */
 export default function PartsSearchPage() {
   const { user } = useAuth()
@@ -39,6 +42,7 @@ export default function PartsSearchPage() {
   const [data, setData] = useState<{
     items: DashboardProduct[]
     totalItems: number
+    filterPending?: boolean
   }>({ items: [], totalItems: 0 })
   const [categories, setCategories] = useState<Category[]>([])
   const [models, setModels] = useState<Model[]>([])
@@ -54,7 +58,7 @@ export default function PartsSearchPage() {
     ])
       .then(([a, b]) => {
         if (active) {
-          setCategories(flatten(a.data))
+          setCategories(categoryOptions(a.data))
           setModels(b.data)
         }
       })
@@ -164,8 +168,8 @@ export default function PartsSearchPage() {
                 )}
               </datalist>
               <datalist id="category-options">
-                {categories.map((category) => (
-                  <option key={category.id} value={category.categoryName} />
+                {visibleCategories(categories, vehicleText).map((category) => (
+                  <option key={category.id} value={category.label} />
                 ))}
               </datalist>
               <datalist id="model-options">
@@ -199,7 +203,9 @@ export default function PartsSearchPage() {
                 ? 'Đang tìm…'
                 : error
                   ? 'Chưa tải được số lượng'
-                  : `Tìm thấy ${data.totalItems.toLocaleString('vi-VN')} phụ tùng`}
+                  : data.filterPending
+                    ? 'Chọn một gợi ý trong danh sách để lọc'
+                    : `Tìm thấy ${data.totalItems.toLocaleString('vi-VN')} phụ tùng`}
             </span>
           </div>
           {expanded && (
@@ -212,6 +218,7 @@ export default function PartsSearchPage() {
                 value={vehicleText}
                 onChange={(event) => {
                   setVehicleText(event.target.value)
+                  setCategoryText('')
                   setPage(0)
                 }}
               />
@@ -279,6 +286,7 @@ export default function PartsSearchPage() {
                       <th>Nhà sản xuất</th>
                       <th>Giá lẻ chuẩn</th>
                       <th>Vị trí</th>
+                      {canCreate && <th>Thao tác</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -301,6 +309,19 @@ export default function PartsSearchPage() {
                             .filter(Boolean)
                             .join(' · ') || '—'}
                         </td>
+                        {canCreate && (
+                          <td>
+                            <ProductRowActions
+                              id={item.id}
+                              name={item.partName}
+                              status={item.status}
+                              editHref={`${base}/${item.id}/edit`}
+                              onChanged={() =>
+                                setRevision((value) => value + 1)
+                              }
+                            />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -308,7 +329,9 @@ export default function PartsSearchPage() {
               </div>
               {!data.items.length && (
                 <p className="bm-products-message">
-                  Không tìm thấy phụ tùng phù hợp.
+                  {data.filterPending
+                    ? 'Chọn một gợi ý trong danh sách để lọc'
+                    : 'Không tìm thấy phụ tùng phù hợp.'}
                 </p>
               )}
               <footer>
