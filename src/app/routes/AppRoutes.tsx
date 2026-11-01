@@ -1,3 +1,5 @@
+import InventoryMovementsPage from '../../modules/owner/pages/InventoryMovementsPage'
+import InventoryPage from '../../modules/owner/pages/InventoryPage'
 /**
  * File: app/routes/AppRoutes.tsx
  * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
@@ -169,9 +171,10 @@ export default function AppRoutes() {
                 path="/owner/products"
                 element={<OwnerWorkspacePage key="products" />}
               />
+              <Route path="/owner/inventory" element={<InventoryPage />} />
               <Route
-                path="/owner/inventory"
-                element={<OwnerWorkspacePage key="inventory" inventory />}
+                path="/owner/inventory/movements"
+                element={<InventoryMovementsPage />}
               />
               <Route
                 path="/owner/products/new"
