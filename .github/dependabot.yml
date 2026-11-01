@@ -15,9 +15,17 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # A dependency goes to the first group it matches. Majors of packages that peer-depend on
+    # each other come in one PR, so `npm ci` can resolve them together.
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
+      eslint:
+        patterns: ['eslint', '@eslint/*', 'eslint-plugin-*', 'typescript-eslint']
+        update-types: [major]
+      vite:
+        patterns: ['vite', '@vitejs/*']
+        update-types: [major]
 
   - package-ecosystem: docker
     directory: /
