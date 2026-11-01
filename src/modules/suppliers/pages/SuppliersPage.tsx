@@ -104,7 +104,7 @@ export default function SuppliersPage() {
               setPage(0)
             }}
           >
-            <option value="">Mọi trạng thái</option>
+            <option value="">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang giao dịch</option>
             <option value="INACTIVE">Ngừng giao dịch</option>
           </select>

@@ -622,3 +622,29 @@ input::placeholder {
 .category-confirm-content p[role='alert'] {
   color: #b42318;
 }
+
+.password-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid #1598f6;
+  border-radius: 12px;
+  color: #263b59;
+  background: #f1f9ff;
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+.password-notice svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #008beb;
+}
+
+.text-search-filter::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0;
+}

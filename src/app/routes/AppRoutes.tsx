@@ -165,10 +165,13 @@ export default function AppRoutes() {
                 path="/owner/products/:id"
                 element={<ProductDetailPage />}
               />
-              <Route path="/owner/products" element={<OwnerWorkspacePage />} />
+              <Route
+                path="/owner/products"
+                element={<OwnerWorkspacePage key="products" />}
+              />
               <Route
                 path="/owner/inventory"
-                element={<OwnerWorkspacePage inventory />}
+                element={<OwnerWorkspacePage key="inventory" inventory />}
               />
               <Route
                 path="/owner/products/new"

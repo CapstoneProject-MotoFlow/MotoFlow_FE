@@ -244,7 +244,7 @@ export default function AdminPermissionHistoryPage() {
                 setPage(1)
               }}
             >
-              <option value="">Mọi loại thay đổi</option>
+              <option value="">Tất cả loại thay đổi</option>
               {Object.entries(changeNames).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}

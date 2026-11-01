@@ -1,3 +1,4 @@
+import ProductRowActions from '../../catalog/components/ProductRowActions'
 import { searchProducts } from '../../catalog/api/searchProducts'
 /**
  * File: modules/owner/pages/OwnerWorkspacePage.tsx
@@ -182,8 +183,30 @@ export default function OwnerWorkspacePage({
                 ))}
               </select>
             )}
+            <datalist id="vehicle-options">
+              {['Xe máy', 'Xe đạp', 'Xe máy điện', 'Xe đạp điện'].map(
+                (label) => (
+                  <option key={label} value={label} />
+                ),
+              )}
+            </datalist>
+            <datalist id="category-options">
+              {categories.map((category) => (
+                <option key={category.id} value={category.categoryName} />
+              ))}
+            </datalist>
+            <datalist id="model-options">
+              {models.map((model) => (
+                <option
+                  key={model.id}
+                  value={model.manufacturer + ' ' + model.modelName}
+                />
+              ))}
+            </datalist>
             <input
               aria-label="Tìm loại xe"
+              className="text-search-filter"
+              list="vehicle-options"
               placeholder="Loại xe"
               value={vehicleText}
               onChange={(event) => {
@@ -193,6 +216,8 @@ export default function OwnerWorkspacePage({
             />
             <input
               aria-label="Tìm nhóm phụ tùng"
+              className="text-search-filter"
+              list="category-options"
               placeholder="Nhóm phụ tùng"
               value={categoryText}
               onChange={(event) => {
@@ -202,6 +227,8 @@ export default function OwnerWorkspacePage({
             />
             <input
               aria-label="Tìm dòng xe"
+              className="text-search-filter"
+              list="model-options"
               placeholder="Dòng xe"
               value={modelText}
               onChange={(event) => {
@@ -259,6 +286,7 @@ export default function OwnerWorkspacePage({
                     <th>Giá lẻ chuẩn</th>
                     {inventory && <th>Khả dụng</th>}
                     <th>Trạng thái</th>
+                    {!inventory && <th>Thao tác</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -296,6 +324,16 @@ export default function OwnerWorkspacePage({
                             : 'Ngừng kinh doanh'}
                         </span>
                       </td>
+                      {!inventory && (
+                        <td>
+                          <ProductRowActions
+                            id={item.id}
+                            name={item.partName}
+                            status={item.status}
+                            onChanged={() => setRevision((value) => value + 1)}
+                          />
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
