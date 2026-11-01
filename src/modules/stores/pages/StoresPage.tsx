@@ -512,17 +512,22 @@ export default function StoresPage() {
               [...employees]
                 .sort(
                   (a, b) =>
-                    Number(b.role === 'BRANCH_MANAGER') -
-                      Number(a.role === 'BRANCH_MANAGER') ||
+                    Number(['OWNER', 'BRANCH_MANAGER'].includes(b.role)) -
+                      Number(['OWNER', 'BRANCH_MANAGER'].includes(a.role)) ||
                     a.fullName.localeCompare(b.fullName, 'vi'),
                 )
                 .map((employee) => (
                   <article className="store-personnel-card" key={employee.id}>
                     <strong>{employee.fullName}</strong>
                     <span>
-                      {employee.role === 'BRANCH_MANAGER'
-                        ? 'Quản lý chi nhánh'
-                        : 'Nhân viên'}
+                      {(
+                        {
+                          OWNER: 'Chủ doanh nghiệp',
+                          ADMIN: 'Quản trị viên',
+                          BRANCH_MANAGER: 'Quản lý chi nhánh',
+                          STAFF: 'Nhân viên',
+                        } as Record<string, string>
+                      )[employee.role] || 'Chưa xác định vai trò'}
                     </span>
                     <span>Điện thoại: {employee.phone || '—'}</span>
                     <span>
