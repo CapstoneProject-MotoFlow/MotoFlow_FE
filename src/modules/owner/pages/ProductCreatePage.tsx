@@ -85,6 +85,19 @@ export default function ProductCreatePage() {
   const { id } = useParams()
   const [initial, setInitial] = useState<Record<string, unknown> | null>(null)
   const [ready, setReady] = useState(!id)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [models, setModels] = useState<Model[]>([])
+  const [vehicleType, setVehicleType] = useState('MOTORCYCLE')
+  const [parent, setParent] = useState('')
+  const [oem, setOem] = useState<string[]>([])
+  const [images, setImages] = useState<string[]>([])
+  const [barcodes, setBarcodes] = useState<string[]>([])
+  const [selected, setSelected] = useState<number[]>([])
+  const [query, setQuery] = useState('')
+
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   useEffect(() => {
     if (!id) return
     let active = true
@@ -117,19 +130,6 @@ export default function ProductCreatePage() {
       active = false
     }
   }, [id])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [models, setModels] = useState<Model[]>([])
-  const [vehicleType, setVehicleType] = useState('MOTORCYCLE')
-  const [parent, setParent] = useState('')
-  const [oem, setOem] = useState<string[]>([])
-  const [images, setImages] = useState<string[]>([])
-  const [barcodes, setBarcodes] = useState<string[]>([])
-  const [selected, setSelected] = useState<number[]>([])
-  const [query, setQuery] = useState('')
-
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   useEffect(() => {
     let active = true
     Promise.all([

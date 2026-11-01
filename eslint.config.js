@@ -19,6 +19,9 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // New in react-hooks 7. Kept as warnings until the existing code is fixed, then remove both lines.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
