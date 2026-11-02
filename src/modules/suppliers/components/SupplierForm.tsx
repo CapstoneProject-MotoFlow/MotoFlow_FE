@@ -78,17 +78,7 @@ export default function SupplierForm({
       <form id="supplier-form" className="supplier-edit" onSubmit={save}>
         <fieldset disabled={busy}>
           {!supplier && (
-            <label>
-              <span>
-                Mã nhà cung cấp <b className="required">*</b>
-              </span>
-              <input
-                name="supplierCode"
-                required
-                maxLength={20}
-                pattern="[A-Za-z0-9._-]{1,20}"
-              />
-            </label>
+            <p>Mã nhà cung cấp được hệ thống tự sinh sau khi lưu.</p>
           )}
           <label>
             <span>

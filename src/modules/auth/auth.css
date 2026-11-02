@@ -107,3 +107,36 @@
   display: inline;
   width: auto;
 }
+.login-experience{display:grid;grid-template-columns:1fr;width:min(100%,500px);overflow:hidden;border:1px solid #e4e8f4;border-radius:28px;background:white;box-shadow:0 24px 80px #25366a14}
+.login-card{width:100%;align-self:center;padding:48px}.login-card .login-system-name{margin-bottom:28px}.login-card h1{margin-bottom:10px;font-size:1.8rem}.login-description{margin:0 0 32px;color:#778198;font-size:14px;line-height:1.6}.login-card>label{font-size:14px}.login-card .submit-button{margin-top:6px;box-shadow:0 8px 20px #4e55ff24}.login-card-footer{margin:28px 0 0;padding-top:22px;border-top:1px solid #eef0f6;color:#8992a5;font-size:11px;line-height:1.7;text-align:center}
+.login-layout-centered .login-pane:has(.login-experience){background:radial-gradient(ellipse at 10% 10%,#e9edff,transparent 50%),#f7f9fd}
+@media(max-width:760px){.login-experience{max-width:460px;grid-template-columns:1fr;border-radius:22px}.login-intro{padding:26px 28px}.login-intro h2{margin:18px 0 0;font-size:26px}.login-intro>p,.login-orbit,.login-intro-footer{display:none}.login-card{padding:32px 28px}}
+
+
+/* Raised branding and depth for the login card. */
+.login-experience {
+  border-color: #fff;
+  box-shadow: 0 2px 0 #dce1f5, 0 8px 0 -4px #e3e7f5, 0 24px 48px #2637751c, 0 48px 90px #34459912, inset 0 1px 0 #fff;
+  background: linear-gradient(155deg, #fff 65%, #f8f9ff);
+}
+.login-card .login-system-name {
+  margin: 0 0 32px;
+  color: #4d52ff;
+  font-size: clamp(2.5rem, 7vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -2px;
+  text-align: center;
+  text-shadow: 0 1px 0 #d7d9ff, 0 2px 0 #b8bcff, 0 3px 0 #969df2, 0 4px 0 #7b83df, 0 8px 12px #4d52ff30;
+}
+.login-card .submit-button {
+  box-shadow: 0 4px 0 #383dce, 0 10px 20px #4e55ff26;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.login-card .submit-button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #383dce, 0 4px 10px #4e55ff20;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-card .submit-button { transition: none; }
+}
