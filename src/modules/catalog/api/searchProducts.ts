@@ -1,7 +1,48 @@
 import axiosClient from '../../../shared/api/axiosClient'
 import type { DashboardProduct } from '../../dashboard/types/dashboardTypes'
 
-type Page = { items: DashboardProduct[]; totalItems: number }
+export type Category = {
+  id: number
+  categoryName: string
+  vehicleType: string
+  children?: Category[]
+  label?: string
+}
+export const vehicleTypes: Record<string, string> = {
+  MOTORCYCLE: 'Xe máy',
+  BICYCLE: 'Xe đạp',
+  E_MOTORCYCLE: 'Xe máy điện',
+  E_BICYCLE: 'Xe đạp điện',
+}
+export function categoryOptions(
+  nodes: Category[],
+  parents: string[] = [],
+): Category[] {
+  return nodes.flatMap((node) => {
+    const path = [...parents, node.categoryName]
+    return [
+      {
+        ...node,
+        label: [
+          vehicleTypes[node.vehicleType] || node.vehicleType,
+          ...path,
+        ].join(' › '),
+      },
+      ...categoryOptions(node.children || [], path),
+    ]
+  })
+}
+export function visibleCategories(categories: Category[], vehicleText: string) {
+  const type = Object.entries(vehicleTypes).find(
+    ([, label]) => normalize(label) === normalize(vehicleText),
+  )?.[0]
+  return categories.filter((c) => !type || c.vehicleType === type)
+}
+type Page = {
+  items: DashboardProduct[]
+  totalItems: number
+  filterPending?: boolean
+}
 const normalize = (value: string) =>
   value
     .normalize('NFD')
@@ -14,7 +55,7 @@ const normalize = (value: string) =>
 export async function searchProducts(
   params: Record<string, unknown>,
   categoryText: string,
-  categories: { id: number; categoryName: string }[],
+  categories: Category[],
   signal: AbortSignal,
   vehicleText = '',
   modelText = '',
@@ -29,7 +70,10 @@ export async function searchProducts(
     E_MOTORCYCLE: 'Xe máy điện',
     E_BICYCLE: 'Xe đạp điện',
   }
-  const category = categories.find((c) => normalize(c.categoryName) === text)
+  const matches = visibleCategories(categories, vehicleText).filter(
+    (c) => normalize(c.label || c.categoryName) === text,
+  )
+  const category = matches.length === 1 ? matches[0] : undefined
   const type = Object.entries(types).find(
     ([, label]) => normalize(label) === vehicle,
   )
@@ -38,7 +82,7 @@ export async function searchProducts(
   )
   // Partial input filters the suggestions; only a resolved option filters products.
   if ((text && !category) || (vehicle && !type) || (model && !vehicleModel))
-    return { items: [], totalItems: 0 }
+    return { items: [], totalItems: 0, filterPending: true }
   return (
     await axiosClient.get<Page>('/products', {
       params: {

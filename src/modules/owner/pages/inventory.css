@@ -1,0 +1,500 @@
+.inventory-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  color: #18324d;
+}
+.inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.inventory-heading h1 {
+  font-size: 25px;
+  margin: 0;
+}
+.inventory-heading > span {
+  font-size: 13px;
+  color: #6c7c92;
+}
+.inventory-summary,
+.inventory-panel {
+  background: white;
+  border: 1px solid #dfe5ed;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.inventory-summary {
+  margin-bottom: 24px;
+  padding: 6px;
+}
+.inventory-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.inventory-metrics article {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+.inventory-page .selected {
+  background: #edf3ff;
+  border-color: #cbd9ff;
+}
+.inventory-metrics article div {
+  font-size: 13px;
+}
+.inventory-metrics strong {
+  display: block;
+  font-size: 26px;
+  margin-top: 4px;
+}
+.inventory-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f3f5fa;
+  color: #5260ff;
+  font-size: 23px;
+}
+.tone-1 {
+  background: #fff9ea;
+  color: #d78b10;
+}
+.tone-3 {
+  background: #fff2f2;
+  color: #e45353;
+}
+.inventory-note {
+  font-size: 12px;
+  color: #718098;
+  margin: 6px 16px 12px;
+}
+.inventory-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-top: 1px solid #eef1f6;
+  padding-top: 6px;
+  gap: 4px;
+}
+.inventory-page button,
+.inventory-page select,
+.inventory-page input {
+  font: inherit;
+  color: inherit;
+}
+.inventory-tabs button {
+  flex: 1;
+  min-width: 180px;
+  text-align: left;
+  border: 1px solid transparent;
+  background: white;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.inventory-tabs small {
+  display: block;
+  margin-top: 4px;
+  color: #718098;
+}
+.inventory-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #e9eef5;
+  gap: 12px;
+}
+.inventory-panel h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.inventory-panel button {
+  border: 1px solid #d5dfec;
+  background: white;
+  border-radius: 7px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.inventory-page button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.inventory-filters {
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.inventory-filters input[type='search'] {
+  flex: 2;
+  min-width: 230px;
+}
+.inventory-filters select {
+  max-width: 260px;
+  min-width: 150px;
+  flex: 1;
+}
+.inventory-filters input[type='search'],
+.inventory-filters select {
+  padding: 10px;
+  border: 1px solid #ccd6e5;
+  border-radius: 7px;
+  background: white;
+  font-size: 13px;
+}
+.inventory-filters label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.inventory-scroll {
+  overflow-x: auto;
+}
+.inventory-panel table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1050px;
+  font-size: 13px;
+}
+.inventory-panel th {
+  font-size: 12px;
+  font-weight: 500;
+  background: #f7f9fc;
+  color: #556b85;
+  text-align: right;
+  padding: 16px 12px;
+  border-block: 1px solid #edf1f6;
+}
+.inventory-panel th:first-child {
+  text-align: left;
+  width: 30%;
+}
+.inventory-panel td {
+  padding: 20px 12px;
+  border-bottom: 1px solid #edf1f6;
+  text-align: right;
+  white-space: nowrap;
+}
+.inventory-panel td:first-child {
+  text-align: left;
+  white-space: normal;
+}
+.inventory-part {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.inventory-part > button {
+  border: 0;
+  padding: 8px;
+  color: #72839c;
+  font-size: 21px;
+  background: transparent;
+}
+.inventory-part a {
+  color: #193b60;
+  text-decoration: none;
+}
+.inventory-part small,
+.inventory-store-row td:first-child small {
+  display: block;
+  margin-top: 6px;
+  color: #73849b;
+  font-size: 11px;
+}
+.inventory-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #ecfaf4;
+  color: #078561;
+  border-radius: 20px;
+  font-size: 11px;
+}
+.inventory-badge.warning {
+  background: #fff6df;
+  color: #c57800;
+}
+.inventory-store-row {
+  background: #f7faff;
+  color: #667d96;
+}
+.inventory-store-row td:first-child {
+  padding-left: 52px;
+}
+.inventory-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  font-size: 13px;
+  color: #687e96;
+}
+.inventory-panel > footer div {
+  display: flex;
+  gap: 8px;
+}
+.inventory-message {
+  padding: 30px;
+  text-align: center;
+  color: #647992;
+}
+@media (max-width: 900px) {
+  .inventory-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .inventory-metrics article {
+    padding: 14px;
+  }
+  .inventory-heading > span {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .owner-dashboard:has(.inventory-page) .admin-sidebar {
+    width: 64px;
+    padding-inline: 8px;
+  }
+  .owner-dashboard:has(.inventory-page) .dashboard-main {
+    margin-left: 64px;
+    min-width: 0;
+  }
+  .owner-dashboard:has(.inventory-page) .sidebar-brand {
+    padding-inline: 0;
+    justify-content: center;
+  }
+  .owner-dashboard:has(.inventory-page) .sidebar-brand strong,
+  .owner-dashboard:has(.inventory-page) .sidebar-brand > span:not(.brand-mark),
+  .owner-dashboard:has(.inventory-page) .sidebar-scope,
+  .owner-dashboard:has(.inventory-page) .sidebar-link > span,
+  .owner-dashboard:has(.inventory-page) .owner-accordion-links {
+    display: none;
+  }
+  .owner-dashboard:has(.inventory-page) .sidebar-link {
+    justify-content: center;
+    padding-inline: 8px;
+    font-size: 0;
+  }
+  .owner-dashboard:has(.inventory-page) .sidebar-link svg:not(:first-child) {
+    display: none;
+  }
+  .inventory-page {
+    padding: 16px 10px;
+  }
+  .inventory-metrics {
+    grid-template-columns: 1fr;
+  }
+  .inventory-metrics article {
+    gap: 12px;
+  }
+  .inventory-panel > header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+  }
+  .inventory-filters input[type='search'],
+  .inventory-filters select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex-basis: 100%;
+  }
+  .inventory-panel > footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+.inventory-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.inventory-row-actions a,
+.inventory-row-actions button {
+  padding: 6px 9px;
+  border: 1px solid #d5dfec;
+  border-radius: 6px;
+  background: white;
+  text-decoration: none;
+  color: #234565;
+  font-size: 12px;
+}
+.inventory-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 22px;
+  border: 0;
+  border-radius: 18px;
+  color: #203047;
+  box-shadow: 0 24px 80px #17243b40;
+}
+.inventory-dialog::backdrop {
+  background: #17243b66;
+}
+.inventory-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.inventory-dialog h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.inventory-dialog button {
+  border: 1px solid #d5dfec;
+  background: white;
+  border-radius: 7px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.inventory-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  margin: 16px 0;
+}
+.inventory-dialog input {
+  padding: 12px;
+  border: 1px solid #bac9e1;
+  border-radius: 7px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.inventory-dialog p {
+  font-size: 12px;
+  color: #61748e;
+}
+.inventory-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+.inventory-dialog button.inventory-primary {
+  background: #5260ff;
+  color: white;
+  border-color: #5260ff;
+}
+.inventory-editor-product {
+  padding: 14px;
+  margin-top: 20px;
+  background: #f7f9fc;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.inventory-editor-product small {
+  display: block;
+  margin-top: 5px;
+  color: #6c7c92;
+}
+.inventory-history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  align-items: center;
+}
+.inventory-history-filters select,
+.inventory-history-filters input {
+  padding: 10px;
+  border: 1px solid #cbd6e6;
+  border-radius: 7px;
+  background: white;
+  max-width: 240px;
+  font-size: 13px;
+  min-width: 0;
+}
+.inventory-history-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 24px;
+}
+.inventory-history-summary strong {
+  display: block;
+  margin-top: 8px;
+}
+.inventory-history-summary small {
+  color: #6c7c92;
+}
+.inventory-history-table {
+  margin-top: 24px;
+}
+.inventory-chart {
+  margin: 20px;
+}
+.inventory-chart svg {
+  width: 100%;
+  max-height: 220px;
+}
+.inventory-chart figcaption {
+  font-size: 12px;
+  color: #6c7c92;
+}
+.inventory-part > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 6px;
+}
+.inventory-part > button:hover {
+  background: #edf3ff;
+  color: #5260ff;
+}
+.inventory-chevron {
+  display: block;
+  transition: transform 0.15s ease;
+}
+.inventory-part > button[aria-expanded='true'] .inventory-chevron {
+  transform: rotate(90deg);
+}
+.inventory-page a,
+.inventory-page a:visited {
+  color: #234565;
+  text-decoration: none;
+}
+.inventory-page a:hover {
+  color: #5260ff;
+  text-decoration: none;
+}
+.inventory-page .inventory-detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px;
+  border: 1px solid #d5dfec;
+  border-radius: 6px;
+  white-space: nowrap;
+  background: white;
+}
+.inventory-page .inventory-detail-link:hover {
+  border-color: #aebcff;
+  background: #f3f6ff;
+}
+.inventory-page a:focus-visible,
+.inventory-page button:focus-visible {
+  outline: 2px solid #5260ff;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inventory-chevron {
+    transition: none;
+  }
+}

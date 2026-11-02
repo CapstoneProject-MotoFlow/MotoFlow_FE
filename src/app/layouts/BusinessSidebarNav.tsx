@@ -96,7 +96,9 @@ export default function BusinessSidebarNav({
   const active = (href: string) =>
     href.includes('#')
       ? location.pathname + location.hash === href
-      : location.pathname === href || location.pathname.startsWith(href + '/')
+      : location.pathname === href ||
+        (href !== '/owner/inventory' &&
+          location.pathname.startsWith(href + '/'))
   const [open, setOpen] = useState<string[]>(() =>
     availableGroups
       .filter((group) =>

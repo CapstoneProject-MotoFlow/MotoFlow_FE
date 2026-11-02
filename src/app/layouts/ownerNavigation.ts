@@ -55,9 +55,8 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Lịch sử xuất nhập',
-    href: '#movements',
+    href: '/owner/inventory/movements',
     icon: 'clock',
-    pending: true,
   },
   { label: 'Lô hàng', href: '#lots', icon: 'hourglass', pending: true },
   {

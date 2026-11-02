@@ -5,8 +5,6 @@
  * Công dụng: Thông tin phụ tùng, hình ảnh, giá, tương thích xe, tồn; Owner xem nhiều kho; sửa và xác nhận ngừng/mở kinh doanh theo quyền. StockBreakdown là component con giải thích các loại tồn không khả dụng.
  */
 import { mapConcurrent } from '../../../shared/utils/mapConcurrent'
-import { canEditCatalog } from '../../../shared/utils/roles'
-import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -79,7 +77,6 @@ export default function ProductDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const owner = user?.role === 'OWNER'
-  const canEdit = canEditCatalog(user)
   const base = owner
     ? '/owner/products'
     : user?.role === 'BRANCH_MANAGER'
@@ -91,9 +88,6 @@ export default function ProductDetailPage() {
   )
   const [stockError, setStockError] = useState('')
   const [error, setError] = useState('')
-  const [revision, setRevision] = useState(0)
-  const [busy, setBusy] = useState(false)
-  const [confirming, setConfirming] = useState(false)
   const [image, setImage] = useState(0)
   useEffect(() => {
     let active = true
@@ -135,22 +129,7 @@ export default function ProductDetailPage() {
     return () => {
       active = false
     }
-  }, [id, revision, owner])
-  async function toggle() {
-    if (!data || busy || !canEdit) return
-    setBusy(true)
-    try {
-      await axiosClient.post(
-        `/products/${id}/${data.status === 'ACTIVE' ? 'discontinue' : 'reactivate'}`,
-      )
-      setConfirming(false)
-      setRevision((x) => x + 1)
-    } catch (e) {
-      setError(apiMessage(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+  }, [id, owner])
   const unavailable = (s: Stock) =>
     s.awaitingInspectionQty +
     s.wrongItemQty +
@@ -278,22 +257,6 @@ export default function ProductDetailPage() {
                   </span>
                   <h2>Thông tin phụ tùng</h2>
                 </div>
-                {canEdit && (
-                  <div className="product-info-actions">
-                    <Link className="product-outline" to={`${base}/${id}/edit`}>
-                      ✎ Sửa
-                    </Link>
-                    <button
-                      className="product-danger"
-                      disabled={busy}
-                      onClick={() => setConfirming(true)}
-                    >
-                      {data.status === 'ACTIVE'
-                        ? '⊘ Ngừng kinh doanh'
-                        : 'Mở lại kinh doanh'}
-                    </button>
-                  </div>
-                )}
               </div>
               <dl className="product-info-grid">
                 {[
@@ -429,23 +392,6 @@ export default function ProductDetailPage() {
             )}
           </div>
         </div>
-      )}
-      {confirming && data && (
-        <ConfirmDialog
-          title={
-            data.status === 'ACTIVE'
-              ? 'Ngừng kinh doanh phụ tùng?'
-              : 'Mở lại kinh doanh?'
-          }
-          message={
-            data.status === 'ACTIVE'
-              ? 'Phụ tùng sẽ không được bán hoặc nhập mới. Lịch sử giao dịch được giữ lại.'
-              : 'Phụ tùng sẽ được phép bán và nhập mới.'
-          }
-          danger={data.status === 'ACTIVE'}
-          onCancel={() => setConfirming(false)}
-          onConfirm={toggle}
-        />
       )}
     </main>
   )

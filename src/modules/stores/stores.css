@@ -140,13 +140,10 @@
   width: 12%;
 }
 .stores-table th:nth-child(5) {
-  width: 13%;
+  width: 17%;
 }
 .stores-table th:nth-child(6) {
-  width: 13%;
-}
-.stores-table th:nth-child(7) {
-  width: 70px;
+  width: 330px;
 }
 .stores-table td {
   overflow-wrap: anywhere;
@@ -527,4 +524,75 @@
 }
 .stores-toolbar select {
   height: 46px;
+}
+
+.stores-page .stores-table th:nth-child(6) {
+  width: 330px;
+}
+.stores-page .store-row-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.stores-page .store-row-actions .edit-store-button {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  white-space: nowrap;
+  text-decoration: none;
+  margin: 0;
+}
+.store-personnel {
+  margin-top: 20px;
+  padding: 20px;
+}
+.store-personnel table {
+  width: 100%;
+  text-align: left;
+}
+.store-personnel th,
+.store-personnel td {
+  padding: 12px;
+}
+
+.store-personnel-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: 85dvh;
+  padding: 0;
+  border: 1px solid #e1e6ee;
+  border-radius: 14px;
+  color: #1d2c44;
+  background: white;
+  box-shadow: 0 24px 80px #111d3533;
+}
+.store-personnel-dialog::backdrop {
+  background: #17243b66;
+}
+.store-personnel-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.store-personnel-dialog .store-modal-heading {
+  flex-shrink: 0;
+  gap: 16px;
+}
+.store-personnel-body {
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.store-personnel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e1e6ee;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+.store-personnel-card + .store-personnel-card {
+  margin-top: 12px;
 }
