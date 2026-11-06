@@ -15,10 +15,20 @@ type Manager = {
   id: number
   username: string
   fullName: string
-  storeId: number
-  storeName: string
-  permissions: string[]
+  storeId: number | null
+  storeName: string | null
+  catalogEdit: boolean
+  retailPriceEdit: boolean
 }
+const permissionFields = {
+  CATALOG_EDIT: 'catalogEdit',
+  RETAIL_PRICE_EDIT: 'retailPriceEdit',
+} as const
+type ManagerPermission = keyof typeof permissionFields
+const managerPermissions: ManagerPermission[] = [
+  'CATALOG_EDIT',
+  'RETAIL_PRICE_EDIT',
+]
 /** OwnerPermissionsPage: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ. */
 export default function OwnerPermissionsPage() {
   const { user } = useAuth()
@@ -42,7 +52,7 @@ export default function OwnerPermissionsPage() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState<{
     row: Manager
-    permission: string
+    permission: ManagerPermission
   } | null>(null)
   const [busy, setBusy] = useState(false)
   const [storeError, setStoreError] = useState('')
@@ -158,7 +168,7 @@ export default function OwnerPermissionsPage() {
                         <small className="permission-central">Kho tổng</small>
                       )}
                     </td>
-                    {['CATALOG_EDIT', 'RETAIL_PRICE_EDIT'].map((permission) => (
+                    {managerPermissions.map((permission) => (
                       <td key={permission}>
                         <label className="permission-control">
                           <input
@@ -171,7 +181,7 @@ export default function OwnerPermissionsPage() {
                                 ? 'Sửa danh mục'
                                 : 'Sửa giá bán lẻ')
                             }
-                            checked={row.permissions.includes(permission)}
+                            checked={row[permissionFields[permission]]}
                             onChange={() => {
                               setFormError('')
                               setPending({ row, permission })
@@ -182,7 +192,7 @@ export default function OwnerPermissionsPage() {
                             aria-hidden="true"
                           />
                           <span>
-                            {row.permissions.includes(permission)
+                            {row[permissionFields[permission]]
                               ? 'Đã có quyền'
                               : 'Không có quyền'}
                           </span>
@@ -259,10 +269,10 @@ export default function OwnerPermissionsPage() {
               }
               setBusy(true)
               setFormError('')
-              const granted = (code: string) =>
+              const granted = (code: ManagerPermission) =>
                 pending.permission === code
-                  ? !pending.row.permissions.includes(code)
-                  : pending.row.permissions.includes(code)
+                  ? !pending.row[permissionFields[code]]
+                  : pending.row[permissionFields[code]]
               try {
                 await axiosClient.put(
                   '/branch-managers/' + pending.row.id + '/permissions',
@@ -294,7 +304,7 @@ export default function OwnerPermissionsPage() {
           >
             <p>
               {pending.row.fullName}:{' '}
-              {pending.row.permissions.includes(pending.permission)
+              {pending.row[permissionFields[pending.permission]]
                 ? 'Thu hồi'
                 : 'Cấp'}{' '}
               quyền{' '}
@@ -307,7 +317,7 @@ export default function OwnerPermissionsPage() {
               <textarea
                 name="reason"
                 required
-                maxLength={500}
+                maxLength={255}
                 disabled={busy}
               />
             </label>

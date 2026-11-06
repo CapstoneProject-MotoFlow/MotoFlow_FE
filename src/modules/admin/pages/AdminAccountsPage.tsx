@@ -4,7 +4,6 @@
  * Đường dẫn: /accounts.
  * Công dụng: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp lại mật khẩu.
  */
-import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 /**
  * Admin account screen: loads accounts/stores, handles search and filters,
  * creates accounts, changes catalog permission, resets passwords and locks users.
@@ -13,6 +12,7 @@ import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import '../admin.css'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -46,7 +46,6 @@ type AccountForm = {
 type PermissionForm = {
   role: AccountRole
   storeId: string
-  catalogEdit: boolean
   reason: string
 }
 type AccountConfirmation = {
@@ -194,7 +193,6 @@ export default function AccountsPage() {
       setPermissionForm({
         role: detail.role,
         storeId: detail.storeId === null ? '' : String(detail.storeId),
-        catalogEdit: detail.permissions.includes('CATALOG_EDIT'),
         reason: '',
       })
     } catch (requestError) {
@@ -219,9 +217,6 @@ export default function AccountsPage() {
       const updatedAccount = await updatePermissions(editingPermission.id, {
         role: permissionForm.role,
         storeId: needsStore ? Number(permissionForm.storeId) : null,
-        catalogEdit:
-          permissionForm.role === 'BRANCH_MANAGER' &&
-          permissionForm.catalogEdit,
         reason: permissionForm.reason.trim(),
         releaseAssignedTasks,
       })
@@ -303,42 +298,6 @@ export default function AccountsPage() {
       )
     } finally {
       setSaving(false)
-    }
-  }
-
-  function toggleCatalogPermission(account: Account) {
-    const allowed = !account.permissions.includes('CATALOG_EDIT')
-    setPermissionConfirm({
-      title: allowed ? 'Cấp quyền sửa danh mục' : 'Thu hồi quyền sửa danh mục',
-      message: `${allowed ? 'Cấp' : 'Thu hồi'} quyền sửa danh mục ${allowed ? 'cho' : 'của'} ${account.fullName}?`,
-      run: async () => {
-        await applyCatalogPermission(account)
-        setPermissionConfirm(null)
-      },
-    })
-  }
-
-  async function applyCatalogPermission(account: Account) {
-    const allowed = !account.permissions.includes('CATALOG_EDIT')
-    setWorkingId(account.id)
-    try {
-      await updatePermissions(account.id, {
-        role: account.role,
-        storeId: account.storeId,
-        catalogEdit: allowed,
-        reason: allowed
-          ? 'Cấp quyền từ danh sách tài khoản'
-          : 'Thu hồi quyền từ danh sách tài khoản',
-        releaseAssignedTasks: false,
-      })
-      await loadAccounts()
-      setNotice(`Đã cập nhật phân quyền cho tài khoản ${account.username}.`)
-    } catch (requestError) {
-      setNotice(
-        getErrorMessage(requestError, 'Không thể cập nhật quyền tài khoản.'),
-      )
-    } finally {
-      setWorkingId(null)
     }
   }
 
@@ -599,22 +558,11 @@ export default function AccountsPage() {
                       </td>
                       <td>
                         {account.role === 'BRANCH_MANAGER' ? (
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={account.permissions.includes(
-                              'CATALOG_EDIT',
-                            )}
-                            className={`permission-switch ${account.permissions.includes('CATALOG_EDIT') ? 'is-on' : ''}`}
-                            disabled={
-                              workingId === account.id || account.id === user.id
-                            }
-                            onClick={() =>
-                              void toggleCatalogPermission(account)
-                            }
-                          >
-                            <span />
-                          </button>
+                          <span title="Owner cấp ở màn Quyền Branch Manager">
+                            {account.permissions.includes('CATALOG_EDIT')
+                              ? 'Đã cấp'
+                              : 'Chưa cấp'}
+                          </span>
                         ) : (
                           '—'
                         )}
@@ -1001,9 +949,6 @@ export default function AccountsPage() {
                                     ].includes(value)
                                       ? current.storeId
                                       : '',
-                                    catalogEdit:
-                                      value === 'BRANCH_MANAGER' &&
-                                      current.catalogEdit,
                                   }
                                 : current,
                             )
@@ -1057,27 +1002,16 @@ export default function AccountsPage() {
                     permissionForm.role,
                   ) && <small>Admin và Owner không được gán cửa hàng.</small>}
                 </fieldset>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={permissionForm.catalogEdit}
-                  disabled={permissionForm.role !== 'BRANCH_MANAGER'}
-                  className="permission-modal-toggle"
-                  onClick={() =>
-                    setPermissionForm((current) =>
-                      current
-                        ? { ...current, catalogEdit: !current.catalogEdit }
-                        : current,
-                    )
-                  }
-                >
-                  <span
-                    className={`permission-switch ${permissionForm.catalogEdit ? 'is-on' : ''}`}
-                  >
-                    <span />
+                <div className="permission-readonly">
+                  <DashboardIcon name="lock" />
+                  <span>
+                    Quyền sửa danh mục:{' '}
+                    {editingPermission.permissions.includes('CATALOG_EDIT')
+                      ? 'Đã cấp'
+                      : 'Chưa cấp'}
+                    . Owner cấp ở màn Quyền Branch Manager.
                   </span>
-                  <span>Được sửa danh mục phụ tùng</span>
-                </button>
+                </div>
                 <div className="permission-readonly">
                   <DashboardIcon name="lock" />
                   <span>

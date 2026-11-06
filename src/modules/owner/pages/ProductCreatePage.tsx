@@ -91,6 +91,7 @@ export default function ProductCreatePage() {
   const [parent, setParent] = useState('')
   const [oem, setOem] = useState<string[]>([])
   const [images, setImages] = useState<string[]>([])
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [barcodes, setBarcodes] = useState<string[]>([])
   const [selected, setSelected] = useState<number[]>([])
   const [query, setQuery] = useState('')
@@ -161,7 +162,7 @@ export default function ProductCreatePage() {
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (saving || !canEdit) return
+    if (saving || uploadingImage || !canEdit) return
     const form = new FormData(event.currentTarget)
     setSaving(true)
     setError('')
@@ -392,10 +393,19 @@ export default function ProductCreatePage() {
               <aside>
                 <section className="owner-panel">
                   <h2>Ảnh phụ tùng</h2>
-                  <ProductImageUrls values={images} onChange={setImages} />
+                  <ProductImageUrls
+                    values={images}
+                    onChange={setImages}
+                    uploading={uploadingImage}
+                    onUploadingChange={setUploadingImage}
+                  />
                 </section>
                 <section className="owner-panel part-create-actions">
-                  <button className="ui-confirm-button" type="submit">
+                  <button
+                    className="ui-confirm-button"
+                    type="submit"
+                    disabled={uploadingImage}
+                  >
                     {saving
                       ? 'Đang lưu…'
                       : loading
