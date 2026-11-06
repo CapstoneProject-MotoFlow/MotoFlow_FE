@@ -7,7 +7,7 @@ import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { getAccessToken, setAccessToken, clearAccessToken } from './accessToken'
 import type { LoginResponse } from '../types/auth'
 const axiosClient = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/v1',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })
