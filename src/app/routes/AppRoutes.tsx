@@ -36,6 +36,20 @@ const VehicleModelsPage = lazy(
 const SupplierDetailPage = lazy(
   () => import('../../modules/suppliers/pages/SupplierDetailPage'),
 )
+const ResolveSupplierDiscrepancyPage = lazy(
+  () => import('../../modules/suppliers/pages/ResolveSupplierDiscrepancyPage'),
+)
+const PurchaseOrdersPage = lazy(
+  () => import('../../modules/receiving/PurchaseOrdersPage'),
+)
+const ReceivingLayoutsPage = lazy(
+  () => import('../../modules/receiving/ReceivingLayoutsPage'),
+)
+const PurchaseOrderDetailPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrdersPage').then((module) => ({
+    default: module.PurchaseOrderDetailPage,
+  })),
+)
 const StaffProductsPage = lazy(
   () => import('../../modules/staff/pages/StaffProductsPage'),
 )
@@ -144,6 +158,33 @@ export default function AppRoutes() {
                 )
               }
             />
+            <Route
+              element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/supplier-discrepancies"
+                element={<ResolveSupplierDiscrepancyPage />}
+              />
+            </Route>
+            <Route
+              element={
+                <RequireRole roles={['OWNER', 'BRANCH_MANAGER', 'STAFF']} />
+              }
+            >
+              <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+              <Route
+                path="/purchase-orders/layout/:screen"
+                element={<ReceivingLayoutsPage />}
+              />
+            </Route>
+            <Route
+              element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/purchase-orders/:id"
+                element={<PurchaseOrderDetailPage />}
+              />
+            </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
               <Route
                 path="/owner/catalog-permissions"

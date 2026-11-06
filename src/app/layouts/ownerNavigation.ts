@@ -30,7 +30,7 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Phiếu nhập hàng',
-    href: '/dashboard#owner-requests',
+    href: '/purchase-orders',
     icon: 'clipboard',
     group: 'NHẬP HÀNG',
   },

@@ -1,0 +1,1030 @@
+import { isAxiosError } from 'axios'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import axiosClient from '../../shared/api/axiosClient'
+import { useAuth } from '../../shared/hooks/useAuth'
+import Icon from '../../shared/ui/Icon'
+import type { DashboardStore } from '../../shared/types/store'
+import { apiMessage } from '../suppliers/supplierService'
+import ReceiptActionDialog from './ReceiptActionDialog'
+import './receiving.css'
+
+type Order = {
+  id: number
+  supplierId: number
+  supplierName: string
+  storeName: string
+  createdAt: string
+  expectedArrival: string | null
+  status: string
+  orderedValue: number | null
+  overdue: boolean
+  lineCount: number
+  openDiscrepancies: number
+}
+type Assignment = {
+  goodsReceiptNoteId: number
+  purchaseOrderId: number
+  supplierName: string
+  deliveryDocumentNo: string
+  arrivedAt: string
+  taskStatus: string
+  lineCount: number
+}
+type Page<T> = { items: T[]; totalItems: number }
+type ReceiptRow = {
+  id: number
+  status: string
+  assigneeName: string | null
+  deliveryDocumentNo: string
+}
+type RowWork = {
+  outstanding: number
+  canCreateReceipt: boolean
+  receipt?: ReceiptRow
+}
+type Detail = Order & {
+  canCreateReceipt: boolean
+  canCreateReplacement: boolean
+  canUpdate: boolean
+  canCancel: boolean
+  note: string | null
+  lines: {
+    id: number
+    sku: string
+    partName: string
+    orderedQty: number
+    receivedQty: number
+    outstandingQty: number
+    purchasePrice: number | null
+  }[]
+  receipts: {
+    id: number
+    deliveryDocumentNo: string
+    arrivedAt: string
+    status: string
+    replacement: boolean
+    lines: { excessDecision: string }[]
+  }[]
+  discrepancies: {
+    id: number
+    goodsReceiptNoteId: number
+    partName: string
+    shortQty: number
+    wrongItemQty: number
+    damagedQty: number
+    rejectedExcessQty: number
+  }[]
+  history: {
+    action: string
+    actorName: string | null
+    at: string
+    reason: string | null
+  }[]
+}
+
+const views = [
+  ['OPEN', 'Đang mở'],
+  ['FULLY_RECEIVED', 'Đã nhận đủ'],
+  ['CANCELLED', 'Đã hủy'],
+  ['ALL', 'Tất cả'],
+]
+const labels: Record<string, string> = {
+  AWAITING_DELIVERY: 'Chờ giao hàng',
+  RECEIVING: 'Đang nhận hàng',
+  FULLY_RECEIVED: 'Đã nhận đủ',
+  CANCELLED: 'Đã hủy',
+  ASSIGNED: 'Chờ kiểm nhận',
+  RESULT_SUBMITTED: 'Chờ xác nhận',
+  CONFIRMED: 'Đã xác nhận',
+}
+const money = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+})
+const pageSize = 20
+
+async function loadOrderWork(
+  order: Order,
+  signal: AbortSignal,
+): Promise<RowWork> {
+  const [{ data: detail }, { data: receipts }] = await Promise.all([
+    axiosClient.get<Detail>('/purchase-orders/' + order.id, { signal }),
+    axiosClient.get<Page<ReceiptRow>>('/goods-receipt-notes', {
+      params: { purchaseOrderId: order.id, size: 100 },
+      signal,
+    }),
+  ])
+  const receipt =
+    receipts.items.find((item) => item.status === 'AWAITING_CONFIRMATION') ??
+    receipts.items.find(
+      (item) =>
+        ['AWAITING_INSPECTION', 'AWAITING_RECOUNT'].includes(item.status) &&
+        !item.assigneeName,
+    ) ??
+    receipts.items[0]
+  return {
+    outstanding: detail.lines.reduce(
+      (total, line) => total + line.outstandingQty,
+      0,
+    ),
+    canCreateReceipt: detail.canCreateReceipt,
+    receipt,
+  }
+}
+
+function day(value: string | null) {
+  return value
+    ? new Date(value).toLocaleDateString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+      })
+    : '—'
+}
+
+function receivingError(error: unknown) {
+  if (
+    isAxiosError(error) &&
+    error.response?.status === 404 &&
+    error.response.data?.code === 'MSG70'
+  ) {
+    return 'BE đang chạy chưa cung cấp API nhập hàng.'
+  }
+  return apiMessage(error)
+}
+
+function Status({ value }: { value: string }) {
+  return (
+    <span
+      className={'receiving-status receiving-status--' + value.toLowerCase()}
+    >
+      {labels[value] ?? value}
+    </span>
+  )
+}
+
+export default function PurchaseOrdersPage() {
+  const { user } = useAuth()
+  const staff = user?.role === 'STAFF'
+  const owner = user?.role === 'OWNER'
+  const manager = user?.role === 'BRANCH_MANAGER'
+  const [view, setView] = useState('OPEN')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(0)
+  const [supplierId, setSupplierId] = useState('')
+  const [storeId, setStoreId] = useState('')
+  const [stores, setStores] = useState<DashboardStore[]>([])
+  const [createdFrom, setCreatedFrom] = useState('')
+  const [createdTo, setCreatedTo] = useState('')
+  const dateRangeError =
+    view !== 'OPEN' && !!createdFrom && !!createdTo && createdFrom > createdTo
+  const [suppliers, setSuppliers] = useState<
+    { id: number; supplierName: string }[]
+  >([])
+  const [work, setWork] = useState<Record<number, RowWork>>({})
+  const [action, setAction] = useState<{
+    receipt: ReceiptRow
+    mode: 'assign' | 'confirm'
+  } | null>(null)
+  const [revision, setRevision] = useState(0)
+  const [orders, setOrders] = useState<Page<Order>>()
+  const [assignments, setAssignments] = useState<Page<Assignment>>()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (staff) return
+    const controller = new AbortController()
+    async function loadSuppliers() {
+      const items = new Map<number, { id: number; supplierName: string }>()
+      let loaded = 0
+      for (let page = 0; ; page++) {
+        const params = { page, size: 100 }
+        const signal = controller.signal
+        if (manager) {
+          const { data } = await axiosClient.get<Page<Order>>(
+            '/purchase-orders',
+            {
+              params: { ...params, view: 'ALL' },
+              signal,
+            },
+          )
+          for (const row of data.items)
+            items.set(row.supplierId, {
+              id: row.supplierId,
+              supplierName: row.supplierName,
+            })
+          loaded += data.items.length
+          if (!data.items.length || loaded >= data.totalItems) break
+        } else {
+          const { data } = await axiosClient.get<
+            Page<{ id: number; supplierName: string }>
+          >('/suppliers', { params, signal })
+          for (const row of data.items) items.set(row.id, row)
+          loaded += data.items.length
+          if (!data.items.length || loaded >= data.totalItems) break
+        }
+      }
+      return [...items.values()].sort((a, b) =>
+        a.supplierName.localeCompare(b.supplierName, 'vi'),
+      )
+    }
+    void loadSuppliers()
+      .then((items) => {
+        if (!controller.signal.aborted) setSuppliers(items)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSuppliers([])
+      })
+    return () => controller.abort()
+  }, [staff, manager])
+
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem('motoflow.receiving.preview.v1')
+    } catch {
+      // Storage may be disabled in the browser.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!owner) return
+    const controller = new AbortController()
+    const signal = controller.signal
+    void axiosClient
+      .get<DashboardStore[]>('/stores', { signal })
+      .then(({ data }) => {
+        if (!signal.aborted) setStores(data)
+      })
+      .catch(() => {
+        if (!signal.aborted) setStores([])
+      })
+    return () => controller.abort()
+  }, [owner])
+
+  useEffect(() => {
+    if (staff && view === 'DONE') return
+    if (dateRangeError) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
+      setError('')
+      try {
+        if (staff) {
+          const { data } = await axiosClient.get<Page<Assignment>>(
+            '/goods-receipt-notes/assigned-to-me',
+            {
+              params: { page, size: pageSize },
+              signal: controller.signal,
+            },
+          )
+          if (!controller.signal.aborted) setAssignments(data)
+        } else {
+          const { data } = await axiosClient.get<Page<Order>>(
+            '/purchase-orders',
+            {
+              params: {
+                page,
+                size: pageSize,
+                view,
+                q: query.trim().replace(/^YCN-0*/i, '') || undefined,
+                supplierId: supplierId || undefined,
+                storeId: owner ? storeId || undefined : undefined,
+                createdFrom:
+                  view !== 'OPEN' ? createdFrom || undefined : undefined,
+                createdTo: view !== 'OPEN' ? createdTo || undefined : undefined,
+              },
+              signal: controller.signal,
+            },
+          )
+          if (controller.signal.aborted) return
+          setOrders(data)
+          if (manager) {
+            const results = await Promise.allSettled(
+              data.items.map(
+                async (row) =>
+                  [
+                    row.id,
+                    await loadOrderWork(row, controller.signal),
+                  ] as const,
+              ),
+            )
+            if (!controller.signal.aborted)
+              setWork(
+                Object.fromEntries(
+                  results.flatMap((result) =>
+                    result.status === 'fulfilled' ? [result.value] : [],
+                  ),
+                ),
+              )
+          }
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) setError(receivingError(error))
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }, 200)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [
+    page,
+    query,
+    staff,
+    view,
+    supplierId,
+    manager,
+    revision,
+    owner,
+    storeId,
+    createdFrom,
+    createdTo,
+    dateRangeError,
+  ])
+
+  const staffDone = staff && view === 'DONE'
+  const total =
+    staffDone || dateRangeError
+      ? 0
+      : ((staff ? assignments : orders)?.totalItems ?? 0)
+  return (
+    <main
+      className={
+        manager || staff
+          ? 'dashboard-content receiving-page receiving-bm-list'
+          : 'dashboard-content receiving-page'
+      }
+    >
+      <header className="receiving-heading">
+        <h1>Yêu cầu nhập hàng</h1>
+        <span>Trang chủ / Nhập hàng / Yêu cầu nhập hàng</span>
+      </header>
+      <section className="receiving-panel">
+        <header className="receiving-panel-head">
+          <h2>
+            {staff
+              ? 'Việc kiểm nhận của tôi'
+              : owner
+                ? 'Yêu cầu nhập hàng toàn chuỗi'
+                : user?.storeName
+                  ? 'Yêu cầu nhập hàng · ' + user.storeName
+                  : 'Yêu cầu nhập hàng của cửa hàng'}
+          </h2>
+          {owner && (
+            <Link
+              className="receiving-layout-primary"
+              to="/purchase-orders/layout/order-form"
+            >
+              ＋ Tạo yêu cầu nhập hàng
+            </Link>
+          )}
+        </header>
+        {staff && (
+          <div className="receiving-filters">
+            <div
+              className="receiving-views"
+              aria-label="Trạng thái việc kiểm nhận"
+            >
+              <button
+                type="button"
+                aria-pressed={!staffDone}
+                onClick={() => {
+                  setView('OPEN')
+                  setPage(0)
+                }}
+              >
+                Việc của tôi
+                {!staffDone && !loading && !error && (
+                  <span className="receiving-pill">{total}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                aria-pressed={staffDone}
+                onClick={() => {
+                  setView('DONE')
+                  setPage(0)
+                }}
+              >
+                Đã xong
+              </button>
+            </div>
+          </div>
+        )}
+        {!staff && (
+          <div className="receiving-filters">
+            <div className="receiving-views" aria-label="Trạng thái">
+              {views.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={view === value}
+                  onClick={() => {
+                    setView(value)
+                    setPage(0)
+                  }}
+                >
+                  {label}
+                  {manager &&
+                    value === 'OPEN' &&
+                    view === 'OPEN' &&
+                    !loading &&
+                    !error && <span className="receiving-pill">{total}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="receiving-filter-row">
+              <div className="receiving-list-search">
+                <Icon name="search" />
+                <input
+                  aria-label="Tìm mã yêu cầu hoặc nhà cung cấp"
+                  placeholder="Tìm mã yêu cầu, nhà cung cấp"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    setPage(0)
+                  }}
+                />
+              </div>
+              {owner && (
+                <select
+                  aria-label="Kho nhận"
+                  value={storeId}
+                  disabled={!stores.length}
+                  onChange={(event) => {
+                    setStoreId(event.target.value)
+                    setPage(0)
+                  }}
+                >
+                  <option value="">Mọi kho nhận</option>
+                  {stores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.storeName}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <select
+                aria-label="Nhà cung cấp"
+                value={supplierId}
+                disabled={!suppliers.length}
+                onChange={(event) => {
+                  setSupplierId(event.target.value)
+                  setPage(0)
+                }}
+              >
+                <option value="">Mọi nhà cung cấp</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.supplierName}
+                  </option>
+                ))}
+              </select>
+              {view !== 'OPEN' && (
+                <>
+                  <label>
+                    Từ ngày{' '}
+                    <input
+                      type="date"
+                      value={createdFrom}
+                      onChange={(event) => {
+                        setCreatedFrom(event.target.value)
+                        setPage(0)
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Đến ngày{' '}
+                    <input
+                      type="date"
+                      value={createdTo}
+                      onChange={(event) => {
+                        setCreatedTo(event.target.value)
+                        setPage(0)
+                      }}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        {dateRangeError && (
+          <p role="alert">Ngày kết thúc phải từ ngày bắt đầu trở đi.</p>
+        )}
+        {!staffDone && !dateRangeError && loading && (
+          <p role="status">Đang tải…</p>
+        )}
+        {!staffDone && !dateRangeError && !loading && error && (
+          <p role="alert">{error}</p>
+        )}
+        {
+          <>
+            <div className="table-scroll">
+              {staff ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Phiếu nhập</th>
+                      <th>Yêu cầu</th>
+                      <th>Nhà cung cấp</th>
+                      <th>Ngày nhận</th>
+                      <th>Hàng cần nhận</th>
+                      <th>Kết quả của tôi</th>
+                      <th>Cần làm</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!staffDone &&
+                      !loading &&
+                      !error &&
+                      assignments?.items.map((row) => (
+                        <tr key={row.goodsReceiptNoteId}>
+                          <td>
+                            <Link
+                              to={
+                                '/purchase-orders/layout/inspection?receipt=' +
+                                row.goodsReceiptNoteId
+                              }
+                            >
+                              {row.deliveryDocumentNo}
+                            </Link>
+                          </td>
+                          <td>#{row.purchaseOrderId}</td>
+                          <td>{row.supplierName}</td>
+                          <td>{day(row.arrivedAt)}</td>
+                          <td>{row.lineCount} mã</td>
+                          <td>
+                            <Status value={row.taskStatus} />
+                          </td>
+                          <td>
+                            <Link
+                              className="receiving-layout-primary"
+                              to={
+                                '/purchase-orders/layout/inspection?receipt=' +
+                                row.goodsReceiptNoteId
+                              }
+                            >
+                              {row.taskStatus === 'ASSIGNED'
+                                ? 'Kiểm nhận'
+                                : 'Xem kết quả'}
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    {!total && (
+                      <tr>
+                        <td colSpan={7} className="receiving-empty-cell">
+                          {staffDone
+                            ? 'BE chưa cung cấp lịch sử việc kiểm nhận đã xong.'
+                            : 'Bạn chưa có phiếu được giao kiểm nhận.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Yêu cầu</th>
+                      <th>Nhà cung cấp</th>
+                      {owner && <th>Kho nhận</th>}
+                      <th>Ngày lập</th>
+                      <th>Giao dự kiến</th>
+                      {owner && <th>Giá trị</th>}
+                      {manager && (
+                        <>
+                          <th>Hàng cần nhận</th>
+                          <th>Kiểm nhận</th>
+                        </>
+                      )}
+                      <th>Trạng thái</th>
+                      <th>{manager ? 'Cần làm' : 'Sai lệch chưa đóng'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!dateRangeError &&
+                      !loading &&
+                      !error &&
+                      orders?.items.map((row) => {
+                        const detail = work[row.id]
+                        const receipt = detail?.receipt
+                        return (
+                          <tr key={row.id}>
+                            <td>
+                              <Link to={'/purchase-orders/' + row.id}>
+                                {manager
+                                  ? 'YCN-' + String(row.id).padStart(4, '0')
+                                  : '#' + row.id}
+                              </Link>
+                            </td>
+                            <td>{row.supplierName}</td>
+                            {owner && <td>{row.storeName}</td>}
+                            <td>{day(row.createdAt)}</td>
+                            <td
+                              className={
+                                row.overdue ? 'receiving-overdue' : undefined
+                              }
+                            >
+                              {row.overdue && '⚠ '}
+                              {day(row.expectedArrival)}
+                            </td>
+                            {owner && (
+                              <td>
+                                {row.orderedValue === null
+                                  ? '—'
+                                  : money.format(row.orderedValue)}
+                              </td>
+                            )}
+                            {manager && (
+                              <>
+                                <td>
+                                  {row.lineCount} mã
+                                  {detail &&
+                                    ' · ' +
+                                      detail.outstanding.toLocaleString(
+                                        'vi-VN',
+                                      )}
+                                </td>
+                                <td>{receipt?.assigneeName ?? '—'}</td>
+                              </>
+                            )}
+                            <td>
+                              <Status value={row.status} />
+                            </td>
+                            <td>
+                              {manager ? (
+                                receipt?.status === 'AWAITING_CONFIRMATION' ? (
+                                  <button
+                                    type="button"
+                                    className="receiving-layout-primary"
+                                    onClick={() =>
+                                      setAction({ receipt, mode: 'confirm' })
+                                    }
+                                  >
+                                    Xác nhận
+                                  </button>
+                                ) : receipt &&
+                                  [
+                                    'AWAITING_INSPECTION',
+                                    'AWAITING_RECOUNT',
+                                  ].includes(receipt.status) &&
+                                  !receipt.assigneeName ? (
+                                  <button
+                                    type="button"
+                                    className="receiving-layout-primary"
+                                    onClick={() =>
+                                      setAction({ receipt, mode: 'assign' })
+                                    }
+                                  >
+                                    Giao việc
+                                  </button>
+                                ) : detail?.canCreateReceipt &&
+                                  (!receipt ||
+                                    receipt.status === 'CONFIRMED') ? (
+                                  <Link
+                                    className="receiving-layout-primary"
+                                    to={
+                                      '/purchase-orders/layout/receipt-form?order=' +
+                                      row.id
+                                    }
+                                  >
+                                    Lập phiếu nhập
+                                  </Link>
+                                ) : null
+                              ) : (
+                                row.openDiscrepancies || '—'
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    {!total && (
+                      <tr>
+                        <td colSpan={8} className="receiving-empty-cell">
+                          Chưa có yêu cầu nhập hàng để hiển thị.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {!staffDone && (
+              <footer className="receiving-pagination">
+                <span>
+                  {total
+                    ? `Hiển thị ${page * pageSize + 1}–${Math.min((page + 1) * pageSize, total)} trên ${total} chứng từ`
+                    : 'Chưa có chứng từ'}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Trang trước"
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                >
+                  ‹
+                </button>
+                <span className="receiving-pill">{page + 1}</span>
+                <button
+                  type="button"
+                  aria-label="Trang sau"
+                  disabled={(page + 1) * pageSize >= total}
+                  onClick={() => setPage(page + 1)}
+                >
+                  ›
+                </button>
+              </footer>
+            )}
+          </>
+        }
+      </section>
+      {action && (
+        <ReceiptActionDialog
+          key={action.receipt.id + action.mode}
+          receiptId={action.receipt.id}
+          documentNo={action.receipt.deliveryDocumentNo}
+          mode={action.mode}
+          onClose={() => setAction(null)}
+          onSaved={() => {
+            setAction(null)
+            setRevision((value) => value + 1)
+          }}
+        />
+      )}
+    </main>
+  )
+}
+
+export function PurchaseOrderDetailPage() {
+  const { id } = useParams()
+  return <PurchaseOrderDetail key={id} id={id} />
+}
+
+function PurchaseOrderDetail({ id }: { id?: string }) {
+  const { user } = useAuth()
+  const owner = user?.role === 'OWNER'
+  const [detail, setDetail] = useState<Detail>()
+  const [error, setError] = useState('')
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+  const validId = /^[1-9]\d*$/.test(id ?? '')
+  useEffect(() => {
+    if (!validId) return
+    const controller = new AbortController()
+    axiosClient
+      .get<Detail>('/purchase-orders/' + id, { signal: controller.signal })
+      .then(({ data }) => {
+        if (!controller.signal.aborted) setDetail(data)
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setError(receivingError(error))
+      })
+    return () => controller.abort()
+  }, [id, validId])
+
+  return (
+    <main className="dashboard-content receiving-page">
+      <Link to="/purchase-orders">← Yêu cầu nhập hàng</Link>
+      <header className="receiving-heading">
+        <h1>Đơn đặt hàng #{id}</h1>
+        {detail && <Status value={detail.status} />}
+      </header>
+      {detail &&
+        (detail.canUpdate ||
+          detail.canCancel ||
+          detail.canCreateReceipt ||
+          detail.canCreateReplacement) && (
+          <div className="receiving-layout-actions">
+            {detail.canUpdate && (
+              <Link
+                to={
+                  '/purchase-orders/layout/order-form?mode=edit&order=' +
+                  detail.id
+                }
+              >
+                Sửa yêu cầu
+              </Link>
+            )}
+            {detail.canCancel && (
+              <button
+                type="button"
+                aria-expanded={cancelOpen}
+                disabled={cancelling}
+                onClick={() => setCancelOpen((value) => !value)}
+              >
+                Hủy yêu cầu
+              </button>
+            )}
+            {(detail.canCreateReceipt || detail.canCreateReplacement) && (
+              <Link
+                className="receiving-layout-primary"
+                to={'/purchase-orders/layout/receipt-form?order=' + detail.id}
+              >
+                Lập phiếu nhập
+              </Link>
+            )}
+          </div>
+        )}
+      {detail?.canCancel && cancelOpen && (
+        <form
+          className="receiving-panel"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if (cancelling) return
+            const reason = String(
+              new FormData(event.currentTarget).get('reason') ?? '',
+            ).trim()
+            if (!reason) {
+              setCancelError('Vui lòng nhập lý do hủy.')
+              return
+            }
+            setCancelError('')
+            setCancelling(true)
+            try {
+              const { data } = await axiosClient.post<Detail>(
+                '/purchase-orders/' + detail.id + '/cancel',
+                { reason },
+              )
+              setDetail(data)
+              setCancelOpen(false)
+            } catch (error) {
+              setCancelError(apiMessage(error))
+            } finally {
+              setCancelling(false)
+            }
+          }}
+        >
+          <h2>Hủy yêu cầu nhập hàng</h2>
+          <div className="receiving-layout-fields">
+            <label>
+              Lý do hủy <textarea name="reason" required maxLength={255} />
+            </label>
+          </div>
+          {cancelError && <p role="alert">{cancelError}</p>}
+          <div className="receiving-layout-actions">
+            <button
+              type="submit"
+              className="receiving-layout-primary"
+              disabled={cancelling}
+            >
+              Xác nhận hủy
+            </button>
+          </div>
+        </form>
+      )}
+      {!validId ? (
+        <p role="alert">Mã đơn đặt hàng không hợp lệ.</p>
+      ) : error ? (
+        <p role="alert">{error}</p>
+      ) : (
+        !detail && <p role="status">Đang tải đơn đặt hàng…</p>
+      )}
+      {detail && (
+        <div className="receiving-split">
+          <div className="receiving-stack">
+            <section className="receiving-panel">
+              <h2>Thông tin chung</h2>
+              <dl className="receiving-info">
+                <div>
+                  <dt>Nhà cung cấp</dt>
+                  <dd>{detail.supplierName}</dd>
+                </div>
+                <div>
+                  <dt>Kho nhận</dt>
+                  <dd>{detail.storeName}</dd>
+                </div>
+                <div>
+                  <dt>Ngày lập</dt>
+                  <dd>{day(detail.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>Giao dự kiến</dt>
+                  <dd>{day(detail.expectedArrival)}</dd>
+                </div>
+                <div>
+                  <dt>Ghi chú</dt>
+                  <dd>{detail.note || '—'}</dd>
+                </div>
+              </dl>
+            </section>
+            <section className="receiving-panel">
+              <h2>Phụ tùng nhập</h2>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Phụ tùng</th>
+                      <th>Số đặt</th>
+                      <th>Đã nhận</th>
+                      <th>Còn thiếu</th>
+                      {owner && <th>Đơn giá</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.lines.map((line) => (
+                      <tr key={line.id}>
+                        <td>
+                          {line.partName}
+                          <small>{line.sku}</small>
+                        </td>
+                        <td>{line.orderedQty}</td>
+                        <td>{line.receivedQty}</td>
+                        <td>{line.outstandingQty}</td>
+                        {owner && (
+                          <td>
+                            {line.purchasePrice === null
+                              ? '—'
+                              : money.format(line.purchasePrice)}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section className="receiving-panel">
+              <h2>Lượt nhận hàng</h2>
+              {!detail.receipts.length ? (
+                <p>Chưa có phiếu nhập hàng.</p>
+              ) : (
+                <ul className="receiving-items">
+                  {detail.receipts.map((receipt) => (
+                    <li key={receipt.id}>
+                      <Link
+                        to={
+                          '/purchase-orders/layout/' +
+                          (owner &&
+                          receipt.lines.some(
+                            (line) => line.excessDecision === 'AWAITING_OWNER',
+                          )
+                            ? 'excess'
+                            : receipt.status === 'AWAITING_CONFIRMATION'
+                              ? 'confirmation'
+                              : 'inspection') +
+                          '?receipt=' +
+                          receipt.id
+                        }
+                      >
+                        {receipt.deliveryDocumentNo}
+                      </Link>
+                      <span>
+                        {day(receipt.arrivedAt)}
+                        {receipt.replacement ? ' · Giao bù' : ''}
+                      </span>
+                      <Status value={receipt.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section className="receiving-panel">
+              <h2>Sai lệch nhà cung cấp</h2>
+              {!detail.discrepancies.length ? (
+                <p>Chưa có sai lệch.</p>
+              ) : (
+                <ul className="receiving-items">
+                  {detail.discrepancies.map((row) => (
+                    <li key={row.id}>
+                      <Link
+                        to={
+                          '/supplier-discrepancies?receipt=' +
+                          row.goodsReceiptNoteId
+                        }
+                      >
+                        {row.partName}
+                      </Link>
+                      Thiếu {row.shortQty} · Giao sai {row.wrongItemQty} · Hỏng{' '}
+                      {row.damagedQty} · Từ chối nhận thừa{' '}
+                      {row.rejectedExcessQty}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+          <section className="receiving-panel">
+            <h2>Lịch sử</h2>
+            {!detail.history.length ? (
+              <p>Chưa có lịch sử.</p>
+            ) : (
+              <ol className="receiving-timeline">
+                {detail.history.map((entry, index) => (
+                  <li key={index}>
+                    {day(entry.at)} · {entry.actorName ?? 'Hệ thống'} ·{' '}
+                    {entry.action}
+                    {entry.reason ? ' · ' + entry.reason : ''}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </div>
+      )}
+    </main>
+  )
+}
