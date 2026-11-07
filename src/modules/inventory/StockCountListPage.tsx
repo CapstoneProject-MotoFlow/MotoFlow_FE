@@ -156,13 +156,18 @@ export default function StockCountListPage() {
           {scope.storesError}
         </p>
       )}
-      {dialog && !staff && (
-        <StockCountFormDialog
-          owner={scope.owner}
-          storeId={scope.user?.storeId}
-          onClose={() => setDialog(false)}
-        />
-      )}
+      {(dialog ||
+        scope.params.get('action') === (scope.owner ? 'request' : 'create')) &&
+        !staff && (
+          <StockCountFormDialog
+            owner={scope.owner}
+            storeId={scope.user?.storeId}
+            onClose={() => {
+              setDialog(false)
+              scope.filter({ action: '' })
+            }}
+          />
+        )}
     </main>
   )
 }

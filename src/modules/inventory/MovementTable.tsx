@@ -45,6 +45,8 @@ export function SourceDocument({ type, id }: { type: string; id: number }) {
       </button>
       {open && <ReceiptDialog id={id} onClose={() => setOpen(false)} />}
     </>
+  ) : type === 'STOCK_COUNT' ? (
+    <Link to={'/stock-counts/' + id}>{label}</Link>
   ) : (
     <span>{label}</span>
   )

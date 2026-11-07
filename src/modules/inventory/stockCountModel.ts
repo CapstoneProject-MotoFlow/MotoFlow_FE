@@ -14,6 +14,7 @@ export type CountLine = {
   reason: string | null
   recount: boolean
   unitCost: number | null
+  createdLotId?: number | null
 }
 export type StockCount = {
   id: number

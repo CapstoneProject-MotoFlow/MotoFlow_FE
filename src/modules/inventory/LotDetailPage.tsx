@@ -48,7 +48,21 @@ export default function LotDetailPage() {
           <div className="stock-detail-columns">
             <InventoryPanel
               title="Thông tin lô"
-              action={<LotState state={item.state} />}
+              action={
+                <div className="stock-actions">
+                  <LotState state={item.state} />
+                  {!scope.owner &&
+                    item.state === 'EXPIRED' &&
+                    item.remainingQty > 0 && (
+                      <button
+                        disabled
+                        title="Chưa thể gửi yêu cầu hủy lô lúc này"
+                      >
+                        Báo hủy
+                      </button>
+                    )}
+                </div>
+              }
             >
               <dl className="stock-facts">
                 <div>

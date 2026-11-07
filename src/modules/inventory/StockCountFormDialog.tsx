@@ -39,6 +39,7 @@ export function StockCountFormDialog({
   const name = owner ? 'Yêu cầu kiểm kê' : 'Tạo phiếu kiểm kê'
   return (
     <FormDialog
+      className="count-create-dialog"
       title={name}
       formId="count-create"
       submitLabel={owner ? 'Gửi yêu cầu' : 'Tạo phiếu'}

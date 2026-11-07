@@ -104,7 +104,36 @@ export default function InventoryPage() {
           </button>
         ))}
       </div>
-      <InventoryPanel title={'Tồn kho · ' + scope.warehouse}>
+      {scope.owner && (
+        <nav className="stock-value-tiles" aria-label="Giá trị tồn theo kho">
+          {[
+            { id: '', storeName: 'Toàn chuỗi' },
+            ...scope.stores.map((store) => ({
+              id: String(store.id),
+              storeName: store.storeName,
+            })),
+          ].map((store) => (
+            <button
+              key={store.id}
+              aria-pressed={scope.storeId === store.id}
+              onClick={() =>
+                scope.filter({ storeId: store.id, storageArea: '' })
+              }
+            >
+              <span>{store.storeName}</span>
+              <strong title="Chưa có số liệu tổng giá trị tồn">—</strong>
+            </button>
+          ))}
+        </nav>
+      )}
+      <InventoryPanel
+        title={'Tồn kho · ' + scope.warehouse}
+        action={
+          <button type="button" disabled title="Chưa thể xuất tệp lúc này">
+            Xuất Excel
+          </button>
+        }
+      >
         <div className="stock-filters">
           <WarehouseFilter
             owner={scope.owner}

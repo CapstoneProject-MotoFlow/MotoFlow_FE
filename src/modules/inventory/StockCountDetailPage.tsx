@@ -1,4 +1,7 @@
-import { Link, useParams } from 'react-router-dom'
+import { StockCountLines } from './StockCountLines'
+import { useState } from 'react'
+import { CountActionDialog, type CountAction } from './CountActionDialog'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { InventoryHeader, InventoryPanel } from './components'
 import { CountBackLink } from './StockCountListPage'
@@ -8,25 +11,57 @@ import {
   countTypeNames,
   type StockCount,
 } from './stockCountModel'
-import { date, dateTime, money } from './presentation'
+import { date, dateTime } from './presentation'
 import './stock-count.css'
 
 export default function StockCountDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  return <StockCountDetailView id={id} role={user?.role ?? ''} />
+  const [params] = useSearchParams()
+  return (
+    <StockCountDetailView
+      key={id + ':' + params.toString()}
+      id={id}
+      role={user?.role ?? ''}
+      initialAction={params.get('action') as CountAction | null}
+    />
+  )
 }
 export function StockCountDetailView({
   count,
   id,
   role,
+  initialAction,
 }: {
   count?: StockCount
   id?: string
   role: string
+  initialAction?: CountAction | null
 }) {
   const staff = role === 'STAFF',
     owner = role === 'OWNER'
+  const allowed = owner
+    ? ['approve', 'opening']
+    : role === 'BRANCH_MANAGER'
+      ? ['assign', 'verify', 'cancel']
+      : []
+  const [action, setAction] = useState<CountAction | undefined>(() =>
+    initialAction && allowed.includes(initialAction)
+      ? initialAction
+      : undefined,
+  )
+  const [allLines, setAllLines] = useState(false)
+  const manage = !count || ['DRAFT', 'COUNTING'].includes(count.status)
+  const approval = !count || count.status === 'AWAITING_APPROVAL'
+  const relevant = (count?.lines ?? []).filter((line) =>
+    count?.type === 'OPENING'
+      ? line.unitCost == null
+      : line.countedQty == null || countDifference(line) !== 0,
+  )
+  const visibleLines =
+    staff || allLines || !count?.submittedAt || !relevant.length
+      ? count?.lines
+      : relevant
   return (
     <main className="inventory-workspace count-workspace">
       <InventoryHeader
@@ -96,81 +131,30 @@ export function StockCountDetailView({
               )}
             </dl>
           </InventoryPanel>
-          <InventoryPanel title={staff ? 'Dòng cần đếm' : 'Dòng kiểm kê'}>
-            <div className="stock-table-scroll">
-              <table className="stock-table">
-                <thead>
-                  <tr>
-                    <th>Phụ tùng / lô / hạn dùng</th>
-                    {staff ? <th>Vị trí</th> : <th>Sổ sách</th>}
-                    <th>Số đếm</th>
-                    {!staff && <th>Chênh lệch</th>}
-                    {owner && <th>Giá trị chênh lệch</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {count?.lines.map((line) => {
-                    const difference =
-                      count.status === 'DRAFT' ? null : countDifference(line)
-                    return (
-                      <tr key={line.id}>
-                        <td>
-                          {line.partName}
-                          <small>{line.sku}</small>
-                          {line.lotCode && (
-                            <strong className="count-lot">
-                              Lô {line.lotCode} · HSD {date(line.expiryDate)}
-                            </strong>
-                          )}
-                          {!staff && (line.reason || line.note) && (
-                            <small>
-                              {line.reason
-                                ? 'Nguyên nhân: ' + line.reason
-                                : 'Staff ghi: ' + line.note}
-                            </small>
-                          )}
-                        </td>
-                        <td>
-                          {staff
-                            ? (line.binLocation ?? '—')
-                            : count.status === 'DRAFT'
-                              ? '—'
-                              : (line.bookQty ?? '—')}
-                        </td>
-                        <td>
-                          {line.countedQty ??
-                            (line.recount ? 'Cần đếm lại' : 'Chưa đếm')}
-                        </td>
-                        {!staff && (
-                          <td>
-                            {difference == null
-                              ? '—'
-                              : (difference > 0 ? '+' : '') + difference}
-                          </td>
-                        )}
-                        {owner && (
-                          <td>
-                            {difference == null || line.unitCost == null
-                              ? '—'
-                              : money.format(difference * line.unitCost)}
-                          </td>
-                        )}
-                      </tr>
-                    )
-                  })}
-                  {!count?.lines.length && (
-                    <tr>
-                      <td
-                        colSpan={staff ? 3 : owner ? 5 : 4}
-                        className="stock-empty"
-                      >
-                        Chưa có dòng kiểm kê để hiển thị.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <InventoryPanel
+            title={staff ? 'Dòng cần đếm' : 'Dòng kiểm kê'}
+            action={
+              !staff && count?.submittedAt && relevant.length > 0 ? (
+                <div className="stock-tabs">
+                  <button
+                    aria-pressed={!allLines}
+                    onClick={() => setAllLines(false)}
+                  >
+                    {count?.type === 'OPENING'
+                      ? 'Thiếu giá vốn'
+                      : 'Chênh lệch, chưa đếm'}
+                  </button>
+                  <button
+                    aria-pressed={allLines}
+                    onClick={() => setAllLines(true)}
+                  >
+                    Tất cả dòng
+                  </button>
+                </div>
+              ) : undefined
+            }
+          >
+            <StockCountLines count={count} role={role} lines={visibleLines} />
           </InventoryPanel>
         </div>
         {!staff && (
@@ -202,22 +186,48 @@ export function StockCountDetailView({
           </Link>
         ) : (
           <div className="count-buttons">
-            <button disabled>Hủy phiếu</button>
+            {!owner && manage && (
+              <button onClick={() => setAction('cancel')}>Hủy phiếu</button>
+            )}
             {owner ? (
-              <button className="count-primary" disabled>
-                Duyệt chênh lệch
-              </button>
+              approval && (
+                <button
+                  className="count-primary"
+                  onClick={() =>
+                    setAction(count?.type === 'OPENING' ? 'opening' : 'approve')
+                  }
+                >
+                  {count?.type === 'OPENING'
+                    ? 'Nhập giá vốn và duyệt'
+                    : 'Duyệt chênh lệch'}
+                </button>
+              )
             ) : (
               <>
-                <button disabled>Giao việc</button>
-                <button className="count-primary" disabled>
-                  Xác minh chênh lệch
-                </button>
+                {manage && !count?.submittedAt && (
+                  <button onClick={() => setAction('assign')}>Giao việc</button>
+                )}
+                {manage && (!count || !!count.submittedAt) && (
+                  <button
+                    className="count-primary"
+                    onClick={() => setAction('verify')}
+                  >
+                    Xác minh chênh lệch
+                  </button>
+                )}
               </>
             )}
           </div>
         )}
       </footer>
+      {action && allowed.includes(action) && (
+        <CountActionDialog
+          action={action}
+          count={count}
+          documentId={id}
+          onClose={() => setAction(undefined)}
+        />
+      )}
     </main>
   )
 }

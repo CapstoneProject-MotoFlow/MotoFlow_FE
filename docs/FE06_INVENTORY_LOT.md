@@ -23,7 +23,7 @@ Nhánh này độc lập với FE-05/PR #24, không thay thế hoặc xóa code 
 - Chưa có thống kê giá trị tồn toàn chuỗi/từng kho, phân trang nhóm SKU toàn chuỗi hoặc sắp xếp theo giá trị. Bảng hiện giữ đúng kết quả phụ tùng/kho và thứ tự phân trang BE.
 - Danh sách lô không trả giá nhập; giá nhập có ở chi tiết lô, không tải N+1 để ghép vào danh sách.
 - BM chưa có endpoint tra cứu danh sách NCC nên chưa có bộ chọn NCC tương đương Owner.
-- Chứng từ gốc hiện mở được phiếu nhập (GET `/goods-receipt-notes/{id}`). Các nguồn bán hàng/điều chuyển/kiểm kê/điều chỉnh hiển thị mã tham chiếu; không dựng đường dẫn tới màn chưa triển khai.
+- Chứng từ gốc hiện mở được phiếu nhập (GET `/goods-receipt-notes/{id}`). Nguồn kiểm kê dẫn tới `/stock-counts/:id` (giao diện chờ API chi tiết); bán hàng/điều chuyển/điều chỉnh hiện mã tham chiếu.
 - Chưa có API xuất Excel của các màn này.
 - Inventory Posting, Low Stock Warning, Near Expiry Warning và File Upload Service thuộc BE. FE đọc tồn/cảnh báo đã có; không thêm dịch vụ ghi sổ hoặc tác vụ nền giả ở FE.
 
@@ -31,7 +31,7 @@ Không thêm dữ liệu mẫu, số liệu giả, tab điều hướng thử ng
 
 ## Kiểm tra
 
-- Build TypeScript/Vite; ESLint (không có lỗi; 15 cảnh báo cũ ngoài module inventory); 17 test hiện có.
+- Build TypeScript/Vite; ESLint (không có lỗi; 15 cảnh báo cũ); 21 test, gồm quy tắc số đếm và kiểm tra HTML không lộ sổ sách/giá vốn với Staff.
 - Kiểm tra trình duyệt với API local thật bằng Owner và BM Cầu Giấy: tồn kho, mở lô, chi tiết lô, lịch sử theo lô, popup vị trí/ngưỡng/hạn dùng; kiểm tra ẩn giá vốn với BM.
 - Kiểm tra gửi ngưỡng 0 bằng chặn request lưu trên trình duyệt, không sửa database thực.
 - Kiểm tra chiều rộng 390px: không tràn trang, bảng cuộn ngang bên trong.
@@ -41,11 +41,16 @@ Các kiểm tra trên không xác nhận mọi nhánh nghiệp vụ BE hoặc th
 
 ## Bổ sung giao diện kiểm kê — UC-90 đến UC-95, UC-105
 
-- Đã fetch lại BE main: vẫn `df4b1f4`. Có entity/repository `StockCount`, `StockCountLine`, `StockCountRequest`; chưa có controller/service/DTO API phục vụ danh sách, yêu cầu, tạo phiếu, chi tiết, giao việc, bắt đầu đếm, lưu/gửi số đếm hoặc phê duyệt kiểm kê.
+- Đã fetch lại BE main: vẫn `df4b1f4`. Có entity/repository `StockCount`, `StockCountLine`, `StockCountRequest`; chưa có controller/service/DTO API phục vụ danh sách, yêu cầu, tạo phiếu, chi tiết, bắt đầu đếm, lưu/gửi số đếm hoặc phê duyệt kiểm kê.
 - `/stock-counts` mở cho Owner/BM/Staff; menu dẫn tới màn này. Các cột và tab theo vai trò: Owner chờ duyệt và xem các kho; BM phiếu kho mình và yêu cầu của Owner; Staff việc cần đếm/đã gửi, không có sổ sách, chênh lệch hoặc giá vốn.
 - Popup Owner yêu cầu kiểm kê và BM tạo phiếu có toàn kho/khu vực/một số phụ tùng, ngày hoặc lý do. Bộ chọn dùng API kho/khu vực/phụ tùng thật. Đổi kho xóa các lựa chọn phụ tùng/khu vực trước đó.
 - `/stock-counts/:id` đã dựng bố cục thông tin, tiến độ, dòng kiểm kê, lịch sử và thanh thao tác theo vai trò. Staff chỉ có thông tin cần đếm và số đếm của mình.
 - `/stock-counts/:id/record` dành cho Staff/BM, dựng bảng đếm mù theo vị trí, lô/hạn dùng, ô số đếm, ghi chú, chỉ dòng chưa đếm và cam kết. Chuẩn bị giao diện trước lúc bắt đầu/đã gửi/không còn được đếm. Có popup chọn Excel cho phiếu đầu kỳ; chưa tải tệp hoặc đọc tệp vào phiếu.
-- **Chưa nối nghiệp vụ kiểm kê:** không có API tương ứng; không gửi tới endpoint tự đặt tên, không tạo phiếu/dòng mẫu, không báo lưu/gửi thành công. Nút tạo/gửi/lưu/duyệt hiện khóa. Các trang không tự lấy entity trong database hoặc dựng phiếu theo mã trên URL. `stockCountModel.ts` chỉ là model hiển thị tạm của FE, không phải hợp đồng DTO BE đã xác nhận.
-- Chưa có popup giao việc/xác minh/duyệt có dữ liệu thực; cần DTO và quy tắc hành động từ BE để hoàn thiện các thao tác này. Chưa áp điều kiện kỳ kho từ ngày cố định trong mockup.
+- **Các thao tác kiểm kê ngoài giao việc chưa nối:** không có API tương ứng; không gửi tới endpoint tự đặt tên, không tạo phiếu/dòng mẫu, không báo lưu/gửi thành công. Nút tạo/gửi/lưu/duyệt hiện khóa. Các trang không tự lấy entity trong database hoặc dựng phiếu theo mã trên URL. `stockCountModel.ts` chỉ là model hiển thị tạm của FE, không phải hợp đồng DTO BE đã xác nhận.
+- Đã bổ sung popup giao việc, xác minh nguyên nhân/bỏ dòng/trả đếm lại, duyệt/trả đếm lại, hủy có lý do, nhập giá vốn đầu kỳ/Excel. Popup xác minh/duyệt/hủy/giá vốn cho xem bố cục và nhập thông tin nhưng khóa gửi khi chưa có API. Chưa áp điều kiện kỳ kho từ ngày cố định trong mockup.
+- Giao người đếm dùng API chung có sẵn: GET/POST `/warehouse-tasks`, `taskType=COUNTING`, `documentId`, `assigneeId`. Chỉ cho BM; BE xác thực phiếu thuộc kho và trạng thái cho phép. Hiển thị người đủ điều kiện, số việc, lịch sử và thông báo chặn từ BE. GET lỗi hoặc không có phiếu thì không cho lưu. Không tạo thêm phiếu để kiểm tra.
 - Ba test bổ sung kiểm tra chưa đếm khác số 0, chỉ nhận số nguyên không âm trong giới hạn, và yêu cầu số đếm/ghi chú ở mọi dòng kèm cam kết (tổng 20 test đạt). Kiểm tra trình duyệt Owner/BM/Staff không có lỗi JavaScript; popup chọn được phụ tùng thật, nút gửi khóa; không gọi API kiểm kê chưa tồn tại. Kiểm tra bố cục trang tại 390px không tràn ngang.
+
+- Đã kiểm tra popup Owner/BM/Staff ở desktop/390px. Giao việc đọc phiếu thực từ BE, kiểm tra payload POST bằng chặn lưu trả lỗi có chủ đích; không đổi người được giao trong database.
+- Lịch sử đã có bố cục tổng nhập/xuất/tồn đầu-cuối và biểu đồ gập/mở; chưa có dữ liệu tổng hợp nên hiện dấu — và trạng thái chưa có dữ liệu, không vẽ đường giả. Owner có ô giá trị tồn theo kho (chưa có tổng nên hiện —). Xuất Excel và báo hủy lô hết hạn hiển thị nhưng khóa do chưa có nghiệp vụ tương ứng.
+- Bảng đối chiếu từng màn: `FE06_SCREEN_COVERAGE.md`.

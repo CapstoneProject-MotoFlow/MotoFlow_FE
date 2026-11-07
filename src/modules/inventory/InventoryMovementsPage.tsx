@@ -16,6 +16,7 @@ export default function InventoryMovementsPage() {
   const scope = useInventoryScope()
   const p = scope.params
   const [search, setSearch] = useState('')
+  const [chartOpen, setChartOpen] = useState(false)
   const products = useInventoryData<Page<Product>>('/products', {
     q: search,
     size: 20,
@@ -141,7 +142,60 @@ export default function InventoryMovementsPage() {
               product.error)
         }
       />
-      <InventoryPanel title="Biến động theo ngày">
+      <InventoryPanel
+        title={
+          product.data
+            ? 'Tồn khả dụng cuối ngày · ' + product.data.partName
+            : 'Nhập, xuất trong kỳ'
+        }
+        action={
+          <button
+            type="button"
+            aria-expanded={chartOpen}
+            onClick={() => setChartOpen(!chartOpen)}
+          >
+            {chartOpen ? 'Ẩn biểu đồ' : 'Xem biểu đồ'}
+          </button>
+        }
+      >
+        <dl className="stock-facts">
+          <div>
+            <dt>Nhập vào kho</dt>
+            <dd>—</dd>
+          </div>
+          <div>
+            <dt>Xuất khỏi kho</dt>
+            <dd>—</dd>
+          </div>
+          {product.data && (
+            <>
+              <div>
+                <dt>Tồn khả dụng đầu kỳ</dt>
+                <dd>—</dd>
+              </div>
+              <div>
+                <dt>Tồn khả dụng cuối kỳ</dt>
+                <dd>—</dd>
+              </div>
+            </>
+          )}
+        </dl>
+        {chartOpen && (
+          <div className="stock-chart-empty" role="status">
+            {product.data
+              ? 'Chưa có dữ liệu tồn cuối ngày cho khoảng thời gian này.'
+              : 'Chọn một phụ tùng để xem tồn khả dụng theo ngày.'}
+          </div>
+        )}
+      </InventoryPanel>
+      <InventoryPanel
+        title="Biến động theo ngày"
+        action={
+          <button type="button" disabled title="Chưa thể xuất tệp lúc này">
+            Xuất Excel
+          </button>
+        }
+      >
         {movements.data && <MovementTable rows={movements.data.items} />}
         <Pagination
           total={movements.data?.totalItems ?? 0}

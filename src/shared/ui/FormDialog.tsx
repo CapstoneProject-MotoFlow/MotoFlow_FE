@@ -14,6 +14,7 @@ export default function FormDialog({
   onClose,
   busy = false,
   submitDisabled = false,
+  className = '',
 }: {
   title: string
   formId: string
@@ -21,6 +22,7 @@ export default function FormDialog({
   submitLabel: string
   busy?: boolean
   submitDisabled?: boolean
+  className?: string
   onClose: () => void
 }) {
   const ref = useRef<HTMLElement>(null)
@@ -69,7 +71,7 @@ export default function FormDialog({
       }}
     >
       <section
-        className="ui-form-dialog"
+        className={'ui-form-dialog ' + className}
         ref={ref}
         role="dialog"
         aria-modal="true"
