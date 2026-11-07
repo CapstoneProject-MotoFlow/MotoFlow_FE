@@ -1,3 +1,11 @@
+import {
+  hasManagerPermission,
+  managerPermissionChange,
+  managerPermissionCodes,
+  readManagers,
+  type Manager,
+  type ManagerPermission,
+} from '../managerPermissions'
 /**
  * File: modules/owner/pages/OwnerPermissionsPage.tsx
  * Loại: MÀN HÌNH — Quyền danh mục và giá.
@@ -11,14 +19,6 @@ import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
 import { apiMessage } from '../../suppliers/supplierService'
 import './owner-permissions.css'
-type Manager = {
-  id: number
-  username: string
-  fullName: string
-  storeId: number
-  storeName: string
-  permissions: string[]
-}
 /** OwnerPermissionsPage: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ. */
 export default function OwnerPermissionsPage() {
   const { user } = useAuth()
@@ -42,7 +42,7 @@ export default function OwnerPermissionsPage() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState<{
     row: Manager
-    permission: string
+    permission: ManagerPermission
   } | null>(null)
   const [busy, setBusy] = useState(false)
   const [storeError, setStoreError] = useState('')
@@ -71,10 +71,15 @@ export default function OwnerPermissionsPage() {
         params: { storeId: storeId || undefined },
       })
       .then((r) => {
-        if (active) setRows(r.data)
+        if (active) setRows(readManagers(r.data))
       })
       .catch((e) => {
-        if (active) setError(apiMessage(e))
+        if (active)
+          setError(
+            e instanceof Error && !('isAxiosError' in e)
+              ? e.message
+              : apiMessage(e),
+          )
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -118,7 +123,7 @@ export default function OwnerPermissionsPage() {
       )}
       {loading ? (
         <p role="status">Đang tải…</p>
-      ) : (
+      ) : !error ? (
         <section className="owner-permissions-panel">
           <h2>Branch Manager</h2>
           <div className="owner-permissions-table">
@@ -137,7 +142,7 @@ export default function OwnerPermissionsPage() {
                     <td>
                       <div className="permission-account">
                         <span className="permission-avatar" aria-hidden="true">
-                          {row.fullName
+                          {(row.fullName || row.username)
                             .trim()
                             .split(/\s+/)
                             .slice(-2)
@@ -146,19 +151,19 @@ export default function OwnerPermissionsPage() {
                             .toUpperCase()}
                         </span>
                         <span>
-                          <strong>{row.fullName}</strong>
+                          <strong>{row.fullName || row.username}</strong>
                           <small>{row.username}</small>
                         </span>
                       </div>
                     </td>
                     <td>
-                      {row.storeName}
+                      {row.storeName || 'Chưa phân cửa hàng'}
                       {stores.find((store) => store.id === row.storeId)
                         ?.central && (
                         <small className="permission-central">Kho tổng</small>
                       )}
                     </td>
-                    {['CATALOG_EDIT', 'RETAIL_PRICE_EDIT'].map((permission) => (
+                    {managerPermissionCodes.map((permission) => (
                       <td key={permission}>
                         <label className="permission-control">
                           <input
@@ -171,7 +176,7 @@ export default function OwnerPermissionsPage() {
                                 ? 'Sửa danh mục'
                                 : 'Sửa giá bán lẻ')
                             }
-                            checked={row.permissions.includes(permission)}
+                            checked={hasManagerPermission(row, permission)}
                             onChange={() => {
                               setFormError('')
                               setPending({ row, permission })
@@ -182,7 +187,7 @@ export default function OwnerPermissionsPage() {
                             aria-hidden="true"
                           />
                           <span>
-                            {row.permissions.includes(permission)
+                            {hasManagerPermission(row, permission)
                               ? 'Đã có quyền'
                               : 'Không có quyền'}
                           </span>
@@ -195,7 +200,7 @@ export default function OwnerPermissionsPage() {
             </table>
           </div>
         </section>
-      )}
+      ) : null}
       {!loading && !error && !rows.length && <p>Không có quản lý chi nhánh.</p>}
       <section className="owner-permissions-panel permission-history">
         <h2>Thay đổi gần đây</h2>
@@ -259,23 +264,20 @@ export default function OwnerPermissionsPage() {
               }
               setBusy(true)
               setFormError('')
-              const granted = (code: string) =>
-                pending.permission === code
-                  ? !pending.row.permissions.includes(code)
-                  : pending.row.permissions.includes(code)
               try {
-                await axiosClient.put(
+                const { data: updated } = await axiosClient.put<Manager>(
                   '/branch-managers/' + pending.row.id + '/permissions',
-                  {
-                    catalogEdit: granted('CATALOG_EDIT'),
-                    retailPriceEdit: granted('RETAIL_PRICE_EDIT'),
+                  managerPermissionChange(
+                    pending.row,
+                    pending.permission,
                     reason,
-                  },
+                  ),
                 )
+                const saved = readManagers([updated])[0]
                 setHistory((previous) => [
                   {
-                    name: pending.row.fullName,
-                    granted: granted(pending.permission),
+                    name: pending.row.fullName || pending.row.username,
+                    granted: hasManagerPermission(saved, pending.permission),
                     permission: pending.permission,
                     reason,
                     at: new Date().toISOString(),
@@ -293,8 +295,8 @@ export default function OwnerPermissionsPage() {
             }}
           >
             <p>
-              {pending.row.fullName}:{' '}
-              {pending.row.permissions.includes(pending.permission)
+              {pending.row.fullName || pending.row.username}:{' '}
+              {hasManagerPermission(pending.row, pending.permission)
                 ? 'Thu hồi'
                 : 'Cấp'}{' '}
               quyền{' '}
@@ -307,7 +309,7 @@ export default function OwnerPermissionsPage() {
               <textarea
                 name="reason"
                 required
-                maxLength={500}
+                maxLength={255}
                 disabled={busy}
               />
             </label>
