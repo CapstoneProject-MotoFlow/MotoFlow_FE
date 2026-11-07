@@ -6,10 +6,10 @@ Nhánh này độc lập với FE-05/PR #24, không thay thế hoặc xóa code 
 
 ## Màn và API đã nối
 
-- `/inventory`: Owner xem toàn chuỗi/chọn kho; BM chỉ xem kho của mình. Lọc tìm kiếm, nhóm, khu vực, tồn bằng 0 và cảnh báo; phân trang server. Bốn thẻ số lượng dùng `/inventory/stock/summary`, không cộng từ trang đang mở. Mỗi kết quả/thống kê của BE là một phụ tùng tại một kho.
-- Mở một phụ tùng để xem các lô/trạng thái từ `/inventory/stock/{storeId}/{productId}`. Giá trị tồn, giá vốn bình quân và giá nhập chỉ hiển thị với Owner.
+- `/inventory`: Owner xem toàn chuỗi theo phụ tùng, mở ra từng kho; khi chọn kho hoặc BM xem thì bảng phẳng có ô kệ. FE đọc đủ các trang `/inventory/stock` (100 dòng/request) rồi mới gom theo productId, cộng giá trị và phân trang 20 phụ tùng. Bốn thẻ đếm SKU phân biệt, không đếm trùng cùng SKU ở nhiều kho. Không cộng tổng từ riêng trang đang mở.
+- Dòng phụ tùng toàn chuỗi không mở bảng lô: mở các dòng kho con theo mockup. Nút Lịch sử/Vị trí/Ngưỡng nằm tại từng kho. Lô/trạng thái/giá nhập xem tại các màn lô; giá trị chỉ Owner thấy.
 - Popup vị trí và ngưỡng tồn dùng PUT `/inventory/stock/{storeId}/{productId}/location` và `/low-stock-threshold`. Ngưỡng 0 được giữ là 0; để trống gửi null. Lưu xong tải lại tồn, thống kê và khu vực.
-- Tra tồn liên kho của Owner dùng `/inventory/availability`.
+- Owner tra tồn liên kho bằng cách mở dòng phụ tùng; các số mỗi kho và tổng đều lấy từ đầy đủ kết quả API tồn.
 - `/inventory/movements`: lọc kho, phụ tùng, lô, loại biến động, khoảng ngày; phân trang; biến động nhóm theo ngày; mở lô và chứng từ phiếu nhập gốc.
 - `/inventory/lots`: bốn nhóm sắp hết hạn/hết hạn/còn hàng/hết hàng; lọc kho, tìm kiếm, nguồn, ngày nhận. Owner có lọc NCC qua tìm kiếm API thực. Không gọi API danh sách NCC bằng BM vì endpoint chỉ cho Owner.
 - `/inventory/lots/:id`: nguồn, nhà cung cấp, ngày nhập/SX/hạn dùng, tồn tại kho theo trạng thái, 10 biến động gần nhất và thứ tự xuất FEFO/FIFO từ BE; bỏ qua lô bị đánh dấu skipped. Owner chọn kho và xem giá nhập.
@@ -20,7 +20,7 @@ Nhánh này độc lập với FE-05/PR #24, không thay thế hoặc xóa code 
 ## Phần mockup còn phụ thuộc BE
 
 - Chưa có số dư sau mỗi biến động, tổng nhập/xuất đầy đủ trong kỳ, số dư đầu/cuối và biểu đồ tồn theo ngày. Không suy ra các số này từ một trang lịch sử.
-- Chưa có thống kê giá trị tồn toàn chuỗi/từng kho, phân trang nhóm SKU toàn chuỗi hoặc sắp xếp theo giá trị. Bảng hiện giữ đúng kết quả phụ tùng/kho và thứ tự phân trang BE.
+- BE chưa có API gom nhóm SKU/tổng giá trị trực tiếp. FE đã xử lý trên toàn bộ các trang thật, có sắp xếp tên/giá trị và phân trang SKU. Khi dữ liệu lớn, nên chuyển tổng hợp/phân trang nhóm về BE để giảm lượng tải. Nếu tải thiếu/trùng dòng hoặc tổng số dòng đổi giữa các trang thì không công bố tổng một phần.
 - Danh sách lô không trả giá nhập; giá nhập có ở chi tiết lô, không tải N+1 để ghép vào danh sách.
 - BM chưa có endpoint tra cứu danh sách NCC nên chưa có bộ chọn NCC tương đương Owner.
 - Chứng từ gốc hiện mở được phiếu nhập (GET `/goods-receipt-notes/{id}`). Nguồn kiểm kê dẫn tới `/stock-counts/:id` (giao diện chờ API chi tiết); bán hàng/điều chuyển/điều chỉnh hiện mã tham chiếu.
@@ -31,7 +31,7 @@ Không thêm dữ liệu mẫu, số liệu giả, tab điều hướng thử ng
 
 ## Kiểm tra
 
-- Build TypeScript/Vite; ESLint (không có lỗi; 15 cảnh báo cũ); 21 test, gồm quy tắc số đếm và kiểm tra HTML không lộ sổ sách/giá vốn với Staff.
+- Build TypeScript/Vite; ESLint (không có lỗi; 15 cảnh báo cũ); 26 test, gồm quy tắc số đếm và kiểm tra HTML không lộ sổ sách/giá vốn với Staff.
 - Kiểm tra trình duyệt với API local thật bằng Owner và BM Cầu Giấy: tồn kho, mở lô, chi tiết lô, lịch sử theo lô, popup vị trí/ngưỡng/hạn dùng; kiểm tra ẩn giá vốn với BM.
 - Kiểm tra gửi ngưỡng 0 bằng chặn request lưu trên trình duyệt, không sửa database thực.
 - Kiểm tra chiều rộng 390px: không tràn trang, bảng cuộn ngang bên trong.
@@ -52,5 +52,13 @@ Các kiểm tra trên không xác nhận mọi nhánh nghiệp vụ BE hoặc th
 - Ba test bổ sung kiểm tra chưa đếm khác số 0, chỉ nhận số nguyên không âm trong giới hạn, và yêu cầu số đếm/ghi chú ở mọi dòng kèm cam kết (tổng 20 test đạt). Kiểm tra trình duyệt Owner/BM/Staff không có lỗi JavaScript; popup chọn được phụ tùng thật, nút gửi khóa; không gọi API kiểm kê chưa tồn tại. Kiểm tra bố cục trang tại 390px không tràn ngang.
 
 - Đã kiểm tra popup Owner/BM/Staff ở desktop/390px. Giao việc đọc phiếu thực từ BE, kiểm tra payload POST bằng chặn lưu trả lỗi có chủ đích; không đổi người được giao trong database.
-- Lịch sử đã có bố cục tổng nhập/xuất/tồn đầu-cuối và biểu đồ gập/mở; chưa có dữ liệu tổng hợp nên hiện dấu — và trạng thái chưa có dữ liệu, không vẽ đường giả. Owner có ô giá trị tồn theo kho (chưa có tổng nên hiện —). Xuất Excel và báo hủy lô hết hạn hiển thị nhưng khóa do chưa có nghiệp vụ tương ứng.
+- Lịch sử đã có bố cục tổng nhập/xuất/tồn đầu-cuối và biểu đồ gập/mở; chưa có dữ liệu tổng hợp nên hiện dấu — và trạng thái chưa có dữ liệu, không vẽ đường giả. Owner có ô giá trị tồn theo kho, tính từ toàn bộ các trang API thật; chỉ hiện — nếu chưa tải đủ hoặc có giá trị chưa biết. Xuất Excel và báo hủy lô hết hạn hiển thị nhưng khóa do chưa có nghiệp vụ tương ứng.
 - Bảng đối chiếu từng màn: `FE06_SCREEN_COVERAGE.md`.
+
+## Chỉnh màn tồn kho đúng cấu trúc mockup
+
+- Gom theo phụ tùng toàn chuỗi; các dòng kho con nền nhạt, thụt đầu dòng, ba nút ngang. Không chèn bảng lô vào dòng phụ tùng.
+- Gom thẻ đếm và giá trị theo kho vào cùng khung; thanh lọc một hàng ở desktop với tìm kiếm trước bộ chọn kho, nhóm, khu vực, sắp xếp, hiện tồn bằng 0.
+- Tìm kiếm ở header và trong bảng cùng dùng q qua BE, hỗ trợ SKU/tên/OEM/ô kệ theo khả năng tìm của BE.
+- 5 test mới kiểm tra gom qua nhiều trang, giữ đủ kho khi lọc thiếu hàng, không đổi giá trị chưa biết thành 0, không cộng hàng đang chuyển vào tồn thực tế, không xuất tổng khi phân trang thiếu/trùng/thay đổi, sắp xếp và tồn bằng 0.
+- Kiểm tra trình duyệt Owner (87 dòng kho/phụ tùng thực), BM Cầu Giấy (29 dòng): tổng dòng cha bằng tổng kho con, tìm kiếm, đổi kho, sắp xếp, popup vị trí và các nút không vượt ô ở 1900/1440/1280/390px.

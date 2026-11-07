@@ -1,367 +1,519 @@
-import { Fragment, useState } from 'react'
-import Icon from '../../shared/ui/Icon'
+import { Fragment, useContext, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
 import { Link } from 'react-router-dom'
+import Icon from '../../shared/ui/Icon'
 import { useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
   InventoryNotice,
   InventoryPanel,
   Pagination,
-  WarehouseFilter,
 } from './components'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
-import { StockLots } from './StockDetails'
-import { ExpiryWarningDialog, StockSettingsDialog } from './SettingsDialogs'
+import { StockSettingsDialog } from './SettingsDialogs'
 import { money, movementLink, number } from './presentation'
-import type { Page, StockRow, StockSummary } from './types'
+import {
+  groupStock,
+  matchesStockView,
+  sortStock,
+  stockKey,
+  stockTotals,
+  unavailableQty,
+} from './stockGrouping'
+import { useCompleteStock } from './useCompleteStock'
+import type { StockRow } from './types'
+import './stock-screen.css'
 
 export default function InventoryPage() {
-  const scope = useInventoryScope()
+  const scope = useInventoryScope(),
+    p = scope.params
   const [revision, setRevision] = useState(0)
-  const [expanded, setExpanded] = useState('')
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [settings, setSettings] = useState<{
     row: StockRow
     mode: 'location' | 'threshold'
   }>()
-  const [expiry, setExpiry] = useState(false)
-  const p = scope.params
-  const page = Math.max(0, Number(p.get('page')) || 0)
+  const dataScope = [
+    scope.user?.id,
+    scope.user?.username,
+    scope.user?.role,
+    scope.user?.storeId,
+  ].join(':')
+  const base = useCompleteStock({}, revision, true, dataScope)
   const filters = {
-    storeId: scope.storeId,
     q: p.get('q') ?? '',
     categoryId: p.get('categoryId') ?? '',
     storageArea: p.get('storageArea') ?? '',
   }
-  const stock = useInventoryData<Page<StockRow>>(
-    '/inventory/stock',
-    {
-      ...filters,
-      page,
-      size: 20,
-      includeZero: p.get('includeZero') === 'true',
-      lowStockOnly: p.get('view') === 'lowStock',
-      unavailableOnly: p.get('view') === 'unavailable',
-      expiryAlertOnly: p.get('view') === 'expiryAlert',
-    },
-    revision,
+  const remoteFilter = !!(
+    filters.q ||
+    filters.categoryId ||
+    filters.storageArea
   )
-  const summary = useInventoryData<StockSummary>(
-    '/inventory/stock/summary',
-    filters,
+  const filtered = useCompleteStock(
+    { ...filters, storeId: scope.storeId },
     revision,
-  )
-  const areas = useInventoryData<string[]>(
-    '/inventory/stock/storage-areas',
-    { storeId: scope.storeId },
-    revision,
+    remoteFilter,
+    dataScope,
   )
   const categories = useInventoryData<Category[]>('/part-categories')
-  const columnWeights = [
-    22,
-    ...(scope.owner && !scope.storeId ? [13] : []),
+  const grouped = scope.owner && !scope.storeId
+  const includeZero = p.get('includeZero') === 'true',
+    view = p.get('view') ?? '',
+    sort = p.get('sort') ?? 'name'
+  const scoped =
+    base.data?.filter(
+      (row) => !scope.storeId || String(row.storeId) === scope.storeId,
+    ) ?? []
+  const matching = remoteFilter ? (filtered.data ?? []) : scoped
+  const keys = new Set(matching.map(stockKey))
+  const groups = sortStock(
+    groupStock(scoped, matching, includeZero, view),
+    (group) => group.product,
+    (group) => group.totals.stockValue,
+    sort,
+  )
+  const flat = sortStock(
+    scoped.filter(
+      (row) =>
+        keys.has(stockKey(row)) &&
+        (includeZero || row.onHandQty + row.inTransitQty > 0) &&
+        matchesStockView(row, view),
+    ),
+    (row) => row,
+    (row) => row.stockValue,
+    sort,
+  )
+  const loading = base.loading || filtered.loading
+  const error =
+    base.error ?? filtered.error ?? scope.storesError ?? categories.error
+  const ready = !!base.data && (!remoteFilter || !!filtered.data)
+  const total = grouped ? groups.length : flat.length
+  const requestedPage = Number(p.get('page')) || 0
+  const page = Math.min(
+    Math.max(0, Math.floor(requestedPage)),
+    Math.max(0, Math.ceil(total / 20) - 1),
+  )
+  const count = (predicate: (row: StockRow) => boolean) =>
+    new Set(scoped.filter(predicate).map((row) => row.productId)).size
+  const metrics = [
+    [
+      '',
+      'Mã có hàng tồn',
+      count((row) => row.onHandQty + row.inTransitQty > 0),
+      'box',
+    ],
+    ['lowStock', 'Dưới ngưỡng', count((row) => row.lowStock), 'sliders'],
+    [
+      'unavailable',
+      'Có hàng chưa bán được',
+      count((row) => unavailableQty(row) > 0),
+      'clock',
+    ],
+    [
+      'expiryAlert',
+      'Có lô sắp hết, hết hạn',
+      count((row) => row.nearExpiryQty + row.expiredQty > 0),
+      'hourglass',
+    ],
+  ] as const
+  const weights = [
+    28,
+    ...(grouped ? [] : [8]),
+    7,
+    8,
     8,
     10,
-    9,
-    10,
-    ...(scope.owner ? [11] : []),
-    11,
-    22,
+    ...(scope.owner ? [12] : []),
+    14,
+    23,
   ]
-  const totalWeight = columnWeights.reduce((total, value) => total + value, 0)
+  const weightTotal = weights.reduce((a, b) => a + b, 0)
+  const columns = grouped ? 8 : scope.owner ? 9 : 8
+  const areas = [
+    ...new Set(
+      scoped
+        .map((row) => row.storageArea)
+        .filter((value): value is string => !!value),
+    ),
+  ].sort((a, b) => a.localeCompare(b, 'vi'))
   function saved() {
     setSettings(undefined)
-    setExpiry(false)
     setRevision((value) => value + 1)
   }
-  return (
-    <main className="inventory-workspace">
-      <InventoryHeader title="Tồn kho">
-        {scope.owner && (
-          <button onClick={() => setExpiry(true)}>Cảnh báo hạn dùng</button>
-        )}
-      </InventoryHeader>
-      <div className="stock-metrics" aria-label="Lọc theo tình trạng tồn">
-        {(
-          [
-            ['', 'withStock', 'Phụ tùng có tồn'],
-            ['lowStock', 'lowStock', 'Dưới ngưỡng tồn'],
-            ['unavailable', 'unavailable', 'Có tồn không khả dụng'],
-            ['expiryAlert', 'expiryAlert', 'Cảnh báo hạn dùng'],
-          ] as const
-        ).map(([view, key, label]) => (
-          <button
-            key={key}
-            className={
-              p.get('view') === view || (!p.get('view') && !view)
-                ? 'selected'
-                : ''
-            }
-            onClick={() => scope.filter({ view })}
-          >
-            <Icon
-              name={
-                key === 'withStock'
-                  ? 'box'
-                  : key === 'lowStock'
-                    ? 'sliders'
-                    : key === 'unavailable'
-                      ? 'clock'
-                      : 'hourglass'
-              }
-            />
-            <span>{label}</span>
-            <strong>
-              {summary.data ? number.format(summary.data[key]) : '—'}
-            </strong>
-          </button>
-        ))}
+  function toggle(id: number) {
+    setExpanded((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function actions(row: StockRow) {
+    return (
+      <div className="stock-row-actions">
+        <Link to={movementLink(row.productId, row.storeId)}>Lịch sử</Link>
+        <button onClick={() => setSettings({ row, mode: 'location' })}>
+          Vị trí
+        </button>
+        <button onClick={() => setSettings({ row, mode: 'threshold' })}>
+          Ngưỡng
+        </button>
       </div>
-      {scope.owner && (
-        <nav className="stock-value-tiles" aria-label="Giá trị tồn theo kho">
-          {[
-            { id: '', storeName: 'Toàn chuỗi' },
-            ...scope.stores.map((store) => ({
-              id: String(store.id),
-              storeName: store.storeName,
-            })),
-          ].map((store) => (
-            <button
-              key={store.id}
-              aria-pressed={scope.storeId === store.id}
-              onClick={() =>
-                scope.filter({ storeId: store.id, storageArea: '' })
+    )
+  }
+  function quantities(rows: StockRow[], group = false) {
+    const totals = stockTotals(rows),
+      product = rows[0]
+    const lows = rows.filter((row) => row.lowStock).length
+    return (
+      <>
+        <td className="stock-numeric stock-available">
+          {number.format(totals.availableQty)}
+        </td>
+        <td
+          className={
+            'stock-numeric' + (!totals.unavailableQty ? ' stock-zero' : '')
+          }
+        >
+          {number.format(totals.unavailableQty)}
+        </td>
+        <td
+          className={
+            'stock-numeric' + (!totals.inTransitQty ? ' stock-zero' : '')
+          }
+        >
+          {number.format(totals.inTransitQty)}
+        </td>
+        <td className="stock-numeric">
+          <strong>{number.format(totals.onHandQty)}</strong> {product.baseUnit}
+        </td>
+        {scope.owner && (
+          <td className="stock-numeric stock-cost">
+            {totals.stockValue == null ? '—' : money.format(totals.stockValue)}
+          </td>
+        )}
+        <td>
+          <div className="stock-condition">
+            <span
+              className={
+                'stock-badge ' +
+                (lows
+                  ? 'stock-badge--near_expiry'
+                  : totals.availableQty
+                    ? 'stock-badge--ok'
+                    : '')
               }
             >
-              <span>{store.storeName}</span>
-              <strong title="Chưa có số liệu tổng giá trị tồn">—</strong>
+              {lows
+                ? group
+                  ? 'Thiếu ở ' + lows + ' kho'
+                  : 'Dưới ngưỡng'
+                : totals.availableQty
+                  ? 'Đủ hàng'
+                  : 'Hết hàng'}
+            </span>
+            {rows.some((row) => row.expiredQty > 0) ? (
+              <span className="stock-badge stock-badge--expired">
+                Lô hết hạn
+              </span>
+            ) : rows.some((row) => row.nearExpiryQty > 0) ? (
+              <span className="stock-badge stock-badge--near_expiry">
+                Lô sắp hết hạn
+              </span>
+            ) : null}
+            {!group && product.productStatus !== 'ACTIVE' && (
+              <span className="stock-badge">Ngừng kinh doanh</span>
+            )}
+          </div>
+        </td>
+      </>
+    )
+  }
+  return (
+    <main className="inventory-workspace stock-screen">
+      <StockHeaderSearch
+        value={filters.q}
+        onChange={(value) => scope.filter({ q: value })}
+      />
+      <InventoryHeader title="Tồn kho" />
+      <section className="stock-summary-card" aria-label="Tổng quan tồn kho">
+        <div className="stock-metrics">
+          {metrics.map(([key, label, value, icon]) => (
+            <button
+              key={key}
+              aria-pressed={view === key}
+              className={view === key ? 'selected' : ''}
+              onClick={() => scope.filter({ view: key })}
+            >
+              <Icon name={icon} />
+              <span>{label}</span>
+              <strong>{base.data ? number.format(value) : '—'}</strong>
             </button>
           ))}
-        </nav>
-      )}
+        </div>
+        {scope.owner && (
+          <nav className="stock-value-tiles" aria-label="Giá trị tồn theo kho">
+            {[
+              { id: '', storeName: 'Toàn chuỗi' },
+              ...scope.stores
+                .filter((store) => store.status !== 'PLANNED')
+                .map((store) => ({
+                  id: String(store.id),
+                  storeName: store.storeName,
+                })),
+            ].map((store) => {
+              const value = base.data
+                ? stockTotals(
+                    base.data.filter(
+                      (row) => !store.id || String(row.storeId) === store.id,
+                    ),
+                  ).stockValue
+                : null
+              return (
+                <button
+                  key={store.id}
+                  aria-pressed={scope.storeId === store.id}
+                  onClick={() =>
+                    scope.filter({ storeId: store.id, storageArea: '' })
+                  }
+                >
+                  <span>{store.storeName}</span>
+                  <strong>{value == null ? '—' : money.format(value)}</strong>
+                </button>
+              )
+            })}
+          </nav>
+        )}
+      </section>
       <InventoryPanel
-        title={'Tồn kho · ' + scope.warehouse}
+        title={
+          'Tồn theo phụ tùng' +
+          (scope.owner
+            ? ' · ' + (scope.storeId ? scope.warehouse : 'toàn chuỗi')
+            : '')
+        }
         action={
-          <button type="button" disabled title="Chưa thể xuất tệp lúc này">
+          <button disabled title="Chưa thể xuất tệp lúc này">
+            <Icon name="download" />
             Xuất Excel
           </button>
         }
       >
         <div className="stock-filters">
-          <WarehouseFilter
-            owner={scope.owner}
-            stores={scope.stores}
-            value={scope.storeId}
-            onChange={(storeId) => scope.filter({ storeId, storageArea: '' })}
-          />
-          <label className="stock-filter stock-search">
-            <span>Tìm kiếm</span>
+          <label className="stock-inline-search">
+            <Icon name="search" />
             <input
-              placeholder="Tìm tên, SKU, mã OEM, vị trí…"
+              type="search"
+              aria-label="Tìm tên, SKU, mã OEM hoặc ô kệ"
+              placeholder="Tìm tên, SKU, mã OEM hoặc ô kệ"
               value={filters.q}
               onChange={(e) => scope.filter({ q: e.target.value })}
             />
           </label>
-          <label className="stock-filter">
-            <span>Nhóm phụ tùng</span>
+          {scope.owner && (
             <select
-              value={filters.categoryId}
-              onChange={(e) => scope.filter({ categoryId: e.target.value })}
+              aria-label="Kho"
+              value={scope.storeId}
+              onChange={(e) =>
+                scope.filter({ storeId: e.target.value, storageArea: '' })
+              }
             >
-              <option value="">Mọi nhóm</option>
-              {categoryOptions(categories.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
+              <option value="">Mọi kho</option>
+              {scope.stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.storeName}
                 </option>
               ))}
             </select>
-          </label>
-          <label className="stock-filter">
-            <span>Khu vực</span>
+          )}
+          <select
+            aria-label="Nhóm phụ tùng"
+            value={filters.categoryId}
+            onChange={(e) => scope.filter({ categoryId: e.target.value })}
+          >
+            <option value="">Mọi nhóm phụ tùng</option>
+            {categoryOptions(categories.data ?? []).map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Khu vực"
+            value={filters.storageArea}
+            onChange={(e) => scope.filter({ storageArea: e.target.value })}
+          >
+            <option value="">Mọi khu vực</option>
+            {areas.map((area) => (
+              <option key={area}>{area}</option>
+            ))}
+          </select>
+          {scope.owner && (
             <select
-              value={filters.storageArea}
-              onChange={(e) => scope.filter({ storageArea: e.target.value })}
+              aria-label="Sắp xếp"
+              value={sort}
+              onChange={(e) => scope.filter({ sort: e.target.value })}
             >
-              <option value="">Mọi khu vực</option>
-              {areas.data?.map((area) => (
-                <option key={area}>{area}</option>
-              ))}
+              <option value="name">Theo tên phụ tùng</option>
+              <option value="value">Giá trị tồn cao nhất</option>
             </select>
-          </label>
+          )}
           <label className="stock-check">
             <input
               type="checkbox"
-              checked={p.get('includeZero') === 'true'}
+              checked={includeZero}
               onChange={(e) => scope.filter({ includeZero: e.target.checked })}
-            />{' '}
-            Hiện cả hết hàng
+            />
+            Hiện cả mã tồn bằng 0
           </label>
         </div>
-        <InventoryNotice
-          loading={stock.loading}
-          error={
-            stock.error ??
-            scope.storesError ??
-            summary.error ??
-            areas.error ??
-            categories.error
-          }
-        />
+        <InventoryNotice loading={loading} error={error} />
+        {(base.error || filtered.error) && (
+          <button
+            className="stock-reload"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Thử lại
+          </button>
+        )}
         <div className="stock-table-scroll">
           <table className="stock-table stock-overview-table">
             <colgroup>
-              {columnWeights.map((weight, index) => (
+              {weights.map((weight, index) => (
                 <col
                   key={index}
-                  style={{ width: (weight / totalWeight) * 100 + '%' }}
+                  style={{ width: (weight / weightTotal) * 100 + '%' }}
                 />
               ))}
             </colgroup>
             <thead>
               <tr>
-                <th>Phụ tùng / vị trí</th>
-                {scope.owner && !scope.storeId && <th>Kho</th>}
-                <th>Khả dụng</th>
-                <th title="Chờ kiểm, giao sai, hư hỏng, chờ trả nhà cung cấp">
-                  Không khả dụng ⓘ
+                <th>Phụ tùng</th>
+                {!grouped && <th>Ô kệ</th>}
+                <th className="stock-numeric">Khả dụng</th>
+                <th
+                  className="stock-numeric"
+                  title="Chờ kiểm, giao sai, hư hỏng, chờ trả nhà cung cấp"
+                >
+                  Không
+                  <br />
+                  khả dụng ⓘ
                 </th>
-                <th>Đang chuyển</th>
-                <th title="Khả dụng cộng không khả dụng, không gồm hàng đang điều chuyển">
-                  Tồn thực tế ⓘ
+                <th className="stock-numeric">
+                  Đang
+                  <br />
+                  điều chuyển
                 </th>
-                {scope.owner && <th>Giá trị tồn</th>}
+                <th
+                  className="stock-numeric"
+                  title="Khả dụng cộng không khả dụng; không tính hàng đang điều chuyển"
+                >
+                  Tồn
+                  <br />
+                  thực tế ⓘ
+                </th>
+                {scope.owner && <th className="stock-numeric">Giá trị tồn</th>}
                 <th>Tình trạng</th>
-                <th>Thao tác</th>
+                <th className="stock-actions-heading">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {stock.data?.items.map((row) => {
-                const key = row.storeId + '-' + row.productId
-                return (
-                  <Fragment key={key}>
-                    <tr>
+              {ready &&
+                grouped &&
+                groups.slice(page * 20, (page + 1) * 20).map((group) => (
+                  <Fragment key={group.product.productId}>
+                    <tr className="stock-product-row">
                       <td>
-                        <button
-                          className="stock-text"
-                          aria-expanded={expanded === key}
-                          onClick={() =>
-                            setExpanded(expanded === key ? '' : key)
-                          }
-                        >
-                          {expanded === key ? '▾' : '▸'} {row.partName}
-                        </button>
-                        <small>
-                          {row.sku} ·{' '}
-                          {[row.storageArea, row.binLocation]
-                            .filter(Boolean)
-                            .join(' / ') || 'Chưa đặt vị trí'}
-                        </small>
-                        {row.productStatus !== 'ACTIVE' && (
-                          <small>Ngừng kinh doanh</small>
-                        )}
-                      </td>
-                      {scope.owner && !scope.storeId && (
-                        <td>{row.storeName}</td>
-                      )}
-                      <td className={row.lowStock ? 'stock-danger' : ''}>
-                        {number.format(row.availableQty)}
-                        <small>Ngưỡng: {row.lowStockThreshold ?? '—'}</small>
-                      </td>
-                      <td
-                        title={`Chờ kiểm: ${row.awaitingInspectionQty} · Sai: ${row.wrongItemQty} · Hỏng: ${row.damagedQty} · Chờ trả: ${row.awaitingSupplierReturnQty}`}
-                      >
-                        {number.format(
-                          row.awaitingInspectionQty +
-                            row.wrongItemQty +
-                            row.damagedQty +
-                            row.awaitingSupplierReturnQty,
-                        )}
-                      </td>
-                      <td>{number.format(row.inTransitQty)}</td>
-                      <td>
-                        {number.format(row.onHandQty)} {row.baseUnit}
-                        {(row.nearExpiryQty > 0 || row.expiredQty > 0) && (
-                          <small className="stock-danger">
-                            Sắp hết hạn: {row.nearExpiryQty} · Hết hạn:{' '}
-                            {row.expiredQty}
-                          </small>
-                        )}
-                      </td>
-                      {scope.owner && (
-                        <td>
-                          {row.stockValue == null
-                            ? '—'
-                            : money.format(row.stockValue)}
-                        </td>
-                      )}
-                      <td>
-                        <div className="stock-condition">
-                          <span
-                            className={
-                              'stock-badge ' +
-                              (row.lowStock
-                                ? 'stock-badge--near_expiry'
-                                : 'stock-badge--ok')
+                        <div className="stock-product-name">
+                          <button
+                            className="stock-tree-toggle"
+                            aria-label={
+                              (expanded.has(group.product.productId)
+                                ? 'Đóng'
+                                : 'Mở') +
+                              ' tồn từng kho của ' +
+                              group.product.partName
                             }
+                            aria-expanded={expanded.has(
+                              group.product.productId,
+                            )}
+                            onClick={() => toggle(group.product.productId)}
                           >
-                            {row.lowStock
-                              ? 'Dưới ngưỡng'
-                              : row.availableQty === 0
-                                ? 'Hết khả dụng'
-                                : 'Đủ hàng'}
-                          </span>
-                          {row.expiredQty > 0 ? (
-                            <span className="stock-badge stock-badge--expired">
-                              Lô hết hạn
-                            </span>
-                          ) : row.nearExpiryQty > 0 ? (
-                            <span className="stock-badge stock-badge--near_expiry">
-                              Lô sắp hết hạn
-                            </span>
-                          ) : null}
+                            <svg
+                              viewBox="0 0 16 16"
+                              aria-hidden="true"
+                              className={
+                                expanded.has(group.product.productId)
+                                  ? 'is-open'
+                                  : ''
+                              }
+                            >
+                              <path
+                                d="m6 4 4 4-4 4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.2"
+                              />
+                            </svg>
+                          </button>
+                          <div>
+                            <Link
+                              to={'/owner/products/' + group.product.productId}
+                            >
+                              {group.product.partName}
+                            </Link>
+                            <small>{group.product.sku}</small>
+                          </div>
                         </div>
                       </td>
-                      <td>
-                        <div className="stock-actions">
-                          <Link to={movementLink(row.productId, row.storeId)}>
-                            Lịch sử
-                          </Link>
-                          <button
-                            onClick={() =>
-                              setSettings({ row, mode: 'location' })
-                            }
-                          >
-                            Vị trí
-                          </button>
-                          <button
-                            onClick={() =>
-                              setSettings({ row, mode: 'threshold' })
-                            }
-                          >
-                            Ngưỡng tồn
-                          </button>
-                        </div>
-                      </td>
+                      {quantities(group.rows, true)}
+                      <td />
                     </tr>
-                    {expanded === key && (
-                      <tr className="stock-expanded-row">
-                        <td colSpan={scope.owner ? (scope.storeId ? 8 : 9) : 7}>
-                          <StockLots
-                            key={revision}
-                            row={row}
-                            owner={scope.owner}
-                          />
-                        </td>
-                      </tr>
-                    )}
+                    {expanded.has(group.product.productId) &&
+                      group.rows.map((row) => (
+                        <tr key={stockKey(row)} className="stock-warehouse-row">
+                          <td>
+                            <span
+                              className="stock-tree-branch"
+                              aria-hidden="true"
+                            >
+                              └
+                            </span>
+                            {row.storeName}
+                          </td>
+                          {quantities([row])}
+                          <td>{actions(row)}</td>
+                        </tr>
+                      ))}
                   </Fragment>
-                )
-              })}
-              {stock.data && !stock.data.items.length && (
+                ))}
+              {ready &&
+                !grouped &&
+                flat.slice(page * 20, (page + 1) * 20).map((row) => (
+                  <tr key={stockKey(row)}>
+                    <td>
+                      <Link
+                        className="stock-product-link"
+                        to={
+                          (scope.owner ? '/owner' : '/branch-manager') +
+                          '/products/' +
+                          row.productId
+                        }
+                      >
+                        {row.partName}
+                      </Link>
+                      <small>{row.sku}</small>
+                    </td>
+                    <td>{row.binLocation ?? '—'}</td>
+                    {quantities([row])}
+                    <td>{actions(row)}</td>
+                  </tr>
+                ))}
+              {ready && !total && (
                 <tr>
-                  <td
-                    colSpan={scope.owner ? (scope.storeId ? 8 : 9) : 7}
-                    className="stock-empty"
-                  >
+                  <td colSpan={columns} className="stock-empty">
                     Không có phụ tùng phù hợp.
                   </td>
                 </tr>
@@ -370,14 +522,14 @@ export default function InventoryPage() {
           </table>
         </div>
         <Pagination
-          total={stock.data?.totalItems ?? 0}
+          total={ready ? total : 0}
           page={page}
-          loading={stock.loading}
+          loading={loading}
           onPage={(next) =>
             scope.setParams((previous) => {
-              const p = new URLSearchParams(previous)
-              p.set('page', String(next))
-              return p
+              const params = new URLSearchParams(previous)
+              params.set('page', String(next))
+              return params
             })
           }
         />
@@ -385,14 +537,36 @@ export default function InventoryPage() {
       {settings && (
         <StockSettingsDialog
           {...settings}
-          areas={areas.data ?? []}
+          areas={areas}
           onClose={() => setSettings(undefined)}
           onSaved={saved}
         />
       )}
-      {expiry && scope.owner && (
-        <ExpiryWarningDialog onClose={() => setExpiry(false)} onSaved={saved} />
-      )}
     </main>
   )
+}
+
+function StockHeaderSearch({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const target = useContext(HeaderSearchTarget)
+  return target
+    ? createPortal(
+        <div className="account-search">
+          <Icon name="search" />
+          <input
+            type="search"
+            aria-label="Tìm phụ tùng theo SKU, tên, mã OEM"
+            placeholder="Tìm phụ tùng theo SKU, tên, mã OEM…"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </div>,
+        target,
+      )
+    : null
 }
