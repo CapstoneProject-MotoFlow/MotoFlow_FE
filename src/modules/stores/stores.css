@@ -596,3 +596,39 @@
 .store-personnel-card + .store-personnel-card {
   margin-top: 12px;
 }
+
+/* Fit all seven store columns within the available desktop width. */
+.stores-page .stores-table { width: 100%; min-width: 0; table-layout: fixed; }
+.stores-page .stores-table th:nth-child(1) { width: 14%; }
+.stores-page .stores-table th:nth-child(2) { width: 15%; }
+.stores-page .stores-table th:nth-child(3) { width: 22%; }
+.stores-page .stores-table th:nth-child(4) { width: 12%; }
+.stores-page .stores-table th:nth-child(5) { width: 11%; }
+.stores-page .stores-table th:nth-child(6) { width: 13%; }
+.stores-page .stores-table th:nth-child(7) { width: 13%; }
+.stores-page .stores-table th, .stores-page .stores-table td { padding: 12px 10px; font-size: 0.875rem; white-space: normal; overflow-wrap: anywhere; }
+.stores-page .stores-table td strong { font-size: 0.875rem; }
+.stores-page .store-row-actions { flex-direction: column; align-items: stretch; gap: 6px; }
+.stores-page .store-row-actions .edit-store-button { min-height: 32px; padding: 6px 8px; white-space: normal; text-align: center; }
+.stores-page .stores-table .status-badge { white-space: normal; text-align: center; }
+@media (max-width: 760px) { .stores-page .stores-table { min-width: 760px; } }
+
+.stores-page .store-row-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.stores-page .store-row-actions .edit-store-button {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.stores-page .stores-table th:nth-child(1) { width: 12%; }
+.stores-page .stores-table th:nth-child(2) { width: 13%; }
+.stores-page .stores-table th:nth-child(3) { width: 19%; }
+.stores-page .stores-table th:nth-child(4) { width: 11%; }
+.stores-page .stores-table th:nth-child(5) { width: 10%; }
+.stores-page .stores-table th:nth-child(6) { width: 12%; }
+.stores-page .stores-table th:nth-child(7) { width: 23%; }

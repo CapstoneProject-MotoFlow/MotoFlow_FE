@@ -5,6 +5,7 @@
  * Công dụng: Tổng quan việc chờ và phạm vi cửa hàng của BM.
  */
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { loadBranchHome, type BranchHome } from '../services/branchHomeService'
@@ -133,7 +134,11 @@ export default function BranchManagerOverview() {
               <span className={'bm-card-icon ' + card.color}>
                 <Icon name={card.icon} />
               </span>
-              <span>{card.label}</span>
+              {card.keys.includes('OPEN_DISCREPANCIES') ? (
+                <Link to="/supplier-discrepancies">{card.label}</Link>
+              ) : (
+                <span>{card.label}</span>
+              )}
               <strong>{count(card.keys)}</strong>
               {!card.keys.length && (
                 <span

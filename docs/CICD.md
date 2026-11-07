@@ -14,17 +14,17 @@ Image frontend là **Caddy + thư mục `dist/`** (`Dockerfile`, `deploy/Caddyfi
 
 1. **Commit project Vite cùng `package.json` và `package-lock.json`.** Pipeline dùng `npm ci`, nên nhóm thống nhất dùng npm (không dùng yarn/pnpm).
 2. **`npm run build` phải tạo ra `dist/`** (mặc định của Vite).
-3. **Gọi API bằng đường dẫn tương đối `/api`**, không hard-code `http://localhost:8080`:
+3. **Gọi API bằng đường dẫn tương đối `/api/v1`**, không hard-code `http://localhost:8080`:
    ```js
    // shared/api/axiosClient.js
-   const axiosClient = axios.create({ baseURL: '/api', withCredentials: true })
+   const axiosClient = axios.create({ baseURL: '/api/v1', withCredentials: true })
    ```
-   Khi chạy ở máy, dùng proxy của Vite để mọi thứ giống trên server (không cần CORS, cookie refresh vẫn hoạt động):
+   Request làm mới phiên dùng `/api/v1/auth/refresh`, cùng phạm vi với cookie refresh. Khi chạy ở máy, proxy Vite chuyển tiếp mọi request dưới `/api` sang backend:
    ```js
    // vite.config.js
    export default defineConfig({
      plugins: [react()],
-     server: { proxy: { '/api': 'http://localhost:8080' } },
+     server: { proxy: { '/api': 'http://127.0.0.1:8080' } },
    })
    ```
    Nhờ đó **một bản build chạy được ở mọi môi trường**: CI không cần biến `VITE_*` nào, và image đã test ở dev được đưa nguyên lên production.

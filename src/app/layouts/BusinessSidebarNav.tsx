@@ -196,7 +196,7 @@ export default function BusinessSidebarNav({
       {link(find('Thông báo'))}
       {group('Bán hàng')}
       {link(find('Công nợ'))}
-      {link(find(owner ? 'Phiếu nhập hàng' : 'Yêu cầu nhập hàng'))}
+      {link(find('Yêu cầu nhập hàng'))}
       {group('Điều chuyển')}
       {group('Kho hàng')}
       {group('Chứng từ')}

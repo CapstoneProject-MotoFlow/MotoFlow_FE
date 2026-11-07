@@ -47,6 +47,40 @@ const VehicleModelsPage = lazy(
 const SupplierDetailPage = lazy(
   () => import('../../modules/suppliers/pages/SupplierDetailPage'),
 )
+const ResolveSupplierDiscrepancyPage = lazy(
+  () => import('../../modules/suppliers/pages/ResolveSupplierDiscrepancyPage'),
+)
+const ExcessReceiptsPage = lazy(
+  () => import('../../modules/receiving/ExcessReceiptsPage'),
+)
+const PurchaseOrdersPage = lazy(
+  () => import('../../modules/receiving/PurchaseOrdersPage'),
+)
+const NewPurchaseOrderPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
+    default: module.NewPurchaseOrderPage,
+  })),
+)
+const EditPurchaseOrderPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
+    default: module.EditPurchaseOrderPage,
+  })),
+)
+const NewGoodsReceiptPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
+    default: module.NewGoodsReceiptPage,
+  })),
+)
+const GoodsReceiptPage = lazy(() =>
+  import('../../modules/receiving/LiveReceiptPage').then((module) => ({
+    default: module.GoodsReceiptPage,
+  })),
+)
+const PurchaseOrderDetailPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrdersPage').then((module) => ({
+    default: module.PurchaseOrderDetailPage,
+  })),
+)
 const StaffProductsPage = lazy(
   () => import('../../modules/staff/pages/StaffProductsPage'),
 )
@@ -78,9 +112,6 @@ const OwnerWorkspacePage = lazy(
   () => import('../../modules/owner/pages/OwnerWorkspacePage'),
 )
 const LoginPage = lazy(() => import('../../modules/auth/pages/LoginPage'))
-const ForgotPasswordPage = lazy(
-  () => import('../../modules/auth/pages/ForgotPasswordPage'),
-)
 const ChangePasswordPage = lazy(
   () => import('../../modules/auth/pages/ChangePasswordPage'),
 )
@@ -141,7 +172,6 @@ export default function AppRoutes() {
             path="/login"
             element={user ? <RootRedirect /> : <LoginPage />}
           />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
         <Route element={<RequireAuth allowPasswordChange />}>
           <Route element={<AuthLayout />}>
@@ -179,8 +209,43 @@ export default function AppRoutes() {
               />
               <Route path="/inventory/lots" element={<LotsPage />} />
               <Route path="/inventory/lots/:id" element={<LotDetailPage />} />
+              <Route
+                path="/supplier-discrepancies"
+                element={<ResolveSupplierDiscrepancyPage />}
+              />
+            </Route>
+            <Route
+              element={
+                <RequireRole roles={['OWNER', 'BRANCH_MANAGER', 'STAFF']} />
+              }
+            >
+              <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+              <Route
+                path="/goods-receipt-notes/:id"
+                element={<GoodsReceiptPage />}
+              />
+            </Route>
+            <Route
+              element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/purchase-orders/:id"
+                element={<PurchaseOrderDetailPage />}
+              />
             </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
+              <Route
+                path="/purchase-orders/new"
+                element={<NewPurchaseOrderPage />}
+              />
+              <Route
+                path="/goods-receipt-notes/excess"
+                element={<ExcessReceiptsPage />}
+              />
+              <Route
+                path="/purchase-orders/:id/edit"
+                element={<EditPurchaseOrderPage />}
+              />
               <Route
                 path="/owner/catalog-permissions"
                 element={<OwnerPermissionsPage />}
@@ -230,6 +295,10 @@ export default function AppRoutes() {
               />
             </Route>
             <Route element={<RequireRole roles={['BRANCH_MANAGER']} />}>
+              <Route
+                path="/purchase-orders/:id/receipts/new"
+                element={<NewGoodsReceiptPage />}
+              />
               <Route element={<RequireCatalogEdit />}>
                 <Route
                   path="/branch-manager/categories"

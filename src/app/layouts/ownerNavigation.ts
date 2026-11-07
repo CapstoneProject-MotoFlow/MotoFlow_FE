@@ -29,8 +29,8 @@ export const ownerNavigation: NavItem[] = [
     pending: true,
   },
   {
-    label: 'Phiếu nhập hàng',
-    href: '/dashboard#owner-requests',
+    label: 'Yêu cầu nhập hàng',
+    href: '/purchase-orders',
     icon: 'clipboard',
     group: 'NHẬP HÀNG',
   },

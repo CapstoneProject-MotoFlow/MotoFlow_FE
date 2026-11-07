@@ -316,7 +316,13 @@ export default function SupplierDetailPage() {
                           </Link>
                           <small>{x.sku}</small>
                         </td>
-                        <td>#{x.deliveryId}</td>
+                        <td>
+                          <Link
+                            to={`/supplier-discrepancies?receipt=${x.deliveryId}`}
+                          >
+                            #{x.deliveryId}
+                          </Link>
+                        </td>
                         <td>{x.shortQty}</td>
                         <td>{x.wrongItemQty}</td>
                         <td>{x.damagedQty}</td>

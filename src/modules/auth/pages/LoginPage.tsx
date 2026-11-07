@@ -5,7 +5,7 @@
  * Công dụng: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công.
  */
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import PasswordField from '../../../shared/ui/PasswordField'
 import { login } from '../services/authService'
@@ -45,42 +45,44 @@ export default function LoginPage() {
   }
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
-      <p className="login-system-name">MotoFlow</p>
-      <h1>Đăng nhập</h1>
-      <label htmlFor="username">
-        Tên đăng nhập <span className="required">*</span>
-      </label>
-      <input
-        id="username"
-        name="username"
-        type="text"
-        autoComplete="username"
-        placeholder="Ví dụ: ha.tt..."
-        value={username}
-        onChange={(event) => setUsername(event.target.value)}
-        required
-      />
+    <div className="login-experience">
+      <form className="login-form login-card" onSubmit={handleSubmit}>
+        <p className="login-system-name">MotoFlow</p>
+        <h1>Chào mừng trở lại</h1>
+        <label htmlFor="username">
+          Tên đăng nhập <span className="required">*</span>
+        </label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autoComplete="username"
+          placeholder="Ví dụ: ha.tt..."
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          required
+        />
 
-      <PasswordField
-        id="password"
-        label="Mật khẩu"
-        value={password}
-        onChange={setPassword}
-        autoComplete="current-password"
-      />
+        <PasswordField
+          id="password"
+          label="Mật khẩu"
+          value={password}
+          onChange={setPassword}
+          autoComplete="current-password"
+        />
 
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <button className="submit-button" type="submit" disabled={submitting}>
+          {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
+        </button>
+        <p className="login-card-footer">
+          MotoFlow · Kết nối vận hành, mở lối thành công
         </p>
-      )}
-      <button className="submit-button" type="submit" disabled={submitting}>
-        {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
-      </button>
-      <p className="forgot-note">
-        <Link to="/forgot-password">Quên mật khẩu</Link>
-      </p>
-    </form>
+      </form>
+    </div>
   )
 }

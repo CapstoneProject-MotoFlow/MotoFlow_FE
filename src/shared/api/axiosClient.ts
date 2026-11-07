@@ -1,21 +1,19 @@
 /**
  * File: shared/api/axiosClient.ts
  * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
- * Công dụng: Axios cấu hình /api, gửi cookie/token, gắn Authorization và xử lý 401 bằng refresh rồi thử lại request một lần. refreshClient tách riêng để không tự gọi interceptor lặp; pendingRefresh gom request trong tab, Web Locks tuần tự refresh giữa tab khi trình duyệt hỗ trợ.
+ * Công dụng: Axios cấu hình /api/v1, gửi cookie/token, gắn Authorization và xử lý 401 bằng refresh rồi thử lại request một lần. refreshClient tách riêng để không tự gọi interceptor lặp; pendingRefresh gom request trong tab, Web Locks tuần tự refresh giữa tab khi trình duyệt hỗ trợ.
  */
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { getAccessToken, setAccessToken, clearAccessToken } from './accessToken'
 import type { LoginResponse } from '../types/auth'
+const apiBaseUrl = '/api/v1'
 const axiosClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: apiBaseUrl,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })
 // Separate transport avoids recursively intercepting refresh failures.
-const refreshClient = axios.create({
-  baseURL: '/api/v1',
-  withCredentials: true,
-})
+const refreshClient = axios.create({ baseURL: apiBaseUrl, withCredentials: true })
 let pendingRefresh: Promise<LoginResponse> | null = null
 /** refreshSession: Làm mới access token qua cookie, gom request trong tab và tuần tự hóa giữa tab bằng Web Locks khi có hỗ trợ. */
 export function refreshSession() {
