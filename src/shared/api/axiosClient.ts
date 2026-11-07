@@ -12,7 +12,10 @@ const axiosClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 // Separate transport avoids recursively intercepting refresh failures.
-const refreshClient = axios.create({ baseURL: '/api', withCredentials: true })
+const refreshClient = axios.create({
+  baseURL: '/api/v1',
+  withCredentials: true,
+})
 let pendingRefresh: Promise<LoginResponse> | null = null
 /** refreshSession: Làm mới access token qua cookie, gom request trong tab và tuần tự hóa giữa tab bằng Web Locks khi có hỗ trợ. */
 export function refreshSession() {

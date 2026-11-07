@@ -49,16 +49,16 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Tồn kho',
-    href: '/owner/inventory',
+    href: '/inventory',
     icon: 'box',
     group: 'KHO HÀNG',
   },
   {
     label: 'Lịch sử xuất nhập',
-    href: '/owner/inventory/movements',
+    href: '/inventory/movements',
     icon: 'clock',
   },
-  { label: 'Lô hàng', href: '#lots', icon: 'hourglass', pending: true },
+  { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
     label: 'Tồn theo ngày',
     href: '#daily-stock',

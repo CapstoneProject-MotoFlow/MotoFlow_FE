@@ -1,12 +1,14 @@
-import InventoryMovementsPage from '../../modules/owner/pages/InventoryMovementsPage'
-import InventoryPage from '../../modules/owner/pages/InventoryPage'
+import LotsPage from '../../modules/inventory/LotsPage'
+import LotDetailPage from '../../modules/inventory/LotDetailPage'
+import InventoryMovementsPage from '../../modules/inventory/InventoryMovementsPage'
+import InventoryPage from '../../modules/inventory/InventoryPage'
 /**
  * File: app/routes/AppRoutes.tsx
  * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
  * Công dụng: Ánh xạ URL sang page; chọn trang chủ theo vai trò; ghép guard/layout; lazy-load page và hiển thị trạng thái chờ bằng Suspense.
  */
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import AuthLayout from '../layouts/AuthLayout'
 import DashboardLayout from '../layouts/DashboardLayout'
@@ -87,6 +89,20 @@ const ProfileChangePasswordPage = lazy(
   () => import('../../modules/profile/pages/ProfileChangePasswordPage'),
 )
 
+function InventoryLegacyRedirect({
+  movements = false,
+}: {
+  movements?: boolean
+}) {
+  const location = useLocation()
+  return (
+    <Navigate
+      to={'/inventory' + (movements ? '/movements' : '') + location.search}
+      replace
+    />
+  )
+}
+
 /** RootRedirect: Chọn trang đích theo trạng thái đăng nhập và yêu cầu đổi mật khẩu. */
 function RootRedirect() {
   const { user } = useAuth()
@@ -144,6 +160,17 @@ export default function AppRoutes() {
                 )
               }
             />
+            <Route
+              element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
+            >
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route
+                path="/inventory/movements"
+                element={<InventoryMovementsPage />}
+              />
+              <Route path="/inventory/lots" element={<LotsPage />} />
+              <Route path="/inventory/lots/:id" element={<LotDetailPage />} />
+            </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
               <Route
                 path="/owner/catalog-permissions"
@@ -171,10 +198,13 @@ export default function AppRoutes() {
                 path="/owner/products"
                 element={<OwnerWorkspacePage key="products" />}
               />
-              <Route path="/owner/inventory" element={<InventoryPage />} />
+              <Route
+                path="/owner/inventory"
+                element={<InventoryLegacyRedirect />}
+              />
               <Route
                 path="/owner/inventory/movements"
-                element={<InventoryMovementsPage />}
+                element={<InventoryLegacyRedirect movements />}
               />
               <Route
                 path="/owner/products/new"
