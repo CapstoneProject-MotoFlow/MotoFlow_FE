@@ -10,6 +10,11 @@ export type DashboardStore = {
   phone: string | null
   status: 'PLANNED' | 'ACTIVE' | 'INACTIVE'
   central: boolean
-  managers: { id: number; fullName: string; phone: string | null }[]
+  managers: {
+    id: number
+    fullName: string
+    role?: string
+    phone: string | null
+  }[]
   productsInStock?: number
 }

@@ -15,7 +15,6 @@ export type CreateAccountResult = {
 export type PermissionUpdate = {
   role: Account['role']
   storeId: number | null
-  catalogEdit: boolean
   reason: string
   releaseAssignedTasks: boolean
 }

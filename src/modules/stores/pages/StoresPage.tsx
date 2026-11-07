@@ -12,7 +12,11 @@ import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { default as DashboardIcon } from '../../../shared/ui/Icon'
 import type { DashboardStore } from '../../../shared/types/store'
-import { listStores, saveStoreRequest } from '../services/storeService'
+import {
+  listStores,
+  saveStoreRequest,
+  setStoreOwnerManager,
+} from '../services/storeService'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import '../stores.css'
 
@@ -240,6 +244,32 @@ export default function StoresPage() {
     setFormError('')
   }
 
+  async function changeOwnerManager(ownerId: number | null) {
+    if (!editingStore || saving) return
+    setSaving(true)
+    setFormError('')
+    try {
+      const updated = await setStoreOwnerManager(editingStore.id, ownerId)
+      setEditingStore(updated)
+      setRefreshKey((key) => key + 1)
+      setSuccess(
+        ownerId === null
+          ? 'Đã gỡ chủ doanh nghiệp quản lý.'
+          : 'Đã gán chủ doanh nghiệp quản lý.',
+      )
+    } catch (requestError) {
+      const message = axios.isAxiosError(requestError)
+        ? requestError.response?.data?.message
+        : undefined
+      setFormError(
+        typeof message === 'string'
+          ? message
+          : 'Không cập nhật được người quản lý. Vui lòng thử lại.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
   async function saveStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFormError('')
@@ -373,6 +403,7 @@ export default function StoresPage() {
               <thead>
                 <tr>
                   <th>Cửa hàng</th>
+                  <th>Người quản lý</th>
                   <th>Địa chỉ</th>
                   <th>Điện thoại</th>
                   <th>Loại kho</th>
@@ -383,7 +414,7 @@ export default function StoresPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td className="stores-placeholder" colSpan={6}>
+                    <td className="stores-placeholder" colSpan={7}>
                       Đang tải danh sách cửa hàng…
                     </td>
                   </tr>
@@ -392,6 +423,18 @@ export default function StoresPage() {
                     <tr key={store.id}>
                       <td>
                         <strong>{store.storeName}</strong>
+                      </td>
+                      <td>
+                        {store.managers?.length
+                          ? store.managers.map((manager) => (
+                              <div key={manager.id}>
+                                {manager.fullName}
+                                {manager.role === 'OWNER' && (
+                                  <small> · Chủ doanh nghiệp</small>
+                                )}
+                              </div>
+                            ))
+                          : 'Chưa có quản lý'}
                       </td>
                       <td>{store.address}</td>
                       <td>{store.phone || '—'}</td>
@@ -446,7 +489,7 @@ export default function StoresPage() {
                   ))
                 ) : (
                   <tr>
-                    <td className="stores-placeholder" colSpan={6}>
+                    <td className="stores-placeholder" colSpan={7}>
                       Không có cửa hàng phù hợp.
                     </td>
                   </tr>
@@ -695,7 +738,8 @@ export default function StoresPage() {
           className="modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setEditingStore(undefined)
+            if (event.target === event.currentTarget && !saving)
+              setEditingStore(undefined)
           }}
         >
           <section
@@ -711,6 +755,7 @@ export default function StoresPage() {
               <button
                 type="button"
                 aria-label="Đóng"
+                disabled={saving}
                 onClick={() => setEditingStore(undefined)}
               >
                 ×
@@ -756,6 +801,48 @@ export default function StoresPage() {
                 />
               </label>
 
+              {editingStore && (
+                <div className="store-copy-note">
+                  <strong>Chủ doanh nghiệp quản lý</strong>
+                  <p>
+                    {editingStore.managers
+                      ?.filter((manager) => manager.role === 'OWNER')
+                      .map((manager) => manager.fullName)
+                      .join(', ') || 'Chưa gán chủ doanh nghiệp.'}
+                  </p>
+                  {user?.role === 'OWNER' &&
+                    user.id &&
+                    editingStore.status !== 'INACTIVE' &&
+                    !editingStore.managers?.some(
+                      (manager) =>
+                        manager.role === 'OWNER' && manager.id === user.id,
+                    ) && (
+                      <button
+                        type="button"
+                        className="edit-store-button"
+                        disabled={saving}
+                        onClick={() => void changeOwnerManager(user.id!)}
+                      >
+                        Tôi trực tiếp quản lý
+                      </button>
+                    )}
+                  {editingStore.managers?.some(
+                    (manager) => manager.role === 'OWNER',
+                  ) && (
+                    <button
+                      type="button"
+                      className="edit-store-button"
+                      disabled={saving}
+                      onClick={() => void changeOwnerManager(null)}
+                    >
+                      Gỡ chủ doanh nghiệp quản lý
+                    </button>
+                  )}
+                  {editingStore.status === 'INACTIVE' && (
+                    <p>Chuyển về đang chuẩn bị và lưu trước khi gán quản lý.</p>
+                  )}
+                </div>
+              )}
               {editingStore?.status === 'PLANNED' && (
                 <p className="store-copy-note">
                   Để hoạt động, cửa hàng cần có người quản lý, cấu hình hàng bán
@@ -774,8 +861,12 @@ export default function StoresPage() {
                       })
                     }
                   >
-                    <option value="PLANNED">Đang chuẩn bị</option>
-                    <option value="ACTIVE">Đang hoạt động</option>
+                    {editingStore.status !== 'ACTIVE' && (
+                      <option value="PLANNED">Đang chuẩn bị</option>
+                    )}
+                    {editingStore.status !== 'INACTIVE' && (
+                      <option value="ACTIVE">Đang hoạt động</option>
+                    )}
                     <option value="INACTIVE">Ngừng hoạt động</option>
                   </select>
                 </label>
@@ -799,6 +890,7 @@ export default function StoresPage() {
                 <button
                   className="edit-store-button"
                   type="button"
+                  disabled={saving}
                   onClick={() => setEditingStore(undefined)}
                 >
                   Hủy

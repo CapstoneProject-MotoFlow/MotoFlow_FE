@@ -30,3 +30,11 @@ export async function saveStoreRequest(
       .data
   return (await axiosClient.post<DashboardStore>('/stores', payload)).data
 }
+
+export async function setStoreOwnerManager(id: number, ownerId: number | null) {
+  return (
+    await axiosClient.put<DashboardStore>(`/stores/${id}/owner-manager`, {
+      ownerId,
+    })
+  ).data
+}

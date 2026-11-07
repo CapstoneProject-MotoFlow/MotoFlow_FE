@@ -1,21 +1,27 @@
 /**
  * File: modules/catalog/components/ProductImageUrls.tsx
  * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
- * Công dụng: Nhập, thêm/bỏ và kiểm tra URL ảnh phụ tùng; không phải trình tải file ảnh lên máy chủ.
+ * Công dụng: Thêm ảnh phụ tùng từ tệp hoặc URL HTTPS và chọn ảnh chính.
  */
 import { useState } from 'react'
-/** ProductImageUrls: Nhập, thêm/bỏ và kiểm tra URL ảnh phụ tùng; không phải trình tải file ảnh lên máy chủ. */
+import { isAxiosError } from 'axios'
+import { uploadProductImage } from '../../../shared/api/upload'
+
 export default function ProductImageUrls({
   values,
   onChange,
+  uploading,
+  onUploadingChange,
 }: {
   values: string[]
   onChange: (values: string[]) => void
+  uploading: boolean
+  onUploadingChange: (uploading: boolean) => void
 }) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
-  function add() {
-    const value = url.trim()
+  const [fileUploadUnavailable, setFileUploadUnavailable] = useState(false)
+  function add(value: string) {
     if (!/^https:\/\/\S{1,492}$/.test(value)) {
       setError('Ảnh phải là đường dẫn HTTPS, tối đa 500 ký tự.')
       return
@@ -32,22 +38,65 @@ export default function ProductImageUrls({
     setUrl('')
     setError('')
   }
+  async function upload(file: File) {
+    onUploadingChange(true)
+    setError('')
+    try {
+      add(await uploadProductImage(file))
+    } catch (error) {
+      if (
+        isAxiosError<{ code?: string }>(error) &&
+        error.response?.data?.code === 'MSG76'
+      ) {
+        setFileUploadUnavailable(true)
+      } else {
+        setError('Không tải được ảnh. Vui lòng thử lại hoặc nhập URL HTTPS.')
+      }
+    } finally {
+      onUploadingChange(false)
+    }
+  }
   return (
     <div className="part-create-body">
-      <p>Thêm tối đa 3 ảnh bằng URL HTTPS. Ảnh đầu tiên là ảnh chính.</p>
+      <p>
+        Thêm tối đa 3 ảnh từ máy hoặc bằng URL HTTPS. Ảnh đầu tiên là ảnh chính.
+      </p>
+      <input
+        type="file"
+        aria-label="Chọn tệp ảnh phụ tùng"
+        accept="image/jpeg,image/png,image/webp"
+        disabled={uploading || fileUploadUnavailable || values.length >= 3}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0]
+          event.currentTarget.value = ''
+          if (file) void upload(file)
+        }}
+      />
+      {fileUploadUnavailable && (
+        <p role="status">
+          Môi trường này chưa bật tải tệp ảnh. Bạn có thể thêm ảnh bằng URL
+          HTTPS.
+        </p>
+      )}
+      {uploading && <p role="status">Đang tải ảnh…</p>}
       <input
         aria-label="Đường dẫn ảnh"
         placeholder="https://…"
         value={url}
+        disabled={uploading}
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            add()
+            add(url.trim())
           }
         }}
       />
-      <button type="button" disabled={values.length >= 3} onClick={add}>
+      <button
+        type="button"
+        disabled={uploading || values.length >= 3}
+        onClick={() => add(url.trim())}
+      >
         Thêm ảnh
       </button>
       {values.map((value, i) => (
@@ -57,6 +106,7 @@ export default function ProductImageUrls({
           {i > 0 && (
             <button
               type="button"
+              disabled={uploading}
               onClick={() =>
                 onChange([value, ...values.filter((x) => x !== value)])
               }
@@ -66,6 +116,7 @@ export default function ProductImageUrls({
           )}
           <button
             type="button"
+            disabled={uploading}
             aria-label={`Xóa ảnh ${i + 1}`}
             onClick={() => onChange(values.filter((x) => x !== value))}
           >
@@ -74,7 +125,6 @@ export default function ProductImageUrls({
         </div>
       ))}
       {error && <p role="alert">{error}</p>}
-      <small>Chưa hỗ trợ tải tệp từ máy.</small>
     </div>
   )
 }
