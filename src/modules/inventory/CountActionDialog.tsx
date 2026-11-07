@@ -7,25 +7,11 @@ import { date, dateTime, money } from './presentation'
 import { countDifference, type StockCount } from './stockCountModel'
 
 export type CountAction = 'assign' | 'verify' | 'approve' | 'cancel' | 'opening'
-type Assignment = {
-  documentId: number
-  canAssign: boolean
-  blockedMessage: string | null
-  noticeMessage: string | null
-  current: { assigneeId: number; assigneeName: string } | null
-  eligibleAssignees: {
-    id: number
-    fullName: string
-    self: boolean
-    openTasks: number
-  }[]
-  history: {
-    id: number
-    assigneeName: string
-    assignedByName: string
-    assignedAt: string
-  }[]
-}
+import {
+  canAssignCounter,
+  submitCountAssignment,
+  type Assignment,
+} from './countAssignment'
 export function CountActionDialog({
   action,
   count,
@@ -78,7 +64,12 @@ function AssignCounterDialog({
       formId="count-assign"
       submitLabel="Giao việc"
       submitDisabled={
-        !resource.data?.canAssign || !selected || resource.loading
+        !canAssignCounter(
+          resource.data,
+          Number(documentId),
+          selected,
+          resource.loading || saving,
+        )
       }
       busy={saving}
       onClose={onClose}
@@ -99,11 +90,13 @@ function AssignCounterDialog({
           setError('')
           setSaved(false)
           try {
-            await axiosClient.post('/warehouse-tasks', {
-              taskType: 'COUNTING',
-              documentId: Number(documentId),
-              assigneeId: selected,
-            })
+            await submitCountAssignment(
+              resource.data,
+              Number(documentId),
+              selected,
+              resource.loading,
+              (payload) => axiosClient.post('/warehouse-tasks', payload),
+            )
             setRevision((v) => v + 1)
             setSaved(true)
           } catch (error) {

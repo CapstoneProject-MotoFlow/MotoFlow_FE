@@ -18,7 +18,7 @@ export function StockSettingsDialog({
   areas: string[]
   stockRows?: StockRow[]
   onClose: () => void
-  onSaved: () => void
+  onSaved: (row: StockRow) => void
 }) {
   const [area, setArea] = useState(row.storageArea ?? '')
   const [bin, setBin] = useState(row.binLocation ?? '')
@@ -78,7 +78,7 @@ export function StockSettingsDialog({
     setSaving(true)
     setError('')
     try {
-      await axiosClient.put(
+      const response = await axiosClient.put<StockRow>(
         '/inventory/stock/' +
           row.storeId +
           '/' +
@@ -91,7 +91,7 @@ export function StockSettingsDialog({
             }
           : { lowStockThreshold: threshold ? Number(threshold) : null },
       )
-      onSaved()
+      onSaved(response.data)
     } catch (error) {
       setError(inventoryError(error))
     } finally {

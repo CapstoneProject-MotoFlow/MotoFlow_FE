@@ -50,7 +50,15 @@ export function useCompleteStock(
       controller.abort()
     }
   }, [query, key, enabled])
+  function updateData(update: (data: StockRow[]) => StockRow[]) {
+    setState((previous) =>
+      previous?.key === key && previous.data
+        ? { ...previous, data: update(previous.data) }
+        : previous,
+    )
+  }
   return {
+    updateData,
     data: enabled && state?.key === key ? state.data : undefined,
     error: enabled && state?.key === key ? state.error : undefined,
     loading: enabled && state?.key !== key,

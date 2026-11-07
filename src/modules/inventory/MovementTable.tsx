@@ -209,7 +209,7 @@ function MovementRows({
     <>
       {day && (
         <tr className="stock-day">
-          <th colSpan={8} scope="rowgroup">
+          <th colSpan={showBalance ? 9 : 8} scope="rowgroup">
             {date(row.occurredAt)}
           </th>
         </tr>

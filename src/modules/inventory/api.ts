@@ -67,7 +67,15 @@ export function useInventoryData<T>(
       controller.abort()
     }
   }, [path, query, key, enabled])
+  function updateData(update: (data: T) => T) {
+    setResponse((previous) =>
+      previous?.key === key && previous.data
+        ? { ...previous, data: update(previous.data) }
+        : previous,
+    )
+  }
   return {
+    updateData,
     data: enabled && response?.key === key ? response.data : undefined,
     error: enabled && response?.key === key ? response.error : undefined,
     loading: enabled && response?.key !== key,

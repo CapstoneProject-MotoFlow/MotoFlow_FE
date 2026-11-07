@@ -20,10 +20,9 @@ import {
   sortStock,
   stockKey,
   stockTotals,
-  unavailableQty,
 } from './stockGrouping'
 import { useCompleteStock } from './useCompleteStock'
-import type { StockRow } from './types'
+import type { StockRow, StockSummary, Page } from './types'
 import './stock-screen.css'
 
 export default function InventoryPage() {
@@ -31,6 +30,8 @@ export default function InventoryPage() {
     p = scope.params
   const [lotRow, setLotRow] = useState<StockRow>()
   const [revision, setRevision] = useState(0)
+  const [completeRevision, setCompleteRevision] = useState(0)
+  const [summaryRevision, setSummaryRevision] = useState(0)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [settings, setSettings] = useState<{
     row: StockRow
@@ -42,7 +43,12 @@ export default function InventoryPage() {
     scope.user?.role,
     scope.user?.storeId,
   ].join(':')
-  const base = useCompleteStock({}, revision, true, dataScope)
+  const grouped = scope.owner && !scope.storeId
+  const requestedPage = Math.max(0, Math.floor(Number(p.get('page')) || 0))
+  const includeZero = p.get('includeZero') === 'true',
+    view = p.get('view') ?? '',
+    sort = p.get('sort') ?? 'name'
+  const complete = useCompleteStock({}, completeRevision, grouped, dataScope)
   const filters = {
     q: p.get('q') ?? '',
     categoryId: p.get('categoryId') ?? '',
@@ -56,14 +62,36 @@ export default function InventoryPage() {
   const filtered = useCompleteStock(
     { ...filters, storeId: scope.storeId },
     revision,
-    remoteFilter,
+    grouped && remoteFilter,
     dataScope,
   )
   const categories = useInventoryData<Category[]>('/part-categories')
-  const grouped = scope.owner && !scope.storeId
-  const includeZero = p.get('includeZero') === 'true',
-    view = p.get('view') ?? '',
-    sort = p.get('sort') ?? 'name'
+  const paged = useInventoryData<Page<StockRow>>(
+    '/inventory/stock',
+    {
+      ...filters,
+      storeId: scope.storeId,
+      page: requestedPage,
+      size: 20,
+      includeZero,
+      lowStockOnly: view === 'lowStock',
+      unavailableOnly: view === 'unavailable',
+      expiryAlertOnly: view === 'expiryAlert',
+    },
+    revision,
+    !grouped,
+  )
+  const summary = useInventoryData<StockSummary>(
+    '/inventory/stock/summary',
+    { ...filters, storeId: scope.storeId },
+    summaryRevision,
+  )
+  const areaResource = useInventoryData<string[]>(
+    '/inventory/stock/storage-areas',
+    { storeId: scope.storeId },
+    summaryRevision,
+  )
+  const base = grouped ? complete : { ...paged, data: paged.data?.items }
   const scoped =
     base.data?.filter(
       (row) => !scope.storeId || String(row.storeId) === scope.storeId,
@@ -76,7 +104,7 @@ export default function InventoryPage() {
     (group) => group.totals.stockValue,
     sort,
   )
-  const flat = sortStock(
+  const sortedFlat = sortStock(
     scoped.filter(
       (row) =>
         keys.has(stockKey(row)) &&
@@ -87,36 +115,35 @@ export default function InventoryPage() {
     (row) => row.stockValue,
     sort,
   )
+  const flat = grouped ? sortedFlat : (paged.data?.items ?? [])
   const loading = base.loading || filtered.loading
   const error =
-    base.error ?? filtered.error ?? scope.storesError ?? categories.error
-  const ready = !!base.data && (!remoteFilter || !!filtered.data)
-  const total = grouped ? groups.length : flat.length
-  const requestedPage = Number(p.get('page')) || 0
-  const page = Math.min(
+    base.error ??
+    filtered.error ??
+    summary.error ??
+    areaResource.error ??
+    scope.storesError ??
+    categories.error
+  const ready = !!base.data && (!grouped || !remoteFilter || !!filtered.data)
+  const total = grouped ? groups.length : (paged.data?.totalItems ?? 0)
+  const boundedPage = Math.min(
     Math.max(0, Math.floor(requestedPage)),
     Math.max(0, Math.ceil(total / 20) - 1),
   )
-  const count = (predicate: (row: StockRow) => boolean) =>
-    new Set(scoped.filter(predicate).map((row) => row.productId)).size
+  const page = grouped ? boundedPage : requestedPage
   const metrics = [
-    [
-      '',
-      'Mã có hàng tồn',
-      count((row) => row.onHandQty + row.inTransitQty > 0),
-      'box',
-    ],
-    ['lowStock', 'Dưới ngưỡng', count((row) => row.lowStock), 'sliders'],
+    ['', 'Mã có hàng tồn', summary.data?.withStock, 'box'],
+    ['lowStock', 'Dưới ngưỡng', summary.data?.lowStock, 'sliders'],
     [
       'unavailable',
       'Có hàng chưa bán được',
-      count((row) => unavailableQty(row) > 0),
+      summary.data?.unavailable,
       'clock',
     ],
     [
       'expiryAlert',
       'Có lô sắp hết, hết hạn',
-      count((row) => row.nearExpiryQty + row.expiredQty > 0),
+      summary.data?.expiryAlert,
       'hourglass',
     ],
   ] as const
@@ -133,16 +160,18 @@ export default function InventoryPage() {
   ]
   const weightTotal = weights.reduce((a, b) => a + b, 0)
   const columns = grouped ? 8 : scope.owner ? 9 : 8
-  const areas = [
-    ...new Set(
-      scoped
-        .map((row) => row.storageArea)
-        .filter((value): value is string => !!value),
-    ),
-  ].sort((a, b) => a.localeCompare(b, 'vi'))
-  function saved() {
+  const areas = areaResource.data ?? []
+  function saved(row: StockRow) {
+    const replace = (rows: StockRow[]) =>
+      rows.map((item) => (stockKey(item) === stockKey(row) ? row : item))
+    complete.updateData(replace)
+    filtered.updateData(replace)
+    paged.updateData((data) => ({ ...data, items: replace(data.items) }))
     setSettings(undefined)
-    setRevision((value) => value + 1)
+    if (lotRow && stockKey(lotRow) === stockKey(row)) setLotRow(row)
+    setSummaryRevision((value) => value + 1)
+    if (filters.q || filters.storageArea || view)
+      setRevision((value) => value + 1)
   }
   function toggle(id: number) {
     setExpanded((previous) => {
@@ -253,7 +282,7 @@ export default function InventoryPage() {
     <main className="inventory-workspace stock-screen">
       <StockHeaderSearch
         value={filters.q}
-        onChange={(value) => scope.filter({ q: value })}
+        onChange={(value) => scope.filter({ q: value }, true)}
       />
       <InventoryHeader title="Tồn kho" />
       <section className="stock-summary-card" aria-label="Tổng quan tồn kho">
@@ -267,11 +296,11 @@ export default function InventoryPage() {
             >
               <Icon name={icon} />
               <span>{label}</span>
-              <strong>{base.data ? number.format(value) : '—'}</strong>
+              <strong>{value == null ? '—' : number.format(value)}</strong>
             </button>
           ))}
         </div>
-        {scope.owner && (
+        {grouped && (
           <nav className="stock-value-tiles" aria-label="Giá trị tồn theo kho">
             {[
               { id: '', storeName: 'Toàn chuỗi' },
@@ -375,7 +404,7 @@ export default function InventoryPage() {
               <option key={area}>{area}</option>
             ))}
           </select>
-          {scope.owner && (
+          {grouped && (
             <select
               aria-label="Sắp xếp"
               value={sort}
@@ -398,7 +427,10 @@ export default function InventoryPage() {
         {(base.error || filtered.error) && (
           <button
             className="stock-reload"
-            onClick={() => setRevision((value) => value + 1)}
+            onClick={() => {
+              setRevision((value) => value + 1)
+              setCompleteRevision((value) => value + 1)
+            }}
           >
             Thử lại
           </button>
@@ -525,7 +557,7 @@ export default function InventoryPage() {
                 ))}
               {ready &&
                 !grouped &&
-                flat.slice(page * 20, (page + 1) * 20).map((row) => (
+                flat.map((row) => (
                   <Fragment key={stockKey(row)}>
                     <tr>
                       <td>

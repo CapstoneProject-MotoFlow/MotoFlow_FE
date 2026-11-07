@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
 import {
@@ -6,7 +6,11 @@ import {
   noticeTime,
 } from '../../modules/notifications/notificationService'
 import NotificationActions from '../../modules/notifications/NotificationActions'
-import { ReceiptDialog } from '../../modules/inventory/MovementTable'
+const ReceiptDialog = lazy(() =>
+  import('../../modules/inventory/MovementTable').then((module) => ({
+    default: module.ReceiptDialog,
+  })),
+)
 import '../../modules/notifications/notifications.css'
 export default function NotificationBell() {
   const { data, error, reload, enabled } = useNotifications()
@@ -95,7 +99,9 @@ export default function NotificationBell() {
         )}
       </div>
       {receipt != null && (
-        <ReceiptDialog id={receipt} onClose={() => setReceipt(undefined)} />
+        <Suspense fallback={<p role="status">Đang tải phiếu nhập…</p>}>
+          <ReceiptDialog id={receipt} onClose={() => setReceipt(undefined)} />
+        </Suspense>
       )}
     </>
   )
