@@ -71,7 +71,7 @@ export const ownerNavigation: NavItem[] = [
     icon: 'calendar',
     pending: true,
   },
-  { label: 'Kiểm kê', href: '#stock-counts', icon: 'checklist', pending: true },
+  { label: 'Kiểm kê', href: '/stock-counts', icon: 'checklist' },
   {
     label: 'Tra cứu chứng từ',
     href: '#documents',

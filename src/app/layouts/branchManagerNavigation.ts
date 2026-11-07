@@ -47,9 +47,8 @@ export const branchManagerNavigation: NavItem[] = [
   },
   {
     label: 'Kiểm kê',
-    href: '#bm-stock-counts',
+    href: '/stock-counts',
     icon: 'checklist',
-    pending: true,
   },
   {
     label: 'Tra cứu chứng từ',

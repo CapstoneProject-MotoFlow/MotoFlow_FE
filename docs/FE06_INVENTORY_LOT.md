@@ -38,3 +38,14 @@ Không thêm dữ liệu mẫu, số liệu giả, tab điều hướng thử ng
 - BE local chạy main mới trên database đang dùng tại `artifacts/receiving-be/.dev-postgres`; không tạo database mới và không sửa working tree BE gốc.
 
 Các kiểm tra trên không xác nhận mọi nhánh nghiệp vụ BE hoặc thay thế một đợt kiểm thử tích hợp đầy đủ.
+
+## Bổ sung giao diện kiểm kê — UC-90 đến UC-95, UC-105
+
+- Đã fetch lại BE main: vẫn `df4b1f4`. Có entity/repository `StockCount`, `StockCountLine`, `StockCountRequest`; chưa có controller/service/DTO API phục vụ danh sách, yêu cầu, tạo phiếu, chi tiết, giao việc, bắt đầu đếm, lưu/gửi số đếm hoặc phê duyệt kiểm kê.
+- `/stock-counts` mở cho Owner/BM/Staff; menu dẫn tới màn này. Các cột và tab theo vai trò: Owner chờ duyệt và xem các kho; BM phiếu kho mình và yêu cầu của Owner; Staff việc cần đếm/đã gửi, không có sổ sách, chênh lệch hoặc giá vốn.
+- Popup Owner yêu cầu kiểm kê và BM tạo phiếu có toàn kho/khu vực/một số phụ tùng, ngày hoặc lý do. Bộ chọn dùng API kho/khu vực/phụ tùng thật. Đổi kho xóa các lựa chọn phụ tùng/khu vực trước đó.
+- `/stock-counts/:id` đã dựng bố cục thông tin, tiến độ, dòng kiểm kê, lịch sử và thanh thao tác theo vai trò. Staff chỉ có thông tin cần đếm và số đếm của mình.
+- `/stock-counts/:id/record` dành cho Staff/BM, dựng bảng đếm mù theo vị trí, lô/hạn dùng, ô số đếm, ghi chú, chỉ dòng chưa đếm và cam kết. Chuẩn bị giao diện trước lúc bắt đầu/đã gửi/không còn được đếm. Có popup chọn Excel cho phiếu đầu kỳ; chưa tải tệp hoặc đọc tệp vào phiếu.
+- **Chưa nối nghiệp vụ kiểm kê:** không có API tương ứng; không gửi tới endpoint tự đặt tên, không tạo phiếu/dòng mẫu, không báo lưu/gửi thành công. Nút tạo/gửi/lưu/duyệt hiện khóa. Các trang không tự lấy entity trong database hoặc dựng phiếu theo mã trên URL. `stockCountModel.ts` chỉ là model hiển thị tạm của FE, không phải hợp đồng DTO BE đã xác nhận.
+- Chưa có popup giao việc/xác minh/duyệt có dữ liệu thực; cần DTO và quy tắc hành động từ BE để hoàn thiện các thao tác này. Chưa áp điều kiện kỳ kho từ ngày cố định trong mockup.
+- Ba test bổ sung kiểm tra chưa đếm khác số 0, chỉ nhận số nguyên không âm trong giới hạn, và yêu cầu số đếm/ghi chú ở mọi dòng kèm cam kết (tổng 20 test đạt). Kiểm tra trình duyệt Owner/BM/Staff không có lỗi JavaScript; popup chọn được phụ tùng thật, nút gửi khóa; không gọi API kiểm kê chưa tồn tại. Kiểm tra bố cục trang tại 390px không tràn ngang.

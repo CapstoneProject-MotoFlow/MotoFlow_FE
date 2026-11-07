@@ -13,12 +13,14 @@ export default function FormDialog({
   submitLabel,
   onClose,
   busy = false,
+  submitDisabled = false,
 }: {
   title: string
   formId: string
   children: ReactNode
   submitLabel: string
   busy?: boolean
+  submitDisabled?: boolean
   onClose: () => void
 }) {
   const ref = useRef<HTMLElement>(null)
@@ -97,7 +99,7 @@ export default function FormDialog({
           <button
             type="submit"
             form={formId}
-            disabled={busy}
+            disabled={busy || submitDisabled}
             className="ui-confirm-button"
           >
             {submitLabel}

@@ -17,6 +17,15 @@ import RequireRole from '../guards/RequireRole'
 import RequireCatalogEdit from '../guards/RequireCatalogEdit'
 import RequirePasswordChange from '../guards/RequirePasswordChange'
 
+const StockCountListPage = lazy(
+  () => import('../../modules/inventory/StockCountListPage'),
+)
+const StockCountDetailPage = lazy(
+  () => import('../../modules/inventory/StockCountDetailPage'),
+)
+const StockCountRecordPage = lazy(
+  () => import('../../modules/inventory/StockCountRecordPage'),
+)
 const NotificationsPage = lazy(
   () => import('../../modules/notifications/NotificationsPage'),
 )
@@ -273,6 +282,19 @@ export default function AppRoutes() {
               }
             >
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/stock-counts" element={<StockCountListPage />} />
+              <Route
+                path="/stock-counts/:id"
+                element={<StockCountDetailPage />}
+              />
+            </Route>
+            <Route
+              element={<RequireRole roles={['STAFF', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/stock-counts/:id/record"
+                element={<StockCountRecordPage />}
+              />
             </Route>
             <Route path="/profile" element={<ProfilePage />} />
             <Route
