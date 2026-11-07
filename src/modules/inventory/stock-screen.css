@@ -1,0 +1,384 @@
+.stock-screen {
+  font-size: 13px;
+}
+.stock-screen .stock-heading {
+  margin-bottom: 24px;
+}
+.stock-screen .stock-heading h1 {
+  font-size: 20px;
+}
+.stock-screen .stock-heading-actions > span {
+  font-size: 12px;
+}
+.stock-screen .stock-summary-card {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.stock-screen .stock-metrics {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 8px;
+  gap: 4px;
+}
+.stock-screen .stock-metrics button {
+  grid-template-columns: 44px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 3px;
+  padding: 14px;
+  border-radius: 12px;
+  min-width: 0;
+  align-content: center;
+}
+.stock-screen .stock-metrics button > svg {
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  background: #eef4ff;
+  align-self: center;
+}
+.stock-screen .stock-metrics button:nth-child(2) > svg {
+  color: #b54708;
+  background: #fffaeb;
+}
+.stock-screen .stock-metrics button:nth-child(3) > svg {
+  color: #667085;
+  background: #f2f4f7;
+}
+.stock-screen .stock-metrics button:nth-child(4) > svg {
+  color: #d92d20;
+  background: #fef3f2;
+}
+.stock-screen .stock-metrics button > span {
+  font-size: 13px;
+  align-self: end;
+}
+.stock-screen .stock-metrics strong {
+  font-size: 28px;
+  align-self: start;
+}
+.stock-screen .stock-metrics button.selected {
+  box-shadow: inset 0 0 0 1px #c7d7fe;
+  background: #eef4ff;
+}
+.stock-screen .stock-value-tiles {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid #f2f4f7;
+  border-radius: 0;
+  padding: 6px;
+  gap: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.stock-screen .stock-value-tiles button {
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+.stock-screen .stock-value-tiles button[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 1px #c7d7fe;
+}
+.stock-screen .stock-value-tiles strong {
+  font-size: 16px;
+  color: #101828;
+}
+.stock-screen .stock-panel-heading {
+  padding: 18px 20px;
+  min-height: 68px;
+}
+.stock-screen .stock-panel-heading h2 {
+  font-size: 16px;
+}
+.stock-screen .stock-panel-heading > button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.stock-screen .stock-panel-heading > button svg {
+  width: 14px;
+  height: 14px;
+}
+.stock-screen .stock-filters {
+  gap: 10px;
+  padding: 14px 20px;
+  align-items: center;
+}
+.stock-screen .stock-filters > select {
+  width: 150px;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #344054;
+  background: #fff;
+  font: inherit;
+  height: 38px;
+  text-overflow: ellipsis;
+}
+.stock-screen .stock-inline-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  height: 38px;
+  padding: 0 10px;
+  flex: 0 1 250px;
+  min-width: 200px;
+  max-width: 100%;
+  background: #fff;
+  color: #667085;
+}
+.stock-screen .stock-inline-search svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.stock-screen .stock-inline-search input {
+  border: 0;
+  outline: 0;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: #344054;
+  font: inherit;
+}
+.stock-screen .stock-check {
+  font-size: 12px;
+  min-height: 38px;
+  gap: 8px;
+}
+.stock-screen .stock-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #465fff;
+}
+.inventory-workspace.stock-screen
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-overview-table {
+  min-width: 1120px;
+  table-layout: fixed;
+}
+.stock-screen .stock-overview-table > thead > tr > th {
+  padding: 12px 18px;
+  font-size: 12px;
+  line-height: 1.45;
+  vertical-align: middle;
+  font-weight: 400;
+}
+.stock-screen .stock-overview-table > tbody > tr > td {
+  padding: 12px 18px;
+  font-size: 13px;
+  line-height: 1.45;
+  border-color: #f2f4f7;
+  white-space: normal;
+  overflow-wrap: normal;
+  min-width: 0;
+}
+.stock-screen .stock-overview-table > tbody > tr.stock-product-row > td {
+  height: 70px;
+}
+.stock-screen .stock-product-name {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.stock-screen .stock-product-name > div {
+  min-width: 0;
+}
+.stock-screen .stock-product-name a,
+.stock-screen .stock-product-link {
+  font-weight: 500;
+  color: #101828;
+  text-decoration: none;
+}
+.stock-screen .stock-product-name a:hover,
+.stock-screen .stock-product-link:hover {
+  color: #465fff;
+}
+.stock-screen .stock-product-name small,
+.stock-screen .stock-overview-table > tbody > tr > td > small {
+  font-size: 12px;
+  margin-top: 3px;
+}
+.stock-screen .stock-tree-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #667085;
+  margin-left: -6px;
+  flex-shrink: 0;
+}
+.stock-screen .stock-tree-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+.stock-screen .stock-tree-toggle svg.is-open {
+  transform: rotate(90deg);
+}
+.stock-screen .stock-overview-table .stock-numeric {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.stock-screen .stock-available {
+  font-size: 15px !important;
+  font-weight: 600;
+}
+.stock-screen .stock-numeric strong {
+  font-weight: 600;
+}
+.stock-screen .stock-zero {
+  color: #98a2b3;
+}
+.stock-screen .stock-warehouse-row {
+  background: #f9fafbb3;
+}
+.stock-screen .stock-overview-table > tbody > tr.stock-warehouse-row > td {
+  height: 58px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.stock-screen .stock-tree-branch {
+  display: inline-block;
+  color: #98a2b3;
+  width: 20px;
+  margin-left: 34px;
+}
+.stock-screen .stock-condition {
+  min-width: 0;
+  gap: 5px;
+  align-items: center;
+}
+.stock-screen .stock-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.stock-screen .stock-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+.stock-screen .stock-row-actions > a,
+.stock-screen .stock-row-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #344054;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px #1018280d;
+  text-decoration: none;
+}
+.stock-screen .stock-actions-heading {
+  text-align: right;
+}
+.stock-screen .stock-pagination {
+  font-size: 12px;
+  padding: 14px 20px;
+}
+.stock-screen .stock-reload {
+  margin: 12px 20px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+}
+@media (max-width: 900px) {
+  .stock-screen .stock-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stock-screen .stock-filters {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 520px) {
+  .stock-screen .stock-metrics button {
+    grid-template-columns: 32px minmax(0, 1fr);
+    padding: 10px;
+    gap: 6px;
+  }
+  .stock-screen .stock-metrics button > svg {
+    grid-row: 1/3;
+    width: 32px;
+    height: 32px;
+    padding: 8px;
+  }
+  .stock-screen .stock-metrics strong {
+    grid-column: 2;
+    font-size: 24px;
+  }
+  .stock-screen .stock-metrics button > span {
+    font-size: 11px;
+  }
+  .stock-screen .stock-value-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stock-screen .stock-value-tiles button {
+    min-width: 0;
+    padding: 10px;
+  }
+  .stock-screen .stock-value-tiles span {
+    font-size: 11px;
+  }
+  .stock-screen .stock-value-tiles strong {
+    font-size: 13px;
+  }
+  .stock-screen .stock-filters {
+    padding: 14px;
+  }
+  .stock-screen .stock-inline-search {
+    flex-basis: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+  .stock-screen .stock-filters > select {
+    width: calc(50% - 5px);
+  }
+  .stock-screen .stock-panel-heading {
+    padding: 16px;
+  }
+  .stock-screen .stock-value-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.stock-screen .stock-filters > select[aria-label='Kho'] {
+  width: 160px;
+}
+.stock-screen .stock-filters > select[aria-label='Nhóm phụ tùng'] {
+  width: 168px;
+}
+.stock-screen .stock-filters > select[aria-label='Khu vực'] {
+  width: 122px;
+}
+.stock-screen .stock-filters > select[aria-label='Sắp xếp'] {
+  width: 170px;
+}
+@media (max-width: 520px) {
+  .stock-screen .stock-filters > select[aria-label] {
+    width: calc(50% - 5px);
+  }
+}

@@ -25,7 +25,7 @@ const items: NavItem[] = [
     icon: 'truck',
     pending: true,
   },
-  { label: 'Kiểm kê', href: '#staff-counts', icon: 'checklist', pending: true },
+  { label: 'Kiểm kê', href: '/stock-counts', icon: 'checklist' },
   { label: 'Phụ tùng', href: '/staff/products', icon: 'tool' },
 ]
 /** StaffSidebarNav: Menu dành cho nhân viên. */
@@ -49,7 +49,8 @@ export default function StaffSidebarNav({
           title={collapsed ? item.label : undefined}
           className={
             'sidebar-link' +
-            (location.pathname + location.hash === item.href
+            (location.pathname + location.hash === item.href ||
+            location.pathname.startsWith(item.href + '/')
               ? ' is-active'
               : '')
           }

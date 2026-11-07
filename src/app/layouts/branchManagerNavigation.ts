@@ -31,14 +31,13 @@ export const branchManagerNavigation: NavItem[] = [
     icon: 'truck',
     pending: true,
   },
-  { label: 'Tồn kho', href: '#bm-stock', icon: 'box', pending: true },
+  { label: 'Tồn kho', href: '/inventory', icon: 'box' },
   {
     label: 'Lịch sử xuất nhập',
-    href: '#bm-movements',
+    href: '/inventory/movements',
     icon: 'clock',
-    pending: true,
   },
-  { label: 'Lô hàng', href: '#bm-lots', icon: 'hourglass', pending: true },
+  { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
     label: 'Tồn theo ngày',
     href: '#bm-daily-stock',
@@ -47,9 +46,8 @@ export const branchManagerNavigation: NavItem[] = [
   },
   {
     label: 'Kiểm kê',
-    href: '#bm-stock-counts',
+    href: '/stock-counts',
     icon: 'checklist',
-    pending: true,
   },
   {
     label: 'Tra cứu chứng từ',

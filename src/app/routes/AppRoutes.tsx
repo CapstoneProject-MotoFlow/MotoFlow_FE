@@ -1,12 +1,10 @@
-import InventoryMovementsPage from '../../modules/owner/pages/InventoryMovementsPage'
-import InventoryPage from '../../modules/owner/pages/InventoryPage'
 /**
  * File: app/routes/AppRoutes.tsx
  * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
  * Công dụng: Ánh xạ URL sang page; chọn trang chủ theo vai trò; ghép guard/layout; lazy-load page và hiển thị trạng thái chờ bằng Suspense.
  */
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import AuthLayout from '../layouts/AuthLayout'
 import DashboardLayout from '../layouts/DashboardLayout'
@@ -15,6 +13,25 @@ import RequireRole from '../guards/RequireRole'
 import RequireCatalogEdit from '../guards/RequireCatalogEdit'
 import RequirePasswordChange from '../guards/RequirePasswordChange'
 
+const LotsPage = lazy(() => import('../../modules/inventory/LotsPage'))
+const LotDetailPage = lazy(
+  () => import('../../modules/inventory/LotDetailPage'),
+)
+const InventoryMovementsPage = lazy(
+  () => import('../../modules/inventory/InventoryMovementsPage'),
+)
+const InventoryPage = lazy(
+  () => import('../../modules/inventory/InventoryPage'),
+)
+const StockCountListPage = lazy(
+  () => import('../../modules/inventory/StockCountListPage'),
+)
+const StockCountDetailPage = lazy(
+  () => import('../../modules/inventory/StockCountDetailPage'),
+)
+const StockCountRecordPage = lazy(
+  () => import('../../modules/inventory/StockCountRecordPage'),
+)
 const NotificationsPage = lazy(
   () => import('../../modules/notifications/NotificationsPage'),
 )
@@ -118,6 +135,20 @@ const ProfileChangePasswordPage = lazy(
   () => import('../../modules/profile/pages/ProfileChangePasswordPage'),
 )
 
+function InventoryLegacyRedirect({
+  movements = false,
+}: {
+  movements?: boolean
+}) {
+  const location = useLocation()
+  return (
+    <Navigate
+      to={'/inventory' + (movements ? '/movements' : '') + location.search}
+      replace
+    />
+  )
+}
+
 /** RootRedirect: Chọn trang đích theo trạng thái đăng nhập và yêu cầu đổi mật khẩu. */
 function RootRedirect() {
   const { user } = useAuth()
@@ -177,6 +208,13 @@ export default function AppRoutes() {
             <Route
               element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
             >
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route
+                path="/inventory/movements"
+                element={<InventoryMovementsPage />}
+              />
+              <Route path="/inventory/lots" element={<LotsPage />} />
+              <Route path="/inventory/lots/:id" element={<LotDetailPage />} />
               <Route
                 path="/supplier-discrepancies"
                 element={<ResolveSupplierDiscrepancyPage />}
@@ -240,10 +278,13 @@ export default function AppRoutes() {
                 path="/owner/products"
                 element={<OwnerWorkspacePage key="products" />}
               />
-              <Route path="/owner/inventory" element={<InventoryPage />} />
+              <Route
+                path="/owner/inventory"
+                element={<InventoryLegacyRedirect />}
+              />
               <Route
                 path="/owner/inventory/movements"
-                element={<InventoryMovementsPage />}
+                element={<InventoryLegacyRedirect movements />}
               />
               <Route
                 path="/owner/products/new"
@@ -316,6 +357,19 @@ export default function AppRoutes() {
               }
             >
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/stock-counts" element={<StockCountListPage />} />
+              <Route
+                path="/stock-counts/:id"
+                element={<StockCountDetailPage />}
+              />
+            </Route>
+            <Route
+              element={<RequireRole roles={['STAFF', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/stock-counts/:id/record"
+                element={<StockCountRecordPage />}
+              />
             </Route>
             <Route path="/profile" element={<ProfilePage />} />
             <Route
