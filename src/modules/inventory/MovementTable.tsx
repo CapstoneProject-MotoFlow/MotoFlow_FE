@@ -147,9 +147,11 @@ export function ReceiptDialog({
 export function MovementTable({
   rows,
   empty = 'Chưa có biến động trong khoảng ngày này.',
+  showBalance = false,
 }: {
   rows: Movement[]
   empty?: string
+  showBalance?: boolean
 }) {
   return (
     <div className="stock-table-scroll">
@@ -163,6 +165,7 @@ export function MovementTable({
               Trạng thái tồn ⓘ
             </th>
             <th>Thay đổi</th>
+            {showBalance && <th>Tồn sau</th>}
             <th>Lô</th>
             <th>Chứng từ gốc / người thực hiện</th>
             <th>Ghi chú</th>
@@ -173,6 +176,7 @@ export function MovementTable({
             <MovementRows
               key={row.id}
               row={row}
+              showBalance={showBalance}
               day={
                 index === 0 ||
                 rows[index - 1].occurredAt.slice(0, 10) !==
@@ -182,7 +186,7 @@ export function MovementTable({
           ))}
           {!rows.length && (
             <tr>
-              <td colSpan={8} className="stock-empty">
+              <td colSpan={showBalance ? 9 : 8} className="stock-empty">
                 {empty}
               </td>
             </tr>
@@ -192,7 +196,15 @@ export function MovementTable({
     </div>
   )
 }
-function MovementRows({ row, day }: { row: Movement; day: boolean }) {
+function MovementRows({
+  row,
+  day,
+  showBalance,
+}: {
+  row: Movement
+  day: boolean
+  showBalance: boolean
+}) {
   return (
     <>
       {day && (
@@ -213,6 +225,7 @@ function MovementRows({ row, day }: { row: Movement; day: boolean }) {
           {row.quantityChange > 0 ? '+' : ''}
           {number.format(row.quantityChange)}
         </td>
+        {showBalance && <td>—</td>}
         <td>
           {row.lotId ? (
             <Link to={lotLink(row.lotId, row.storeId)}>

@@ -40,6 +40,7 @@ export function CountActionDialog({
   if (action === 'assign')
     return (
       <AssignCounterDialog
+        count={count}
         documentId={count ? String(count.id) : documentId}
         onClose={onClose}
       />
@@ -47,9 +48,11 @@ export function CountActionDialog({
   return <CountReviewDialog action={action} count={count} onClose={onClose} />
 }
 function AssignCounterDialog({
+  count,
   documentId,
   onClose,
 }: {
+  count?: StockCount
   documentId?: string
   onClose: () => void
 }) {
@@ -110,6 +113,16 @@ function AssignCounterDialog({
           }
         }}
       >
+        <dl className="stock-facts">
+          <div>
+            <dt>Phạm vi</dt>
+            <dd>{count?.scopeLabel ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>Ngày kiểm kê</dt>
+            <dd>{date(count?.countDate)}</dd>
+          </div>
+        </dl>
         <InventoryNotice
           loading={resource.loading}
           error={resource.error ?? error}
@@ -286,6 +299,63 @@ function CountReviewDialog({
                     : count?.confirmedByName) ?? '—'}
                 </dd>
               </div>
+            </dl>
+            <dl className="stock-facts count-summary">
+              <div>
+                <dt>{action === 'opening' ? 'Phụ tùng' : 'Khớp sổ sách'}</dt>
+                <dd>
+                  {count
+                    ? action === 'opening'
+                      ? new Set(count.lines.map((line) => line.productId)).size
+                      : count.lines.filter(
+                          (line) => countDifference(line) === 0,
+                        ).length
+                    : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt>{action === 'opening' ? 'Dòng lô' : 'Chênh lệch'}</dt>
+                <dd>
+                  {count
+                    ? action === 'opening'
+                      ? count.lines.length
+                      : count.lines.filter(
+                          (line) =>
+                            countDifference(line) != null &&
+                            countDifference(line) !== 0,
+                        ).length
+                    : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt>Chưa đếm</dt>
+                <dd>
+                  {count
+                    ? count.lines.filter((line) => line.countedQty == null)
+                        .length
+                    : '—'}
+                </dd>
+              </div>
+              {action === 'approve' && (
+                <div>
+                  <dt>Tổng giá trị chênh lệch</dt>
+                  <dd>
+                    {count &&
+                    count.lines.every(
+                      (line) =>
+                        line.unitCost != null && countDifference(line) != null,
+                    )
+                      ? money.format(
+                          count.lines.reduce(
+                            (sum, line) =>
+                              sum + line.unitCost! * countDifference(line)!,
+                            0,
+                          ),
+                        )
+                      : '—'}
+                  </dd>
+                </div>
+              )}
             </dl>
             {action === 'opening' ? (
               <>

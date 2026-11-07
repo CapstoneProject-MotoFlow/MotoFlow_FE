@@ -60,6 +60,7 @@ export function StockCountFormDialog({
               onChange={(e) => {
                 setWarehouse(e.target.value)
                 setArea('')
+                setQuery('')
                 setPicked([])
                 setSelected('')
               }}
@@ -211,6 +212,20 @@ export function StockCountFormDialog({
             Ngày kiểm kê *
             <input type="date" required defaultValue={today()} />
           </label>
+        )}
+        {owner && warehouse && (
+          <p className="stock-notice">
+            Yêu cầu sẽ được gửi tới Branch Manager của{' '}
+            {stores.data?.find((store) => String(store.id) === warehouse)
+              ?.storeName ?? 'kho đã chọn'}{' '}
+            để lập phiếu kiểm kê.
+          </p>
+        )}
+        {!owner && (
+          <p className="stock-notice">
+            Ngày kiểm kê phải thuộc kỳ kho đang mở. Kiểm kê đầu kỳ chỉ ghi tồn
+            sau khi Owner duyệt giá vốn.
+          </p>
         )}
         <InventoryNotice
           loading={stores.loading || areas.loading || products.loading}

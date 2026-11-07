@@ -352,3 +352,24 @@
   width: min(720px, calc(100vw - 32px));
   max-width: 720px;
 }
+
+.count-workspace .count-summary,
+.count-form .count-summary {
+  background: #f7f9fc;
+  border: 1px solid #e1e6ef;
+  border-radius: 9px;
+  margin: 16px 0;
+}
+.count-list-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #edf0f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.count-list-footer nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

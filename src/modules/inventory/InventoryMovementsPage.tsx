@@ -10,11 +10,27 @@ import {
 import { MovementTable } from './MovementTable'
 import { movementNames } from './presentation'
 import type { Movement, Page } from './types'
+import { useLotCollection } from './useLotCollection'
+import './inventory-screens.css'
 
 type Product = { id: number; sku: string; partName: string }
 export default function InventoryMovementsPage() {
   const scope = useInventoryScope()
   const p = scope.params
+  const lotCollection = useLotCollection(
+    scope.storeId,
+    String(scope.user?.id) + ':' + scope.user?.role,
+  )
+  const lotOptions = [
+    ...new Map(
+      (lotCollection.rows ?? [])
+        .filter(
+          (row) =>
+            !p.get('productId') || row.productId === Number(p.get('productId')),
+        )
+        .map((row) => [row.lotId, row]),
+    ).values(),
+  ]
   const [search, setSearch] = useState('')
   const [chartOpen, setChartOpen] = useState(false)
   const products = useInventoryData<Page<Product>>('/products', {
@@ -41,7 +57,7 @@ export default function InventoryMovementsPage() {
       from,
       to,
       page,
-      size: 20,
+      size: 50,
     },
     0,
     !invalid,
@@ -53,7 +69,7 @@ export default function InventoryMovementsPage() {
     ),
   ]
   return (
-    <main className="inventory-workspace">
+    <main className="inventory-workspace inventory-screen">
       <InventoryHeader title="Lịch sử xuất nhập" />
       <section className="stock-panel">
         <div className="stock-filters">
@@ -103,13 +119,26 @@ export default function InventoryMovementsPage() {
           </label>
           <label className="stock-filter">
             <span>Mã lô</span>
-            <input
-              type="number"
-              min={1}
-              placeholder="Mọi lô"
+            <select
               value={p.get('lotId') ?? ''}
+              disabled={lotCollection.loading}
               onChange={(e) => scope.filter({ lotId: e.target.value })}
-            />
+            >
+              <option value="">Mọi lô</option>
+              {p.get('lotId') &&
+                !lotOptions.some(
+                  (row) => String(row.lotId) === p.get('lotId'),
+                ) && (
+                  <option value={p.get('lotId')!}>
+                    L-{String(p.get('lotId')).padStart(4, '0')}
+                  </option>
+                )}
+              {lotOptions.map((row) => (
+                <option key={row.lotId} value={row.lotId}>
+                  L-{String(row.lotId).padStart(4, '0')} · {row.sku}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="stock-filter">
             <span>Từ ngày</span>
@@ -139,7 +168,8 @@ export default function InventoryMovementsPage() {
             : (movements.error ??
               scope.storesError ??
               products.error ??
-              product.error)
+              product.error ??
+              lotCollection.error)
         }
       />
       <InventoryPanel
@@ -196,10 +226,13 @@ export default function InventoryMovementsPage() {
           </button>
         }
       >
-        {movements.data && <MovementTable rows={movements.data.items} />}
+        {movements.data && (
+          <MovementTable rows={movements.data.items} showBalance />
+        )}
         <Pagination
           total={movements.data?.totalItems ?? 0}
           page={page}
+          size={50}
           loading={movements.loading}
           onPage={(next) =>
             scope.setParams((previous) => {

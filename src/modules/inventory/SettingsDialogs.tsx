@@ -3,21 +3,53 @@ import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import type { StockRow, ExpiryWarning } from './types'
 import { date, dateTime, today } from './presentation'
-import { inventoryError, useInventoryData } from './api'
+import { inventoryError, useInventoryData, useInventoryScope } from './api'
+import { useLotCollection } from './useLotCollection'
 
 export function StockSettingsDialog({
   row,
   mode,
   areas,
+  stockRows = [],
   onClose,
   onSaved,
 }: {
   row: StockRow
   mode: 'location' | 'threshold'
   areas: string[]
+  stockRows?: StockRow[]
   onClose: () => void
   onSaved: () => void
 }) {
+  const [area, setArea] = useState(row.storageArea ?? '')
+  const [bin, setBin] = useState(row.binLocation ?? '')
+  const parsed = /^(.*)-(\d+)-(\d+)$/.exec(row.binLocation ?? '')
+  const [level, setLevel] = useState(
+    parsed?.[2] ? String(Number(parsed[2])) : '',
+  )
+  const [slot, setSlot] = useState(parsed?.[3] ? String(Number(parsed[3])) : '')
+  const [thresholdValue, setThresholdValue] = useState(
+    String(row.lowStockThreshold ?? ''),
+  )
+  function updatePosition(
+    nextArea: string,
+    nextLevel: string,
+    nextSlot: string,
+  ) {
+    setArea(nextArea)
+    setLevel(nextLevel)
+    setSlot(nextSlot)
+    const prefix = nextArea.replace(/^Khu\s*/i, '').trim()
+    if (prefix && nextLevel && nextSlot)
+      setBin(prefix + '-' + nextLevel.padStart(2, '0') + '-' + nextSlot)
+  }
+  const occupied = stockRows.filter(
+    (item) =>
+      item.storeId === row.storeId &&
+      item.productId !== row.productId &&
+      bin.trim() !== '' &&
+      item.binLocation === bin.trim(),
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -61,18 +93,21 @@ export function StockSettingsDialog({
   return (
     <FormDialog
       title={
-        (mode === 'location'
-          ? 'Cập nhật vị trí · '
-          : 'Đặt ngưỡng tồn tối thiểu · ') + row.partName
+        mode === 'location'
+          ? 'Cập nhật vị trí lưu kho'
+          : 'Đặt ngưỡng tồn tối thiểu'
       }
       formId="stock-settings"
-      submitLabel="Lưu thay đổi"
+      submitLabel={mode === 'location' ? 'Lưu vị trí' : 'Lưu ngưỡng'}
       busy={saving}
       onClose={onClose}
     >
       <form id="stock-settings" onSubmit={submit}>
         <p>
-          {row.sku} · {row.storeName}
+          <strong>{row.partName}</strong>
+          <br />
+          {row.sku} · {row.storeName} · Khả dụng: {row.availableQty}{' '}
+          {row.baseUnit}
         </p>
         {mode === 'location' ? (
           <div className="stock-fields">
@@ -81,7 +116,8 @@ export function StockSettingsDialog({
               <input
                 name="area"
                 list="stock-areas"
-                defaultValue={row.storageArea ?? ''}
+                value={area}
+                onChange={(e) => updatePosition(e.target.value, level, slot)}
                 maxLength={50}
                 disabled={saving}
               />
@@ -92,13 +128,61 @@ export function StockSettingsDialog({
               ))}
             </datalist>
             <label>
-              Ô kệ{' '}
+              Mã vị trí{' '}
               <input
                 name="bin"
-                defaultValue={row.binLocation ?? ''}
+                value={bin}
+                onChange={(e) => {
+                  setBin(e.target.value)
+                  const match = /^(.*)-(\d+)-(\d+)$/.exec(e.target.value)
+                  setLevel(match?.[2] ? String(Number(match[2])) : '')
+                  if (match) {
+                    const matchedArea = areas.find(
+                      (item) =>
+                        item
+                          .replace(/^Khu\s*/i, '')
+                          .trim()
+                          .toLocaleLowerCase() === match[1].toLocaleLowerCase(),
+                    )
+                    if (matchedArea) setArea(matchedArea)
+                  }
+                  setSlot(match?.[3] ? String(Number(match[3])) : '')
+                }}
                 maxLength={50}
                 disabled={saving}
               />
+            </label>
+            <label>
+              Tầng kệ
+              <select
+                aria-label="Tầng kệ"
+                value={level}
+                disabled={saving}
+                onChange={(e) => updatePosition(area, e.target.value, slot)}
+              >
+                <option value="">Chọn tầng kệ</option>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Ô
+              <select
+                aria-label="Ô"
+                value={slot}
+                disabled={saving}
+                onChange={(e) => updatePosition(area, level, e.target.value)}
+              >
+                <option value="">Chọn ô</option>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         ) : (
@@ -113,14 +197,39 @@ export function StockSettingsDialog({
                 type="number"
                 min={0}
                 max={1000000}
-                defaultValue={row.lowStockThreshold ?? ''}
+                value={thresholdValue}
+                onChange={(e) => setThresholdValue(e.target.value)}
                 disabled={saving}
               />
             </label>
             <small>
               Để trống để bỏ ngưỡng cảnh báo cho phụ tùng tại kho này.
             </small>
+            <p role="status">
+              {thresholdValue === ''
+                ? 'Không cảnh báo cho phụ tùng này.'
+                : 'Với ngưỡng ' +
+                  thresholdValue +
+                  ' ' +
+                  row.baseUnit +
+                  ', tồn hiện tại ' +
+                  row.availableQty +
+                  ' sẽ là: ' +
+                  (row.availableQty < Number(thresholdValue)
+                    ? 'Dưới ngưỡng'
+                    : 'Đủ hàng')}
+              .
+            </p>
           </div>
+        )}
+        {mode === 'location' && occupied.length > 0 && (
+          <p role="status">
+            Ô {bin} đang có{' '}
+            {occupied
+              .map((item) => item.partName + ' (' + item.sku + ')')
+              .join(', ')}
+            . Lưu thì các phụ tùng dùng chung một ô.
+          </p>
         )}
         {error && <p role="alert">{error}</p>}
       </form>
@@ -135,8 +244,14 @@ export function ExpiryWarningDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const scope = useInventoryScope()
+  const lots = useLotCollection(
+    '',
+    String(scope.user?.id) + ':' + scope.user?.role,
+  )
   const current = useInventoryData<ExpiryWarning>('/inventory/expiry-warning')
-  const [days, setDays] = useState('')
+  const [typedDays, setDays] = useState<string | null>(null)
+  const days = typedDays ?? String(current.data?.inEffect?.days ?? '')
   const [effectiveDate, setEffectiveDate] = useState(today)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -232,6 +347,27 @@ export function ExpiryWarningDialog({
             {!!days && (
               <p role="status">
                 Cảnh báo trước {days} ngày, áp dụng từ {date(effectiveDate)}.
+              </p>
+            )}
+            {!!days && Number(days) >= 1 && Number(days) <= 365 && (
+              <p role="status">
+                {lots.rows
+                  ? 'Theo tồn hiện tại, ' +
+                    new Set(
+                      lots.rows
+                        .filter(
+                          (row) =>
+                            row.remainingQty > 0 &&
+                            row.daysToExpiry != null &&
+                            row.daysToExpiry >= 0 &&
+                            row.daysToExpiry <= Number(days),
+                        )
+                        .map((row) => row.lotId),
+                    ).size +
+                    ' lô nằm trong khoảng cảnh báo ' +
+                    days +
+                    ' ngày.'
+                  : 'Số lô nằm trong khoảng cảnh báo: —'}
               </p>
             )}
             <h3>Các lần thay đổi</h3>

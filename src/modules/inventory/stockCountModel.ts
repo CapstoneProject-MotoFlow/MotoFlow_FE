@@ -25,6 +25,11 @@ export type StockCount = {
   status: 'DRAFT' | 'COUNTING' | 'AWAITING_APPROVAL' | 'COMPLETED' | 'CANCELLED'
   countDate: string
   scopeLabel: string
+  cancellationReason?: string | null
+  recountReason?: string | null
+  sourceReason?: string | null
+  importedFileName?: string | null
+  automaticallyCompleted?: boolean
   sourceLabel: string
   assigneeName: string | null
   submittedAt: string | null

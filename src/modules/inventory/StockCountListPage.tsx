@@ -27,6 +27,34 @@ export default function StockCountListPage() {
   return (
     <main className="inventory-workspace count-workspace">
       <InventoryHeader title="Kiểm kê" />
+      {!staff && !scope.owner && (
+        <InventoryPanel
+          title={
+            scope.owner ? 'Yêu cầu kiểm kê đã gửi' : 'Yêu cầu kiểm kê của Owner'
+          }
+        >
+          <div className="stock-table-scroll">
+            <table className="stock-table">
+              <thead>
+                <tr>
+                  <th>Yêu cầu</th>
+                  {scope.owner && <th>Kho</th>}
+                  <th>Phạm vi</th>
+                  <th>Lý do</th>
+                  <th>{scope.owner ? 'Trạng thái' : 'Cần làm'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={scope.owner ? 5 : 4} className="stock-empty">
+                    Chưa tải được yêu cầu kiểm kê. Vui lòng quay lại sau.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </InventoryPanel>
+      )}
       <InventoryPanel
         title={
           staff
@@ -122,8 +150,20 @@ export default function StockCountListPage() {
             </tbody>
           </table>
         </div>
+        <footer className="count-list-footer">
+          <span>Tổng số phiếu: —</span>
+          <nav aria-label="Phân trang kiểm kê">
+            <button disabled aria-label="Trang trước">
+              ‹
+            </button>
+            <span>—</span>
+            <button disabled aria-label="Trang sau">
+              ›
+            </button>
+          </nav>
+        </footer>
       </InventoryPanel>
-      {!staff && (
+      {!staff && scope.owner && (
         <InventoryPanel
           title={
             scope.owner ? 'Yêu cầu kiểm kê đã gửi' : 'Yêu cầu kiểm kê của Owner'

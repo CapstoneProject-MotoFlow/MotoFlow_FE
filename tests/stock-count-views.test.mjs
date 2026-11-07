@@ -54,3 +54,83 @@ test('stock-count rows keep book quantities and costs out of Staff markup, inclu
     await server.close()
   }
 })
+
+test('count detail distinguishes cancelled, returned and opening states without leaking cost to Staff or BM', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { StockCountDetailView } = await server.ssrLoadModule(
+      '/src/modules/inventory/StockCountDetailPage.tsx',
+    )
+    const count = {
+      id: 1,
+      code: 'K-TEST',
+      storeId: 1,
+      storeName: 'Kho',
+      type: 'OPENING',
+      status: 'CANCELLED',
+      countDate: '2026-11-07',
+      scopeLabel: 'Toàn kho',
+      sourceLabel: 'BM',
+      assigneeName: null,
+      submittedAt: null,
+      createdByName: 'BM',
+      createdAt: '2026-11-07T09:00:00',
+      confirmedByName: null,
+      confirmedAt: null,
+      approvedByName: null,
+      approvedAt: null,
+      events: [],
+      cancellationReason: 'Hủy theo yêu cầu',
+      recountReason: 'Đếm lại ô kệ',
+      lines: [
+        {
+          id: 1,
+          productId: 1,
+          partName: 'A',
+          sku: 'A',
+          baseUnit: 'Cái',
+          binLocation: null,
+          lotCode: null,
+          expiryDate: null,
+          bookQty: 10,
+          countedQty: 2,
+          note: null,
+          reason: null,
+          recount: false,
+          unitCost: 123456,
+        },
+      ],
+    }
+    const render = (role, data = count) =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(StockCountDetailView, { role, count: data }),
+        ),
+      )
+    const owner = render('OWNER')
+    assert.match(owner, /Hủy theo yêu cầu/)
+    assert.match(owner, /Đếm lại ô kệ/)
+    assert.match(owner, /Giá trị tồn đầu kỳ/)
+    assert.doesNotMatch(owner, /Duyệt chênh lệch<\/button>/)
+    for (const role of ['STAFF', 'BRANCH_MANAGER'])
+      assert.doesNotMatch(
+        render(role),
+        /Giá trị tồn đầu kỳ|246[.,]912|123[.,]456/,
+      )
+    assert.match(
+      render('OWNER', {
+        ...count,
+        lines: [{ ...count.lines[0], unitCost: null }],
+      }),
+      /Giá trị tồn đầu kỳ<\/dt><dd>—<\/dd>/,
+    )
+  } finally {
+    await server.close()
+  }
+})

@@ -11,7 +11,7 @@ import {
   countTypeNames,
   type StockCount,
 } from './stockCountModel'
-import { date, dateTime } from './presentation'
+import { date, dateTime, money } from './presentation'
 import './stock-count.css'
 
 export default function StockCountDetailPage() {
@@ -74,6 +74,22 @@ export function StockCountDetailView({
           Chưa tải được thông tin phiếu kiểm kê. Vui lòng quay lại sau.
         </p>
       )}
+      {count?.status === 'CANCELLED' && (
+        <p role="status" className="count-unavailable">
+          Phiếu đã hủy
+          {count.cancellationReason ? ': ' + count.cancellationReason : ''}.
+        </p>
+      )}
+      {count?.recountReason && (
+        <p role="status" className="count-unavailable">
+          Yêu cầu đếm lại: {count.recountReason}
+        </p>
+      )}
+      {count?.automaticallyCompleted && !staff && (
+        <p role="status" className="stock-notice">
+          Phiếu tự hoàn tất vì không có chênh lệch cần duyệt.
+        </p>
+      )}
       <div className={staff ? '' : 'count-detail-grid'}>
         <div>
           <InventoryPanel
@@ -131,6 +147,56 @@ export function StockCountDetailView({
               )}
             </dl>
           </InventoryPanel>
+          {!staff && count?.sourceReason && (
+            <p className="stock-notice">Lý do yêu cầu: {count.sourceReason}</p>
+          )}
+          {!staff && count?.importedFileName && (
+            <p className="stock-notice">Tệp nhập: {count.importedFileName}</p>
+          )}
+          {!staff && count?.type === 'OPENING' && (
+            <dl className="stock-facts count-summary">
+              <div>
+                <dt>Phụ tùng</dt>
+                <dd>
+                  {new Set(count.lines.map((line) => line.productId)).size}
+                </dd>
+              </div>
+              <div>
+                <dt>Dòng lô</dt>
+                <dd>{count.lines.length}</dd>
+              </div>
+              <div>
+                <dt>Tổng số lượng đã đếm</dt>
+                <dd>
+                  {count.lines.some((line) => line.countedQty == null)
+                    ? '—'
+                    : count.lines.reduce(
+                        (sum, line) => sum + (line.countedQty ?? 0),
+                        0,
+                      )}
+                </dd>
+              </div>
+              {owner && (
+                <div>
+                  <dt>Giá trị tồn đầu kỳ</dt>
+                  <dd>
+                    {count.lines.some(
+                      (line) =>
+                        line.unitCost == null || line.countedQty == null,
+                    )
+                      ? '—'
+                      : money.format(
+                          count.lines.reduce(
+                            (sum, line) =>
+                              sum + line.unitCost! * line.countedQty!,
+                            0,
+                          ),
+                        )}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
           <InventoryPanel
             title={staff ? 'Dòng cần đếm' : 'Dòng kiểm kê'}
             action={

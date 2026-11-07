@@ -538,6 +538,7 @@ export default function InventoryPage() {
         <StockSettingsDialog
           {...settings}
           areas={areas}
+          stockRows={base.data}
           onClose={() => setSettings(undefined)}
           onSaved={saved}
         />

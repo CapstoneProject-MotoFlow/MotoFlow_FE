@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useInventoryData, useInventoryScope } from './api'
+import { useInventoryScope } from './api'
 import {
   InventoryHeader,
   InventoryNotice,
@@ -10,54 +10,98 @@ import {
 } from './components'
 import { ExpiryWarningDialog } from './SettingsDialogs'
 import { date, lotLink, sourceNames } from './presentation'
-import type { LotList, Page } from './types'
+import type { LotRow } from './types'
+import { useLotCollection } from './useLotCollection'
+import './inventory-screens.css'
 
 export default function LotsPage() {
   const scope = useInventoryScope()
   const p = scope.params
   const [expiry, setExpiry] = useState(false)
   const [revision, setRevision] = useState(0)
-  const [supplierSearch, setSupplierSearch] = useState('')
+
   const tab = p.get('tab') ?? 'NEAR_EXPIRY'
   const page = Math.max(0, Number(p.get('page')) || 0)
   const from = p.get('receivedFrom') ?? '',
     to = p.get('receivedTo') ?? ''
   const invalid = !!from && !!to && from > to
-  const lots = useInventoryData<LotList>(
-    '/inventory/lots',
-    {
-      storeId: scope.storeId,
-      tab,
-      q: p.get('q') ?? '',
-      supplierId: p.get('supplierId') ?? '',
-      source: p.get('source') ?? '',
-      receivedFrom: from,
-      receivedTo: to,
-      page,
-      size: 20,
-    },
+  const collection = useLotCollection(
+    scope.storeId,
+    String(scope.user?.id) + ':' + scope.user?.role,
     revision,
-    !invalid,
   )
-  const suppliers = useInventoryData<
-    Page<{ id: number; supplierName: string }>
-  >('/suppliers', { q: supplierSearch, size: 20 }, 0, scope.owner)
-  const selected = useInventoryData<{
-    supplier: { id: number; supplierName: string }
-  }>(
-    '/suppliers/' + p.get('supplierId'),
-    {},
-    0,
-    scope.owner && !!p.get('supplierId'),
+  const grouped = new Map<number, LotRow>()
+  for (const row of collection.rows ?? []) {
+    const prior = grouped.get(row.lotId)
+    grouped.set(
+      row.lotId,
+      prior
+        ? { ...prior, remainingQty: prior.remainingQty + row.remainingQty }
+        : { ...row },
+    )
+  }
+  const rows = [...grouped.values()]
+  const inTab = (row: LotRow, value: string) =>
+    value === 'DEPLETED'
+      ? row.remainingQty === 0
+      : row.remainingQty > 0 &&
+        (value === 'IN_STOCK' ||
+          (value === 'EXPIRED'
+            ? row.daysToExpiry != null && row.daysToExpiry < 0
+            : collection.days != null &&
+              row.daysToExpiry != null &&
+              row.daysToExpiry >= 0 &&
+              row.daysToExpiry <= collection.days))
+  const query = (p.get('q') ?? '').toLocaleLowerCase()
+  const filtered = rows.filter(
+    (row) =>
+      inTab(row, tab) &&
+      (!query ||
+        [
+          row.partName,
+          row.sku,
+          row.manufacturerLotNo,
+          'L-' + String(row.lotId).padStart(4, '0'),
+          String(row.lotId),
+        ].some((value) => value?.toLocaleLowerCase().includes(query))) &&
+      (!p.get('supplierId') ||
+        String(row.supplierId) === p.get('supplierId')) &&
+      (!p.get('source') || row.sourceType === p.get('source')) &&
+      (tab !== 'DEPLETED' ||
+        ((!from || row.receivedDate >= from) &&
+          (!to || row.receivedDate <= to))),
   )
+  filtered.sort((a, b) =>
+    p.get('sort') === 'received' || tab === 'DEPLETED'
+      ? b.receivedDate.localeCompare(a.receivedDate)
+      : (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999') ||
+        a.receivedDate.localeCompare(b.receivedDate),
+  )
+  const lots = {
+    loading: collection.loading,
+    error: collection.error,
+    data: collection.rows
+      ? {
+          expiryWarningDays: collection.days,
+          page: {
+            items: filtered.slice(page * 20, page * 20 + 20),
+            totalItems: filtered.length,
+          },
+        }
+      : undefined,
+  }
   const supplierOptions = [
-    ...(selected.data ? [selected.data.supplier] : []),
-    ...(suppliers.data?.items ?? []).filter(
-      (item) => item.id !== selected.data?.supplier.id,
-    ),
+    ...new Map(
+      (collection.rows ?? [])
+        .filter((row) => row.supplierId != null)
+        .map((row) => [
+          row.supplierId,
+          { id: row.supplierId!, supplierName: row.supplierName ?? '—' },
+        ]),
+    ).values(),
   ]
   return (
-    <main className="inventory-workspace">
+    <main className="inventory-workspace inventory-screen">
       <InventoryHeader title="Lô hàng">
         {scope.owner && (
           <button onClick={() => setExpiry(true)}>Cảnh báo hạn dùng</button>
@@ -78,6 +122,11 @@ export default function LotsPage() {
               onClick={() => scope.filter({ tab: key })}
             >
               {label}
+              {key !== 'DEPLETED' && collection.rows && (
+                <span className="stock-badge">
+                  {rows.filter((row) => inTab(row, key)).length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -105,32 +154,22 @@ export default function LotsPage() {
             value={scope.storeId}
             onChange={(storeId) => scope.filter({ storeId })}
           />
-          {scope.owner && (
-            <>
-              <label className="stock-filter">
-                <span>Tìm nhà cung cấp</span>
-                <input
-                  value={supplierSearch}
-                  placeholder="Tên nhà cung cấp…"
-                  onChange={(e) => setSupplierSearch(e.target.value)}
-                />
-              </label>
-              <label className="stock-filter">
-                <span>Nhà cung cấp</span>
-                <select
-                  value={p.get('supplierId') ?? ''}
-                  onChange={(e) => scope.filter({ supplierId: e.target.value })}
-                >
-                  <option value="">Mọi nhà cung cấp</option>
-                  {supplierOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.supplierName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          )}
+          <>
+            <label className="stock-filter">
+              <span>Nhà cung cấp</span>
+              <select
+                value={p.get('supplierId') ?? ''}
+                onChange={(e) => scope.filter({ supplierId: e.target.value })}
+              >
+                <option value="">Mọi nhà cung cấp</option>
+                {supplierOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.supplierName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
           <label className="stock-filter">
             <span>Nguồn lô</span>
             <select
@@ -145,47 +184,67 @@ export default function LotsPage() {
               ))}
             </select>
           </label>
-          <label className="stock-filter">
-            <span>Nhận từ ngày</span>
-            <input
-              type="date"
-              max={to || undefined}
-              value={from}
-              onChange={(e) => scope.filter({ receivedFrom: e.target.value })}
-            />
-          </label>
-          <label className="stock-filter">
-            <span>Đến ngày</span>
-            <input
-              type="date"
-              min={from || undefined}
-              value={to}
-              onChange={(e) => scope.filter({ receivedTo: e.target.value })}
-            />
-          </label>
+          {tab === 'DEPLETED' && (
+            <>
+              <label className="stock-filter">
+                <span>Nhận từ ngày</span>
+                <input
+                  type="date"
+                  max={to || undefined}
+                  value={from}
+                  onChange={(e) =>
+                    scope.filter({ receivedFrom: e.target.value })
+                  }
+                />
+              </label>
+              <label className="stock-filter">
+                <span>Đến ngày</span>
+                <input
+                  type="date"
+                  min={from || undefined}
+                  value={to}
+                  onChange={(e) => scope.filter({ receivedTo: e.target.value })}
+                />
+              </label>
+            </>
+          )}
+          {tab === 'IN_STOCK' && (
+            <label className="stock-filter">
+              <span>Sắp xếp</span>
+              <select
+                value={p.get('sort') ?? 'expiry'}
+                onChange={(e) => scope.filter({ sort: e.target.value })}
+              >
+                <option value="expiry">Hạn dùng sớm nhất trước</option>
+                <option value="received">Nhận mới nhất trước</option>
+              </select>
+            </label>
+          )}
         </div>
         <InventoryNotice
           loading={lots.loading}
           error={
             invalid
               ? 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.'
-              : (lots.error ??
-                scope.storesError ??
-                suppliers.error ??
-                selected.error)
+              : (lots.error ?? scope.storesError)
           }
         />
         <div className="stock-table-scroll">
           <table className="stock-table">
             <thead>
               <tr>
-                <th>Lô / phụ tùng</th>
-                {scope.owner && <th>Kho</th>}
+                <th>Lô</th>
+                <th>Phụ tùng</th>
                 <th>Nguồn / nhà cung cấp</th>
-                <th>Ngày nhập</th>
+                {['IN_STOCK', 'DEPLETED'].includes(tab) && <th>Ngày nhập</th>}
                 <th>Lô nhà sản xuất / ngày SX</th>
                 <th>Hạn dùng</th>
-                <th>Còn lại</th>
+                {['NEAR_EXPIRY', 'EXPIRED'].includes(tab) && (
+                  <th>{tab === 'EXPIRED' ? 'Quá hạn' : 'Còn tới hạn'}</th>
+                )}
+                <th>{tab === 'DEPLETED' ? 'Đã nhận' : 'Còn lại'}</th>
+                {scope.owner && <th>Giá vốn lô</th>}
+                {!scope.owner && tab === 'EXPIRED' && <th>Cần làm</th>}
               </tr>
             </thead>
             <tbody>
@@ -195,13 +254,15 @@ export default function LotsPage() {
                     <Link to={lotLink(row.lotId, row.storeId)}>
                       L-{String(row.lotId).padStart(4, '0')}
                     </Link>
-                    <small>
-                      {row.partName} · {row.sku}
-                    </small>
                   </td>
-                  {scope.owner && <td>{row.storeName}</td>}
+                  <td>
+                    {row.partName}
+                    <small>{row.sku}</small>
+                  </td>
                   <td>{row.supplierName ?? sourceNames[row.sourceType]}</td>
-                  <td>{date(row.receivedDate)}</td>
+                  {['IN_STOCK', 'DEPLETED'].includes(tab) && (
+                    <td>{date(row.receivedDate)}</td>
+                  )}
                   <td>
                     {row.manufacturerLotNo ?? '—'}
                     <small>{date(row.manufactureDate)}</small>
@@ -224,14 +285,32 @@ export default function LotsPage() {
                       </small>
                     )}
                   </td>
+                  {['NEAR_EXPIRY', 'EXPIRED'].includes(tab) && (
+                    <td>
+                      {row.daysToExpiry == null
+                        ? '—'
+                        : Math.abs(row.daysToExpiry) + ' ngày'}
+                    </td>
+                  )}
                   <td>
-                    {row.remainingQty} {row.baseUnit}
+                    {tab === 'DEPLETED' ? '—' : row.remainingQty} {row.baseUnit}
                   </td>
+                  {scope.owner && <td>—</td>}
+                  {!scope.owner && tab === 'EXPIRED' && (
+                    <td>
+                      <button
+                        disabled
+                        title="Chưa thể gửi yêu cầu hủy hàng lúc này"
+                      >
+                        Báo hủy hàng hết hạn
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {lots.data && !lots.data.page.items.length && (
                 <tr>
-                  <td colSpan={scope.owner ? 7 : 6} className="stock-empty">
+                  <td colSpan={10} className="stock-empty">
                     Không có lô hàng phù hợp.
                   </td>
                 </tr>
