@@ -56,9 +56,10 @@ export function stockTotals(rows: StockRow[]) {
     unavailableQty: rows.reduce((sum, row) => sum + unavailableQty(row), 0),
     inTransitQty: rows.reduce((sum, row) => sum + row.inTransitQty, 0),
     onHandQty: rows.reduce((sum, row) => sum + row.onHandQty, 0),
-    stockValue: rows.some((row) => row.stockValue == null)
-      ? null
-      : rows.reduce((sum, row) => sum + (row.stockValue ?? 0), 0),
+    stockValue: rows.reduce((sum, row) => sum + (row.stockValue ?? 0), 0),
+    incompleteCost: rows.some(
+      (row) => row.stockValue == null && row.onHandQty + row.inTransitQty > 0,
+    ),
   }
 }
 export function matchesStockView(row: StockRow, view: string) {

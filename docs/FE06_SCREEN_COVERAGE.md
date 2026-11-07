@@ -1,3 +1,7 @@
+# Cập nhật sau review PR25
+
+Xem trạng thái mới nhất tại [PR25_REVIEW_FOLLOWUP.md](PR25_REVIEW_FOLLOWUP.md). Phần dưới ghi nhận đợt triển khai trước review; các mục tải toàn bộ lô, cột giữ chỗ và thống kê/biểu đồ đã được thay đổi theo review. Kiểm kê vẫn là Doing, chưa Done vì còn chờ API BE.
+
 # Đối chiếu toàn bộ giao diện FE-06
 
 Nguồn: nhóm FE-06 trong `app.js`, `iteration3.js`, `screens_stock.js`, `screens_lots.js`, `screens_count.js` của mockup HTML người dùng cung cấp. Chỉ dùng các bố cục/quy tắc hiển thị; không chép dữ liệu mẫu vào ứng dụng. Mã UC trong mockup có chỗ khác bảng phân công; bảng này đối chiếu theo tên màn.

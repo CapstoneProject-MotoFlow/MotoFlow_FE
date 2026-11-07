@@ -9,30 +9,15 @@ import {
 } from './components'
 import { MovementTable } from './MovementTable'
 import { movementNames } from './presentation'
-import type { Movement, Page } from './types'
-import { useLotCollection } from './useLotCollection'
+import type { Movement, Page, LotList } from './types'
+
 import './inventory-screens.css'
 
 type Product = { id: number; sku: string; partName: string }
 export default function InventoryMovementsPage() {
   const scope = useInventoryScope()
   const p = scope.params
-  const lotCollection = useLotCollection(
-    scope.storeId,
-    String(scope.user?.id) + ':' + scope.user?.role,
-  )
-  const lotOptions = [
-    ...new Map(
-      (lotCollection.rows ?? [])
-        .filter(
-          (row) =>
-            !p.get('productId') || row.productId === Number(p.get('productId')),
-        )
-        .map((row) => [row.lotId, row]),
-    ).values(),
-  ]
   const [search, setSearch] = useState('')
-  const [chartOpen, setChartOpen] = useState(false)
   const products = useInventoryData<Page<Product>>('/products', {
     q: search,
     size: 20,
@@ -43,6 +28,21 @@ export default function InventoryMovementsPage() {
     0,
     !!p.get('productId'),
   )
+  const lotCollection = useInventoryData<LotList>(
+    '/inventory/lots',
+    {
+      tab: 'IN_STOCK',
+      q: product.data?.sku,
+      storeId: scope.storeId,
+      size: 100,
+    },
+    0,
+    !!product.data,
+  )
+  const lotOptions =
+    lotCollection.data?.page.items.filter(
+      (row) => row.productId === product.data?.id,
+    ) ?? []
   const page = Math.max(0, Number(p.get('page')) || 0)
   const from = p.get('from') ?? '',
     to = p.get('to') ?? ''
@@ -173,52 +173,6 @@ export default function InventoryMovementsPage() {
         }
       />
       <InventoryPanel
-        title={
-          product.data
-            ? 'Tồn khả dụng cuối ngày · ' + product.data.partName
-            : 'Nhập, xuất trong kỳ'
-        }
-        action={
-          <button
-            type="button"
-            aria-expanded={chartOpen}
-            onClick={() => setChartOpen(!chartOpen)}
-          >
-            {chartOpen ? 'Ẩn biểu đồ' : 'Xem biểu đồ'}
-          </button>
-        }
-      >
-        <dl className="stock-facts">
-          <div>
-            <dt>Nhập vào kho</dt>
-            <dd>—</dd>
-          </div>
-          <div>
-            <dt>Xuất khỏi kho</dt>
-            <dd>—</dd>
-          </div>
-          {product.data && (
-            <>
-              <div>
-                <dt>Tồn khả dụng đầu kỳ</dt>
-                <dd>—</dd>
-              </div>
-              <div>
-                <dt>Tồn khả dụng cuối kỳ</dt>
-                <dd>—</dd>
-              </div>
-            </>
-          )}
-        </dl>
-        {chartOpen && (
-          <div className="stock-chart-empty" role="status">
-            {product.data
-              ? 'Chưa có dữ liệu tồn cuối ngày cho khoảng thời gian này.'
-              : 'Chọn một phụ tùng để xem tồn khả dụng theo ngày.'}
-          </div>
-        )}
-      </InventoryPanel>
-      <InventoryPanel
         title="Biến động theo ngày"
         action={
           <button type="button" disabled title="Chưa thể xuất tệp lúc này">
@@ -226,9 +180,7 @@ export default function InventoryMovementsPage() {
           </button>
         }
       >
-        {movements.data && (
-          <MovementTable rows={movements.data.items} showBalance />
-        )}
+        {movements.data && <MovementTable rows={movements.data.items} />}
         <Pagination
           total={movements.data?.totalItems ?? 0}
           page={page}

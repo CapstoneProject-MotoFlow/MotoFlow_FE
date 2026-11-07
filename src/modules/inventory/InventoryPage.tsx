@@ -11,6 +11,7 @@ import {
   Pagination,
 } from './components'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
+import { StockLots } from './StockDetails'
 import { StockSettingsDialog } from './SettingsDialogs'
 import { money, movementLink, number } from './presentation'
 import {
@@ -28,6 +29,7 @@ import './stock-screen.css'
 export default function InventoryPage() {
   const scope = useInventoryScope(),
     p = scope.params
+  const [lotRow, setLotRow] = useState<StockRow>()
   const [revision, setRevision] = useState(0)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [settings, setSettings] = useState<{
@@ -153,6 +155,21 @@ export default function InventoryPage() {
   function actions(row: StockRow) {
     return (
       <div className="stock-row-actions">
+        <button
+          aria-expanded={
+            lotRow?.storeId === row.storeId &&
+            lotRow?.productId === row.productId
+          }
+          onClick={() =>
+            setLotRow((previous) =>
+              previous && stockKey(previous) === stockKey(row)
+                ? undefined
+                : row,
+            )
+          }
+        >
+          Lô
+        </button>
         <Link to={movementLink(row.productId, row.storeId)}>Lịch sử</Link>
         <button onClick={() => setSettings({ row, mode: 'location' })}>
           Vị trí
@@ -191,7 +208,8 @@ export default function InventoryPage() {
         </td>
         {scope.owner && (
           <td className="stock-numeric stock-cost">
-            {totals.stockValue == null ? '—' : money.format(totals.stockValue)}
+            {money.format(totals.stockValue)}
+            {totals.incompleteCost && <small>Chưa đủ giá vốn</small>}
           </td>
         )}
         <td>
@@ -264,12 +282,12 @@ export default function InventoryPage() {
                   storeName: store.storeName,
                 })),
             ].map((store) => {
-              const value = base.data
+              const valueTotals = base.data
                 ? stockTotals(
                     base.data.filter(
                       (row) => !store.id || String(row.storeId) === store.id,
                     ),
-                  ).stockValue
+                  )
                 : null
               return (
                 <button
@@ -280,7 +298,14 @@ export default function InventoryPage() {
                   }
                 >
                   <span>{store.storeName}</span>
-                  <strong>{value == null ? '—' : money.format(value)}</strong>
+                  <strong>
+                    {valueTotals == null
+                      ? '—'
+                      : money.format(valueTotals.stockValue)}
+                  </strong>
+                  {valueTotals?.incompleteCost && (
+                    <small>Chưa đủ giá vốn</small>
+                  )}
                 </button>
               )
             })}
@@ -309,7 +334,7 @@ export default function InventoryPage() {
               aria-label="Tìm tên, SKU, mã OEM hoặc ô kệ"
               placeholder="Tìm tên, SKU, mã OEM hoặc ô kệ"
               value={filters.q}
-              onChange={(e) => scope.filter({ q: e.target.value })}
+              onChange={(e) => scope.filter({ q: e.target.value }, true)}
             />
           </label>
           {scope.owner && (
@@ -473,43 +498,61 @@ export default function InventoryPage() {
                     </tr>
                     {expanded.has(group.product.productId) &&
                       group.rows.map((row) => (
-                        <tr key={stockKey(row)} className="stock-warehouse-row">
-                          <td>
-                            <span
-                              className="stock-tree-branch"
-                              aria-hidden="true"
-                            >
-                              └
-                            </span>
-                            {row.storeName}
-                          </td>
-                          {quantities([row])}
-                          <td>{actions(row)}</td>
-                        </tr>
+                        <Fragment key={stockKey(row)}>
+                          <tr className="stock-warehouse-row">
+                            <td>
+                              <span
+                                className="stock-tree-branch"
+                                aria-hidden="true"
+                              >
+                                └
+                              </span>
+                              {row.storeName}
+                            </td>
+                            {quantities([row])}
+                            <td>{actions(row)}</td>
+                          </tr>
+                          {lotRow && stockKey(lotRow) === stockKey(row) && (
+                            <tr>
+                              <td colSpan={columns}>
+                                <StockLots row={row} owner={scope.owner} />
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       ))}
                   </Fragment>
                 ))}
               {ready &&
                 !grouped &&
                 flat.slice(page * 20, (page + 1) * 20).map((row) => (
-                  <tr key={stockKey(row)}>
-                    <td>
-                      <Link
-                        className="stock-product-link"
-                        to={
-                          (scope.owner ? '/owner' : '/branch-manager') +
-                          '/products/' +
-                          row.productId
-                        }
-                      >
-                        {row.partName}
-                      </Link>
-                      <small>{row.sku}</small>
-                    </td>
-                    <td>{row.binLocation ?? '—'}</td>
-                    {quantities([row])}
-                    <td>{actions(row)}</td>
-                  </tr>
+                  <Fragment key={stockKey(row)}>
+                    <tr>
+                      <td>
+                        <Link
+                          className="stock-product-link"
+                          to={
+                            (scope.owner ? '/owner' : '/branch-manager') +
+                            '/products/' +
+                            row.productId
+                          }
+                        >
+                          {row.partName}
+                        </Link>
+                        <small>{row.sku}</small>
+                      </td>
+                      <td>{row.binLocation ?? '—'}</td>
+                      {quantities([row])}
+                      <td>{actions(row)}</td>
+                    </tr>
+                    {lotRow && stockKey(lotRow) === stockKey(row) && (
+                      <tr>
+                        <td colSpan={columns}>
+                          <StockLots row={row} owner={scope.owner} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               {ready && !total && (
                 <tr>

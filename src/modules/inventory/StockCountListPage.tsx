@@ -47,7 +47,7 @@ export default function StockCountListPage() {
               <tbody>
                 <tr>
                   <td colSpan={scope.owner ? 5 : 4} className="stock-empty">
-                    Chưa tải được yêu cầu kiểm kê. Vui lòng quay lại sau.
+                    Chức năng kiểm kê đang chờ BE hoàn thiện API.
                   </td>
                 </tr>
               </tbody>
@@ -144,24 +144,12 @@ export default function StockCountListPage() {
                   className="stock-empty"
                   colSpan={staff ? 6 : scope.owner ? 8 : 6}
                 >
-                  Chưa tải được danh sách phiếu kiểm kê. Vui lòng quay lại sau.
+                  Chức năng kiểm kê đang chờ BE hoàn thiện API.
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <footer className="count-list-footer">
-          <span>Tổng số phiếu: —</span>
-          <nav aria-label="Phân trang kiểm kê">
-            <button disabled aria-label="Trang trước">
-              ‹
-            </button>
-            <span>—</span>
-            <button disabled aria-label="Trang sau">
-              ›
-            </button>
-          </nav>
-        </footer>
       </InventoryPanel>
       {!staff && scope.owner && (
         <InventoryPanel
@@ -183,7 +171,7 @@ export default function StockCountListPage() {
               <tbody>
                 <tr>
                   <td colSpan={scope.owner ? 5 : 4} className="stock-empty">
-                    Chưa tải được yêu cầu kiểm kê. Vui lòng quay lại sau.
+                    Chức năng kiểm kê đang chờ BE hoàn thiện API.
                   </td>
                 </tr>
               </tbody>

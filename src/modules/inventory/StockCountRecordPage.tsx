@@ -16,13 +16,15 @@ export default function StockCountRecordPage() {
   return <StockCountRecordView key={id} id={id} />
 }
 // This view intentionally has no book-quantity or unit-cost column: counting is blind.
-export function StockCountRecordView({
-  count,
-  id,
-}: {
+export function StockCountRecordView(props: {
   count?: StockCount
   id?: string
 }) {
+  return (
+    <CountRecordForm key={JSON.stringify(props.count ?? null)} {...props} />
+  )
+}
+function CountRecordForm({ count, id }: { count?: StockCount; id?: string }) {
   const [importOpen, setImportOpen] = useState(false)
   const [fileName, setFileName] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
@@ -111,7 +113,7 @@ export function StockCountRecordView({
       </InventoryHeader>
       {!count && (
         <p className="count-unavailable" role="status">
-          Chưa tải được phiếu kiểm kê được giao. Vui lòng quay lại sau.
+          Chức năng kiểm kê đang chờ BE hoàn thiện API.
         </p>
       )}
       <InventoryPanel
@@ -201,7 +203,7 @@ export function StockCountRecordView({
                     id={'note-' + line.id}
                     aria-label={'Ghi chú ' + line.partName}
                     placeholder="Lý do chưa đếm được…"
-                    maxLength={1000}
+                    maxLength={255}
                     value={values[line.id].note}
                     onChange={(e) => update(line, { note: e.target.value })}
                   />

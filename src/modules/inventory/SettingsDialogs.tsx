@@ -3,8 +3,7 @@ import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import type { StockRow, ExpiryWarning } from './types'
 import { date, dateTime, today } from './presentation'
-import { inventoryError, useInventoryData, useInventoryScope } from './api'
-import { useLotCollection } from './useLotCollection'
+import { inventoryError, useInventoryData } from './api'
 
 export function StockSettingsDialog({
   row,
@@ -23,7 +22,16 @@ export function StockSettingsDialog({
 }) {
   const [area, setArea] = useState(row.storageArea ?? '')
   const [bin, setBin] = useState(row.binLocation ?? '')
-  const parsed = /^(.*)-(\d+)-(\d+)$/.exec(row.binLocation ?? '')
+  const candidate = /^(.*)-(\d+)-(\d+)$/.exec(row.binLocation ?? '')
+  const parsed =
+    candidate &&
+    Number(candidate[2]) >= 1 &&
+    Number(candidate[2]) <= 6 &&
+    Number(candidate[3]) >= 1 &&
+    Number(candidate[3]) <= 10
+      ? candidate
+      : null
+  const [manualBin, setManualBin] = useState(!!row.binLocation && !parsed)
   const [level, setLevel] = useState(
     parsed?.[2] ? String(Number(parsed[2])) : '',
   )
@@ -40,7 +48,7 @@ export function StockSettingsDialog({
     setLevel(nextLevel)
     setSlot(nextSlot)
     const prefix = nextArea.replace(/^Khu\s*/i, '').trim()
-    if (prefix && nextLevel && nextSlot)
+    if (!manualBin && prefix && nextLevel && nextSlot)
       setBin(prefix + '-' + nextLevel.padStart(2, '0') + '-' + nextSlot)
   }
   const occupied = stockRows.filter(
@@ -133,8 +141,17 @@ export function StockSettingsDialog({
                 name="bin"
                 value={bin}
                 onChange={(e) => {
+                  setManualBin(true)
                   setBin(e.target.value)
-                  const match = /^(.*)-(\d+)-(\d+)$/.exec(e.target.value)
+                  const candidate = /^(.*)-(\d+)-(\d+)$/.exec(e.target.value)
+                  const match =
+                    candidate &&
+                    Number(candidate[2]) >= 1 &&
+                    Number(candidate[2]) <= 6 &&
+                    Number(candidate[3]) >= 1 &&
+                    Number(candidate[3]) <= 10
+                      ? candidate
+                      : null
                   setLevel(match?.[2] ? String(Number(match[2])) : '')
                   if (match) {
                     const matchedArea = areas.find(
@@ -152,6 +169,11 @@ export function StockSettingsDialog({
                 disabled={saving}
               />
             </label>
+            {manualBin && (
+              <small>
+                Mã vị trí nhập tay được giữ nguyên khi đổi khu vực, tầng hoặc ô.
+              </small>
+            )}
             <label>
               Tầng kệ
               <select
@@ -244,11 +266,6 @@ export function ExpiryWarningDialog({
   onClose: () => void
   onSaved: () => void
 }) {
-  const scope = useInventoryScope()
-  const lots = useLotCollection(
-    '',
-    String(scope.user?.id) + ':' + scope.user?.role,
-  )
   const current = useInventoryData<ExpiryWarning>('/inventory/expiry-warning')
   const [typedDays, setDays] = useState<string | null>(null)
   const days = typedDays ?? String(current.data?.inEffect?.days ?? '')
@@ -347,27 +364,6 @@ export function ExpiryWarningDialog({
             {!!days && (
               <p role="status">
                 Cảnh báo trước {days} ngày, áp dụng từ {date(effectiveDate)}.
-              </p>
-            )}
-            {!!days && Number(days) >= 1 && Number(days) <= 365 && (
-              <p role="status">
-                {lots.rows
-                  ? 'Theo tồn hiện tại, ' +
-                    new Set(
-                      lots.rows
-                        .filter(
-                          (row) =>
-                            row.remainingQty > 0 &&
-                            row.daysToExpiry != null &&
-                            row.daysToExpiry >= 0 &&
-                            row.daysToExpiry <= Number(days),
-                        )
-                        .map((row) => row.lotId),
-                    ).size +
-                    ' lô nằm trong khoảng cảnh báo ' +
-                    days +
-                    ' ngày.'
-                  : 'Số lô nằm trong khoảng cảnh báo: —'}
               </p>
             )}
             <h3>Các lần thay đổi</h3>

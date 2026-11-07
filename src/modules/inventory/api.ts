@@ -7,9 +7,18 @@ import type { DashboardStore } from '../../shared/types/store'
 
 export type Query = Record<string, string | number | boolean | undefined>
 export function inventoryError(error: unknown) {
-  if (isAxiosError<{ message?: string; code?: string }>(error)) {
+  if (
+    isAxiosError<{
+      message?: string
+      code?: string
+      fieldErrors?: Record<string, string>
+    }>(error)
+  ) {
     if (error.response?.data?.code === 'MSG70')
       return 'Chức năng kho hàng hiện chưa sẵn sàng. Vui lòng thử lại sau.'
+    const fields = error.response?.data?.fieldErrors
+    if (fields && Object.keys(fields).length)
+      return Object.values(fields).join(' ')
     return (
       error.response?.data?.message ??
       'Không tải được dữ liệu. Vui lòng thử lại.'
@@ -73,17 +82,21 @@ export function useInventoryScope() {
   const storeId = owner ? (params.get('storeId') ?? '') : ''
   function filter(
     change: Record<string, string | boolean | number | undefined>,
+    replace = false,
   ) {
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
-      for (const [key, value] of Object.entries(change)) {
-        if (value === undefined || value === '' || value === false)
-          next.delete(key)
-        else next.set(key, String(value))
-      }
-      next.delete('page')
-      return next
-    })
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        for (const [key, value] of Object.entries(change)) {
+          if (value === undefined || value === '' || value === false)
+            next.delete(key)
+          else next.set(key, String(value))
+        }
+        next.delete('page')
+        return next
+      },
+      { replace },
+    )
   }
   return {
     user,

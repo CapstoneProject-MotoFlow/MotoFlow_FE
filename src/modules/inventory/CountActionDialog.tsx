@@ -272,7 +272,7 @@ function CountReviewDialog({
             <textarea
               required
               rows={3}
-              maxLength={1000}
+              maxLength={255}
               placeholder="Nhập lý do hủy phiếu…"
             />
           </label>
@@ -522,7 +522,7 @@ function CountReviewDialog({
                                         'Nguyên nhân ' + line.partName
                                       }
                                       placeholder="Nguyên nhân chênh lệch"
-                                      maxLength={1000}
+                                      maxLength={255}
                                       disabled={!!back[line.id]}
                                     />
                                     <label className="stock-check">
@@ -575,7 +575,7 @@ function CountReviewDialog({
                 {returned > 0 && (
                   <label>
                     Lý do trả về đếm lại *
-                    <textarea required rows={3} maxLength={1000} />
+                    <textarea required rows={3} maxLength={255} />
                   </label>
                 )}
               </>

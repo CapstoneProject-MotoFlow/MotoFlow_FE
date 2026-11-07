@@ -67,9 +67,10 @@ test('low-stock matching selects a product without dropping its other warehouse 
   assert.equal(groups[0].totals.availableQty, 15)
   assert.equal(groups[0].rows.length, 2)
 })
-test('unknown cost stays unknown and in-transit does not inflate physical stock', () => {
+test('unknown cost marks the known subtotal as incomplete and in-transit does not inflate physical stock', () => {
   const rows = [row(1, 1, 10, 100, { inTransitQty: 3 }), row(1, 2, 5, null)]
-  assert.equal(stockTotals(rows).stockValue, null)
+  assert.equal(stockTotals(rows).stockValue, 100)
+  assert.equal(stockTotals(rows).incompleteCost, true)
   assert.equal(stockTotals(rows).onHandQty, 15)
   assert.equal(stockTotals(rows).inTransitQty, 3)
 })
@@ -120,5 +121,15 @@ test('zero-stock display and value sorting preserve zero, unknown values and sou
   assert.deepEqual(
     rows.map((r) => r.productId),
     [1, 2, 3],
+  )
+})
+
+test('unpriced empty stock contributes zero without marking known totals incomplete', () => {
+  const total = stockTotals([row(1, 1, 0, null), row(2, 1, 5, 50)])
+  assert.equal(total.stockValue, 50)
+  assert.equal(total.incompleteCost, false)
+  assert.equal(
+    stockTotals([row(1, 1, 0, null, { inTransitQty: 1 })]).incompleteCost,
+    true,
   )
 })

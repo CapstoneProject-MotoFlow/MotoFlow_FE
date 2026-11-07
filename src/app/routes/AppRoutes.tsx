@@ -1,7 +1,3 @@
-import LotsPage from '../../modules/inventory/LotsPage'
-import LotDetailPage from '../../modules/inventory/LotDetailPage'
-import InventoryMovementsPage from '../../modules/inventory/InventoryMovementsPage'
-import InventoryPage from '../../modules/inventory/InventoryPage'
 /**
  * File: app/routes/AppRoutes.tsx
  * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
@@ -17,6 +13,16 @@ import RequireRole from '../guards/RequireRole'
 import RequireCatalogEdit from '../guards/RequireCatalogEdit'
 import RequirePasswordChange from '../guards/RequirePasswordChange'
 
+const LotsPage = lazy(() => import('../../modules/inventory/LotsPage'))
+const LotDetailPage = lazy(
+  () => import('../../modules/inventory/LotDetailPage'),
+)
+const InventoryMovementsPage = lazy(
+  () => import('../../modules/inventory/InventoryMovementsPage'),
+)
+const InventoryPage = lazy(
+  () => import('../../modules/inventory/InventoryPage'),
+)
 const StockCountListPage = lazy(
   () => import('../../modules/inventory/StockCountListPage'),
 )

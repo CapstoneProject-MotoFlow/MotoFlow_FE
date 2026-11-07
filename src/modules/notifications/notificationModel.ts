@@ -38,7 +38,16 @@ export function noticeTarget(
         '/products/' +
         id,
     }
-  if (notice.refType === 'GOODS_RECEIPT_NOTE') return { receiptId: id }
+  if (role !== 'STAFF') {
+    if (notice.refType === 'PURCHASE_ORDER')
+      return { path: '/purchase-orders/' + id }
+    if (notice.refType === 'GOODS_RECEIPT_NOTE')
+      return { path: '/goods-receipt-notes/' + id }
+    if (notice.refType === 'SUPPLIER_DISCREPANCY')
+      return { path: '/supplier-discrepancies' }
+  }
+  if (notice.refType === 'GOODS_RECEIPT_NOTE' && role === 'STAFF')
+    return { receiptId: id }
 }
 export function noticeTime(value: string) {
   return new Date(value).toLocaleString('vi-VN', {

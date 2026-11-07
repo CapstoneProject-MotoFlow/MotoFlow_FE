@@ -41,9 +41,16 @@ export function StockCountDetailView({
   const staff = role === 'STAFF',
     owner = role === 'OWNER'
   const allowed = owner
-    ? ['approve', 'opening']
+    ? count?.status === 'AWAITING_APPROVAL'
+      ? ['approve', 'opening']
+      : []
     : role === 'BRANCH_MANAGER'
-      ? ['assign', 'verify', 'cancel']
+      ? [
+          'assign',
+          ...(count && ['DRAFT', 'COUNTING'].includes(count.status)
+            ? ['verify', 'cancel']
+            : []),
+        ]
       : []
   const [action, setAction] = useState<CountAction | undefined>(() =>
     initialAction && allowed.includes(initialAction)
@@ -51,8 +58,8 @@ export function StockCountDetailView({
       : undefined,
   )
   const [allLines, setAllLines] = useState(false)
-  const manage = !count || ['DRAFT', 'COUNTING'].includes(count.status)
-  const approval = !count || count.status === 'AWAITING_APPROVAL'
+  const manage = !!count && ['DRAFT', 'COUNTING'].includes(count.status)
+  const approval = !!count && count.status === 'AWAITING_APPROVAL'
   const relevant = (count?.lines ?? []).filter((line) =>
     count?.type === 'OPENING'
       ? line.unitCost == null
@@ -71,7 +78,7 @@ export function StockCountDetailView({
       </InventoryHeader>
       {!count && (
         <p role="status" className="count-unavailable">
-          Chưa tải được thông tin phiếu kiểm kê. Vui lòng quay lại sau.
+          Chức năng kiểm kê đang chờ BE hoàn thiện API.
         </p>
       )}
       {count?.status === 'CANCELLED' && (
@@ -270,7 +277,7 @@ export function StockCountDetailView({
               )
             ) : (
               <>
-                {manage && !count?.submittedAt && (
+                {(!count || (manage && !count.submittedAt)) && (
                   <button onClick={() => setAction('assign')}>Giao việc</button>
                 )}
                 {manage && (!count || !!count.submittedAt) && (

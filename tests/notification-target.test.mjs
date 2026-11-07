@@ -54,7 +54,7 @@ test('count references open the count screen and receipt references open the rea
   )
   assert.deepEqual(
     noticeTarget({ refType: 'GOODS_RECEIPT_NOTE', refId: 3 }, 'OWNER'),
-    { receiptId: 3 },
+    { path: '/goods-receipt-notes/3' },
   )
 })
 test('unknown references, invalid IDs and Admin never create invented or external document links', () => {
@@ -73,5 +73,34 @@ test('unknown references, invalid IDs and Admin never create invented or externa
   assert.equal(
     noticeTarget({ refType: 'PRODUCT', refId: 1 }, 'ADMIN'),
     undefined,
+  )
+})
+
+test('purchasing notifications open implemented FE-05 routes only for Owner and BM', () => {
+  for (const role of ['OWNER', 'BRANCH_MANAGER']) {
+    assert.deepEqual(
+      noticeTarget({ refType: 'PURCHASE_ORDER', refId: 8 }, role),
+      { path: '/purchase-orders/8' },
+    )
+    assert.deepEqual(
+      noticeTarget({ refType: 'GOODS_RECEIPT_NOTE', refId: 8 }, role),
+      { path: '/goods-receipt-notes/8' },
+    )
+    assert.deepEqual(
+      noticeTarget({ refType: 'SUPPLIER_DISCREPANCY', refId: 8 }, role),
+      { path: '/supplier-discrepancies' },
+    )
+    assert.equal(
+      noticeTarget({ refType: 'REPLENISHMENT_REQUEST', refId: 8 }, role),
+      undefined,
+    )
+  }
+  assert.equal(
+    noticeTarget({ refType: 'PURCHASE_ORDER', refId: 8 }, 'STAFF'),
+    undefined,
+  )
+  assert.deepEqual(
+    noticeTarget({ refType: 'GOODS_RECEIPT_NOTE', refId: 8 }, 'STAFF'),
+    { receiptId: 8 },
   )
 })

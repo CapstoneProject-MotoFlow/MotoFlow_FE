@@ -18,9 +18,8 @@ import {
   sourceNames,
   stockStatuses,
 } from './presentation'
-import type { LotDetail } from './types'
+import type { LotDetail, LotList } from './types'
 import './inventory-screens.css'
-import { useLotCollection } from './useLotCollection'
 
 export default function LotDetailPage() {
   const { id } = useParams()
@@ -28,11 +27,15 @@ export default function LotDetailPage() {
   const lot = useInventoryData<LotDetail>('/inventory/lots/' + id, {
     storeId: scope.storeId,
   })
-  const locations = useLotCollection(
-    '',
-    String(scope.user?.id) + ':' + scope.user?.role,
+  const locations = useInventoryData<LotList>('/inventory/lots', {
+    q: id,
+    tab: 'IN_STOCK',
+    storeId: scope.storeId,
+    size: 100,
+  })
+  const lotLocations = locations.data?.page.items.filter(
+    (row) => row.lotId === Number(id),
   )
-  const lotLocations = locations.rows?.filter((row) => row.lotId === Number(id))
   const item = lot.data
   return (
     <main className="inventory-workspace inventory-screen">

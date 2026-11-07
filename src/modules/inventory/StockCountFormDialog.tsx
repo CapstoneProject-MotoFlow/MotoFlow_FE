@@ -34,7 +34,7 @@ export function StockCountFormDialog({
     '/products',
     { q: query, storeId: warehouse, size: 20 },
     0,
-    !!warehouse && scope === 'SKUS',
+    !!warehouse && scope === 'PRODUCTS',
   )
   const name = owner ? 'Yêu cầu kiểm kê' : 'Tạo phiếu kiểm kê'
   return (
@@ -102,9 +102,9 @@ export function StockCountFormDialog({
           <legend>Phạm vi</legend>
           <div className="count-radio-options">
             {[
-              ['ALL', 'Toàn kho'],
+              ['WHOLE', 'Toàn kho'],
               ['AREA', 'Một khu vực'],
-              ['SKUS', 'Một số phụ tùng'],
+              ['PRODUCTS', 'Một số phụ tùng'],
             ].map(([value, label]) => (
               <label key={value}>
                 <input
@@ -135,7 +135,7 @@ export function StockCountFormDialog({
             </select>
           </label>
         )}
-        {scope === 'SKUS' && (
+        {scope === 'PRODUCTS' && (
           <div>
             <label>
               Tìm phụ tùng
@@ -203,7 +203,7 @@ export function StockCountFormDialog({
             <textarea
               rows={3}
               required
-              maxLength={1000}
+              maxLength={255}
               placeholder="Nhập lý do cần kiểm kê…"
             />
           </label>
