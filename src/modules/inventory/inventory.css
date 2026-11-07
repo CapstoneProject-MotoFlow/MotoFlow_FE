@@ -555,3 +555,67 @@
     flex-wrap: wrap;
   }
 }
+/* Expanded lot tables must not determine the width of the parent stock grid. */
+.inventory-workspace
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-overview-table {
+  table-layout: fixed;
+}
+.stock-overview-table > thead > tr > th,
+.stock-overview-table > tbody > tr > td {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.inventory-workspace
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-overview-table
+  > tbody
+  > tr
+  > td:first-child {
+  min-width: 0;
+}
+.stock-overview-table .stock-actions {
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.stock-overview-table .stock-condition {
+  min-width: 0;
+}
+.stock-overview-table .stock-expanded-row > td {
+  padding: 0;
+}
+.stock-expanded {
+  min-width: 0;
+  max-width: 100%;
+}
+.stock-expanded > .stock-table-scroll {
+  width: 100%;
+  min-width: 0;
+}
+.stock-expanded .stock-table {
+  min-width: 820px;
+}
+.stock-lot-heading {
+  flex-wrap: wrap;
+  white-space: normal;
+  margin-bottom: 12px;
+}
+.stock-lot-heading h3 {
+  flex: 1 1 220px;
+  margin: 0;
+}
+.stock-lot-heading > span {
+  margin-left: auto;
+}
+.stock-lot-heading > button {
+  background: white;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #344054;
+  font: inherit;
+}

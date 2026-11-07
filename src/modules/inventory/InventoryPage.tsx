@@ -56,6 +56,18 @@ export default function InventoryPage() {
     revision,
   )
   const categories = useInventoryData<Category[]>('/part-categories')
+  const columnWeights = [
+    22,
+    ...(scope.owner && !scope.storeId ? [13] : []),
+    8,
+    10,
+    9,
+    10,
+    ...(scope.owner ? [11] : []),
+    11,
+    22,
+  ]
+  const totalWeight = columnWeights.reduce((total, value) => total + value, 0)
   function saved() {
     setSettings(undefined)
     setExpiry(false)
@@ -195,7 +207,15 @@ export default function InventoryPage() {
           }
         />
         <div className="stock-table-scroll">
-          <table className="stock-table">
+          <table className="stock-table stock-overview-table">
+            <colgroup>
+              {columnWeights.map((weight, index) => (
+                <col
+                  key={index}
+                  style={{ width: (weight / totalWeight) * 100 + '%' }}
+                />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <th>Phụ tùng / vị trí</th>
@@ -323,7 +343,7 @@ export default function InventoryPage() {
                       </td>
                     </tr>
                     {expanded === key && (
-                      <tr>
+                      <tr className="stock-expanded-row">
                         <td colSpan={scope.owner ? (scope.storeId ? 8 : 9) : 7}>
                           <StockLots
                             key={revision}
