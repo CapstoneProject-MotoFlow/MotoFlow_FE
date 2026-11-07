@@ -5,17 +5,7 @@
  */
 import { useState } from 'react'
 import { isAxiosError } from 'axios'
-import axiosClient from '../../../shared/api/axiosClient'
-
-type UploadSignature = {
-  uploadUrl: string
-  apiKey: string
-  timestamp: number
-  signature: string
-  folder: string
-  type: string
-  allowedFormats: string
-}
+import { uploadProductImage } from '../../../shared/api/upload'
 
 export default function ProductImageUrls({
   values,
@@ -52,24 +42,7 @@ export default function ProductImageUrls({
     onUploadingChange(true)
     setError('')
     try {
-      const { data } = await axiosClient.post<UploadSignature>(
-        '/uploads/signature',
-        {
-          purpose: 'PRODUCT_IMAGE',
-        },
-      )
-      const body = new FormData()
-      body.append('file', file)
-      body.append('api_key', data.apiKey)
-      body.append('timestamp', String(data.timestamp))
-      body.append('signature', data.signature)
-      body.append('folder', data.folder)
-      body.append('type', data.type)
-      body.append('allowed_formats', data.allowedFormats)
-      const response = await fetch(data.uploadUrl, { method: 'POST', body })
-      if (!response.ok) throw new Error('Image upload failed')
-      const result: { secure_url?: string } = await response.json()
-      add(result.secure_url ?? '')
+      add(await uploadProductImage(file))
     } catch (error) {
       if (
         isAxiosError<{ code?: string }>(error) &&

@@ -7,6 +7,12 @@ import Icon from '../../shared/ui/Icon'
 import type { DashboardStore } from '../../shared/types/store'
 import { apiMessage } from '../suppliers/supplierService'
 import ReceiptActionDialog from './ReceiptActionDialog'
+import { receiptWork, type WorkReceipt } from './receivingRules'
+import {
+  purchaseOrderCode,
+  receiptStatusLabels,
+  orderHistoryLabels,
+} from './receivingPresentation'
 import './receiving.css'
 
 type Order = {
@@ -32,17 +38,8 @@ type Assignment = {
   lineCount: number
 }
 type Page<T> = { items: T[]; totalItems: number }
-type ReceiptRow = {
-  id: number
-  status: string
-  assigneeName: string | null
-  deliveryDocumentNo: string
-}
-type RowWork = {
-  outstanding: number
-  canCreateReceipt: boolean
-  receipt?: ReceiptRow
-}
+type ReceiptRow = WorkReceipt
+type RowWork = { receipt?: ReceiptRow }
 type Detail = Order & {
   canCreateReceipt: boolean
   canCreateReplacement: boolean
@@ -80,6 +77,21 @@ type Detail = Order & {
     actorName: string | null
     at: string
     reason: string | null
+    delivery: {
+      oldExpectedArrival: string | null
+      newExpectedArrival: string | null
+      oldNote: string | null
+      newNote: string | null
+    } | null
+    lineChanges: {
+      productId: number
+      sku: string
+      partName: string
+      oldQty: number | null
+      newQty: number | null
+      oldPrice: number | null
+      newPrice: number | null
+    }[]
   }[]
 }
 
@@ -89,50 +101,31 @@ const views = [
   ['CANCELLED', 'Đã hủy'],
   ['ALL', 'Tất cả'],
 ]
-const labels: Record<string, string> = {
-  AWAITING_DELIVERY: 'Chờ giao hàng',
-  RECEIVING: 'Đang nhận hàng',
-  FULLY_RECEIVED: 'Đã nhận đủ',
-  CANCELLED: 'Đã hủy',
-  ASSIGNED: 'Chờ kiểm nhận',
-  RESULT_SUBMITTED: 'Chờ xác nhận',
-  CONFIRMED: 'Đã xác nhận',
-}
+const labels = receiptStatusLabels
 const money = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
   currency: 'VND',
 })
 const pageSize = 20
 
-async function loadOrderWork(
-  order: Order,
+async function loadWorkQueue(
+  params: Record<string, string | boolean>,
   signal: AbortSignal,
-): Promise<RowWork> {
-  const [{ data: detail }, { data: receipts }] = await Promise.all([
-    axiosClient.get<Detail>('/purchase-orders/' + order.id, { signal }),
-    axiosClient.get<Page<ReceiptRow>>('/goods-receipt-notes', {
-      params: { purchaseOrderId: order.id, size: 100 },
-      signal,
-    }),
-  ])
-  const receipt =
-    receipts.items.find((item) => item.status === 'AWAITING_CONFIRMATION') ??
-    receipts.items.find(
-      (item) =>
-        ['AWAITING_INSPECTION', 'AWAITING_RECOUNT'].includes(item.status) &&
-        !item.assigneeName,
-    ) ??
-    receipts.items[0]
-  return {
-    outstanding: detail.lines.reduce(
-      (total, line) => total + line.outstandingQty,
-      0,
-    ),
-    canCreateReceipt: detail.canCreateReceipt,
-    receipt,
+) {
+  const receipts: ReceiptRow[] = []
+  for (let page = 0; ; page++) {
+    const { data } = await axiosClient.get<Page<ReceiptRow>>(
+      '/goods-receipt-notes',
+      {
+        params: { ...params, page, size: 100 },
+        signal,
+      },
+    )
+    receipts.push(...data.items)
+    if (!data.items.length || receipts.length >= data.totalItems)
+      return receipts
   }
 }
-
 function day(value: string | null) {
   return value
     ? new Date(value).toLocaleDateString('vi-VN', {
@@ -147,7 +140,7 @@ function receivingError(error: unknown) {
     error.response?.status === 404 &&
     error.response.data?.code === 'MSG70'
   ) {
-    return 'BE đang chạy chưa cung cấp API nhập hàng.'
+    return 'Chức năng nhập hàng hiện chưa sẵn sàng. Vui lòng thử lại sau.'
   }
   return apiMessage(error)
 }
@@ -213,8 +206,7 @@ export default function PurchaseOrdersPage() {
               id: row.supplierId,
               supplierName: row.supplierName,
             })
-          loaded += data.items.length
-          if (!data.items.length || loaded >= data.totalItems) break
+          break
         } else {
           const { data } = await axiosClient.get<
             Page<{ id: number; supplierName: string }>
@@ -230,21 +222,20 @@ export default function PurchaseOrdersPage() {
     }
     void loadSuppliers()
       .then((items) => {
-        if (!controller.signal.aborted) setSuppliers(items)
+        if (!controller.signal.aborted)
+          setSuppliers((previous) => {
+            const known = new Map(previous.map((item) => [item.id, item]))
+            for (const item of items) known.set(item.id, item)
+            return [...known.values()].sort((a, b) =>
+              a.supplierName.localeCompare(b.supplierName, 'vi'),
+            )
+          })
       })
       .catch(() => {
         if (!controller.signal.aborted) setSuppliers([])
       })
     return () => controller.abort()
   }, [staff, manager])
-
-  useEffect(() => {
-    try {
-      sessionStorage.removeItem('motoflow.receiving.preview.v1')
-    } catch {
-      // Storage may be disabled in the browser.
-    }
-  }, [])
 
   useEffect(() => {
     if (!owner) return
@@ -262,7 +253,6 @@ export default function PurchaseOrdersPage() {
   }, [owner])
 
   useEffect(() => {
-    if (staff && view === 'DONE') return
     if (dateRangeError) return
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
@@ -299,23 +289,35 @@ export default function PurchaseOrdersPage() {
           if (controller.signal.aborted) return
           setOrders(data)
           if (manager) {
-            const results = await Promise.allSettled(
-              data.items.map(
-                async (row) =>
-                  [
-                    row.id,
-                    await loadOrderWork(row, controller.signal),
-                  ] as const,
+            setSuppliers((previous) => {
+              const known = new Map(previous.map((item) => [item.id, item]))
+              for (const row of data.items)
+                known.set(row.supplierId, {
+                  id: row.supplierId,
+                  supplierName: row.supplierName,
+                })
+              return [...known.values()].sort((a, b) =>
+                a.supplierName.localeCompare(b.supplierName, 'vi'),
+              )
+            })
+            const queues = await Promise.all([
+              loadWorkQueue(
+                { status: 'AWAITING_CONFIRMATION' },
+                controller.signal,
               ),
-            )
-            if (!controller.signal.aborted)
+              loadWorkQueue({ unassigned: true }, controller.signal),
+            ])
+            if (!controller.signal.aborted) {
+              const receipts = queues.flat()
               setWork(
                 Object.fromEntries(
-                  results.flatMap((result) =>
-                    result.status === 'fulfilled' ? [result.value] : [],
-                  ),
+                  data.items.map((row) => [
+                    row.id,
+                    { receipt: receiptWork(receipts, row.id) },
+                  ]),
                 ),
               )
+            }
           }
         }
       } catch (error) {
@@ -343,11 +345,9 @@ export default function PurchaseOrdersPage() {
     dateRangeError,
   ])
 
-  const staffDone = staff && view === 'DONE'
-  const total =
-    staffDone || dateRangeError
-      ? 0
-      : ((staff ? assignments : orders)?.totalItems ?? 0)
+  const total = dateRangeError
+    ? 0
+    : ((staff ? assignments : orders)?.totalItems ?? 0)
   return (
     <main
       className={
@@ -360,6 +360,22 @@ export default function PurchaseOrdersPage() {
         <h1>Yêu cầu nhập hàng</h1>
         <span>Trang chủ / Nhập hàng / Yêu cầu nhập hàng</span>
       </header>
+      {owner && (
+        <div className="receiving-filter-row">
+          <Link
+            className="receiving-secondary-link"
+            to="/goods-receipt-notes/excess"
+          >
+            Chờ duyệt hàng thừa
+          </Link>
+          <Link
+            className="receiving-secondary-link"
+            to="/supplier-discrepancies"
+          >
+            Hồ sơ sai lệch nhà cung cấp
+          </Link>
+        </div>
+      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>
@@ -374,7 +390,7 @@ export default function PurchaseOrdersPage() {
           {owner && (
             <Link
               className="receiving-layout-primary"
-              to="/purchase-orders/layout/order-form"
+              to="/purchase-orders/new"
             >
               ＋ Tạo yêu cầu nhập hàng
             </Link>
@@ -388,26 +404,16 @@ export default function PurchaseOrdersPage() {
             >
               <button
                 type="button"
-                aria-pressed={!staffDone}
+                aria-pressed={true}
                 onClick={() => {
                   setView('OPEN')
                   setPage(0)
                 }}
               >
                 Việc của tôi
-                {!staffDone && !loading && !error && (
+                {!loading && !error && (
                   <span className="receiving-pill">{total}</span>
                 )}
-              </button>
-              <button
-                type="button"
-                aria-pressed={staffDone}
-                onClick={() => {
-                  setView('DONE')
-                  setPage(0)
-                }}
-              >
-                Đã xong
               </button>
             </div>
           </div>
@@ -513,12 +519,8 @@ export default function PurchaseOrdersPage() {
         {dateRangeError && (
           <p role="alert">Ngày kết thúc phải từ ngày bắt đầu trở đi.</p>
         )}
-        {!staffDone && !dateRangeError && loading && (
-          <p role="status">Đang tải…</p>
-        )}
-        {!staffDone && !dateRangeError && !loading && error && (
-          <p role="alert">{error}</p>
-        )}
+        {!dateRangeError && loading && <p role="status">Đang tải…</p>}
+        {!dateRangeError && !loading && error && <p role="alert">{error}</p>}
         {
           <>
             <div className="table-scroll">
@@ -536,22 +538,20 @@ export default function PurchaseOrdersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {!staffDone &&
-                      !loading &&
+                    {!loading &&
                       !error &&
                       assignments?.items.map((row) => (
                         <tr key={row.goodsReceiptNoteId}>
                           <td>
                             <Link
                               to={
-                                '/purchase-orders/layout/inspection?receipt=' +
-                                row.goodsReceiptNoteId
+                                '/goods-receipt-notes/' + row.goodsReceiptNoteId
                               }
                             >
                               {row.deliveryDocumentNo}
                             </Link>
                           </td>
-                          <td>#{row.purchaseOrderId}</td>
+                          <td>{purchaseOrderCode(row.purchaseOrderId)}</td>
                           <td>{row.supplierName}</td>
                           <td>{day(row.arrivedAt)}</td>
                           <td>{row.lineCount} mã</td>
@@ -562,8 +562,7 @@ export default function PurchaseOrdersPage() {
                             <Link
                               className="receiving-layout-primary"
                               to={
-                                '/purchase-orders/layout/inspection?receipt=' +
-                                row.goodsReceiptNoteId
+                                '/goods-receipt-notes/' + row.goodsReceiptNoteId
                               }
                             >
                               {row.taskStatus === 'ASSIGNED'
@@ -576,9 +575,7 @@ export default function PurchaseOrdersPage() {
                     {!total && (
                       <tr>
                         <td colSpan={7} className="receiving-empty-cell">
-                          {staffDone
-                            ? 'BE chưa cung cấp lịch sử việc kiểm nhận đã xong.'
-                            : 'Bạn chưa có phiếu được giao kiểm nhận.'}
+                          Bạn chưa có phiếu được giao kiểm nhận.
                         </td>
                       </tr>
                     )}
@@ -615,9 +612,7 @@ export default function PurchaseOrdersPage() {
                           <tr key={row.id}>
                             <td>
                               <Link to={'/purchase-orders/' + row.id}>
-                                {manager
-                                  ? 'YCN-' + String(row.id).padStart(4, '0')
-                                  : '#' + row.id}
+                                {purchaseOrderCode(row.id)}
                               </Link>
                             </td>
                             <td>{row.supplierName}</td>
@@ -640,14 +635,7 @@ export default function PurchaseOrdersPage() {
                             )}
                             {manager && (
                               <>
-                                <td>
-                                  {row.lineCount} mã
-                                  {detail &&
-                                    ' · ' +
-                                      detail.outstanding.toLocaleString(
-                                        'vi-VN',
-                                      )}
-                                </td>
+                                <td>{row.lineCount} mã</td>
                                 <td>{receipt?.assigneeName ?? '—'}</td>
                               </>
                             )}
@@ -681,18 +669,6 @@ export default function PurchaseOrdersPage() {
                                   >
                                     Giao việc
                                   </button>
-                                ) : detail?.canCreateReceipt &&
-                                  (!receipt ||
-                                    receipt.status === 'CONFIRMED') ? (
-                                  <Link
-                                    className="receiving-layout-primary"
-                                    to={
-                                      '/purchase-orders/layout/receipt-form?order=' +
-                                      row.id
-                                    }
-                                  >
-                                    Lập phiếu nhập
-                                  </Link>
                                 ) : null
                               ) : (
                                 row.openDiscrepancies || '—'
@@ -712,7 +688,7 @@ export default function PurchaseOrdersPage() {
                 </table>
               )}
             </div>
-            {!staffDone && (
+            {
               <footer className="receiving-pagination">
                 <span>
                   {total
@@ -737,7 +713,7 @@ export default function PurchaseOrdersPage() {
                   ›
                 </button>
               </footer>
-            )}
+            }
           </>
         }
       </section>
@@ -790,7 +766,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
     <main className="dashboard-content receiving-page">
       <Link to="/purchase-orders">← Yêu cầu nhập hàng</Link>
       <header className="receiving-heading">
-        <h1>Đơn đặt hàng #{id}</h1>
+        <h1>Yêu cầu nhập hàng {purchaseOrderCode(id ?? '')}</h1>
         {detail && <Status value={detail.status} />}
       </header>
       {detail &&
@@ -800,12 +776,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
           detail.canCreateReplacement) && (
           <div className="receiving-layout-actions">
             {detail.canUpdate && (
-              <Link
-                to={
-                  '/purchase-orders/layout/order-form?mode=edit&order=' +
-                  detail.id
-                }
-              >
+              <Link to={'/purchase-orders/' + detail.id + '/edit'}>
                 Sửa yêu cầu
               </Link>
             )}
@@ -822,7 +793,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
             {(detail.canCreateReceipt || detail.canCreateReplacement) && (
               <Link
                 className="receiving-layout-primary"
-                to={'/purchase-orders/layout/receipt-form?order=' + detail.id}
+                to={'/purchase-orders/' + detail.id + '/receipts/new'}
               >
                 Lập phiếu nhập
               </Link>
@@ -911,6 +882,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 </div>
               </dl>
             </section>
+
             <section className="receiving-panel">
               <h2>Phụ tùng nhập</h2>
               <div className="table-scroll">
@@ -947,6 +919,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 </table>
               </div>
             </section>
+
             <section className="receiving-panel">
               <h2>Lượt nhận hàng</h2>
               {!detail.receipts.length ? (
@@ -955,21 +928,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 <ul className="receiving-items">
                   {detail.receipts.map((receipt) => (
                     <li key={receipt.id}>
-                      <Link
-                        to={
-                          '/purchase-orders/layout/' +
-                          (owner &&
-                          receipt.lines.some(
-                            (line) => line.excessDecision === 'AWAITING_OWNER',
-                          )
-                            ? 'excess'
-                            : receipt.status === 'AWAITING_CONFIRMATION'
-                              ? 'confirmation'
-                              : 'inspection') +
-                          '?receipt=' +
-                          receipt.id
-                        }
-                      >
+                      <Link to={'/goods-receipt-notes/' + receipt.id}>
                         {receipt.deliveryDocumentNo}
                       </Link>
                       <span>
@@ -982,6 +941,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 </ul>
               )}
             </section>
+
             <section className="receiving-panel">
               <h2>Sai lệch nhà cung cấp</h2>
               {!detail.discrepancies.length ? (
@@ -1007,6 +967,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
               )}
             </section>
           </div>
+
           <section className="receiving-panel">
             <h2>Lịch sử</h2>
             {!detail.history.length ? (
@@ -1016,7 +977,47 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 {detail.history.map((entry, index) => (
                   <li key={index}>
                     {day(entry.at)} · {entry.actorName ?? 'Hệ thống'} ·{' '}
-                    {entry.action}
+                    {orderHistoryLabels[entry.action] ?? 'Đã cập nhật yêu cầu'}
+                    {entry.delivery && (
+                      <div>
+                        {entry.delivery.oldExpectedArrival !==
+                          entry.delivery.newExpectedArrival && (
+                          <p>
+                            Ngày giao: {day(entry.delivery.oldExpectedArrival)}{' '}
+                            → {day(entry.delivery.newExpectedArrival)}
+                          </p>
+                        )}
+                        {entry.delivery.oldNote !== entry.delivery.newNote && (
+                          <p>
+                            Ghi chú: {entry.delivery.oldNote || '—'} →{' '}
+                            {entry.delivery.newNote || '—'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {!!entry.lineChanges?.length && (
+                      <ul>
+                        {entry.lineChanges.map((change) => (
+                          <li key={change.productId}>
+                            {change.sku}: Số lượng {change.oldQty ?? '—'} →{' '}
+                            {change.newQty ?? '—'}
+                            {owner && change.oldPrice !== change.newPrice && (
+                              <span>
+                                {' '}
+                                · Giá{' '}
+                                {change.oldPrice == null
+                                  ? '—'
+                                  : money.format(change.oldPrice)}{' '}
+                                →{' '}
+                                {change.newPrice == null
+                                  ? '—'
+                                  : money.format(change.newPrice)}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     {entry.reason ? ' · ' + entry.reason : ''}
                   </li>
                 ))}

@@ -37,29 +37,6 @@
   border-color: #5264ff;
   box-shadow: 0 0 0 3px #5264ff1a;
 }
-.forgot-note {
-  margin: 23px 0 0;
-  color: #39465e;
-  font-size: 1.1875rem;
-  line-height: 1.65;
-}
-.forgot-note a {
-  color: #394fff;
-  text-decoration: none;
-}
-.forgot-note a:hover {
-  text-decoration: underline;
-}
-.forgot-password-page h1 {
-  margin-bottom: 32px;
-}
-.forgot-back-button {
-  display: grid;
-  margin-top: 24px;
-  place-items: center;
-  color: #fff;
-  text-decoration: none;
-}
 .change-password-form h1 {
   margin-bottom: 32px;
 }

@@ -29,7 +29,7 @@ export const ownerNavigation: NavItem[] = [
     pending: true,
   },
   {
-    label: 'Phiếu nhập hàng',
+    label: 'Yêu cầu nhập hàng',
     href: '/purchase-orders',
     icon: 'clipboard',
     group: 'NHẬP HÀNG',

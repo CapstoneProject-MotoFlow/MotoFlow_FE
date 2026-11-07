@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { apiMessage } from '../suppliers/supplierService'
 import ReceiptActionDialog from './ReceiptActionDialog'
+import ConfirmDialog from '../../shared/ui/ConfirmDialog'
+import { inspectionQuantitiesValid } from './receivingRules'
 
 type Line = {
   id: number
@@ -61,7 +63,7 @@ export default function LiveReceiptPage({
   screen,
 }: {
   id: string
-  screen: Screen
+  screen?: Screen
 }) {
   const [receipt, setReceipt] = useState<Receipt>()
   const [error, setError] = useState('')
@@ -87,7 +89,14 @@ export default function LiveReceiptPage({
     <ReceiptForm
       key={version}
       receipt={receipt}
-      screen={screen}
+      screen={
+        screen ??
+        (receipt.canDecideExcess
+          ? 'excess'
+          : receipt.canConfirm || receipt.canReturnForRecount
+            ? 'confirmation'
+            : 'inspection')
+      }
       onAssigned={() => setVersion((value) => value + 1)}
     />
   )
@@ -117,6 +126,7 @@ function ReceiptForm({
   const rowRefs = useRef(new Map<number, HTMLTableRowElement>())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const editing =
     screen === 'inspection' && receipt.canRecord && receipt.lines.length > 0
   const reviewing = screen === 'excess' && receipt.canDecideExcess
@@ -209,6 +219,10 @@ function ReceiptForm({
     const recount =
       submitter instanceof HTMLButtonElement && submitter.value === 'recount'
     if (recount ? !recounting : !(editing || reviewing || confirming)) return
+    if (confirming && !recount) {
+      setConfirmOpen(true)
+      return
+    }
     const reason = String(fields.get('reason') ?? '').trim()
     const lines = receipt.lines.map((line) => ({
       lineId: line.id,
@@ -227,9 +241,9 @@ function ReceiptForm({
       editing &&
       receipt.lines.some(
         (line) =>
-          Number(fields.get('wrongItemQty' + line.id)) +
-            Number(fields.get('damagedQty' + line.id)) >
-          Number(fields.get('deliveredQty' + line.id)),
+          !inspectionQuantitiesValid(
+            countFields.map(([field]) => Number(fields.get(field + line.id))),
+          ),
       )
     ) {
       setError(
@@ -569,21 +583,6 @@ function ReceiptForm({
           </table>
         </div>
       </section>
-      {editing && (
-        <section className="receiving-panel">
-          <h2>Ghi chú kiểm hàng</h2>
-          <div className="receiving-layout-fields">
-            <label className="receiving-layout-wide">
-              Ghi chú
-              <textarea
-                rows={2}
-                disabled
-                placeholder="BE chưa hỗ trợ lưu ghi chú kiểm hàng"
-              />
-            </label>
-          </div>
-        </section>
-      )}
       {recounting && (
         <section className="receiving-panel">
           <h2>Trả về kiểm lại</h2>
@@ -636,6 +635,46 @@ function ReceiptForm({
           }}
         />
       )}
+      {confirmOpen && (
+        <ConfirmDialog
+          title="Xác nhận phiếu nhập hàng?"
+          message="Hàng đạt sẽ được ghi nhận vào tồn kho. Phần hàng thừa chờ Owner quyết định."
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={async () => {
+            if (saving) return
+            setSaving(true)
+            setError('')
+            try {
+              await axiosClient.post(
+                '/goods-receipt-notes/' + receipt.id + '/confirm',
+              )
+              navigate(back)
+            } catch (error) {
+              setError(apiMessage(error))
+              setConfirmOpen(false)
+            } finally {
+              setSaving(false)
+            }
+          }}
+        />
+      )}
     </form>
+  )
+}
+
+export function GoodsReceiptPage() {
+  const { id } = useParams()
+  return (
+    <main className="dashboard-content receiving-page">
+      <header className="receiving-heading">
+        <h1>Phiếu nhập hàng {id ? '#' + id : ''}</h1>
+        <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
+      </header>
+      {id && /^[1-9]\d*$/.test(id) ? (
+        <LiveReceiptPage key={id} id={id} />
+      ) : (
+        <p role="alert">Không tìm thấy phiếu.</p>
+      )}
+    </main>
   )
 }

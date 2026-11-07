@@ -6,6 +6,15 @@ import { apiMessage } from '../suppliers/supplierService'
 type Assignment = {
   canAssign: boolean
   blockedMessage: string | null
+  noticeMessage: string | null
+  current: { assigneeName: string; status: string } | null
+  history: {
+    id: number
+    assigneeName: string
+    assignedByName: string
+    assignedAt: string
+    status: string
+  }[]
   eligibleAssignees: {
     id: number
     fullName: string
@@ -116,6 +125,19 @@ export default function ReceiptActionDialog({
     >
       <form id="receiving-row-action" onSubmit={submit}>
         {loading && <p role="status">Đang tải phiếu nhập…</p>}
+        {assignment && (
+          <>
+            <p>
+              Đang giao cho:{' '}
+              <strong>
+                {assignment.current?.assigneeName ?? 'Chưa có người nhận'}
+              </strong>
+            </p>
+            {assignment.noticeMessage && (
+              <p role="status">{assignment.noticeMessage}</p>
+            )}
+          </>
+        )}
         {assignment &&
           (assignment.canAssign && assignment.eligibleAssignees.length ? (
             <label>
@@ -175,6 +197,47 @@ export default function ReceiptActionDialog({
                 : 'Phiếu này hiện chưa thể xác nhận.'}
             </p>
           </>
+        )}
+        {assignment && (
+          <section>
+            <h3>Lịch sử giao việc</h3>
+            {assignment.history.length ? (
+              <div className="table-scroll">
+                <table className="receiving-confirm-table">
+                  <thead>
+                    <tr>
+                      <th>Người nhận</th>
+                      <th>Người giao</th>
+                      <th>Thời điểm</th>
+                      <th>Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignment.history.map((task) => (
+                      <tr key={task.id}>
+                        <td>{task.assigneeName}</td>
+                        <td>{task.assignedByName}</td>
+                        <td>
+                          {new Date(task.assignedAt).toLocaleString('vi-VN')}
+                        </td>
+                        <td>
+                          {{
+                            ASSIGNED: 'Đã giao',
+                            RESULT_SUBMITTED: 'Đã gửi kết quả',
+                            DONE: 'Đã xong',
+                            RELEASED: 'Đã thu hồi',
+                            CANCELLED: 'Đã hủy giao việc',
+                          }[task.status] ?? task.status}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p>Chưa có lịch sử giao việc.</p>
+            )}
+          </section>
         )}
         {error && <p role="alert">{error}</p>}
       </form>

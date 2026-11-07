@@ -538,3 +538,47 @@
 .receiving-panel .receiving-focused-line td {
   background: #f1f4ff;
 }
+
+.receiving-product-picker {
+  position: relative;
+  min-width: 15rem;
+}
+
+.receiving-product-picker input {
+  width: 100%;
+}
+
+.receiving-order-lines .receiving-product-picker input {
+  width: 100%;
+  text-align: left;
+}
+
+.receiving-product-results {
+  display: grid;
+  max-height: 16rem;
+  overflow-y: auto;
+  margin-top: 0.3rem;
+  padding: 0.35rem;
+  border: 1px solid #dce2eb;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.receiving-product-results button {
+  text-align: left;
+  white-space: normal;
+}
+
+.receiving-case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.receiving-secondary-link {
+  display: inline-block;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #dce2eb;
+  border-radius: 0.55rem;
+  text-decoration: none;
+}
