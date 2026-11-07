@@ -91,12 +91,22 @@ export function StockLots({ row, owner }: { row: StockRow; owner: boolean }) {
   )
 }
 
-export function AvailabilityButton({ row }: { row: StockRow }) {
+type AvailabilityProduct = Pick<
+  StockRow,
+  'productId' | 'partName' | 'sku' | 'baseUnit'
+>
+export function AvailabilityButton({
+  row,
+  label = 'Liên kho',
+}: {
+  row: AvailabilityProduct
+  label?: string
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
-        Liên kho
+        {label}
       </button>
       {open && <AvailabilityDialog row={row} onClose={() => setOpen(false)} />}
     </>
@@ -106,7 +116,7 @@ function AvailabilityDialog({
   row,
   onClose,
 }: {
-  row: StockRow
+  row: AvailabilityProduct
   onClose: () => void
 }) {
   const resource = useInventoryData<
@@ -133,6 +143,7 @@ function AvailabilityDialog({
         }}
       >
         <InventoryNotice loading={resource.loading} error={resource.error} />
+        <p>Chỉ tính hàng có thể bán, không bao gồm hàng hết hạn.</p>
         {resource.data && (
           <table className="stock-table">
             <thead>
@@ -142,6 +153,13 @@ function AvailabilityDialog({
               </tr>
             </thead>
             <tbody>
+              {!resource.data.length && (
+                <tr>
+                  <td colSpan={2}>
+                    Chưa có kho đang hoạt động có hàng có thể bán.
+                  </td>
+                </tr>
+              )}
               {resource.data.map((item) => (
                 <tr key={item.storeId}>
                   <td>

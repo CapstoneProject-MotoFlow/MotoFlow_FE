@@ -31,7 +31,7 @@ Không thêm dữ liệu mẫu, số liệu giả, tab điều hướng thử ng
 
 ## Kiểm tra
 
-- Build TypeScript/Vite; ESLint (không có lỗi; 15 cảnh báo cũ); 26 test, gồm quy tắc số đếm và kiểm tra HTML không lộ sổ sách/giá vốn với Staff.
+- Build TypeScript/Vite; ESLint (không có lỗi; 13 cảnh báo cũ); 29 test, gồm quy tắc số đếm và kiểm tra HTML không lộ sổ sách/giá vốn với Staff.
 - Kiểm tra trình duyệt với API local thật bằng Owner và BM Cầu Giấy: tồn kho, mở lô, chi tiết lô, lịch sử theo lô, popup vị trí/ngưỡng/hạn dùng; kiểm tra ẩn giá vốn với BM.
 - Kiểm tra gửi ngưỡng 0 bằng chặn request lưu trên trình duyệt, không sửa database thực.
 - Kiểm tra chiều rộng 390px: không tràn trang, bảng cuộn ngang bên trong.
@@ -62,3 +62,13 @@ Các kiểm tra trên không xác nhận mọi nhánh nghiệp vụ BE hoặc th
 - Tìm kiếm ở header và trong bảng cùng dùng q qua BE, hỗ trợ SKU/tên/OEM/ô kệ theo khả năng tìm của BE.
 - 5 test mới kiểm tra gom qua nhiều trang, giữ đủ kho khi lọc thiếu hàng, không đổi giá trị chưa biết thành 0, không cộng hàng đang chuyển vào tồn thực tế, không xuất tổng khi phân trang thiếu/trùng/thay đổi, sắp xếp và tồn bằng 0.
 - Kiểm tra trình duyệt Owner (87 dòng kho/phụ tùng thực), BM Cầu Giấy (29 dòng): tổng dòng cha bằng tổng kho con, tìm kiếm, đổi kho, sắp xếp, popup vị trí và các nút không vượt ô ở 1900/1440/1280/390px.
+
+## Nối các API đã có trên BE main
+
+- Thông báo chuyển sang GET `/notifications` với `page`, `size`, `unreadOnly`; dùng `read` từ response để hiển thị đã đọc/chưa đọc. Trang thông báo phân trang 20 dòng, chuông lấy 5 thông báo chưa đọc và tổng chưa đọc từ API. Không giới hạn trang thông báo ở 5 dòng `/home` nữa.
+- Nối POST `/notifications/{id}/read` và `/notifications/read-all`. Lưu thành công mới tải lại số chưa đọc trên trang/chuông; lỗi giữ thông báo và cho thử lại. Thay đổi URL/bộ lọc không đọc trạng thái checkbox từ sự kiện đã kết thúc.
+- Thông báo PRODUCT mở chi tiết phụ tùng theo vai trò; LOT chỉ Owner/BM; STOCK_COUNT mở màn kiểm kê; STOCK_COUNT_REQUEST mở danh sách cho Owner/BM. Phiếu nhập GOODS_RECEIPT_NOTE mở dialog dùng GET thật. Nguồn chưa có màn không sinh đường dẫn giả.
+- Owner có nút “Tra tồn có thể bán” tại chi tiết phụ tùng, gọi GET `/inventory/availability?productIds=...`; hiển thị số có thể bán tại kho đang hoạt động, loại hàng hết hạn, không thay thế số khả dụng vật lý ở bảng tồn kho.
+- Upload signature chỉ cho ảnh/PDF, không thay thế API nhập Excel kiểm kê. Chưa thêm upload vào nơi BE chưa có nghiệp vụ lưu tệp.
+- Hai job LOW_STOCK/NEAR_EXPIRY/LOT_EXPIRED nằm trên nhánh BE `feature/iter2-barcode-jobs`, chưa main; FE đã có điều hướng PRODUCT/LOT tương ứng khi nhận thông báo. Không tự merge/chạy job hoặc tạo thông báo thử trong database.
+- Build, ESLint (0 lỗi, 13 cảnh báo cũ), 29 test đạt. Browser kiểm tra GET thông báo với Owner/BM/Staff; API tồn có thể bán với Owner; thử lỗi/lưu đọc từng mục/đọc tất cả/đồng bộ chuông/mở kiểm kê/390px bằng phản hồi lưu chặn trong trình duyệt. Không POST đánh dấu đọc vào database thực khi kiểm tra.

@@ -51,7 +51,13 @@ export function SourceDocument({ type, id }: { type: string; id: number }) {
     <span>{label}</span>
   )
 }
-function ReceiptDialog({ id, onClose }: { id: number; onClose: () => void }) {
+export function ReceiptDialog({
+  id,
+  onClose,
+}: {
+  id: number
+  onClose: () => void
+}) {
   const receipt = useInventoryData<Receipt>('/goods-receipt-notes/' + id)
   return (
     <FormDialog
