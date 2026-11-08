@@ -13,7 +13,7 @@ const items: NavItem[] = [
     href: '/notifications',
     icon: 'bell',
   },
-  { label: 'Đơn bán', href: '#staff-sales', icon: 'receipt', pending: true },
+  { label: 'Đơn bán', href: '/sales-orders', icon: 'receipt' },
   {
     label: 'Yêu cầu nhập hàng',
     href: '/purchase-orders',

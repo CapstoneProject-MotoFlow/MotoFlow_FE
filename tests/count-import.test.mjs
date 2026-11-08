@@ -80,14 +80,14 @@ test('opening costs map once per product even when it has several lots', () => {
     mapCountSheet(
       [
         ['SKU', 'Giá vốn'],
-        ['A', 0],
+        ['A', 1],
         ['B', 12000],
       ],
       lines,
       'cost',
     ),
     [
-      { id: 7, value: '0', note: '' },
+      { id: 7, value: '1', note: '' },
       { id: 8, value: '12000', note: '' },
     ],
   )
@@ -113,4 +113,55 @@ test('empty sheets and missing required columns are rejected', () => {
     ],
   ])
     assert.throws(() => mapCountSheet(rows, lines, 'quantity'))
+})
+
+test('R-20 opening cost imports reject zero while counts still allow zero', () => {
+  for (const value of [0, '0', '00'])
+    assert.throws(
+      () =>
+        mapCountSheet(
+          [
+            ['SKU', 'Giá vốn'],
+            ['B', value],
+          ],
+          lines,
+          'cost',
+        ),
+      /Dòng 2: Giá vốn phải lớn hơn 0\./,
+    )
+  for (const value of [-1, 1.5])
+    assert.throws(() =>
+      mapCountSheet(
+        [
+          ['SKU', 'Giá vốn'],
+          ['B', value],
+        ],
+        lines,
+        'cost',
+      ),
+    )
+  assert.deepEqual(
+    mapCountSheet(
+      [
+        ['SKU', 'Số đếm'],
+        ['B', 0],
+      ],
+      lines,
+      'quantity',
+    ),
+    [{ id: 3, value: '0', note: '' }],
+  )
+  assert.throws(
+    () =>
+      mapCountSheet(
+        [
+          ['SKU', 'Giá vốn'],
+          ['A', 1],
+          ['B', 0],
+        ],
+        lines,
+        'cost',
+      ),
+    /Dòng 3: Giá vốn phải lớn hơn 0\./,
+  )
 })

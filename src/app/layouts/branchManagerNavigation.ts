@@ -11,7 +11,8 @@ export const branchManagerNavigation: NavItem[] = [
     href: '/notifications',
     icon: 'bell',
   },
-  { label: 'Đơn bán', href: '#bm-sales', icon: 'receipt', pending: true },
+  { label: 'Đơn bán', href: '/sales-orders', icon: 'receipt' },
+  { label: 'Nhu cầu chưa đáp ứng', href: '/unmet-demand', icon: 'clipboard' },
   { label: 'Khách hàng', href: '/branch-manager/customers', icon: 'users' },
   { label: 'Công nợ', href: '#bm-debts', icon: 'wallet', pending: true },
   {

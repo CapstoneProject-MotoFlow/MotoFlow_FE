@@ -15,7 +15,7 @@ export function inventoryError(error: unknown) {
     }>(error)
   ) {
     if (error.response?.data?.code === 'MSG70')
-      return 'Chức năng kho hàng hiện chưa sẵn sàng. Vui lòng thử lại sau.'
+      return 'Chức năng hiện chưa sẵn sàng. Vui lòng thử lại sau.'
     const fields = error.response?.data?.fieldErrors
     if (fields && Object.keys(fields).length)
       return Object.values(fields).join(' ')

@@ -15,6 +15,7 @@ export default function FormDialog({
   busy = false,
   submitDisabled = false,
   className = '',
+  footerExtra,
 }: {
   title: string
   formId: string
@@ -22,6 +23,7 @@ export default function FormDialog({
   submitLabel: string
   busy?: boolean
   submitDisabled?: boolean
+  footerExtra?: ReactNode
   className?: string
   onClose: () => void
 }) {
@@ -98,6 +100,7 @@ export default function FormDialog({
           >
             Hủy
           </button>
+          {footerExtra}
           <button
             type="submit"
             form={formId}

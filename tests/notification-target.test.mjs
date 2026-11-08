@@ -63,12 +63,7 @@ test('unknown references, invalid IDs and Admin never create invented or externa
       noticeTarget({ refType: 'LOT', refId: id }, 'OWNER'),
       undefined,
     )
-  for (const refType of [
-    'https://example.com',
-    'SALES_ORDER',
-    'TRANSFER_ORDER',
-    null,
-  ])
+  for (const refType of ['https://example.com', 'TRANSFER_ORDER', null])
     assert.equal(noticeTarget({ refType, refId: 1 }, 'OWNER'), undefined)
   assert.equal(
     noticeTarget({ refType: 'PRODUCT', refId: 1 }, 'ADMIN'),
@@ -117,5 +112,12 @@ test('discrepancy type routes Owner to resolution', () => {
   for (const role of ['STAFF', 'BRANCH_MANAGER'])
     assert.deepEqual(noticeTarget(notice, role), {
       path: '/goods-receipt-notes/8',
+    })
+})
+
+test('sales order notices open FE07 for all business roles', () => {
+  for (const role of ['OWNER', 'BRANCH_MANAGER', 'STAFF'])
+    assert.deepEqual(noticeTarget({ refType: 'SALES_ORDER', refId: 9 }, role), {
+      path: '/sales-orders/9',
     })
 })
