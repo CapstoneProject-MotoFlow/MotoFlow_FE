@@ -15,11 +15,11 @@ export const ownerNavigation: NavItem[] = [
   { label: 'Thông báo', href: '/notifications', icon: 'bell' },
   {
     label: 'Đơn bán',
-    href: '#sales',
+    href: '/sales-orders',
     icon: 'receipt',
     group: 'BÁN HÀNG',
-    pending: true,
   },
+  { label: 'Nhu cầu chưa đáp ứng', href: '/unmet-demand', icon: 'clipboard' },
   { label: 'Khách hàng', href: '/owner/customers', icon: 'users' },
   {
     label: 'Công nợ',

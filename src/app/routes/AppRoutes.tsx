@@ -13,6 +13,31 @@ import RequireRole from '../guards/RequireRole'
 import RequireCatalogEdit from '../guards/RequireCatalogEdit'
 import RequirePasswordChange from '../guards/RequirePasswordChange'
 
+const SalesOrderListPage = lazy(() =>
+  import('../../modules/sales/SalesPages').then((m) => ({
+    default: m.SalesOrderListPage,
+  })),
+)
+const SalesOrderFormPage = lazy(() =>
+  import('../../modules/sales/SalesPages').then((m) => ({
+    default: m.SalesOrderFormPage,
+  })),
+)
+const SalesOrderDetailPage = lazy(() =>
+  import('../../modules/sales/SalesPages').then((m) => ({
+    default: m.SalesOrderDetailPage,
+  })),
+)
+const RecordPickedPage = lazy(() =>
+  import('../../modules/sales/SalesPages').then((m) => ({
+    default: m.RecordPickedPage,
+  })),
+)
+const UnmetDemandPage = lazy(() =>
+  import('../../modules/sales/SalesPages').then((m) => ({
+    default: m.UnmetDemandPage,
+  })),
+)
 const LotsPage = lazy(() => import('../../modules/inventory/LotsPage'))
 const LotDetailPage = lazy(
   () => import('../../modules/inventory/LotDetailPage'),
@@ -356,6 +381,11 @@ export default function AppRoutes() {
                 <RequireRole roles={['OWNER', 'BRANCH_MANAGER', 'STAFF']} />
               }
             >
+              <Route path="/sales-orders" element={<SalesOrderListPage />} />
+              <Route
+                path="/sales-orders/:id"
+                element={<SalesOrderDetailPage />}
+              />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/stock-counts" element={<StockCountListPage />} />
               <Route
@@ -370,6 +400,31 @@ export default function AppRoutes() {
                 path="/stock-counts/:id/record"
                 element={<StockCountRecordPage />}
               />
+            </Route>
+            <Route
+              element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/sales-orders/new"
+                element={<SalesOrderFormPage />}
+              />
+              <Route
+                path="/sales-orders/:id/edit"
+                element={<SalesOrderFormPage />}
+              />
+            </Route>
+            <Route
+              element={<RequireRole roles={['STAFF', 'BRANCH_MANAGER']} />}
+            >
+              <Route
+                path="/sales-orders/:id/pick"
+                element={<RecordPickedPage />}
+              />
+            </Route>
+            <Route
+              element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
+            >
+              <Route path="/unmet-demand" element={<UnmetDemandPage />} />
             </Route>
             <Route path="/profile" element={<ProfilePage />} />
             <Route
