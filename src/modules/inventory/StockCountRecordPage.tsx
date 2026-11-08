@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { mapCountSheet, readCountFile, type ImportRow } from './countImport'
 import FormDialog from '../../shared/ui/FormDialog'
 import { useParams, Link } from 'react-router-dom'
 import { InventoryHeader, InventoryPanel } from './components'
@@ -27,6 +28,9 @@ export function StockCountRecordView(props: {
 function CountRecordForm({ count, id }: { count?: StockCount; id?: string }) {
   const [importOpen, setImportOpen] = useState(false)
   const [fileName, setFileName] = useState('')
+  const [importRows, setImportRows] = useState<ImportRow[]>([])
+  const [importError, setImportError] = useState('')
+  const [importBusy, setImportBusy] = useState(false)
   const [onlyMissing, setOnlyMissing] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const lines = [...(count?.lines ?? [])]
@@ -254,26 +258,77 @@ function CountRecordForm({ count, id }: { count?: StockCount; id?: string }) {
           title="Nhập số đếm từ Excel"
           formId="count-import"
           submitLabel="Nhập số đếm"
-          submitDisabled
+          busy={importBusy}
+          submitDisabled={importBusy || !importRows.length}
           onClose={() => setImportOpen(false)}
         >
           <form
             id="count-import"
             className="count-form"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (importBusy || !importRows.length) return
+              setValues((previous) => ({
+                ...previous,
+                ...Object.fromEntries(
+                  importRows.map((row) => [
+                    row.id,
+                    { value: row.value, note: row.note },
+                  ]),
+                ),
+              }))
+              setImportOpen(false)
+              setImportRows([])
+            }}
           >
             <label>
               Tệp Excel
               <input
                 type="file"
-                accept=".xlsx,.xls"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
+                accept=".xlsx"
+                disabled={importBusy}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  setImportRows([])
+                  setImportError('')
+                  setFileName(file?.name ?? '')
+                  if (!file) return
+                  setImportBusy(true)
+                  try {
+                    setImportRows(
+                      mapCountSheet(
+                        await readCountFile(file),
+                        lines,
+                        'quantity',
+                      ),
+                    )
+                  } catch (error) {
+                    setImportError(
+                      error instanceof Error
+                        ? error.message
+                        : 'Không đọc được tệp Excel.',
+                    )
+                  } finally {
+                    setImportBusy(false)
+                  }
+                }}
               />
             </label>
             {fileName && <p>Tệp đã chọn: {fileName}</p>}
+            {importBusy && <p role="status">Đang đọc tệp…</p>}
+            {importError && (
+              <p role="alert" className="stock-error">
+                {importError}
+              </p>
+            )}
+            {!!importRows.length && (
+              <p role="status">
+                Hợp lệ: {importRows.length} dòng. Các dòng khác giữ nguyên.
+              </p>
+            )}
             <p className="count-unavailable">
-              Chưa thể nhập tệp vào phiếu kiểm kê lúc này. Tệp chưa được tải
-              lên.
+              Cột: SKU, Mã lô (nếu có), Số đếm, Ghi chú. Dữ liệu chỉ điền vào
+              màn hình, chưa lưu lên hệ thống.
             </p>
           </form>
         </FormDialog>

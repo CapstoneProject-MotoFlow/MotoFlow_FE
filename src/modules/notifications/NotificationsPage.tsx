@@ -7,7 +7,6 @@ import {
   markAllNoticesRead,
 } from './notificationService'
 import NotificationActions from './NotificationActions'
-import { ReceiptDialog } from '../inventory/MovementTable'
 import Icon from '../../shared/ui/Icon'
 import './notifications.css'
 export default function NotificationsPage() {
@@ -22,8 +21,7 @@ export default function NotificationsPage() {
     unreadOnly,
   })
   const [busy, setBusy] = useState(false),
-    [actionError, setActionError] = useState(''),
-    [receipt, setReceipt] = useState<number>()
+    [actionError, setActionError] = useState('')
   async function markAll() {
     if (busy) return
     setBusy(true)
@@ -121,7 +119,7 @@ export default function NotificationsPage() {
                     {noticeTime(item.createdAt)} ·{' '}
                     <strong>{item.read ? 'Đã đọc' : 'Chưa đọc'}</strong>
                   </small>
-                  <NotificationActions notice={item} onReceipt={setReceipt} />
+                  <NotificationActions notice={item} />
                 </div>
                 {!item.read && (
                   <span className="notifications-dot" aria-label="Chưa đọc" />
@@ -166,9 +164,6 @@ export default function NotificationsPage() {
           </div>
         </footer>
       </section>
-      {receipt != null && (
-        <ReceiptDialog id={receipt} onClose={() => setReceipt(undefined)} />
-      )}
     </main>
   )
 }

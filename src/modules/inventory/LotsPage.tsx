@@ -9,9 +9,41 @@ import {
   WarehouseFilter,
 } from './components'
 import { ExpiryWarningDialog } from './SettingsDialogs'
-import { date, lotLink, sourceNames } from './presentation'
-import type { LotList, Page } from './types'
+import { date, lotLink, money, sourceNames } from './presentation'
+import type { LotDetail, LotList, Page } from './types'
 import './inventory-screens.css'
+function LotCost({ id, storeId }: { id: number; storeId: number }) {
+  const [open, setOpen] = useState(false)
+  const result = useInventoryData<LotDetail>(
+    '/inventory/lots/' + id,
+    { storeId },
+    0,
+    open,
+  )
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)}>
+        Xem giá vốn
+      </button>
+    )
+  if (result.loading) return <span role="status">Đang tải…</span>
+  if (result.error)
+    return (
+      <span role="alert">
+        {result.error}{' '}
+        <button type="button" onClick={() => setOpen(false)}>
+          Thử lại
+        </button>
+      </span>
+    )
+  return (
+    <span>
+      {result.data?.purchaseUnitPrice == null
+        ? 'Chưa có giá vốn'
+        : money.format(result.data.purchaseUnitPrice)}
+    </span>
+  )
+}
 export default function LotsPage() {
   const scope = useInventoryScope(),
     p = scope.params
@@ -182,6 +214,7 @@ export default function LotsPage() {
                 <th>Ngày nhận</th>
                 <th>Lô nhà sản xuất</th>
                 <th>Hạn dùng</th>
+                {scope.owner && <th>Giá vốn lô</th>}
                 {tab !== 'DEPLETED' && <th>Còn lại</th>}
               </tr>
             </thead>
@@ -222,6 +255,15 @@ export default function LotsPage() {
                       </small>
                     )}
                   </td>
+                  {scope.owner && (
+                    <td>
+                      <LotCost
+                        key={row.lotId + '-' + row.storeId}
+                        id={row.lotId}
+                        storeId={row.storeId}
+                      />
+                    </td>
+                  )}
                   {tab !== 'DEPLETED' && (
                     <td>
                       {row.remainingQty} {row.baseUnit}
@@ -231,7 +273,12 @@ export default function LotsPage() {
               ))}
               {lots.data && !lots.data.page.items.length && (
                 <tr>
-                  <td colSpan={scope.owner ? 8 : 7} className="stock-empty">
+                  <td
+                    colSpan={
+                      6 + (scope.owner ? 2 : 0) + (tab !== 'DEPLETED' ? 1 : 0)
+                    }
+                    className="stock-empty"
+                  >
                     Không có lô hàng phù hợp.
                   </td>
                 </tr>

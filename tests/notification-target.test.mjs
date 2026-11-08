@@ -86,9 +86,9 @@ test('purchasing notifications open implemented FE-05 routes only for Owner and 
       noticeTarget({ refType: 'GOODS_RECEIPT_NOTE', refId: 8 }, role),
       { path: '/goods-receipt-notes/8' },
     )
-    assert.deepEqual(
+    assert.equal(
       noticeTarget({ refType: 'SUPPLIER_DISCREPANCY', refId: 8 }, role),
-      { path: '/supplier-discrepancies' },
+      undefined,
     )
     assert.equal(
       noticeTarget({ refType: 'REPLENISHMENT_REQUEST', refId: 8 }, role),
@@ -101,6 +101,21 @@ test('purchasing notifications open implemented FE-05 routes only for Owner and 
   )
   assert.deepEqual(
     noticeTarget({ refType: 'GOODS_RECEIPT_NOTE', refId: 8 }, 'STAFF'),
-    { receiptId: 8 },
+    { path: '/goods-receipt-notes/8' },
   )
+})
+
+test('discrepancy type routes Owner to resolution', () => {
+  const notice = {
+    type: 'SUPPLIER_DISCREPANCY_OPENED',
+    refType: 'GOODS_RECEIPT_NOTE',
+    refId: 8,
+  }
+  assert.deepEqual(noticeTarget(notice, 'OWNER'), {
+    path: '/supplier-discrepancies',
+  })
+  for (const role of ['STAFF', 'BRANCH_MANAGER'])
+    assert.deepEqual(noticeTarget(notice, role), {
+      path: '/goods-receipt-notes/8',
+    })
 })

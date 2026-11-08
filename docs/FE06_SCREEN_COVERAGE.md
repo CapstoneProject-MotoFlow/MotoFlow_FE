@@ -1,3 +1,17 @@
+# Bổ sung FE theo mockup toàn bộ ba iteration — 08/11/2026
+
+Nguồn đối chiếu: MotoFlow_UI_ToanBo.html và các file screens_count.js, screens_lots.js, iteration3.js trong bộ MotoFlow_UI_ToanBo người dùng cung cấp.
+
+- Giữ lọc ngày nhận tại tab Đã hết hàng theo mockup; không mở rộng sang tab khác.
+- Owner có cột Giá vốn lô. Do API danh sách chưa có giá, bấm Xem giá vốn để đọc chi tiết lô thật ngay trong dòng, tránh gọi chi tiết cho toàn bộ danh sách. BM không dựng cột hoặc gọi API giá qua tính năng này.
+- Nhập số đếm Excel: đọc .xlsx cục bộ, kiểm tra toàn bộ tệp rồi mới điền các dòng khớp SKU/mã lô. Có trạng thái đang đọc, lỗi, số dòng hợp lệ; giữ các dòng không nằm trong tệp. Không gửi dữ liệu lên BE.
+- Nhập giá vốn đầu kỳ Excel: một giá mỗi SKU; kiểm tra trùng và giá trị; điền các ô giá vốn trên màn hình, không tự duyệt hoặc ghi tồn.
+- Quy ước cột hiển thị ngay trong popup: SKU, Mã lô, Số đếm, Ghi chú; tệp giá vốn dùng SKU, Giá vốn. .xls cần lưu lại thành .xlsx. Giới hạn tệp 5 MB.
+- Tạo/yêu cầu kiểm kê, bắt đầu đếm, lưu/gửi số đếm, xác minh, duyệt và hủy vẫn khóa cho tới khi có hợp đồng API. Không có dữ liệu phiếu giả trong ứng dụng.
+- Khác mockup còn lại do phụ thuộc dữ liệu/API: danh sách và chi tiết phiếu kiểm kê thật, lọc NCC cho BM, API tồn gom toàn chuỗi, giá vốn trực tiếp trong response danh sách lô; thao tác báo hủy thuộc luồng điều chỉnh kho.
+
+Phần dưới là ghi nhận lịch sử, ưu tiên cập nhật phía trên khi có khác biệt.
+
 # Cập nhật sau review PR25
 
 Xem trạng thái mới nhất tại [PR25_REVIEW_FOLLOWUP.md](PR25_REVIEW_FOLLOWUP.md). Phần dưới ghi nhận đợt triển khai trước review; các mục tải toàn bộ lô, cột giữ chỗ và thống kê/biểu đồ đã được thay đổi theo review. Kiểm kê vẫn là Doing, chưa Done vì còn chờ API BE.

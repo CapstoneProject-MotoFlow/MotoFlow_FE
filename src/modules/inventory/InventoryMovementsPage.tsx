@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useInventoryData, useInventoryScope } from './api'
+import { useCompleteLots, useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
   InventoryNotice,
@@ -9,7 +9,7 @@ import {
 } from './components'
 import { MovementTable } from './MovementTable'
 import { movementNames } from './presentation'
-import type { Movement, Page, LotList } from './types'
+import type { Movement, Page } from './types'
 
 import './inventory-screens.css'
 
@@ -28,21 +28,29 @@ export default function InventoryMovementsPage() {
     0,
     !!p.get('productId'),
   )
-  const lotCollection = useInventoryData<LotList>(
-    '/inventory/lots',
+  const lotCollection = useCompleteLots(
     {
       tab: 'IN_STOCK',
       q: product.data?.sku,
       storeId: scope.storeId,
       size: 100,
     },
-    0,
     !!product.data,
   )
-  const lotOptions =
-    lotCollection.data?.page.items.filter(
-      (row) => row.productId === product.data?.id,
-    ) ?? []
+  const depletedLots = useCompleteLots(
+    { tab: 'DEPLETED', q: product.data?.sku, storeId: scope.storeId },
+    !!product.data,
+  )
+  const lotOptions = Array.from(
+    new Map(
+      [
+        ...(lotCollection.data?.page.items ?? []),
+        ...(depletedLots.data?.page.items ?? []),
+      ]
+        .filter((row) => row.productId === product.data?.id)
+        .map((row) => [row.lotId, row]),
+    ).values(),
+  )
   const page = Math.max(0, Number(p.get('page')) || 0)
   const from = p.get('from') ?? '',
     to = p.get('to') ?? ''
@@ -121,7 +129,7 @@ export default function InventoryMovementsPage() {
             <span>Mã lô</span>
             <select
               value={p.get('lotId') ?? ''}
-              disabled={lotCollection.loading}
+              disabled={lotCollection.loading || depletedLots.loading}
               onChange={(e) => scope.filter({ lotId: e.target.value })}
             >
               <option value="">Mọi lô</option>
@@ -169,7 +177,8 @@ export default function InventoryMovementsPage() {
               scope.storesError ??
               products.error ??
               product.error ??
-              lotCollection.error)
+              lotCollection.error ??
+              depletedLots.error)
         }
       />
       <InventoryPanel

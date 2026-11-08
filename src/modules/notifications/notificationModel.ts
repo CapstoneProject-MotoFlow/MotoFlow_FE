@@ -8,10 +8,10 @@ export type Notice = {
   createdAt: string
   readAt: string | null
 }
-export type NoticeTarget = { path: string } | { receiptId: number }
+export type NoticeTarget = { path: string }
 /** Only route to screens implemented in this FE branch. References never become arbitrary URLs. */
 export function noticeTarget(
-  notice: Pick<Notice, 'refType' | 'refId'>,
+  notice: Pick<Notice, 'refType' | 'refId'> & { type?: string },
   role: string | undefined,
 ): NoticeTarget | undefined {
   const id = notice.refId
@@ -22,6 +22,10 @@ export function noticeTarget(
     !['OWNER', 'BRANCH_MANAGER', 'STAFF'].includes(role ?? '')
   )
     return
+  if (role === 'OWNER' && notice.type === 'SUPPLIER_DISCREPANCY_OPENED')
+    return { path: '/supplier-discrepancies' }
+  if (notice.refType === 'GOODS_RECEIPT_NOTE')
+    return { path: '/goods-receipt-notes/' + id }
   if (notice.refType === 'STOCK_COUNT') return { path: '/stock-counts/' + id }
   if (notice.refType === 'STOCK_COUNT_REQUEST' && role !== 'STAFF')
     return { path: '/stock-counts' }
@@ -41,13 +45,7 @@ export function noticeTarget(
   if (role !== 'STAFF') {
     if (notice.refType === 'PURCHASE_ORDER')
       return { path: '/purchase-orders/' + id }
-    if (notice.refType === 'GOODS_RECEIPT_NOTE')
-      return { path: '/goods-receipt-notes/' + id }
-    if (notice.refType === 'SUPPLIER_DISCREPANCY')
-      return { path: '/supplier-discrepancies' }
   }
-  if (notice.refType === 'GOODS_RECEIPT_NOTE' && role === 'STAFF')
-    return { receiptId: id }
 }
 export function noticeTime(value: string) {
   return new Date(value).toLocaleString('vi-VN', {

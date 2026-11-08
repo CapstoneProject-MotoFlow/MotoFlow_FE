@@ -121,3 +121,54 @@ export function useInventoryScope() {
       : (user?.storeName ?? 'Kho của tôi'),
   }
 }
+
+// Load every matching page so broad text searches cannot hide a lot.
+export function useCompleteLots(params: Query, enabled = true) {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== '')
+      .map(([k, v]) => [k, String(v)]),
+  ).toString()
+  const [response, setResponse] = useState<{
+    key: string
+    data?: import('./types').LotList
+    error?: string
+  }>()
+  useEffect(() => {
+    if (!enabled) return
+    const controller = new AbortController()
+    async function load() {
+      try {
+        let page = 0
+        let result: import('./types').LotList | undefined
+        do {
+          const { data } = await axiosClient.get<import('./types').LotList>(
+            '/inventory/lots?' + query,
+            { params: { page, size: 100 }, signal: controller.signal },
+          )
+          if (!result)
+            result = {
+              ...data,
+              page: { ...data.page, items: [...data.page.items] },
+            }
+          else result.page.items.push(...data.page.items)
+          page++
+          if (!data.page.items.length || page * 100 >= data.page.totalItems)
+            break
+        } while (!controller.signal.aborted)
+        if (!controller.signal.aborted)
+          setResponse({ key: query, data: result })
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setResponse({ key: query, error: inventoryError(error) })
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [query, enabled])
+  return {
+    data: enabled && response?.key === query ? response.data : undefined,
+    error: enabled && response?.key === query ? response.error : undefined,
+    loading: enabled && response?.key !== query,
+  }
+}

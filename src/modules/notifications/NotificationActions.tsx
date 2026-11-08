@@ -6,11 +6,9 @@ import { noticeTarget, type Notice } from './notificationModel'
 import { markNoticeRead, refreshNotifications } from './notificationService'
 export default function NotificationActions({
   notice,
-  onReceipt,
   onOpened,
 }: {
   notice: Notice
-  onReceipt: (id: number) => void
   onOpened?: () => void
 }) {
   const { user } = useAuth(),
@@ -31,8 +29,7 @@ export default function NotificationActions({
       if (controller.signal.aborted) return
       if (open && target) {
         onOpened?.()
-        if ('path' in target) navigate(target.path)
-        else onReceipt(target.receiptId)
+        navigate(target.path)
       }
       refreshNotifications()
     } catch (error) {

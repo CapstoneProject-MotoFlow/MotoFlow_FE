@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { mapCountSheet, readCountFile } from './countImport'
 import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError, useInventoryData } from './api'
@@ -220,6 +221,8 @@ function CountReviewDialog({
     ),
   )
   const [fileName, setFileName] = useState('')
+  const [importError, setImportError] = useState('')
+  const [importBusy, setImportBusy] = useState(false)
   const returned =
     Object.values(back).filter(Boolean).length +
     Object.values(ways).filter((way) => way === 'back').length
@@ -356,16 +359,54 @@ function CountReviewDialog({
                   Nhập giá vốn từ Excel
                   <input
                     type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) =>
-                      setFileName(e.target.files?.[0]?.name ?? '')
-                    }
+                    accept=".xlsx"
+                    disabled={importBusy}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      setFileName('')
+                      setImportError('')
+                      if (!file) return
+                      setImportBusy(true)
+                      try {
+                        const rows = mapCountSheet(
+                          await readCountFile(file),
+                          count?.lines ?? [],
+                          'cost',
+                        )
+                        setCosts((previous) => ({
+                          ...previous,
+                          ...Object.fromEntries(
+                            rows.map((row) => [row.id, row.value]),
+                          ),
+                        }))
+                        setFileName(file.name)
+                        setShowAll(true)
+                      } catch (error) {
+                        setImportError(
+                          error instanceof Error
+                            ? error.message
+                            : 'Không đọc được tệp Excel.',
+                        )
+                      } finally {
+                        setImportBusy(false)
+                      }
+                    }}
                   />
                 </label>
                 {fileName && (
                   <small>
-                    Tệp đã chọn: {fileName}. Chưa tải lên hoặc nhập vào phiếu.
+                    Đã điền giá vốn từ {fileName} vào màn hình; chưa lưu lên hệ
+                    thống.
                   </small>
+                )}
+                <p>
+                  Cột trong tệp: SKU, Giá vốn. Mỗi phụ tùng một giá vốn ban đầu.
+                </p>
+                {importBusy && <p role="status">Đang đọc tệp…</p>}
+                {importError && (
+                  <p role="alert" className="stock-error">
+                    {importError}
+                  </p>
                 )}
                 <label className="stock-check">
                   <input

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { useInventoryData, useInventoryScope } from './api'
+import { useCompleteLots, useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
   InventoryNotice,
@@ -18,7 +18,7 @@ import {
   sourceNames,
   stockStatuses,
 } from './presentation'
-import type { LotDetail, LotList } from './types'
+import type { LotDetail } from './types'
 import './inventory-screens.css'
 
 export default function LotDetailPage() {
@@ -27,7 +27,7 @@ export default function LotDetailPage() {
   const lot = useInventoryData<LotDetail>('/inventory/lots/' + id, {
     storeId: scope.storeId,
   })
-  const locations = useInventoryData<LotList>('/inventory/lots', {
+  const locations = useCompleteLots({
     q: id,
     tab: 'IN_STOCK',
     storeId: scope.storeId,

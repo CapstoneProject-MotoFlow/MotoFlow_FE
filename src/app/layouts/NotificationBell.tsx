@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
 import {
@@ -6,18 +6,12 @@ import {
   noticeTime,
 } from '../../modules/notifications/notificationService'
 import NotificationActions from '../../modules/notifications/NotificationActions'
-const ReceiptDialog = lazy(() =>
-  import('../../modules/inventory/MovementTable').then((module) => ({
-    default: module.ReceiptDialog,
-  })),
-)
 import '../../modules/notifications/notifications.css'
 export default function NotificationBell() {
   const { data, error, reload, enabled } = useNotifications()
   const location = useLocation(),
     path = location.pathname + location.search
-  const [openOn, setOpenOn] = useState<string | null>(null),
-    [receipt, setReceipt] = useState<number>()
+  const [openOn, setOpenOn] = useState<string | null>(null)
   const open = openOn === path,
     ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -79,7 +73,6 @@ export default function NotificationBell() {
                       <small>{noticeTime(item.createdAt)}</small>
                       <NotificationActions
                         notice={item}
-                        onReceipt={setReceipt}
                         onOpened={() => setOpenOn(null)}
                       />
                     </div>
@@ -98,11 +91,6 @@ export default function NotificationBell() {
           </section>
         )}
       </div>
-      {receipt != null && (
-        <Suspense fallback={<p role="status">Đang tải phiếu nhập…</p>}>
-          <ReceiptDialog id={receipt} onClose={() => setReceipt(undefined)} />
-        </Suspense>
-      )}
     </>
   )
 }
