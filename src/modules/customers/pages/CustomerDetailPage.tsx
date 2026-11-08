@@ -1,3 +1,6 @@
+import { useInventoryData } from '../../inventory/api'
+import type { DebtDetail } from '../../receivables/types'
+import CustomerCreditActions from '../../receivables/CustomerCreditActions'
 /**
  * File: modules/customers/pages/CustomerDetailPage.tsx
  * Loại: MÀN HÌNH — Chi tiết khách hàng / công nợ.
@@ -104,6 +107,17 @@ export default function CustomerDetailPage({
   const [editing, setEditing] = useState(false)
   const [revision, setRevision] = useState(0)
   const [tab, setTab] = useState('open')
+  const debtResource = useInventoryData<DebtDetail>(
+    '/customers/' + id + '/debts',
+    {},
+    revision,
+    !!id && ['OWNER', 'BRANCH_MANAGER'].includes(user?.role ?? ''),
+  )
+  const earliestDue = debtResource.data?.debts
+    .filter((d) => d.remainingAmount > 0 && d.dueDate)
+    .map((d) => d.dueDate)
+    .sort()[0]
+
   useEffect(() => {
     let active = true
     setData(null)
@@ -179,7 +193,13 @@ export default function CustomerDetailPage({
               </div>
               <div>
                 <dt>Nợ quá hạn</dt>
-                <dd title="API chưa cung cấp">—</dd>
+                <dd>
+                  {debtResource.data
+                    ? money(debtResource.data.overdueDebt)
+                    : debtResource.loading
+                      ? 'Đang tải…'
+                      : 'Không tải được'}
+                </dd>
               </div>
               <div>
                 <dt>Hạn trả gần nhất</dt>
@@ -267,17 +287,10 @@ export default function CustomerDetailPage({
                   >
                     ✎ Sửa
                   </button>
-                  {owner && (
-                    <button
-                      className="cp-primary"
-                      disabled
-                      title="BE chưa có API cấp hoặc thu hồi quyền mua chịu"
-                    >
-                      {c.creditStatus === 'ELIGIBLE'
-                        ? 'Thu hồi quyền mua chịu'
-                        : 'Cấp quyền mua chịu'}
-                    </button>
-                  )}
+                  <CustomerCreditActions
+                    id={id!}
+                    onSaved={() => setRevision((n) => n + 1)}
+                  />
                 </div>
               </header>
               <dl className="cp-fields">
@@ -287,7 +300,7 @@ export default function CustomerDetailPage({
                 </div>
                 <div>
                   <dt>Người liên hệ</dt>
-                  <dd>—</dd>
+                  <dd>Chưa có thông tin</dd>
                 </div>
                 <div>
                   <dt>Mã số thuế</dt>
@@ -302,11 +315,6 @@ export default function CustomerDetailPage({
                   <dd>{c.address || '—'}</dd>
                 </div>
               </dl>
-              {owner && (
-                <p className="cp-note">
-                  Cấp/thu hồi quyền mua chịu chưa được hệ thống hỗ trợ.
-                </p>
-              )}
             </section>
             <section className="cp-panel">
               <h2>
@@ -374,12 +382,28 @@ export default function CustomerDetailPage({
               <strong>{money(c.totalDebt)}</strong>
               <dl className="cp-fields">
                 <div>
-                  <dt>Nợ quá hạn</dt>
-                  <dd>—</dd>
+                  <dt>
+                    Nợ quá hạn {owner ? 'toàn chuỗi' : 'trong phạm vi xem'}
+                  </dt>
+                  <dd>
+                    {debtResource.data
+                      ? money(debtResource.data.overdueDebt)
+                      : debtResource.loading
+                        ? 'Đang tải…'
+                        : 'Không tải được'}
+                  </dd>
                 </div>
                 <div>
                   <dt>Hạn trả sớm nhất</dt>
-                  <dd>—</dd>
+                  <dd>
+                    {debtResource.data
+                      ? earliestDue
+                        ? date(earliestDue + 'T00:00:00')
+                        : 'Không có khoản còn nợ'
+                      : debtResource.loading
+                        ? 'Đang tải…'
+                        : 'Không tải được'}
+                  </dd>
                 </div>
               </dl>
               {!owner && (
@@ -396,7 +420,9 @@ export default function CustomerDetailPage({
               <Link className="cp-button" to={`${base}/${id}/debts`}>
                 Xem công nợ
               </Link>
-              <small>Nợ quá hạn và hạn trả chưa được API cung cấp.</small>
+              {debtResource.error && (
+                <small role="alert">{debtResource.error}</small>
+              )}
             </div>
           </aside>
         </div>

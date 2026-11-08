@@ -130,6 +130,16 @@ const ProductCreatePage = lazy(
 const SuppliersPage = lazy(
   () => import('../../modules/suppliers/pages/SuppliersPage'),
 )
+const ReceivableListPage = lazy(() =>
+  import('../../modules/receivables/ReceivablePages').then((m) => ({
+    default: m.ReceivableListPage,
+  })),
+)
+const ReceivableDetailPage = lazy(() =>
+  import('../../modules/receivables/ReceivablePages').then((m) => ({
+    default: m.ReceivableDetailPage,
+  })),
+)
 const CustomersPage = lazy(
   () => import('../../modules/customers/pages/CustomersPage'),
 )
@@ -318,7 +328,7 @@ export default function AppRoutes() {
               <Route path="/owner/customers" element={<CustomersPage />} />
               <Route
                 path="/owner/customers/:id/debts"
-                element={<CustomerDetailPage debtView />}
+                element={<ReceivableDetailPage />}
               />
               <Route
                 path="/owner/customers/:id"
@@ -346,7 +356,7 @@ export default function AppRoutes() {
               />
               <Route
                 path="/branch-manager/customers/:id/debts"
-                element={<CustomerDetailPage debtView />}
+                element={<ReceivableDetailPage />}
               />
               <Route
                 path="/branch-manager/customers/:id"
@@ -424,6 +434,11 @@ export default function AppRoutes() {
             <Route
               element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
             >
+              <Route path="/receivables" element={<ReceivableListPage />} />
+              <Route
+                path="/receivables/customers/:id"
+                element={<ReceivableDetailPage />}
+              />
               <Route path="/unmet-demand" element={<UnmetDemandPage />} />
             </Route>
             <Route path="/profile" element={<ProfilePage />} />

@@ -13,6 +13,6 @@ Cập nhật 08/11/2026.
 
 ## Phụ thuộc và giới hạn
 
-R-02 còn chờ BE hỗ trợ status trong SalesOrderSearch. Hiện FE vẫn tải các trang để lọc trạng thái; sau khi BE hỗ trợ sẽ chuyển sang phân trang tại server.
+R-02 đã sửa theo BE PR #38: gửi status cùng view/page/size; dùng trực tiếp items/totalItems của BE, bỏ tải toàn bộ và chia trang lại ở FE.
 
 Nhặt hàng phiếu điều chuyển thuộc chức năng điều chuyển khi có API. Chưa kiểm thử toàn bộ luồng với BE trên trình duyệt hoặc camera trên thiết bị thật. Cần kiểm tra giao việc và thu một phần: lưu xong popup không tự mở lại.
