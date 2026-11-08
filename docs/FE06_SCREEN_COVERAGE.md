@@ -1,0 +1,63 @@
+# Bổ sung FE theo mockup toàn bộ ba iteration — 08/11/2026
+
+Nguồn đối chiếu: MotoFlow_UI_ToanBo.html và các file screens_count.js, screens_lots.js, iteration3.js trong bộ MotoFlow_UI_ToanBo người dùng cung cấp.
+
+- Giữ lọc ngày nhận tại tab Đã hết hàng theo mockup; không mở rộng sang tab khác.
+- Owner có cột Giá vốn lô. Do API danh sách chưa có giá, bấm Xem giá vốn để đọc chi tiết lô thật ngay trong dòng, tránh gọi chi tiết cho toàn bộ danh sách. BM không dựng cột hoặc gọi API giá qua tính năng này.
+- Nhập số đếm Excel: đọc .xlsx cục bộ, kiểm tra toàn bộ tệp rồi mới điền các dòng khớp SKU/mã lô. Có trạng thái đang đọc, lỗi, số dòng hợp lệ; giữ các dòng không nằm trong tệp. Không gửi dữ liệu lên BE.
+- Nhập giá vốn đầu kỳ Excel: một giá mỗi SKU; kiểm tra trùng và giá trị; điền các ô giá vốn trên màn hình, không tự duyệt hoặc ghi tồn.
+- Quy ước cột hiển thị ngay trong popup: SKU, Mã lô, Số đếm, Ghi chú; tệp giá vốn dùng SKU, Giá vốn. .xls cần lưu lại thành .xlsx. Giới hạn tệp 5 MB.
+- Tạo/yêu cầu kiểm kê, bắt đầu đếm, lưu/gửi số đếm, xác minh, duyệt và hủy vẫn khóa cho tới khi có hợp đồng API. Không có dữ liệu phiếu giả trong ứng dụng.
+- Khác mockup còn lại do phụ thuộc dữ liệu/API: danh sách và chi tiết phiếu kiểm kê thật, lọc NCC cho BM, API tồn gom toàn chuỗi, giá vốn trực tiếp trong response danh sách lô; thao tác báo hủy thuộc luồng điều chỉnh kho.
+
+Phần dưới là ghi nhận lịch sử, ưu tiên cập nhật phía trên khi có khác biệt.
+
+# Cập nhật sau review PR25
+
+Xem trạng thái mới nhất tại [PR25_REVIEW_FOLLOWUP.md](PR25_REVIEW_FOLLOWUP.md). Phần dưới ghi nhận đợt triển khai trước review; các mục tải toàn bộ lô, cột giữ chỗ và thống kê/biểu đồ đã được thay đổi theo review. Kiểm kê vẫn là Doing, chưa Done vì còn chờ API BE.
+
+# Đối chiếu toàn bộ giao diện FE-06
+
+Nguồn: nhóm FE-06 trong `app.js`, `iteration3.js`, `screens_stock.js`, `screens_lots.js`, `screens_count.js` của mockup HTML người dùng cung cấp. Chỉ dùng các bố cục/quy tắc hiển thị; không chép dữ liệu mẫu vào ứng dụng. Mã UC trong mockup có chỗ khác bảng phân công; bảng này đối chiếu theo tên màn.
+
+| Màn / popup / trạng thái                                                             | Vai trò         | Vị trí FE                                      | Trạng thái                                                                                                             |
+| ------------------------------------------------------------------------------------ | --------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Inventory Stock, lọc dưới ngưỡng/chưa khả dụng/hạn dùng                              | Owner/BM        | `/inventory`                                   | Đọc đủ stock, gom SKU và số kho thiếu hàng; mở dòng kho con theo mockup, giá trị chỉ Owner                             |
+| Owner chọn kho / tra tồn liên kho                                                    | Owner           | Bộ chọn kho, mở phụ tùng → Liên kho            | Nối stores/stock; gom toàn chuỗi theo SKU; Owner tra số có thể bán qua availability ở chi tiết phụ tùng                |
+| Giá trị tồn toàn chuỗi/từng kho                                                      | Owner           | Ô giá trị theo kho trên màn tồn                | Tính tổng thật từ đầy đủ các trang stock; thiếu/không biết giá trị thì hiện —                                          |
+| Update Storage Location                                                              | Owner/BM        | Tồn kho → Vị trí                               | GET/PUT thật; mã vị trí, khu vực, tầng kệ, ô; cảnh báo dùng chung ô từ tồn thật                                        |
+| Set Low Stock Threshold                                                              | Owner/BM        | Tồn kho → Ngưỡng tồn                           | PUT thật; xem trước trạng thái theo ngưỡng; để trống null, 0 giữ nguyên                                                |
+| Stock Movement History, lọc phụ tùng/lô/loại/ngày                                    | Owner/BM        | `/inventory/movements`                         | Nối API, nhóm ngày, liên kết lô/chứng từ                                                                               |
+| Tóm tắt / biểu đồ tồn khả dụng theo ngày                                             | Owner/BM        | Thẻ trên lịch sử → Xem biểu đồ                 | Có bố cục/trạng thái trống; chờ tổng hợp BE, không vẽ dữ liệu giả                                                      |
+| Lot List: sắp hết hạn/hết hạn/còn hàng/hết hàng                                      | Owner/BM        | `/inventory/lots`                              | Đọc đủ các trang lô còn/hết hàng; gom lô toàn chuỗi, lọc NCC từ dữ liệu thật cho Owner/BM, tab/ngày/sắp xếp/phân trang |
+| Lot Detail: còn hạn/hết hạn/Owner                                                    | Owner/BM        | `/inventory/lots/:id`                          | Hai cột: thông tin/tồn theo kho/biến động và thẻ FEFO/FIFO; cảnh báo hết hạn, nhãn giá theo nguồn; giá chỉ Owner       |
+| Configure Expiry Warning / lỗi ngày                                                  | Owner           | Lô hàng hoặc Tồn kho → Cảnh báo hạn dùng       | GET/PUT thật; ngày áp dụng và lịch sử; kiểm tra ngày/số ngày                                                           |
+| Báo hủy lô hết hạn                                                                   | BM              | Chi tiết lô hết hạn còn hàng                   | Hiển thị nút khóa; nghiệp vụ điều chỉnh chưa có API                                                                    |
+| Stock Count List: Owner chờ duyệt/tất cả, BM yêu cầu của Owner, Staff cần đếm/đã gửi | Owner/BM/Staff  | `/stock-counts`                                | Đủ bố cục theo vai trò; chờ API danh sách/yêu cầu                                                                      |
+| Request Stock Count, phạm vi toàn kho/khu vực/phụ tùng và lý do                      | Owner           | Danh sách → Yêu cầu kiểm kê; `?action=request` | Bộ chọn thật; gửi khóa, chờ API yêu cầu                                                                                |
+| Create Stock Count, định kỳ/cuối năm/đầu kỳ                                          | BM              | Danh sách → Tạo phiếu; `?action=create`        | Bộ chọn thật; tạo khóa; kỳ hợp lệ/phạm vi từ yêu cầu Owner chờ BE                                                      |
+| Stock Count Detail / từ yêu cầu Owner / tự hoàn tất / Staff                          | Owner/BM/Staff  | `/stock-counts/:id`                            | Bố cục thông tin/tiến độ/dòng/lịch sử; Staff không có sổ sách/giá vốn; chờ DTO chi tiết                                |
+| Assign Counter / đổi người / tự đếm / bị khóa                                        | BM              | Chi tiết → Giao việc; `?action=assign`         | **GET/POST warehouse-tasks thật**, theo canAssign và thông báo BE                                                      |
+| Start Counting / đã gửi / không còn được sửa                                         | Staff/BM tự đếm | `/stock-counts/:id/record`                     | Có các nhánh giao diện theo trạng thái model; chờ API phiếu và bắt đầu đếm                                             |
+| Record Counted Quantities / đếm lại / chỉ chưa đếm / cam kết                         | Staff/BM tự đếm | `/stock-counts/:id/record`                     | Bảng đếm mù theo vị trí/lô; kiểm tra số đếm; lưu/gửi khóa, chờ API                                                     |
+| Nhập số đếm từ Excel cho phiếu đầu kỳ                                                | Staff/BM tự đếm | Màn ghi số đếm, phiếu OPENING                  | Có popup chọn tệp; chưa tải/đọc vào phiếu                                                                              |
+| Verify Count Differences: ghi nguyên nhân, bỏ dòng chưa đếm, trả đếm lại             | BM              | Chi tiết → Xác minh; `?action=verify`          | Đã dựng popup; gửi khóa, chờ kết quả/DTO và API xác minh                                                               |
+| Approve Count Differences / trả dòng về đếm lại và lý do                             | Owner           | Chi tiết → Duyệt; `?action=approve`            | Đã dựng popup; duyệt khóa, chờ API                                                                                     |
+| Cancel Stock Count / lý do bắt buộc                                                  | BM              | Chi tiết → Hủy phiếu; `?action=cancel`         | Đã dựng popup; xác nhận khóa, chờ API                                                                                  |
+| Opening Balance Count Detail                                                         | Owner/BM/Staff  | Chi tiết phiếu OPENING                         | Có nhánh bảng số đếm/giá vốn ban đầu/lô tạo ra; chờ dữ liệu phiếu                                                      |
+| Approve Opening Balance / nhập giá vốn mỗi SKU / chọn Excel                          | Owner           | Chi tiết phiếu đầu kỳ; `?action=opening`       | Đã dựng popup; duyệt/nhập tệp chưa ghi dữ liệu                                                                         |
+| Xuất Excel                                                                           | Owner/BM        | Tồn kho và lịch sử                             | Hiển thị nút khóa; chờ API xuất tệp                                                                                    |
+
+**Không phải màn hình FE:** Inventory Posting Service, File Upload Service, Low-Stock Warning (JOB-02), Near-Expiry Warning (JOB-03). Không viết các dịch vụ/tác vụ này trong FE. FE hiện hiển thị tồn, ngưỡng, trạng thái hạn dùng và cấu hình mà API có trả về; không tạo thông báo/cờ tồn kho giả.
+
+Các URL `:id` cần mã phiếu/lô thực, không tạo bản ghi chỉ để mở giao diện. Việc có bố cục không đồng nghĩa luồng kiểm kê đã hoạt động: hiện API danh sách/chi tiết/tạo/đếm/xác minh/duyệt/hủy vẫn thiếu. Giao người đếm là ngoại lệ đã có API chung.
+
+API thông báo đã nối: GET danh sách/phân trang/lọc chưa đọc, POST đọc từng mục/đọc tất cả, đồng bộ chuông. Nguồn PRODUCT/LOT/STOCK_COUNT mở đúng màn theo vai trò; GOODS_RECEIPT_NOTE mở chi tiết phiếu nhập thật. Hai job cảnh báo vẫn chờ nhánh BE được merge vào main.
+
+## Rà soát bổ sung ngày 07/11/2026
+
+Đã bổ sung khối thống kê kiểm kê/xác minh/duyệt, lý do hủy/đếm lại, nguồn yêu cầu/tệp nhập khi có dữ liệu; BM xem yêu cầu Owner trước danh sách phiếu. Popup yêu cầu có tóm tắt nơi nhận, giao việc có phạm vi/ngày. Lịch sử có bộ chọn lô từ dữ liệu thật và cột tồn sau để — khi BE chưa trả.
+
+Các trường chưa có hợp đồng BE được để —, không tính ngược từ trang biến động: tồn sau, tổng nhập/xuất kỳ, giá vốn trên danh sách lô, số lượng đã nhận của lô hết hàng, biểu đồ. Các luồng kiểm kê hiện có giao diện, chưa có dữ liệu phiếu từ BE nên chưa kiểm chứng toàn bộ trạng thái nghiệp vụ trên trình duyệt bằng phiếu thật. Không tạo dữ liệu mẫu hoặc endpoint giả.
+
+Đã mở màn/popup Owner, BM, Staff trên 1440px và 400px, kiểm tra lỗi JavaScript và tràn ngang; test tự động kiểm tra quyền riêng tư số sổ sách/giá vốn theo vai trò. Phần màu sắc/chi tiết chữ có thể còn khác mockup; không coi đây là xác nhận khớp từng pixel.

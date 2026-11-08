@@ -1,3 +1,4 @@
+import { AvailabilityButton } from '../../inventory/StockDetails'
 /**
  * File: modules/catalog/pages/ProductDetailPage.tsx
  * Loại: MÀN HÌNH — Chi tiết phụ tùng.
@@ -316,6 +317,15 @@ export default function ProductDetailPage() {
               <section className="product-detail-panel">
                 <div className="product-stock-heading">
                   <h2>Tồn theo kho</h2>
+                  <AvailabilityButton
+                    label="Tra tồn có thể bán"
+                    row={{
+                      productId: data.id,
+                      partName: data.partName,
+                      sku: data.sku,
+                      baseUnit: data.baseUnit,
+                    }}
+                  />
                   {owner && !stockError && stocks.length > 0 && (
                     <span>
                       Tổng khả dụng toàn chuỗi:{' '}

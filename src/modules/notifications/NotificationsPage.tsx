@@ -1,18 +1,58 @@
-/**
- * File: modules/notifications/NotificationsPage.tsx
- * Loại: MÀN HÌNH — Thông báo.
- * Đường dẫn: /notifications.
- * Công dụng: Màn hiển thị thông báo hiện được API home cung cấp; không đồng nghĩa đã có API phân trang/đánh dấu đọc riêng.
- */
-import { Link } from 'react-router-dom'
-import { useNotifications, noticeTime } from './notificationService'
+import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { isAxiosError } from 'axios'
+import {
+  useNotifications,
+  noticeTime,
+  markAllNoticesRead,
+} from './notificationService'
+import NotificationActions from './NotificationActions'
 import Icon from '../../shared/ui/Icon'
 import './notifications.css'
-/** NotificationsPage: Màn hiển thị thông báo hiện được API home cung cấp; không đồng nghĩa đã có API phân trang/đánh dấu đọc riêng. */
 export default function NotificationsPage() {
-  const { data, error, reload } = useNotifications()
+  const [params, setParams] = useSearchParams()
+  const requestedPage = Number(params.get('page'))
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0
+  const unreadOnly = params.get('unreadOnly') === 'true'
+  const { data, error, loading, reload } = useNotifications({
+    page,
+    size: 20,
+    unreadOnly,
+  })
+  const [busy, setBusy] = useState(false),
+    [actionError, setActionError] = useState('')
+  async function markAll() {
+    if (busy) return
+    setBusy(true)
+    setActionError('')
+    setParams((previous) => {
+      const next = new URLSearchParams(previous)
+      next.delete('page')
+      return next
+    })
+    try {
+      await markAllNoticesRead()
+    } catch (error) {
+      setActionError(
+        isAxiosError<{ message?: string }>(error)
+          ? (error.response?.data?.message ??
+              'Chưa đánh dấu được thông báo. Vui lòng thử lại.')
+          : 'Chưa đánh dấu được thông báo. Vui lòng thử lại.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+  function changePage(next: number) {
+    setParams((previous) => {
+      const params = new URLSearchParams(previous)
+      params.set('page', String(next))
+      return params
+    })
+  }
   return (
-    <main className="dashboard-content notifications-page">
+    <main className="notifications-page">
       <header className="notifications-heading">
         <h1>Thông báo</h1>
         <nav>
@@ -22,61 +62,106 @@ export default function NotificationsPage() {
       <section className="notifications-panel">
         <header>
           <h2>Thông báo của bạn</h2>
-          <button disabled title="BE chưa hỗ trợ đánh dấu đã đọc">
+          <button
+            disabled={busy || loading || !data?.unread}
+            onClick={() => void markAll()}
+          >
             ✓ Đánh dấu tất cả đã đọc
           </button>
         </header>
         <div className="notifications-toolbar">
-          <div className="notifications-tabs">
-            <button disabled title="Chưa có phân loại từ API">
-              Việc cần tôi làm
-            </button>
-            <button disabled title="Chưa có phân loại từ API">
-              Cảnh báo tồn, hạn dùng
-            </button>
-            <button disabled title="Chưa có phân loại từ API">
-              Tin để biết
-            </button>
-            <button aria-pressed="true">Tất cả dữ liệu hiện có</button>
-          </div>
+          <strong>
+            {unreadOnly ? 'Thông báo chưa đọc' : 'Tất cả thông báo'}
+          </strong>
           <label>
-            <input type="checkbox" checked disabled />
+            <input
+              type="checkbox"
+              checked={unreadOnly}
+              disabled={busy}
+              onChange={(event) => {
+                const checked = event.currentTarget.checked
+                setParams((previous) => {
+                  const params = new URLSearchParams(previous)
+                  params.delete('page')
+                  if (checked) params.set('unreadOnly', 'true')
+                  else params.delete('unreadOnly')
+                  return params
+                })
+              }}
+            />
             Chỉ thông báo chưa đọc
           </label>
         </div>
+        {actionError && (
+          <p role="alert" className="notification-error">
+            {actionError}
+          </p>
+        )}
         {error ? (
           <p className="notifications-empty" role="alert">
             {error}
             <button onClick={reload}>Thử lại</button>
           </p>
-        ) : !data ? (
+        ) : loading ? (
           <p className="notifications-empty" role="status">
             Đang tải thông báo…
           </p>
-        ) : data.latest.length ? (
+        ) : data?.latest.length ? (
           <ul className="notifications-list">
             {data.latest.map((item) => (
-              <li key={item.id}>
+              <li key={item.id} className={item.read ? 'is-read' : 'is-unread'}>
                 <span className="notifications-symbol">
                   <Icon name="bell" />
                 </span>
                 <div>
                   <p>{item.message}</p>
                   <small>
-                    {noticeTime(item.createdAt)} · <strong>Chưa đọc</strong>
+                    {noticeTime(item.createdAt)} ·{' '}
+                    <strong>{item.read ? 'Đã đọc' : 'Chưa đọc'}</strong>
                   </small>
+                  <NotificationActions notice={item} />
                 </div>
-                <span className="notifications-dot" aria-label="Chưa đọc" />
+                {!item.read && (
+                  <span className="notifications-dot" aria-label="Chưa đọc" />
+                )}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="notifications-empty">Không có thông báo chưa đọc.</p>
+          <p className="notifications-empty">
+            {page > 0
+              ? 'Không có thông báo ở trang này.'
+              : unreadOnly
+                ? 'Không có thông báo chưa đọc.'
+                : 'Chưa có thông báo.'}
+          </p>
         )}
-        <footer>
-          {data ? `${data.unread} thông báo chưa đọc. ` : ''}Hiện hiển thị tối
-          đa 5 thông báo mới nhất. Lịch sử, phân loại và đánh dấu đã đọc chưa
-          được hệ thống hỗ trợ.
+        <footer className="notifications-pagination">
+          <span>
+            {data
+              ? data.unread +
+                ' thông báo chưa đọc · ' +
+                data.totalItems +
+                ' kết quả'
+              : '—'}
+          </span>
+          <div>
+            <button
+              aria-label="Trang trước"
+              disabled={!page || loading}
+              onClick={() => changePage(page - 1)}
+            >
+              ‹
+            </button>
+            <span>{page + 1}</span>
+            <button
+              aria-label="Trang sau"
+              disabled={loading || !data || (page + 1) * 20 >= data.totalItems}
+              onClick={() => changePage(page + 1)}
+            >
+              ›
+            </button>
+          </div>
         </footer>
       </section>
     </main>

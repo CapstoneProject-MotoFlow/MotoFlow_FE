@@ -334,3 +334,17 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+.product-stock-heading {
+  flex-wrap: wrap;
+}
+.product-stock-heading > button {
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: white;
+  color: #344054;
+  cursor: pointer;
+  margin: 10px 0;
+}
