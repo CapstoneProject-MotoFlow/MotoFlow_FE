@@ -67,6 +67,7 @@ export function mapCountSheet(
       number > (mode === 'quantity' ? 2147483647 : Number.MAX_SAFE_INTEGER)
     )
       fail('Giá trị phải là số nguyên không âm hợp lệ.')
+    if (mode === 'cost' && number === 0) fail('Giá vốn phải lớn hơn 0.')
     const text = String(row[note] ?? '').trim()
     if (text.length > 255) fail('Ghi chú tối đa 255 ký tự.')
     seen.add(id)
