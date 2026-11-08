@@ -31,8 +31,6 @@ import SalesVersions from './SalesVersions'
 import DemandReplenishment from './DemandReplenishment'
 import BarcodeCamera from './BarcodeCamera'
 import './sales.css'
-const pending =
-  'Chức năng đơn bán đang chờ hoàn thiện kết nối dữ liệu. Thông tin chưa được lưu.'
 function Header({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <header className="stock-heading">
@@ -42,13 +40,6 @@ function Header({ title, children }: { title: string; children?: ReactNode }) {
       </div>
       <div className="stock-heading-actions">{children}</div>
     </header>
-  )
-}
-function Pending() {
-  return (
-    <p className="stock-notice" role="status">
-      {pending}
-    </p>
   )
 }
 function Shell({
@@ -162,7 +153,6 @@ export function SalesOrderListPage({
             ? [
                 ['OPEN', 'Cần lấy'],
                 ['PICKED', 'Đã gửi'],
-                ['COMPLETED', 'Đã xong'],
               ]
             : [
                 ['OPEN', 'Chưa hoàn tất'],
@@ -254,7 +244,7 @@ export function SalesOrderListPage({
                   ...(scope.owner ? ['Cửa hàng'] : []),
                   'Khách hàng',
                   'Ngày tạo',
-                  ...(staff ? ['Người giao'] : ['Thành tiền', 'Còn phải thu']),
+                  ...(staff ? ['Người giao'] : ['Thành tiền', 'Thanh toán']),
                   'Trạng thái',
                   'Cần làm',
                 ].map((h) => (
@@ -808,7 +798,7 @@ export function SalesOrderFormView({
             {busy ? 'Đang lưu…' : order ? 'Lưu phiên bản mới' : 'Tạo đơn'}
           </button>
           <Link className="sales-cancel" to="/sales-orders">
-            Hủy đơn
+            Quay lại
           </Link>
           {previewError && (
             <p role="alert" className="stock-error">
@@ -1083,7 +1073,7 @@ export function SalesOrderDetailView({
 }) {
   const staff = role === 'STAFF',
     bm = role === 'BRANCH_MANAGER'
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [action, setAction] = useState<string | undefined>(() =>
     params.get('action') === 'assign' && order?.actions?.canAssignPicker
       ? 'assign'
@@ -1093,6 +1083,12 @@ export function SalesOrderDetailView({
           ? 'payment'
           : '',
   )
+  useEffect(() => {
+    if (!order || !params.has('action')) return
+    const next = new URLSearchParams(params)
+    next.delete('action')
+    setParams(next, { replace: true })
+  }, [order, params, setParams])
   const steps = ['AWAITING_PICKING', 'PICKED', 'CONFIRMED', 'COMPLETED']
   const stage = order ? steps.indexOf(order.status) : -1
   const financial =
@@ -1138,7 +1134,6 @@ export function SalesOrderDetailView({
         </span>
       }
     >
-      {!order && <Pending />}
       <div
         className={'sales-detail-layout' + (staff ? ' sales-detail-staff' : '')}
       >
@@ -1571,7 +1566,6 @@ export function RecordPickedView({
         </span>
       }
     >
-      {!order && <Pending />}
       <div className="sales-pick-screen">
         <InventoryPanel
           title={
