@@ -5,7 +5,7 @@ import CustomerCreditActions from '../../receivables/CustomerCreditActions'
  * File: modules/customers/pages/CustomerDetailPage.tsx
  * Loại: MÀN HÌNH — Chi tiết khách hàng / công nợ.
  * Đường dẫn: /owner/customers/:id/debts, /owner/customers/:id, /branch-manager/customers/:id/debts, /branch-manager/customers/:id.
- * Công dụng: Hồ sơ, công nợ, đơn, thanh toán, lịch sử mua chịu, nhu cầu chưa đáp ứng; hỗ trợ debtView để ưu tiên màn công nợ. PaymentTable là component con hiển thị giao dịch thanh toán.
+ * Công dụng: Hồ sơ, công nợ, đơn, thanh toán, lịch sử mua chịu, nhu cầu chưa đáp ứng; PaymentTable là component con hiển thị giao dịch thanh toán.
  */
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -92,12 +92,8 @@ const status: Record<string, string> = {
   GRANTED: 'Cấp quyền mua chịu',
   REVOKED: 'Thu hồi quyền mua chịu',
 }
-/** CustomerDetailPage: Hồ sơ, công nợ, đơn, thanh toán, lịch sử mua chịu, nhu cầu chưa đáp ứng; hỗ trợ debtView để ưu tiên màn công nợ. PaymentTable là component con hiển thị giao dịch thanh toán. */
-export default function CustomerDetailPage({
-  debtView = false,
-}: {
-  debtView?: boolean
-}) {
+/** CustomerDetailPage: Hồ sơ, công nợ, đơn, thanh toán, lịch sử mua chịu, nhu cầu chưa đáp ứng; PaymentTable là component con hiển thị giao dịch thanh toán. */
+export default function CustomerDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const owner = user?.role === 'OWNER'
@@ -106,7 +102,6 @@ export default function CustomerDetailPage({
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [revision, setRevision] = useState(0)
-  const [tab, setTab] = useState('open')
   const debtResource = useInventoryData<DebtDetail>(
     '/customers/' + id + '/debts',
     {},
@@ -148,10 +143,6 @@ export default function CustomerDetailPage({
       </main>
     )
   const c = data.customer
-  const debts = data.debts.filter(
-    (d) => tab !== 'open' || d.remainingAmount > 0,
-  )
-  const payments = data.payments.filter((p) => p.paymentType === 'DEBT_PAYMENT')
   const badge = (
     <span className={'cp-badge ' + c.creditStatus.toLowerCase()}>
       {credit[c.creditStatus] || c.creditStatus}
@@ -160,39 +151,120 @@ export default function CustomerDetailPage({
   return (
     <main className="dashboard-content customer-profile">
       <header className="cp-heading">
-        <h1>
-          {debtView ? 'Công nợ của ' : ''}
-          {c.customerName}
-        </h1>
+        <h1>{c.customerName}</h1>
         <nav>
           <Link to="/dashboard">Trang chủ</Link> ›{' '}
           <Link to={base}>Khách hàng</Link> › {c.customerName}
         </nav>
       </header>
-      {debtView ? (
-        <>
+      <div className="cp-layout">
+        <div className="cp-main">
           <section className="cp-panel cp-summary">
             <header>
               <h2>
-                {c.customerName} {badge}
+                {c.customerName} <small>#{c.id}</small>
               </h2>
-              <Link className="cp-button" to={`${base}/${id}`}>
-                Hồ sơ khách hàng
-              </Link>
+              <div className="cp-actions">
+                <button className="cp-button" onClick={() => setEditing(true)}>
+                  ✎ Sửa
+                </button>
+                <CustomerCreditActions
+                  data={debtResource.data}
+                  error={debtResource.error}
+                  onSaved={() => setRevision((n) => n + 1)}
+                />
+              </div>
             </header>
-            <dl className="cp-fields four">
+            <dl className="cp-fields">
               <div>
                 <dt>Điện thoại</dt>
                 <dd>{c.phone || '—'}</dd>
               </div>
               <div>
-                <dt>Còn nợ toàn chuỗi</dt>
-                <dd>
-                  <strong>{money(c.totalDebt)}</strong>
-                </dd>
+                <dt>Người liên hệ</dt>
+                <dd>Chưa có thông tin</dd>
               </div>
               <div>
-                <dt>Nợ quá hạn</dt>
+                <dt>Mã số thuế</dt>
+                <dd>{c.taxCode || '—'}</dd>
+              </div>
+              <div>
+                <dt>Quyền mua chịu</dt>
+                <dd>{badge}</dd>
+              </div>
+              <div className="cp-wide">
+                <dt>Địa chỉ</dt>
+                <dd>{c.address || '—'}</dd>
+              </div>
+            </dl>
+          </section>
+          <section className="cp-panel">
+            <h2>
+              Đơn đã mua <small>({data.orderCount})</small>
+            </h2>
+            <div className="cp-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Đơn</th>
+                    <th>Ngày tạo</th>
+                    <th>Cửa hàng</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Hoàn tất</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.orders.map((o) => (
+                    <tr key={o.id}>
+                      <td>#{o.id}</td>
+                      <td>{date(o.createdAt)}</td>
+                      <td>{o.storeName}</td>
+                      <td>{money(o.total)}</td>
+                      <td>
+                        <span className="cp-badge">
+                          {status[o.status] || o.status}
+                        </span>
+                        {o.completionType && (
+                          <small>
+                            {status[o.completionType] || o.completionType}
+                          </small>
+                        )}
+                      </td>
+                      <td>{o.completedAt ? date(o.completedAt) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!data.orders.length && (
+                <p className="cp-empty">Chưa có đơn bán.</p>
+              )}
+            </div>
+            <p className="cp-note">
+              Hiển thị các đơn gần nhất trong phạm vi được phép xem.
+            </p>
+          </section>
+          <PaymentTable rows={data.payments} total={data.paymentCount} />
+          {data.creditHistory.length > 0 && (
+            <section className="cp-panel">
+              <h2>Lịch sử quyền mua chịu</h2>
+              {data.creditHistory.map((e, i) => (
+                <p className="cp-history" key={i}>
+                  {status[e.eventType] || e.eventType} · {date(e.decidedAt)} ·{' '}
+                  {e.decidedBy}
+                  <small>{e.reason}</small>
+                </p>
+              ))}
+            </section>
+          )}
+        </div>
+        <aside className="cp-panel cp-debt">
+          <h2>Công nợ toàn chuỗi</h2>
+          <div>
+            <strong>{money(c.totalDebt)}</strong>
+            <dl className="cp-fields">
+              <div>
+                <dt>Nợ quá hạn {owner ? 'toàn chuỗi' : 'trong phạm vi xem'}</dt>
                 <dd>
                   {debtResource.data
                     ? money(debtResource.data.overdueDebt)
@@ -202,231 +274,39 @@ export default function CustomerDetailPage({
                 </dd>
               </div>
               <div>
-                <dt>Hạn trả gần nhất</dt>
-                <dd title="API chưa cung cấp">—</dd>
+                <dt>Hạn trả sớm nhất</dt>
+                <dd>
+                  {debtResource.data
+                    ? earliestDue
+                      ? date(earliestDue + 'T00:00:00')
+                      : 'Không có khoản còn nợ'
+                    : debtResource.loading
+                      ? 'Đang tải…'
+                      : 'Không tải được'}
+                </dd>
               </div>
             </dl>
-          </section>
-          <section className="cp-panel">
-            <h2>Các khoản nợ</h2>
-            <div className="cp-tabs">
-              <button
-                aria-pressed={tab === 'open'}
-                onClick={() => setTab('open')}
-              >
-                Còn nợ {data.debts.filter((d) => d.remainingAmount > 0).length}
-              </button>
-              <button disabled title="Chưa có dữ liệu hạn trả">
-                Quá hạn —
-              </button>
-              <button
-                aria-pressed={tab === 'all'}
-                onClick={() => setTab('all')}
-              >
-                Khoản nợ hiện có {data.debts.length}
-              </button>
-            </div>
-            <div className="cp-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Khoản nợ</th>
-                    <th>Nguồn</th>
-                    <th>Ngày ghi nợ</th>
-                    <th>Hạn trả</th>
-                    <th>Số nợ</th>
-                    <th>Đã thu</th>
-                    <th>Còn lại</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {debts.map((d) => (
-                    <tr key={d.id}>
-                      <td id={`customer-debt-${d.id}`}>#{d.id}</td>
-                      <td>
-                        {status[d.originType] || d.originType}
-                        {d.salesOrderId != null && (
-                          <small>Đơn #{d.salesOrderId}</small>
-                        )}
-                        <small>{d.storeName}</small>
-                      </td>
-                      <td>{date(d.recognizedAt)}</td>
-                      <td>—</td>
-                      <td>{money(d.originalAmount)}</td>
-                      <td>{money(d.originalAmount - d.remainingAmount)}</td>
-                      <td>{money(d.remainingAmount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!debts.length && (
-                <p className="cp-empty">
-                  Khách không còn khoản nợ nào trong phạm vi dữ liệu được xem.
-                </p>
-              )}
-            </div>
-            <p className="cp-note">
-              API chỉ trả khoản nợ chưa tất toán trong phạm vi được phép; chưa
-              có lịch sử toàn bộ khoản nợ hoặc hạn trả.
-            </p>
-          </section>
-          <PaymentTable rows={payments} debtOnly />
-        </>
-      ) : (
-        <div className="cp-layout">
-          <div className="cp-main">
-            <section className="cp-panel cp-summary">
-              <header>
-                <h2>
-                  {c.customerName} <small>#{c.id}</small>
-                </h2>
-                <div className="cp-actions">
-                  <button
-                    className="cp-button"
-                    onClick={() => setEditing(true)}
-                  >
-                    ✎ Sửa
-                  </button>
-                  <CustomerCreditActions
-                    id={id!}
-                    onSaved={() => setRevision((n) => n + 1)}
-                  />
-                </div>
-              </header>
-              <dl className="cp-fields">
-                <div>
-                  <dt>Điện thoại</dt>
-                  <dd>{c.phone || '—'}</dd>
-                </div>
-                <div>
-                  <dt>Người liên hệ</dt>
-                  <dd>Chưa có thông tin</dd>
-                </div>
-                <div>
-                  <dt>Mã số thuế</dt>
-                  <dd>{c.taxCode || '—'}</dd>
-                </div>
-                <div>
-                  <dt>Quyền mua chịu</dt>
-                  <dd>{badge}</dd>
-                </div>
-                <div className="cp-wide">
-                  <dt>Địa chỉ</dt>
-                  <dd>{c.address || '—'}</dd>
-                </div>
-              </dl>
-            </section>
-            <section className="cp-panel">
-              <h2>
-                Đơn đã mua <small>({data.orderCount})</small>
-              </h2>
-              <div className="cp-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Đơn</th>
-                      <th>Ngày tạo</th>
-                      <th>Cửa hàng</th>
-                      <th>Tổng tiền</th>
-                      <th>Trạng thái</th>
-                      <th>Hoàn tất</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.orders.map((o) => (
-                      <tr key={o.id}>
-                        <td>#{o.id}</td>
-                        <td>{date(o.createdAt)}</td>
-                        <td>{o.storeName}</td>
-                        <td>{money(o.total)}</td>
-                        <td>
-                          <span className="cp-badge">
-                            {status[o.status] || o.status}
-                          </span>
-                          {o.completionType && (
-                            <small>
-                              {status[o.completionType] || o.completionType}
-                            </small>
-                          )}
-                        </td>
-                        <td>{o.completedAt ? date(o.completedAt) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!data.orders.length && (
-                  <p className="cp-empty">Chưa có đơn bán.</p>
-                )}
-              </div>
-              <p className="cp-note">
-                Hiển thị các đơn gần nhất trong phạm vi được phép xem.
+            {!owner && (
+              <p>
+                Nợ tại cửa hàng:{' '}
+                {c.debtAtOwnStore == null ? '—' : money(c.debtAtOwnStore)}
               </p>
-            </section>
-            <PaymentTable rows={data.payments} total={data.paymentCount} />
-            {data.creditHistory.length > 0 && (
-              <section className="cp-panel">
-                <h2>Lịch sử quyền mua chịu</h2>
-                {data.creditHistory.map((e, i) => (
-                  <p className="cp-history" key={i}>
-                    {status[e.eventType] || e.eventType} · {date(e.decidedAt)} ·{' '}
-                    {e.decidedBy}
-                    <small>{e.reason}</small>
-                  </p>
-                ))}
-              </section>
+            )}
+            <p>
+              {c.totalDebt === 0
+                ? 'Không còn khoản nợ nào.'
+                : 'Còn nợ toàn chuỗi.'}
+            </p>
+            <Link className="cp-button" to={`${base}/${id}/debts`}>
+              Xem công nợ
+            </Link>
+            {debtResource.error && (
+              <small role="alert">{debtResource.error}</small>
             )}
           </div>
-          <aside className="cp-panel cp-debt">
-            <h2>Công nợ toàn chuỗi</h2>
-            <div>
-              <strong>{money(c.totalDebt)}</strong>
-              <dl className="cp-fields">
-                <div>
-                  <dt>
-                    Nợ quá hạn {owner ? 'toàn chuỗi' : 'trong phạm vi xem'}
-                  </dt>
-                  <dd>
-                    {debtResource.data
-                      ? money(debtResource.data.overdueDebt)
-                      : debtResource.loading
-                        ? 'Đang tải…'
-                        : 'Không tải được'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Hạn trả sớm nhất</dt>
-                  <dd>
-                    {debtResource.data
-                      ? earliestDue
-                        ? date(earliestDue + 'T00:00:00')
-                        : 'Không có khoản còn nợ'
-                      : debtResource.loading
-                        ? 'Đang tải…'
-                        : 'Không tải được'}
-                  </dd>
-                </div>
-              </dl>
-              {!owner && (
-                <p>
-                  Nợ tại cửa hàng:{' '}
-                  {c.debtAtOwnStore == null ? '—' : money(c.debtAtOwnStore)}
-                </p>
-              )}
-              <p>
-                {c.totalDebt === 0
-                  ? 'Không còn khoản nợ nào.'
-                  : 'Còn nợ toàn chuỗi.'}
-              </p>
-              <Link className="cp-button" to={`${base}/${id}/debts`}>
-                Xem công nợ
-              </Link>
-              {debtResource.error && (
-                <small role="alert">{debtResource.error}</small>
-              )}
-            </div>
-          </aside>
-        </div>
-      )}
+        </aside>
+      </div>
+
       {data && (
         <section className="cp-panel">
           <h2>Nhu cầu chưa đáp ứng</h2>

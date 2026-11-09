@@ -5,7 +5,7 @@ Nhánh: feature/FE-08-receivables-management. Phạm vi UC-62 đến UC-67 theo 
 - /receivables: danh sách còn nợ, tìm khách, chỉ quá hạn, phân trang server; Owner lọc cửa hàng/toàn chuỗi, BM do BE giới hạn cửa hàng.
 - /receivables/customers/:id: dư nợ theo phạm vi và toàn chuỗi, khoản nợ còn mở/quá hạn/tất cả, hạn trả, điều chỉnh, số đã thu, lịch sử và phân bổ thu nợ.
 - Popup thu nợ gọi preview BE; giữ nguyên snapshot số dư và phân bổ khi xác nhận. Không tự tính thứ tự phân bổ. Hỗ trợ tiền mặt, tiền thối, chuyển khoản và mã giao dịch, chọn khoản nợ hoặc để BE phân bổ tự động.
-- Owner cấp/thu hồi mua chịu có lý do và ghi nợ đầu kỳ theo cửa hàng, số tiền, hạn trả, diễn giải, chứng từ bắt buộc. Popup có trên chi tiết công nợ và hồ sơ khách hàng.
+- Owner cấp/thu hồi mua chịu có lý do và ghi nợ đầu kỳ theo cửa hàng, số tiền, hạn trả, diễn giải, chứng từ bắt buộc. Popup có trên hồ sơ khách hàng; ghi nợ đầu kỳ còn có trên danh sách công nợ.
 - Staff không được mở route công nợ. Chống gửi lặp; BE kiểm quyền và số dư cuối cùng. Khi lỗi ghi tiền phải xem preview lại.
 
 Dùng API /receivables/customers và /customers/:id/{debts,credit/grant,credit/revoke,opening-debts,debt-payments/preview,debt-payments}. Migration DB thuộc BE đã có, không tạo migration FE. Tải chứng từ dùng dịch vụ ATTACHMENT có sẵn; cần Cloudinary được cấu hình để ghi nợ đầu kỳ.
@@ -23,3 +23,5 @@ Phụ thuộc BE để khớp đủ mockup: API tổng hợp tổng phải thu/q
 Đã hiển thị chứng từ khoản nợ/phiếu thu, người ghi nợ, ngày tất toán, số dư hiện tại trong phân bổ. Popup thu nợ hỗ trợ chứng từ, tiền khách đưa, tiền thối và chặn tiền thiếu. Preview tự tải từ BE trong cùng popup; xác nhận trước khi ghi thu. Không sửa BE/database.
 
 Kèm sửa R-02 FE-07: gửi status cùng view/page/size và dùng phân trang BE, bỏ tải toàn bộ danh sách. Kiểm tra cuối: build đạt, 59/59 test đạt, lint module mới đạt. Chưa kiểm thử giao dịch thật hoặc xác minh trực quan trên trình duyệt.
+
+API tổng hợp công nợ và dueSoon được nhóm chuyển sang Iteration 3 (BE Mạnh, sau đó FE nối). Hiện giữ dấu — kèm ghi chú.
