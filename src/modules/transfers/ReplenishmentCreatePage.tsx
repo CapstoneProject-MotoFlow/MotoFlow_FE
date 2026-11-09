@@ -1,3 +1,4 @@
+import BarcodeScan from '../operations/BarcodeScan'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -9,7 +10,7 @@ import {
 import { InventoryNotice } from '../inventory/components'
 import type { DashboardStore } from '../../shared/types/store'
 import { transferQuantitiesValid } from './transferRules'
-import StoreStock from './StoreStock'
+import { useCompleteStock } from '../inventory/useCompleteStock'
 import { useChoicePages } from '../sales/useSalesList'
 import './transfers.css'
 type Row = {
@@ -52,6 +53,34 @@ export default function ReplenishmentCreatePage() {
       0,
       !!destination,
     )
+  const productIds = [
+    ...new Set(rows.filter((r) => r.productId > 0).map((r) => r.productId)),
+  ].join(',')
+  const availability = useInventoryData<
+    { storeId: number; productId: number; sellableQty: number }[]
+  >('/inventory/availability', { productIds }, 0, scope.owner && !!productIds)
+  const ownStock = useCompleteStock(
+    {},
+    0,
+    !scope.owner && !!productIds && !!destination,
+    String(scope.user?.id ?? ''),
+  )
+  function stockText(storeId: string, productId: number) {
+    if (!storeId) return 'Chọn cửa hàng'
+    if (!productId) return 'Chọn phụ tùng'
+    const data = scope.owner ? availability : ownStock
+    if (data.loading) return 'Đang tải…'
+    if (data.error) return <span title={data.error}>Không tải được</span>
+    if (!data.data) return '—'
+    if (scope.owner)
+      return (
+        availability.data?.find(
+          (s) => s.storeId === Number(storeId) && s.productId === productId,
+        )?.sellableQty ?? 0
+      )
+    const row = ownStock.data?.find((s) => s.productId === productId)
+    return row ? Math.max(0, row.availableQty - row.expiredQty) : 0
+  }
   async function save() {
     if (lock.current || !valid) return
     lock.current = true
@@ -210,26 +239,16 @@ export default function ReplenishmentCreatePage() {
                         />
                       </td>
                       <td>
-                        {row.productId > 0 ? (
-                          <StoreStock
-                            storeId={destination}
-                            productId={row.productId}
-                          />
-                        ) : (
-                          '—'
-                        )}
+                        {row.productId > 0
+                          ? stockText(destination, row.productId)
+                          : '—'}
                       </td>
                       <td>
-                        {row.productId > 0 && central ? (
-                          <StoreStock
-                            storeId={String(central.id)}
-                            productId={row.productId}
-                          />
-                        ) : scope.owner ? (
-                          'Chọn phụ tùng'
-                        ) : (
-                          'Chưa có dữ liệu được phép xem'
-                        )}
+                        {row.productId > 0 && central
+                          ? stockText(String(central.id), row.productId)
+                          : scope.owner
+                            ? 'Chọn phụ tùng'
+                            : 'Chưa có dữ liệu được phép xem'}
                       </td>
                       <td>
                         <input
@@ -331,9 +350,20 @@ export function PartChoice({
     choices = useChoicePages<{ id: number; sku: string; partName: string }>(
       '/products',
       query,
+      open,
     )
   return (
     <div className="tf-part-choice">
+      <BarcodeScan
+        onFound={(p) => {
+          if (excluded.includes(p.productId))
+            throw new Error(
+              'Phụ tùng đã có trong phiếu. Hãy sửa số lượng ở dòng hiện có.',
+            )
+          onChange({ productId: p.productId, sku: p.sku, partName: p.partName })
+          setOpen(false)
+        }}
+      />
       <input
         aria-label="Tìm và chọn phụ tùng"
         role="combobox"

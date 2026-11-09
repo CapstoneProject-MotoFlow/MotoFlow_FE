@@ -12,9 +12,14 @@ import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
 import { states, type Replenishment } from './types'
 import './transfers.css'
+import { purchaseQuantityLimit, hasExistingPurchase } from './transferRules'
 export function ReplenishmentDetailPage() {
   const [revision, setRevision] = useState(0),
-    [purchase, setPurchase] = useState(false)
+    [purchase, setPurchase] = useState(false),
+    [createdPurchase, setCreatedPurchase] = useState<{
+      requestId: number
+      id: number
+    }>()
   const { id } = useParams(),
     scope = useInventoryScope(),
     r = useInventoryData<Replenishment>(
@@ -33,7 +38,7 @@ export function ReplenishmentDetailPage() {
           <Link to="/replenishment-requests">← Yêu cầu bổ sung</Link>
           <h1>Yêu cầu bổ sung #{id}</h1>
         </div>
-        {r.data && canCoordinate && (
+        {r.data && r.data.status !== 'CLOSED' && canCoordinate && (
           <Link
             className="tf-primary"
             to={'/transfer-orders/new?requestId=' + id}
@@ -50,7 +55,9 @@ export function ReplenishmentDetailPage() {
             setPurchase(false)
             setRevision((n) => n + 1)
           }}
-          onSaved={() => {}}
+          onSaved={(purchaseId) =>
+            setCreatedPurchase({ requestId: r.data!.id, id: purchaseId })
+          }
         />
       )}
       {r.data && (
@@ -102,7 +109,20 @@ export function ReplenishmentDetailPage() {
                   {r.data.lines.filter((l) => l.toPurchaseQty > 0).length} phụ
                   tùng cần mua bổ sung.
                 </p>
-                {scope.owner ? (
+                {createdPurchase?.requestId === r.data.id ? (
+                  <p role="status">
+                    Đã tạo{' '}
+                    <Link to={'/purchase-orders/' + createdPurchase.id}>
+                      phiếu nhập hàng #{createdPurchase.id}
+                    </Link>{' '}
+                    cho phần chuyển mua trong lần làm việc này.
+                  </p>
+                ) : hasExistingPurchase(r.data.purchaseOrders) ? (
+                  <p>
+                    Yêu cầu đã có phiếu nhập hàng. Kiểm tra các phiếu liên quan
+                    trước khi lập thêm.
+                  </p>
+                ) : scope.owner && r.data.status !== 'CLOSED' ? (
                   <button
                     className="tf-primary"
                     onClick={() => setPurchase(true)}
@@ -114,16 +134,19 @@ export function ReplenishmentDetailPage() {
                 )}
               </div>
             )}
-            {canCoordinate && (
+            {canCoordinate && r.data.status !== 'CLOSED' && (
               <CoordinationAction
                 replenishment
                 id={r.data.id}
                 lines={r.data.lines
-                  .filter((l) => l.remainingQty > 0)
+                  .filter(
+                    (l) => purchaseQuantityLimit(l) > 0 || l.toPurchaseQty > 0,
+                  )
                   .map((l) => ({
                     productId: l.productId,
                     sku: l.sku,
-                    quantity: l.remainingQty,
+                    quantity: purchaseQuantityLimit(l),
+                    currentPurchaseQty: l.toPurchaseQty,
                   }))}
                 onSaved={() => setRevision((n) => n + 1)}
               />

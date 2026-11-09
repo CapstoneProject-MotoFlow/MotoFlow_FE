@@ -1,4 +1,5 @@
 import ProductRowActions from '../components/ProductRowActions'
+import BarcodeScan from '../../operations/BarcodeScan'
 import {
   categoryOptions,
   visibleCategories,
@@ -13,7 +14,7 @@ import { searchProducts } from '../api/searchProducts'
 import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import Icon from '../../../shared/ui/Icon'
@@ -23,6 +24,7 @@ type Model = { id: number; manufacturer: string; modelName: string }
 /** PartsSearchPage: Tìm phụ tùng cho BM/Staff; lọc loại xe, nhóm, dòng xe, thương hiệu và hàng còn tồn; mở chi tiết; hiện nút tạo nếu được phép. */
 export default function PartsSearchPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const canCreate = canEditCatalog(user)
   const base =
     user?.role === 'STAFF' ? '/staff/products' : '/branch-manager/products'
@@ -156,6 +158,12 @@ export default function PartsSearchPage() {
                 + Thêm phụ tùng
               </Link>
             )}
+          </div>
+          <div className="bm-products-barcode">
+            <BarcodeScan
+              allowInactive
+              onFound={(part) => navigate(`${base}/${part.productId}`)}
+            />
           </div>
           <div className="bm-products-search">
             <label className="bm-product-query">

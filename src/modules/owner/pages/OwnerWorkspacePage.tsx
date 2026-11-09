@@ -4,6 +4,7 @@ import {
   type Category,
 } from '../../catalog/api/searchProducts'
 import ProductRowActions from '../../catalog/components/ProductRowActions'
+import BarcodeScan from '../../operations/BarcodeScan'
 import { searchProducts } from '../../catalog/api/searchProducts'
 /**
  * File: modules/owner/pages/OwnerWorkspacePage.tsx
@@ -140,6 +141,10 @@ export default function OwnerWorkspacePage({
         </span>
       </div>
       <section className="owner-panel">
+        <BarcodeScan
+          allowInactive
+          onFound={(part) => navigate(`/owner/products/${part.productId}`)}
+        />
         <header className="parts-panel-heading">
           <h2>{inventory ? 'Tra cứu tồn kho' : 'Tìm phụ tùng'}</h2>
           {!inventory && (

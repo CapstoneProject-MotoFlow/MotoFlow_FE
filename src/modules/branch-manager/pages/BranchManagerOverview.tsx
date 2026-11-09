@@ -1,3 +1,5 @@
+import BranchWorkBoard from './BranchWorkBoard'
+import { useBranchWork } from './useBranchWork'
 /**
  * File: modules/branch-manager/pages/BranchManagerOverview.tsx
  * Loại: MÀN HÌNH — Tổng quan quản lý chi nhánh.
@@ -7,7 +9,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
-import { useAuth } from '../../../shared/hooks/useAuth'
 import { loadBranchHome, type BranchHome } from '../services/branchHomeService'
 import './branch-overview.css'
 const cards: {
@@ -15,9 +16,11 @@ const cards: {
   icon: IconName
   keys: string[]
   color: string
+  href?: string
 }[] = [
   {
     label: 'Đơn bán cần xử lý',
+    href: '/sales-orders',
     icon: 'receipt',
     keys: [
       'ORDERS_TO_ASSIGN',
@@ -28,38 +31,41 @@ const cards: {
   },
   {
     label: 'Hàng nhập cần xử lý',
+    href: '/purchase-orders',
     icon: 'clipboard',
     keys: ['RECEIPTS_TO_ASSIGN', 'RECEIPTS_AWAITING_CONFIRMATION'],
     color: 'orange',
   },
   {
     label: 'Điều chuyển cần xử lý',
+    href: '/transfer-orders',
     icon: 'truck',
     keys: ['TRANSFERS_AWAITING_DISPATCH'],
     color: 'cyan',
   },
   {
     label: 'Bổ sung hàng cần xử lý',
+    href: '/replenishment-requests',
     icon: 'transfer',
     keys: ['REPLENISHMENTS_AWAITING_COORDINATION'],
     color: 'blue',
   },
   {
-    label: 'Thanh toán chờ xác minh',
+    label: 'Kiểm kê cần xử lý',
+    href: '/stock-counts',
     icon: 'checklist',
-    keys: ['PAYMENTS_AWAITING_VERIFICATION'],
+    keys: ['BM_COUNTS_OPEN'],
     color: 'orange',
   },
   {
-    label: 'Sai lệch đang mở',
+    label: 'Điều chỉnh chưa gửi',
     icon: 'sliders',
-    keys: ['OPEN_DISCREPANCIES'],
+    keys: [],
     color: 'orange',
   },
 ]
 /** BranchManagerOverview: Tổng quan việc chờ và phạm vi cửa hàng của BM. */
 export default function BranchManagerOverview() {
-  const { user } = useAuth()
   const [data, setData] = useState<BranchHome | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -82,7 +88,16 @@ export default function BranchManagerOverview() {
       active = false
     }
   }, [revision])
+  const work = useBranchWork(
+    !!data?.shortcuts.some(
+      (s) => s.key === 'REPLENISHMENTS_AWAITING_COORDINATION',
+    ),
+  )
   function count(keys: string[]) {
+    if (keys.includes('BM_COUNTS_OPEN'))
+      return work.countError
+        ? '—'
+        : (work.countTotal?.toLocaleString('vi-VN') ?? '—')
     if (
       loading ||
       error ||
@@ -120,89 +135,38 @@ export default function BranchManagerOverview() {
         aria-label="Việc cần xử lý"
         aria-busy={loading}
       >
-        {cards
-          .filter(
-            (card) =>
-              !data ||
-              !card.keys.includes('REPLENISHMENTS_AWAITING_COORDINATION') ||
-              data.shortcuts.some(
-                (item) => item.key === 'REPLENISHMENTS_AWAITING_COORDINATION',
-              ),
-          )
-          .map((card) => (
-            <article className="bm-summary-card" key={card.label}>
+        {cards.map((card) => {
+          const content = (
+            <>
               <span className={'bm-card-icon ' + card.color}>
                 <Icon name={card.icon} />
               </span>
-              {card.keys.includes('OPEN_DISCREPANCIES') ? (
-                <Link to="/supplier-discrepancies">{card.label}</Link>
-              ) : (
-                <span>{card.label}</span>
-              )}
+              <span className="bm-summary-label">{card.label}</span>
               <strong>{count(card.keys)}</strong>
-              {!card.keys.length && (
-                <span
-                  className="bm-info"
-                  title="Chưa có dữ liệu từ hệ thống"
-                  aria-label="Chưa có dữ liệu từ hệ thống"
-                >
-                  ⓘ
-                </span>
-              )}
+              <span className="bm-card-arrow" aria-hidden="true">
+                ›
+              </span>
+            </>
+          )
+          return card.href ? (
+            <Link className="bm-summary-card" key={card.label} to={card.href}>
+              {content}
+            </Link>
+          ) : (
+            <article
+              className="bm-summary-card is-unavailable"
+              key={card.label}
+              title="Chức năng điều chỉnh kho chưa có API"
+            >
+              {content}
             </article>
-          ))}
+          )
+        })}
       </section>
-      <div className="bm-overview-columns">
-        <section className="bm-panel">
-          <h2>Việc chờ lâu nhất</h2>
-          <div className="bm-work-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Chứng từ</th>
-                  <th>Việc</th>
-                  <th>Đã chờ</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={4} className="bm-unavailable">
-                    {loading
-                      ? 'Đang tải tổng quan…'
-                      : 'Chưa có dữ liệu chi tiết về các công việc chờ xử lý.'}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <footer>
-            Số lượng việc cần xử lý được cập nhật từ hệ thống theo phạm vi cửa
-            hàng.
-          </footer>
-        </section>
-        <aside className="bm-panel bm-monitor">
-          <h2>Theo dõi</h2>
-          <section>
-            <p>Doanh số hôm nay</p>
-            <strong>—</strong>
-            <small>Chưa có dữ liệu doanh số.</small>
-          </section>
-          <section>
-            <p>
-              Tồn dưới ngưỡng ·{' '}
-              {data?.storeName || user?.storeName || 'Cửa hàng được phân công'}
-            </p>
-            <strong>—</strong>
-            <small>Chưa có dữ liệu cảnh báo tồn kho.</small>
-          </section>
-          <section>
-            <p>Lô sắp hết hạn</p>
-            <strong>—</strong>
-            <small>Chưa có dữ liệu hạn sử dụng của lô hàng.</small>
-          </section>
-        </aside>
-      </div>
+      <BranchWorkBoard
+        data={work}
+        storeName={data?.storeName ?? 'Kho của bạn'}
+      />
     </main>
   )
 }

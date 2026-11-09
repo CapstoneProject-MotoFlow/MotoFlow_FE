@@ -1,5 +1,7 @@
 # Bổ sung FE theo mockup toàn bộ ba iteration — 08/11/2026
 
+**Cập nhật 09/11/2026:** kiểm kê CYCLE/YEAR_END đã nối API BE hiện có; các ghi chú “chờ BE” phía dưới là lịch sử. Xem FE05_FE13_API_AUDIT_2026-11-09.md phần cập nhật sau xử lý. OPENING và API kỳ kho/điều chỉnh còn phụ thuộc BE.
+
 Nguồn đối chiếu: MotoFlow_UI_ToanBo.html và các file screens_count.js, screens_lots.js, iteration3.js trong bộ MotoFlow_UI_ToanBo người dùng cung cấp.
 
 - Giữ lọc ngày nhận tại tab Đã hết hàng theo mockup; không mở rộng sang tab khác.

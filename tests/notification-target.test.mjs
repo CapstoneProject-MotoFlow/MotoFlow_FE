@@ -63,7 +63,7 @@ test('unknown references, invalid IDs and Admin never create invented or externa
       noticeTarget({ refType: 'LOT', refId: id }, 'OWNER'),
       undefined,
     )
-  for (const refType of ['https://example.com', 'TRANSFER_ORDER', null])
+  for (const refType of ['https://example.com', 'UNKNOWN_DOCUMENT', null])
     assert.equal(noticeTarget({ refType, refId: 1 }, 'OWNER'), undefined)
   assert.equal(
     noticeTarget({ refType: 'PRODUCT', refId: 1 }, 'ADMIN'),
@@ -85,9 +85,9 @@ test('purchasing notifications open implemented FE-05 routes only for Owner and 
       noticeTarget({ refType: 'SUPPLIER_DISCREPANCY', refId: 8 }, role),
       undefined,
     )
-    assert.equal(
+    assert.deepEqual(
       noticeTarget({ refType: 'REPLENISHMENT_REQUEST', refId: 8 }, role),
-      undefined,
+      { path: '/replenishment-requests/8' },
     )
   }
   assert.equal(
@@ -120,4 +120,22 @@ test('sales order notices open FE07 for all business roles', () => {
     assert.deepEqual(noticeTarget({ refType: 'SALES_ORDER', refId: 9 }, role), {
       path: '/sales-orders/9',
     })
+})
+
+test('transfer and replenishment notifications use the implemented role routes', () => {
+  assert.deepEqual(
+    noticeTarget({ refType: 'TRANSFER_ORDER', refId: 4 }, 'STAFF'),
+    { path: '/transfer-orders/4' },
+  )
+  assert.deepEqual(
+    noticeTarget(
+      { refType: 'REPLENISHMENT_REQUEST', refId: 5 },
+      'BRANCH_MANAGER',
+    ),
+    { path: '/replenishment-requests/5' },
+  )
+  assert.equal(
+    noticeTarget({ refType: 'REPLENISHMENT_REQUEST', refId: 5 }, 'STAFF'),
+    undefined,
+  )
 })

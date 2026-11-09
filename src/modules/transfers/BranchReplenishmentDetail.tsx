@@ -88,6 +88,7 @@ export default function BranchReplenishmentDetail({
                     <th>Đã lập kế hoạch</th>
                     <th>Đã nhận</th>
                     <th>Chuyển mua</th>
+                    <th>Còn thiếu</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -101,6 +102,7 @@ export default function BranchReplenishmentDetail({
                       <td>{l.plannedQty}</td>
                       <td>{l.fulfilledQty}</td>
                       <td>{l.toPurchaseQty}</td>
+                      <td>{l.remainingQty}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -120,6 +122,22 @@ export default function BranchReplenishmentDetail({
             ))}
             {!d.transferOrders.length && (
               <p className="tf-empty">Chưa có lệnh điều chuyển.</p>
+            )}
+          </section>
+          <section>
+            <h2>Phiếu nhập hàng</h2>
+            {d.purchaseOrders.map((p) => (
+              <div className="tf-branch-transfer" key={p.id}>
+                <Link to={'/purchase-orders/' + p.id}>
+                  Đơn mua #{p.id} · {p.supplierName}
+                </Link>
+                <span className="tf-badge">
+                  {purchaseStatuses[p.status] ?? p.status}
+                </span>
+              </div>
+            ))}
+            {!d.purchaseOrders.length && (
+              <p className="tf-empty">Chưa có phiếu nhập hàng liên kết.</p>
             )}
           </section>
         </div>
@@ -147,4 +165,10 @@ export default function BranchReplenishmentDetail({
       </div>
     </main>
   )
+}
+const purchaseStatuses: Record<string, string> = {
+  AWAITING_DELIVERY: 'Chờ giao hàng',
+  RECEIVING: 'Đang nhận hàng',
+  FULLY_RECEIVED: 'Đã nhận đủ',
+  CANCELLED: 'Đã hủy',
 }

@@ -1,0 +1,482 @@
+/* Shared visual rhythm for the operational screens in the supplied mockup. */
+.dashboard-content.rv-page,
+.inventory-workspace.sales-workspace,
+.inventory-workspace.count-workspace,
+.dashboard-content.tf-page {
+  width: calc(100% - 48px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-top: 24px;
+  padding-bottom: 32px;
+  gap: 20px;
+}
+.rv-page > .stock-heading,
+.sales-workspace > .stock-heading,
+.count-workspace > .stock-heading {
+  margin-bottom: 0;
+  min-height: 32px;
+}
+.count-workspace > .stock-heading {
+  margin-bottom: 20px;
+}
+.rv-page > .stock-heading h1,
+.sales-workspace > .stock-heading h1,
+.count-workspace > .stock-heading h1,
+.tf-page > header h1 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+.rv-page > .stock-heading nav,
+.sales-workspace > .stock-heading nav,
+.tf-page > header nav {
+  font-size: 13px;
+  color: #475467;
+}
+.sales-workspace .stock-panel,
+.count-workspace .stock-panel,
+.rv-page .stock-panel {
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+.count-workspace > .stock-panel + .stock-panel {
+  margin-top: 20px;
+}
+.sales-workspace .stock-panel-heading,
+.count-workspace .stock-panel-heading {
+  padding: 18px 20px;
+}
+.sales-workspace .stock-panel-heading h2,
+.count-workspace .stock-panel-heading h2,
+.tf-list-heading h2 {
+  font-size: 16px;
+  line-height: 24px;
+}
+.sales-workspace .stock-filter,
+.sales-workspace .stock-filters > label {
+  font-size: 13px;
+}
+.sales-workspace .stock-tabs {
+  margin-bottom: 0;
+}
+.sales-workspace .stock-tabs button[aria-pressed='true'] {
+  background: #fff;
+  color: #1d2939;
+  box-shadow: 0 1px 3px #1018281a;
+}
+.rv-page .rv-filters label:has(input[type='checkbox']),
+.tf-page .tf-filters label:has(input[type='checkbox']) {
+  display: inline-flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 8px;
+  min-height: 38px;
+}
+.rv-page input[type='checkbox'],
+.tf-page input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin: 0;
+  accent-color: #465fff;
+}
+.rv-page .rv-overview {
+  gap: 20px;
+}
+.rv-page .rv-overview > article,
+.rv-page .rv-overview > button {
+  min-height: 150px;
+  padding: 20px;
+  gap: 8px;
+  border-radius: 14px;
+}
+.rv-page .rv-overview strong {
+  font-size: 24px;
+  line-height: 32px;
+  margin: 0;
+}
+.rv-page .rv-overview small {
+  font-size: 12px;
+}
+.rv-page .rv-overview .rv-stat-icon {
+  width: 40px;
+  height: 40px;
+}
+.rv-page .rv-filters {
+  padding: 16px 20px;
+  gap: 12px;
+  align-items: center;
+}
+.rv-page .rv-filters input:not([type='checkbox']),
+.rv-page .rv-filters select {
+  height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.rv-page .rv-table td {
+  font-size: 14px;
+  padding: 16px 20px;
+}
+.rv-page .rv-table th,
+.rv-page .rv-table small {
+  font-size: 12px;
+}
+.tf-page .tf-list-search {
+  align-items: center;
+  gap: 10px;
+}
+.tf-list-search > details {
+  flex-basis: 100%;
+  margin-top: 2px;
+}
+.tf-list-search > details[open] {
+  display: block;
+}
+.tf-list-search > details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  list-style: none;
+  padding: 6px 0;
+}
+.tf-list-search > details > summary::before {
+  content: '▸';
+  font-size: 11px;
+}
+.tf-list-search > details[open] > summary::before {
+  content: '▾';
+}
+.tf-list-search > details > summary::-webkit-details-marker {
+  display: none;
+}
+.tf-list-search > details > label {
+  display: inline-grid;
+  vertical-align: top;
+  margin: 8px 12px 0 0;
+  gap: 6px;
+}
+.tf-list-search > details > label input {
+  width: 160px;
+}
+.count-workspace .stock-empty {
+  padding: 42px 20px;
+}
+.count-workspace .stock-table button {
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  padding: 8px 12px;
+  font: inherit;
+  color: #344054;
+  cursor: pointer;
+}
+.count-workspace .stock-table button.count-primary {
+  background: #465fff;
+  border-color: #465fff;
+  color: #fff;
+}
+.count-workspace .stock-table td,
+.count-workspace .stock-table th {
+  padding: 14px 20px;
+  font-size: 13px;
+}
+.count-workspace .stock-table th {
+  font-size: 12px;
+}
+.count-workspace .stock-table small {
+  display: block;
+  line-height: 1.5;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 12px;
+}
+.count-workspace .stock-table td {
+  white-space: normal;
+}
+@media (max-width: 700px) {
+  .dashboard-content.rv-page,
+  .inventory-workspace.sales-workspace,
+  .inventory-workspace.count-workspace,
+  .dashboard-content.tf-page {
+    width: calc(100% - 24px);
+    padding-top: 20px;
+  }
+  .rv-page > .stock-heading,
+  .sales-workspace > .stock-heading,
+  .tf-page > header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .rv-page > .stock-heading nav,
+  .tf-page > header nav {
+    width: 100%;
+  }
+}
+.rv-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.rv-heading-actions > button {
+  border: 1px solid #465fff;
+  background: #465fff;
+  color: white;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font: inherit;
+}
+.past-stock-quick {
+  display: flex;
+  gap: 4px;
+  background: #f2f4f7;
+  border-radius: 7px;
+  padding: 3px;
+  align-self: center;
+}
+.tf-page .past-stock-quick button {
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.past-stock-page .tf-filters {
+  padding: 16px 20px;
+  align-items: flex-end;
+  gap: 12px;
+}
+.past-stock-page .past-stock-quick {
+  margin: 16px 20px 0;
+  width: fit-content;
+  max-width: calc(100% - 40px);
+  flex-wrap: wrap;
+}
+.past-stock-page .tf-filters > label {
+  min-width: 0;
+  max-width: 220px;
+  flex: 1 1 160px;
+}
+.past-stock-page .tf-filters > .past-stock-date {
+  flex: 0 1 155px;
+}
+.past-stock-page .tf-filters > .past-stock-zero {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 38px;
+  white-space: nowrap;
+  margin: 0;
+}
+.past-stock-page .tf-filters > .past-stock-zero input {
+  margin: 0;
+  flex-shrink: 0;
+}
+.past-stock-page .tf-filters :is(input:not([type='checkbox']), select) {
+  width: 100%;
+}
+.past-stock-page section > .tf-note {
+  margin: 0;
+  padding: 10px 20px;
+  background: #fafbfc;
+  border-top: 1px solid #edf0f4;
+  font-size: 12px;
+}
+.past-stock-page .tf-filters label {
+  font-size: 13px;
+}
+.past-stock-page .tf-filters input:not([type='checkbox']),
+.past-stock-page .tf-filters select {
+  min-height: 38px;
+}
+.tf-page .tf-list-search > details[open] {
+  display: block;
+}
+.tf-page .tf-list-search > details {
+  flex-basis: 100%;
+}
+.tf-page .tf-list-search > details label {
+  display: inline-grid;
+  margin-top: 8px;
+  vertical-align: top;
+}
+.tf-page .tf-list-search > details summary {
+  display: inline-flex;
+}
+.owner-overview .operation-work-panel table {
+  table-layout: auto;
+  width: 100%;
+  border-collapse: collapse;
+}
+.owner-overview .operation-work-panel th:first-child {
+  width: auto;
+}
+.owner-overview .operation-work-panel th:nth-child(2) {
+  width: auto;
+}
+.operation-work-panel .stock-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+.operation-work-panel .stock-table td:last-child {
+  white-space: nowrap;
+  min-width: 110px;
+}
+.operation-work-panel .stock-table small {
+  display: block;
+  line-height: 1.6;
+}
+.count-tab-number {
+  margin-left: 6px;
+  background: #eef4ff;
+  color: #465fff;
+  border-radius: 12px;
+  font-size: 11px;
+  padding: 1px 5px;
+}
+.count-extra-filters {
+  font-size: 13px;
+  color: #475467;
+}
+.count-extra-filters summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.count-extra-filters > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+.count-extra-filters label {
+  display: grid;
+  gap: 6px;
+}
+.count-status {
+  display: inline-block;
+  font-size: 11px;
+  border-radius: 12px;
+  background: #f2f4f7;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.count-status-COUNTING {
+  background: #eef4ff;
+  color: #465fff;
+}
+.count-status-AWAITING_APPROVAL {
+  background: #fffaeb;
+  color: #b54708;
+}
+.count-status-COMPLETED {
+  background: #ecfdf3;
+  color: #027a48;
+}
+.count-status-CANCELLED {
+  color: #667085;
+}
+.owner-monitoring {
+  display: grid;
+  gap: 20px;
+  margin-top: 20px;
+}
+.owner-chain-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.owner-chain-metrics > div {
+  padding: 20px;
+  border-right: 1px solid #eef0f4;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.owner-chain-metrics > div:last-child {
+  border: 0;
+}
+.owner-chain-metrics span {
+  font-size: 13px;
+  color: #667085;
+}
+.owner-chain-metrics strong {
+  font-size: 22px;
+  line-height: 30px;
+}
+.owner-chain-metrics a {
+  font-size: 12px;
+}
+.operation-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  background: #465fff;
+  color: white !important;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.owner-monitoring .stock-table td,
+.owner-monitoring .stock-table th {
+  padding: 14px 20px;
+}
+.owner-monitoring .stock-table th {
+  font-size: 12px;
+}
+.owner-monitoring .stock-table td {
+  font-size: 14px;
+}
+.owner-monitoring .stock-table td:first-child {
+  min-width: 160px;
+}
+@media (max-width: 900px) {
+  .owner-chain-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .owner-monitoring table {
+    min-width: 760px;
+  }
+}
+.rv-list-page .rv-table .rv-pay-overdue {
+  background: #465fff;
+  color: #fff;
+  border-color: #465fff;
+}
+.tf-page.tf-branch-list .tf-list-search > details {
+  display: none;
+}
+.owner-monitoring .operation-work-panel .stock-table {
+  table-layout: auto;
+}
+.owner-monitoring .operation-work-panel .stock-table th:first-child {
+  width: auto;
+}
+.owner-monitoring .operation-work-panel .stock-table th:nth-child(2) {
+  width: auto;
+}
+.dashboard-content.rv-page.rv-list-page > header.stock-heading h1 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+.rv-list-page .rv-filters > .stock-filter > span {
+  display: none;
+}
+.rv-list-page .rv-filters > .stock-filter {
+  gap: 0;
+}
+.owner-overview .owner-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.dashboard-content.past-stock-page h2 {
+  font-size: 16px;
+  line-height: 24px;
+}

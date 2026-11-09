@@ -6,6 +6,7 @@ import { inventoryError } from '../inventory/api'
 import { useChoicePages } from '../sales/useSalesList'
 import { money } from '../inventory/presentation'
 import type { Replenishment } from './types'
+import { hasExistingPurchase } from './transferRules'
 export default function ReplenishmentPurchaseDialog({
   request,
   onClose,
@@ -13,7 +14,7 @@ export default function ReplenishmentPurchaseDialog({
 }: {
   request: Replenishment
   onClose: () => void
-  onSaved: () => void
+  onSaved: (id: number) => void
 }) {
   const [supplier, setSupplier] = useState(''),
     [q, setQ] = useState(''),
@@ -30,6 +31,8 @@ export default function ReplenishmentPurchaseDialog({
     }>('/suppliers', q),
     lines = request.lines.filter((l) => l.toPurchaseQty > 0),
     valid =
+      request.status !== 'CLOSED' &&
+      !hasExistingPurchase(request.purchaseOrders) &&
       !!supplier &&
       lines.length > 0 &&
       lines.every(
@@ -87,7 +90,7 @@ export default function ReplenishmentPurchaseDialog({
               },
             )
             setCreated(r.data.id)
-            onSaved()
+            onSaved(r.data.id)
           } catch (err) {
             setError(inventoryError(err))
           } finally {
@@ -99,6 +102,12 @@ export default function ReplenishmentPurchaseDialog({
         {error && (
           <p role="alert" className="stock-error">
             {error}
+          </p>
+        )}
+        {hasExistingPurchase(request.purchaseOrders) && (
+          <p role="alert">
+            Yêu cầu đã có phiếu nhập hàng. Vui lòng kiểm tra phiếu liên quan để
+            tránh lập trùng.
           </p>
         )}
         {created ? (
@@ -209,8 +218,8 @@ export default function ReplenishmentPurchaseDialog({
               </table>
             </div>
             <p className="tf-purchase-note">
-              Mã yêu cầu được ghi trong ghi chú đơn mua. Hệ thống chưa hỗ trợ tự
-              liên kết hoặc trừ phần chuyển mua sau khi tạo phiếu.
+              Kiểm tra các phiếu nhập hàng đã lập trước khi tạo mới. Phần chuyển
+              mua chưa được tự động trừ sau khi tạo phiếu.
             </p>
           </fieldset>
         )}

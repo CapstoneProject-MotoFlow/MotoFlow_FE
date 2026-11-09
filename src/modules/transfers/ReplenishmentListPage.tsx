@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
-import { states, type Replenishment } from './types'
+import { states, type Replenishment, type ReplenishmentRow } from './types'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
@@ -14,7 +14,7 @@ export default function ReplenishmentListPage() {
     [search, setSearch] = useState(''),
     page = Math.max(0, Number(scope.params.get('page')) || 0),
     status = scope.params.get('status') ?? '',
-    base = useInventoryData<Page<Replenishment>>('/replenishment-requests', {
+    base = useInventoryData<Page<ReplenishmentRow>>('/replenishment-requests', {
       page,
       size: 20,
       status: status === 'OPEN' ? undefined : status,
@@ -109,7 +109,7 @@ export default function ReplenishmentListPage() {
           <div className="tf-list-search">
             <input
               aria-label="Tìm yêu cầu trong trang"
-              placeholder="Tìm mã hoặc tên phụ tùng trong trang"
+              placeholder="Tìm mã yêu cầu hoặc cửa hàng trong trang"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -170,7 +170,12 @@ export default function ReplenishmentListPage() {
             </thead>
             <tbody>
               {r.data?.items.map((row) => (
-                <ReplenishmentRow key={row.id} row={row} search={search} />
+                <ReplenishmentRow
+                  key={row.id}
+                  row={row}
+                  search={search}
+                  canCoordinate={coordinator}
+                />
               ))}
             </tbody>
           </table>
@@ -198,27 +203,27 @@ export default function ReplenishmentListPage() {
 function ReplenishmentRow({
   row,
   search,
+  canCoordinate,
 }: {
-  row: Replenishment
+  row: ReplenishmentRow
   search: string
+  canCoordinate: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
   const detail = useInventoryData<Replenishment>(
       '/replenishment-requests/' + row.id,
+      {},
+      0,
+      expanded,
     ),
     d = detail.data
-  const canCoordinate = useCoordinationAccess(d?.lines[0]?.productId)
   const query = search.toLocaleLowerCase('vi-VN')
   if (
     query &&
-    ![
-      code('YBS', row.id),
-      row.storeName,
-      ...(d?.lines.map((l) => l.sku + ' ' + l.partName) ?? []),
-    ]
+    ![code('YBS', row.id), row.storeName]
       .join(' ')
       .toLocaleLowerCase('vi-VN')
-      .includes(query) &&
-    !detail.loading
+      .includes(query)
   )
     return null
   return (
@@ -232,41 +237,62 @@ function ReplenishmentRow({
       <td>{row.createdByName}</td>
       <td>{row.createdAt.slice(0, 10).split('-').reverse().join('/')}</td>
       <td className="tf-requested-parts">
-        {d ? (
-          <>
-            {d.lines
-              .slice(0, 2)
-              .map((l) => l.partName)
-              .join(', ')}
-            {d.lines.length > 2
-              ? ' và ' + (d.lines.length - 2) + ' mã khác'
-              : ''}
-          </>
-        ) : detail.loading ? (
-          'Đang tải…'
-        ) : (
-          <span title={detail.error}>Không tải được chi tiết</span>
-        )}
+        {expanded &&
+          (d ? (
+            <div className="tf-request-parts-summary">
+              {d.lines
+                .slice(0, 2)
+                .map((l) => l.partName)
+                .join(', ')}
+              {d.lines.length > 2
+                ? ' và ' + (d.lines.length - 2) + ' mã khác'
+                : ''}
+            </div>
+          ) : detail.loading ? (
+            'Đang tải…'
+          ) : (
+            <span title={detail.error}>Không tải được chi tiết</span>
+          ))}
         <small>
           {row.totalRequestedQty} sản phẩm · {row.lineCount} mã
         </small>
+        <button
+          className="tf-request-details-toggle"
+          type="button"
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Thu gọn' : 'Xem chi tiết'} ${code('YBS', row.id)}`}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? 'Thu gọn' : 'Xem chi tiết'}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </td>
       <td>
-        {d
-          ? d.transferOrders.length
-            ? d.transferOrders.map((t) => (
-                <Link
-                  className="tf-transfer-ref"
-                  key={t.id}
-                  to={'/transfer-orders/' + t.id}
-                >
-                  {code('DC', t.id)}
-                </Link>
-              ))
-            : '—'
-          : detail.loading
-            ? '…'
-            : 'Không tải được'}
+        {d ? (
+          d.transferOrders.length ? (
+            d.transferOrders.map((t) => (
+              <Link
+                className="tf-transfer-ref"
+                key={t.id}
+                to={'/transfer-orders/' + t.id}
+              >
+                {code('DC', t.id)}
+              </Link>
+            ))
+          ) : (
+            '—'
+          )
+        ) : expanded && detail.loading ? (
+          '…'
+        ) : expanded ? (
+          'Không tải được'
+        ) : (
+          <Link to={'/replenishment-requests/' + row.id}>
+            Xem trong yêu cầu →
+          </Link>
+        )}
       </td>
       <td>
         <span className={'tf-badge tf-status-' + row.status}>

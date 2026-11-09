@@ -1,3 +1,4 @@
+import BarcodeScan from '../operations/BarcodeScan'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -119,9 +120,7 @@ function ReceiptForm({
     receipt.arrivedAt?.slice(0, 16) ?? '',
   )
   const [onlyUnchecked, setOnlyUnchecked] = useState(false)
-  const [scan, setScan] = useState('')
   const [scanMessage, setScanMessage] = useState('')
-  const [scanning, setScanning] = useState(false)
   const [focusedLine, setFocusedLine] = useState<number>()
   const rowRefs = useRef(new Map<number, HTMLTableRowElement>())
   const [saving, setSaving] = useState(false)
@@ -165,49 +164,6 @@ function ReceiptForm({
         Number(countValue(line, 'damagedQty')) <=
         Number(countValue(line, 'deliveredQty'))
     )
-  }
-
-  async function locateLine() {
-    const code = scan.trim()
-    if (!code || scanning) return
-    setScanMessage('')
-    setScanning(true)
-    try {
-      let line = rows.find(
-        (item) =>
-          item.sku.toLocaleLowerCase('vi') === code.toLocaleLowerCase('vi'),
-      )
-      if (!line) {
-        const { data } = await axiosClient.get<{ items: { id: number }[] }>(
-          '/products',
-          { params: { q: code, size: 100 } },
-        )
-        const ids = new Set(data.items.map((item) => item.id))
-        const matches = rows.filter((item) => ids.has(item.productId))
-        if (matches.length > 1) {
-          setScanMessage('Có nhiều dòng trùng kết quả. Hãy nhập mã SKU cụ thể.')
-          return
-        }
-        line = matches[0]
-      }
-      if (!line) {
-        setScanMessage('Không tìm thấy mã này trong phiếu.')
-        return
-      }
-      const id = line.id
-      setOnlyUnchecked(false)
-      setFocusedLine(id)
-      setScan('')
-      requestAnimationFrame(() => {
-        const row = rowRefs.current.get(id)
-        row?.scrollIntoView({ block: 'center', inline: 'nearest' })
-        row?.querySelector('input')?.focus()
-      })
-    } catch (error) {
-      setScanMessage(apiMessage(error))
-    } finally {
-      setScanning(false)
-    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -286,6 +242,43 @@ function ReceiptForm({
 
   return (
     <form className="receiving-stack" onSubmit={submit}>
+      {editing && (
+        <BarcodeScan
+          allowInactive
+          resolveLocal={(code) => {
+            const l = receipt.lines.find(
+              (l) =>
+                l.sku.toLocaleLowerCase('vi') === code.toLocaleLowerCase('vi'),
+            )
+            return l
+              ? {
+                  productId: l.productId,
+                  sku: l.sku,
+                  partName: l.partName,
+                  status: 'ACTIVE',
+                  barcode: code,
+                  availableQty: null,
+                }
+              : undefined
+          }}
+          disabled={saving}
+          onFound={(p) => {
+            const line = receipt.lines.find((l) => l.productId === p.productId)
+            if (!line) {
+              setScanMessage('Phụ tùng không thuộc phiếu nhận.')
+              return
+            }
+            setOnlyUnchecked(false)
+            setFocusedLine(line.id)
+            setScanMessage('Đã tìm ' + p.partName)
+            requestAnimationFrame(() => {
+              const row = rowRefs.current.get(line.id)
+              row?.scrollIntoView({ block: 'center' })
+              row?.querySelector('input')?.focus()
+            })
+          }}
+        />
+      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>Chứng từ giao hàng · {receipt.deliveryDocumentNo}</h2>
@@ -343,30 +336,6 @@ function ReceiptForm({
                 }}
               >
                 Bây giờ
-              </button>
-            </div>
-            <div className="receiving-arrival-control">
-              <label>
-                Quét mã hoặc nhập SKU
-                <input
-                  type="search"
-                  value={scan}
-                  onChange={(event) => setScan(event.target.value)}
-                  placeholder="Quét mã vạch hoặc nhập SKU"
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      void locateLine()
-                    }
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                disabled={scanning || !scan.trim()}
-                onClick={() => void locateLine()}
-              >
-                Tìm dòng
               </button>
             </div>
             {scanMessage && (

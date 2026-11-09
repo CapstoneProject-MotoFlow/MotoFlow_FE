@@ -39,9 +39,8 @@ export const branchManagerNavigation: NavItem[] = [
   { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
     label: 'Tồn theo ngày',
-    href: '#bm-daily-stock',
+    href: '/inventory/past-date-stock',
     icon: 'calendar',
-    pending: true,
   },
   {
     label: 'Kiểm kê',
@@ -72,6 +71,6 @@ export const branchManagerNavigation: NavItem[] = [
     icon: 'scale',
     pending: true,
   },
-  { label: 'Bảng giá', href: '#bm-prices', icon: 'tag', pending: true },
+  { label: 'Bảng giá', href: '/pricing/retail-prices', icon: 'tag' },
   { label: 'Phụ tùng', href: '/branch-manager/products', icon: 'tool' },
 ]

@@ -7,9 +7,16 @@ export default function CoordinationAction({
   onSaved,
   canDecide = true,
   canReturn = false,
+  returnLines,
 }: {
   id: number
-  lines: { productId: number; sku: string; quantity: number }[]
+  lines: {
+    productId: number
+    sku: string
+    quantity: number
+    currentPurchaseQty?: number
+  }[]
+  returnLines?: { productId: number; sku: string; quantity: number; currentPurchaseQty?:number }[]
   replenishment?: boolean
   canDecide?: boolean
   canReturn?: boolean
@@ -21,22 +28,43 @@ export default function CoordinationAction({
     [decision, setDecision] = useState('LATE_DELIVERY'),
     [reason, setReason] = useState(''),
     [adjustment, setAdjustment] = useState('')
-  const chosen = lines.find((l) => l.productId === Number(product)),
+  const options = action === 'return' ? (returnLines ?? lines) : lines
+  const chosen = options.find((l) => l.productId === Number(product)),
     valid =
-      !!chosen && Number.isInteger(qty) && qty > 0 && qty <= chosen.quantity
+      !!chosen &&
+      Number.isInteger(qty) &&
+      qty >= (replenishment ? 0 : 1) &&
+      qty <= chosen.quantity
+  function open(next: string) {
+    const first = (next === 'return' ? (returnLines ?? lines) : lines)[0]
+    setProduct(String(first?.productId ?? ''))
+    setQty(
+      next === 'purchase'
+        ? first && 'currentPurchaseQty' in first
+          ? (first.currentPurchaseQty ?? 0)
+          : 0
+        : 1,
+    )
+    setReason('')
+    setAdjustment('')
+    setAction(next)
+  }
   return (
     <div className="tf-note">
       <div className="tf-filters">
         {canDecide && (
           <button
             disabled={!lines.length}
-            onClick={() => setAction(replenishment ? 'purchase' : 'decision')}
+            onClick={() => open(replenishment ? 'purchase' : 'decision')}
           >
             {replenishment ? 'Chuyển phần thiếu sang mua' : 'Xử lý phần thiếu'}
           </button>
         )}
         {!replenishment && canReturn && (
-          <button disabled={!lines.length} onClick={() => setAction('return')}>
+          <button
+            disabled={!(returnLines ?? lines).length}
+            onClick={() => open('return')}
+          >
             Ghi nhận hàng trả về nguồn
           </button>
         )}
@@ -45,7 +73,7 @@ export default function CoordinationAction({
         <TransferAction
           title={
             action === 'purchase'
-              ? 'Chuyển mua'
+              ? 'Cập nhật tổng số cần mua'
               : action === 'return'
                 ? 'Nhận hàng trả về kho nguồn'
                 : 'Quyết định xử lý sai lệch'
@@ -86,22 +114,37 @@ export default function CoordinationAction({
               value={product}
               onChange={(e) => {
                 setProduct(e.target.value)
-                setQty(1)
+                const picked = options.find(
+                  (l) => l.productId === Number(e.target.value),
+                )
+                setQty(
+                  action === 'purchase'
+                    ? picked && 'currentPurchaseQty' in picked
+                      ? (picked.currentPurchaseQty ?? 0)
+                      : 0
+                    : 1,
+                )
               }}
             >
-              {lines.map((l) => (
+              {options.map((l) => (
                 <option key={l.productId} value={l.productId}>
-                  {l.sku} · Còn thiếu {l.quantity}
+                  {l.sku} ·{' '}
+                  {action === 'purchase'
+                    ? 'Mua tối đa'
+                    : action === 'return'
+                      ? 'Có thể nhận trả'
+                      : 'Còn thiếu'}{' '}
+                  {l.quantity}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Số lượng
+            {action === 'purchase' ? 'Tổng số cần mua' : 'Số lượng'}
             <input
               type="number"
               required
-              min={1}
+              min={action === 'purchase' ? 0 : 1}
               max={chosen?.quantity ?? 0}
               value={qty}
               onChange={(e) => setQty(Number(e.target.value))}
@@ -142,9 +185,12 @@ export default function CoordinationAction({
               </label>
             </>
           )}
-          <p>
-            BE kiểm tra quyền điều phối/kho nguồn và số lượng trước khi ghi.
-          </p>
+          {action === 'purchase' && (
+            <p>
+              Số này thay thế tổng đã chuyển mua, không cộng thêm. Nhập 0 để bỏ
+              phần chuyển mua.
+            </p>
+          )}
         </TransferAction>
       )}
     </div>

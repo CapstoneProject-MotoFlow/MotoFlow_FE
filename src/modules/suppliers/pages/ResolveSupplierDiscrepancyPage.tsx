@@ -1,4 +1,5 @@
 import { isAxiosError } from 'axios'
+import { useInventoryScope } from '../../inventory/api'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
@@ -270,6 +271,9 @@ function DiscrepancyForm({
   receiptId: string
   onOpenReceipt: (receipt: string) => void
 }) {
+  const scope = useInventoryScope()
+  const [status, setStatus] = useState('OPEN'),
+    [purchaseOrderId, setPurchaseOrderId] = useState('')
   const [rows, setRows] = useState<Case[]>([])
   const [drafts, setDrafts] = useState<Record<number, HandlingDraft>>({})
   const valid = !receiptId || /^[1-9]\d*$/.test(receiptId)
@@ -285,7 +289,8 @@ function DiscrepancyForm({
   }>()
 
   useEffect(() => {
-    if (!valid) return
+    if (!valid || (purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)))
+      return
     const controller = new AbortController()
     async function load() {
       setLoading(true)
@@ -316,7 +321,13 @@ function DiscrepancyForm({
             items: Case[]
             totalItems: number
           }>('/discrepancy-cases', {
-            params: { status: 'OPEN', page, size: 20 },
+            params: {
+              status: status || undefined,
+              storeId: scope.storeId || undefined,
+              purchaseOrderId: purchaseOrderId || undefined,
+              page,
+              size: 20,
+            },
             signal: controller.signal,
           })
           if (!controller.signal.aborted) {
@@ -331,9 +342,12 @@ function DiscrepancyForm({
         if (!controller.signal.aborted) setLoading(false)
       }
     }
-    void load()
-    return () => controller.abort()
-  }, [receiptId, valid, page])
+    const timer = setTimeout(() => void load(), 300)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [receiptId, valid, page, status, scope.storeId, purchaseOrderId])
 
   return (
     <main className="dashboard-content supplier-discrepancy-page">
@@ -341,6 +355,62 @@ function DiscrepancyForm({
         <h1>Xử lý sai lệch nhà cung cấp</h1>
         <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
       </header>
+      {!receiptId && (
+        <div className="receiving-filter-row">
+          <label>
+            Trạng thái
+            <select
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(0)
+              }}
+            >
+              <option value="OPEN">Đang mở</option>
+              <option value="CLOSED">Đã đóng</option>
+              <option value="">Tất cả</option>
+            </select>
+          </label>
+          {scope.owner && (
+            <label>
+              Cửa hàng
+              <select
+                value={scope.storeId}
+                onChange={(e) => {
+                  scope.filter({ storeId: e.target.value })
+                  setPage(0)
+                }}
+              >
+                <option value="">Toàn chuỗi</option>
+                {scope.stores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.storeName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label>
+            Mã đơn mua
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[1-9][0-9]*"
+              value={purchaseOrderId}
+              onChange={(e) => {
+                if (
+                  e.target.value === '' ||
+                  /^[1-9]\d*$/.test(e.target.value)
+                ) {
+                  setPurchaseOrderId(e.target.value)
+                  setPage(0)
+                }
+              }}
+            />
+          </label>
+          {scope.storesError && <p role="alert">{scope.storesError}</p>}
+        </div>
+      )}
       <form
         className="receiving-filter-row"
         onSubmit={(event) => {
@@ -511,7 +581,16 @@ function DiscrepancyForm({
                         </td>
                         <td>{row.outstandingReturnQty}</td>
                         <td>{row.outstandingReplacementQty}</td>
-                        <td>{row.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}</td>
+                        <td>
+                          <span
+                            className={
+                              'supplier-case-status ' +
+                              (row.status === 'OPEN' ? 'is-open' : 'is-closed')
+                            }
+                          >
+                            {row.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+                          </span>
+                        </td>
                         <td>
                           <div className="receiving-case-actions">
                             {row.canRecordReturn && (

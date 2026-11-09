@@ -21,16 +21,23 @@ export type PartLine = {
   extraDispatchedQty: number | null
   unresolvedQty: number | null
 }
-export type Replenishment = {
+/** UC69 list response. Does not include lines or related documents. */
+export type ReplenishmentRow = {
   id: number
   requestingStoreId: number
   storeName: string
   status: string
-  note: string
   createdByName: string
   createdAt: string
   lineCount: number
   totalRequestedQty: number
+}
+/** UC70 detail response. Counts belong only to the list response. */
+export type Replenishment = Omit<
+  ReplenishmentRow,
+  'lineCount' | 'totalRequestedQty'
+> & {
+  note: string | null
   lines: {
     productId: number
     sku: string
@@ -45,15 +52,8 @@ export type Replenishment = {
   transferOrders: { id: number; sourceStoreName: string; status: string }[]
   purchaseOrders: { id: number; supplierName: string; status: string }[]
 }
-export type Transfer = {
-  attachments: Evidence[]
-  extraDispatchConfirmedBy: { id: number; fullName: string } | null
-  extraDispatchConfirmedAt: string | null
-  createdBy: { id: number; fullName: string } | null
-  dispatchedBy: { id: number; fullName: string } | null
-  dispatchedAt: string | null
-  closedBy: { id: number; fullName: string } | null
-  closedAt: string | null
+/** UC72 list response. Never use this as a detail response. */
+export type TransferRow = {
   id: number
   status: string
   sourceStoreId: number
@@ -65,6 +65,20 @@ export type Transfer = {
   createdByName: string
   lineCount: number
   totalPlannedQty: number
+  dispatchedAt: string | null
+  closedAt: string | null
+}
+/** UC73 detail response has people and lines rather than list aggregates. */
+export type Transfer = Omit<
+  TransferRow,
+  'createdByName' | 'lineCount' | 'totalPlannedQty'
+> & {
+  attachments: Evidence[]
+  extraDispatchConfirmedBy: { id: number; fullName: string } | null
+  extraDispatchConfirmedAt: string | null
+  createdBy: { id: number; fullName: string } | null
+  dispatchedBy: { id: number; fullName: string } | null
+  closedBy: { id: number; fullName: string } | null
   lines: PartLine[]
   receipts: {
     id: number
@@ -75,8 +89,8 @@ export type Transfer = {
   lots: {
     productId: number
     lotId: number
-    manufacturerLotNo: string
-    expiryDate: string
+    manufacturerLotNo: string | null
+    expiryDate: string | null
     quantity: number
     unitCost: number | null
   }[]
@@ -89,7 +103,7 @@ export type Transfer = {
       id: number
       resolutionType: string
       quantity: number
-      reason: string
+      reason: string | null
       confirmedAt: string | null
     }[]
   }[]
@@ -129,8 +143,8 @@ export type Preparation = {
     preparedQty: number | null
     shortReason: string | null
     sellableQty: number
-    storageArea: string
-    binLocation: string
+    storageArea: string | null
+    binLocation: string | null
     barcodes: string[]
     shortQty: number | null
     pickFirst: PickLot[]
@@ -152,4 +166,13 @@ export const states: Record<string, string> = {
   CONFIRMED: 'Đã xác nhận',
   OPEN: 'Đang xử lý',
   RESOLVED: 'Đã xử lý',
+}
+export const resolutionNames: Record<string, string> = {
+  MOVED_TO_AWAITING_RETURN: 'Chuyển chờ trả',
+  RETURNED_TO_SUPPLIER: 'Đã trả nhà cung cấp',
+  REPLACEMENT_RECEIVED: 'Đã nhận hàng thay thế',
+  LATE_DELIVERY_RECEIVED: 'Nhận hàng đến muộn',
+  RECEIVED_BACK_AT_SOURCE: 'Trả về kho nguồn',
+  APPROVED_LOSS: 'Mất/hỏng',
+  CLOSED_BY_AGREEMENT: 'Đóng theo thỏa thuận',
 }

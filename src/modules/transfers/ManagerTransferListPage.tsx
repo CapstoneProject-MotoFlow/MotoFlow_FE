@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
-import { states, type Transfer } from './types'
+import { states, type TransferRow } from './types'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
@@ -13,7 +13,7 @@ export default function ManagerTransferListPage() {
     [search, setSearch] = useState(''),
     page = Math.max(0, Number(scope.params.get('page')) || 0),
     status = scope.params.get('status') ?? 'OPEN',
-    base = useInventoryData<Page<Transfer>>(
+    base = useInventoryData<Page<TransferRow>>(
       '/transfer-orders',
       {
         status: status === 'OPEN' ? undefined : status,

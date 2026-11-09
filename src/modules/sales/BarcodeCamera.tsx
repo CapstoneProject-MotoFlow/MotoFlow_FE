@@ -76,6 +76,7 @@ export default function BarcodeCamera({
       title="Quét mã vạch"
       formId="camera-scan"
       submitLabel="Quét bằng camera"
+      hideSubmit
       submitDisabled
       onClose={onClose}
     >

@@ -1,3 +1,4 @@
+import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import { useEffect, useState, type FormEvent } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
@@ -36,7 +37,7 @@ type Receipt = {
   }[]
 }
 
-export default function ReceiptActionDialog({
+function ExistingReceiptActionDialog({
   receiptId,
   documentNo,
   mode,
@@ -242,5 +243,21 @@ export default function ReceiptActionDialog({
         {error && <p role="alert">{error}</p>}
       </form>
     </FormDialog>
+  )
+}
+
+export default function ReceiptActionDialog(
+  props: Parameters<typeof ExistingReceiptActionDialog>[0],
+) {
+  return props.mode === 'assign' ? (
+    <WarehouseAssignmentDialog
+      taskType="INSPECTION"
+      documentId={props.receiptId}
+      title={'Giao kiểm nhận ' + props.documentNo}
+      onClose={props.onClose}
+      onSaved={props.onSaved}
+    />
+  ) : (
+    <ExistingReceiptActionDialog {...props} />
   )
 }

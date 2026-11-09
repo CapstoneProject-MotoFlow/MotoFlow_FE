@@ -90,12 +90,15 @@ export default function LotsPage() {
   ]
   return (
     <main className="inventory-workspace inventory-screen">
-      <InventoryHeader title="Lô hàng">
-        {scope.owner && (
-          <button onClick={() => setExpiry(true)}>Cảnh báo hạn dùng</button>
-        )}
-      </InventoryHeader>
-      <InventoryPanel title={'Lô hàng · ' + scope.warehouse}>
+      <InventoryHeader title="Lô hàng" />
+      <InventoryPanel
+        title={'Lô hàng · ' + scope.warehouse}
+        action={
+          scope.owner && (
+            <button onClick={() => setExpiry(true)}>Cảnh báo hạn dùng</button>
+          )
+        }
+      >
         <div className="stock-tabs" role="tablist" aria-label="Trạng thái lô">
           {Object.entries({
             NEAR_EXPIRY: 'Sắp hết hạn',

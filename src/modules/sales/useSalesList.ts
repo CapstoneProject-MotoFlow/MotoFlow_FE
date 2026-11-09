@@ -43,6 +43,7 @@ export function useSalesList(params: Query, status: string, enabled = true) {
 export function useChoicePages<T extends { id: number }>(
   path: string,
   q: string,
+  enabled = true,
 ) {
   const [retry, setRetry] = useState(0)
   const [request, setRequest] = useState({ q: '', page: 0 }),
@@ -54,6 +55,7 @@ export function useChoicePages<T extends { id: number }>(
     error?: string
   }>()
   useEffect(() => {
+    if (!enabled) return
     const controller = new AbortController()
     const timer = setTimeout(() => {
       void axiosClient
@@ -95,9 +97,9 @@ export function useChoicePages<T extends { id: number }>(
       clearTimeout(timer)
       controller.abort()
     }
-  }, [path, q, page, retry])
+  }, [path, q, page, retry, enabled])
   const current = response?.q === q ? response : undefined,
-    loading = !current || current.page !== page
+    loading = enabled && (!current || current.page !== page)
   return {
     data: current?.data,
     error: current?.error,
@@ -105,7 +107,7 @@ export function useChoicePages<T extends { id: number }>(
     hasMore:
       (current?.data?.items.length ?? 0) < (current?.data?.totalItems ?? 0),
     loadMore: () => {
-      if (!loading) {
+      if (enabled && !loading) {
         if (current?.error) setRetry((n) => n + 1)
         else setRequest({ q, page: page + 1 })
       }

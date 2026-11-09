@@ -58,9 +58,8 @@ export const ownerNavigation: NavItem[] = [
   { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
     label: 'Tồn theo ngày',
-    href: '#daily-stock',
+    href: '/inventory/past-date-stock',
     icon: 'calendar',
-    pending: true,
   },
   {
     label: 'Kỳ kho',
@@ -104,16 +103,14 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Bảng giá',
-    href: '#prices',
+    href: '/pricing/retail-prices',
     icon: 'tag',
     group: 'GIÁ BÁN',
-    pending: true,
   },
   {
     label: 'Quy tắc giá',
-    href: '#pricing-rules',
+    href: '/pricing/rules',
     icon: 'percent',
-    pending: true,
   },
   {
     label: 'Quyền danh mục và giá',
