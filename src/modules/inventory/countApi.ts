@@ -1,5 +1,11 @@
 import type { Page } from './types'
 import type { StockCount } from './stockCountModel'
+export function canCancelCount(count: {
+  status: string
+  confirmedAt: string | null
+}) {
+  return ['DRAFT', 'COUNTING'].includes(count.status) && !count.confirmedAt
+}
 export type CountRequest = {
   id: number
   storeId: number

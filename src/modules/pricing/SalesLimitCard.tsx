@@ -109,6 +109,15 @@ export default function SalesLimitCard({
               {error}
             </p>
           )}
+          {limit.scheduled &&
+            effective &&
+            effective < limit.scheduled.effectiveFrom.slice(0, 10) && (
+              <p className="pricing-notice">
+                Mức {limit.scheduled.rate}% đã hẹn từ{' '}
+                {date(limit.scheduled.effectiveFrom)} vẫn sẽ áp dụng vào ngày
+                đó.
+              </p>
+            )}
           <button className="pricing-primary" disabled={!valid || busy}>
             {busy ? 'Đang lưu…' : margin ? 'Lưu biên lợi nhuận' : 'Lưu ngưỡng'}
           </button>

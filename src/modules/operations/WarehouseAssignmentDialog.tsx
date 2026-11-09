@@ -1,4 +1,5 @@
 import './operations.css'
+import { isAxiosError } from 'axios'
 import { useRef, useState } from 'react'
 import FormDialog from '../../shared/ui/FormDialog'
 import { useInventoryData, inventoryError } from '../inventory/api'
@@ -18,18 +19,28 @@ export default function WarehouseAssignmentDialog({
   documentId: number
   title?: string
   onClose: () => void
-  onSaved?: () => void
+  onSaved?: (name: string) => void
 }) {
-  const [choice, setChoice] = useState(''),
+  const [selected, setChoice] = useState<string>(),
+    [revision, setRevision] = useState(0),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('')
   const lock = useRef(false),
     r = useInventoryData<Assignment>(
       '/warehouse-tasks',
       { taskType, documentId },
-      0,
+      revision,
       Number.isSafeInteger(documentId) && documentId > 0,
     ),
+    choice =
+      selected ??
+      (r.data?.eligibleAssignees.some(
+        (p) => p.id === r.data?.current?.assigneeId,
+      )
+        ? String(r.data.current!.assigneeId)
+        : r.data?.eligibleAssignees.length === 1
+          ? String(r.data.eligibleAssignees[0].id)
+          : ''),
     valid =
       !!r.data?.canAssign &&
       r.data.documentId === documentId &&
@@ -59,10 +70,17 @@ export default function WarehouseAssignmentDialog({
               assigneeId: Number(choice),
             })
             refreshNotifications()
-            onSaved?.()
+            onSaved?.(
+              r.data?.eligibleAssignees.find((p) => p.id === Number(choice))
+                ?.fullName ?? 'nhân viên',
+            )
             onClose()
           } catch (e) {
             setError(inventoryError(e))
+            if (isAxiosError(e) && e.response?.status === 409) {
+              setRevision((n) => n + 1)
+              setChoice(undefined)
+            }
           } finally {
             lock.current = false
             setBusy(false)
@@ -98,6 +116,9 @@ export default function WarehouseAssignmentDialog({
               </select>
             </label>
             <h3>Lịch sử giao việc</h3>
+            {!r.data.eligibleAssignees.length && (
+              <p role="status">Không có nhân viên đủ điều kiện nhận việc.</p>
+            )}
             {r.data.history.map((h) => (
               <p key={h.id}>
                 {h.assigneeName} · {h.assignedByName} · {dateTime(h.assignedAt)}

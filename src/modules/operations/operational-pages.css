@@ -246,7 +246,46 @@
 }
 .past-stock-page .tf-filters {
   padding: 16px 20px;
+  align-items: flex-end;
+  gap: 12px;
+}
+.past-stock-page .past-stock-quick {
+  margin: 16px 20px 0;
+  width: fit-content;
+  max-width: calc(100% - 40px);
+  flex-wrap: wrap;
+}
+.past-stock-page .tf-filters > label {
+  min-width: 0;
+  max-width: 220px;
+  flex: 1 1 160px;
+}
+.past-stock-page .tf-filters > .past-stock-date {
+  flex: 0 1 155px;
+}
+.past-stock-page .tf-filters > .past-stock-zero {
+  display: flex;
+  flex-direction: row;
   align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 38px;
+  white-space: nowrap;
+  margin: 0;
+}
+.past-stock-page .tf-filters > .past-stock-zero input {
+  margin: 0;
+  flex-shrink: 0;
+}
+.past-stock-page .tf-filters :is(input:not([type='checkbox']), select) {
+  width: 100%;
+}
+.past-stock-page section > .tf-note {
+  margin: 0;
+  padding: 10px 20px;
+  background: #fafbfc;
+  border-top: 1px solid #edf0f4;
+  font-size: 12px;
 }
 .past-stock-page .tf-filters label {
   font-size: 13px;

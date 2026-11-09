@@ -1,9 +1,13 @@
 import type { AuthUser } from '../../shared/types/auth'
+export type RoundingRule = 'NONE' | 'UP_100' | 'UP_500' | 'UP_1000'
+export type PolicyState = 'ACTIVE' | 'SCHEDULED' | 'SUPERSEDED'
+export type ProductStatus = 'ACTIVE' | 'DISCONTINUED'
 export const canEditPrice = (u: AuthUser | null) =>
   u?.role === 'OWNER' ||
   (u?.role === 'BRANCH_MANAGER' &&
     !!u.permissions?.includes('RETAIL_PRICE_EDIT'))
-export const today = () => new Date().toLocaleDateString('en-CA')
+export const today = () =>
+  new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
 export const money = (n: number | null | undefined) =>
   n == null ? '—' : n.toLocaleString('vi-VN') + ' ₫'
 export const date = (s: string | null | undefined) =>
@@ -30,7 +34,7 @@ export type Price = {
   categoryId: number | null
   categoryName: string | null
   baseUnit: string
-  status: string
+  status: ProductStatus
   currentPrice: number | null
   currentFrom: string | null
   scheduledPrice: number | null
@@ -40,7 +44,7 @@ export type Price = {
     latestPurchasePrice: number | null
     receivedDate: string
     markupRate: number
-    roundingRule: string
+    roundingRule: RoundingRule
   } | null
 }
 export type Version = {
@@ -49,7 +53,7 @@ export type Version = {
   change: number | null
   effectiveFrom: string
   effectiveTo: string | null
-  state: string
+  state: PolicyState
   fromSuggestion: boolean | null
   reason: string | null
   setByName: string
@@ -60,7 +64,7 @@ export type RateVersion = {
   id: number
   rate: number
   effectiveFrom: string
-  state: string
+  state: PolicyState
   setByName: string
   setAt: string
 }
@@ -80,7 +84,7 @@ export const flattenCategories = (rows: Category[]): Category[] =>
   rows.flatMap((r) => [r, ...flattenCategories(r.children ?? [])])
 export type Config = {
   effectiveFrom: string
-  roundingRule: string
+  roundingRule: RoundingRule
   categories: {
     categoryId: number
     categoryName: string

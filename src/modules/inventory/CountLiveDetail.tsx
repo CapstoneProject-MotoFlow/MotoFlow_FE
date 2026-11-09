@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
-import { countFromDto, type CountDto } from './countApi'
+import { countFromDto, canCancelCount, type CountDto } from './countApi'
 import type { Assignment } from './countAssignment'
 import { countStateNames, countTypeNames } from './stockCountModel'
 import { date, dateTime, money, today } from './presentation'
@@ -205,7 +205,7 @@ export default function CountLiveDetail() {
                   </button>
                 </>
               )}
-              {manager && open && (
+              {manager && canCancelCount(d) && (
                 <button onClick={() => choose('cancel')}>Hủy phiếu</button>
               )}
               {scope.owner && d.status === 'AWAITING_APPROVAL' && (

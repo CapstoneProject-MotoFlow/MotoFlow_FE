@@ -17,15 +17,20 @@ import axiosClient from '../../shared/api/axiosClient'
 import { date, dateTime } from './presentation'
 import './stock-count.css'
 import { useCountList } from './useCountList'
+import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 export default function StockCountListPage() {
   const scope = useInventoryScope(),
     staff = scope.user?.role === 'STAFF',
     p = scope.params
   const [dialog, setDialog] = useState(false),
-    [requestId, setRequestId] = useState<number>(),
+    [requestId, setRequestId] = useState<number | undefined>(() => {
+      const value = Number(p.get('requestId'))
+      return Number.isSafeInteger(value) && value > 0 ? value : undefined
+    }),
     [revision, setRevision] = useState(0),
     [error, setError] = useState(''),
-    [busy, setBusy] = useState(false)
+    [busy, setBusy] = useState(false),
+    [cancelId, setCancelId] = useState<number>()
   const lock = useRef(false),
     page = Math.max(0, Number(p.get('page')) || 0),
     status = p.get('status') ?? (scope.owner ? 'AWAITING_APPROVAL' : 'OPEN'),
@@ -43,12 +48,15 @@ export default function StockCountListPage() {
     revision,
     !invalid,
   )
-  const requests = useInventoryData<CountRequest[]>(
+  const ownerRequests = useInventoryData<CountRequest[]>(
     '/stock-count-requests',
     { storeId: scope.storeId },
     revision,
-    !staff,
+    scope.owner,
   )
+  const requests = scope.owner
+    ? ownerRequests
+    : { data: r.data?.pendingRequests, error: r.error, loading: r.loading }
   async function cancel(id: number) {
     if (lock.current) return
     lock.current = true
@@ -56,6 +64,7 @@ export default function StockCountListPage() {
     setError('')
     try {
       await axiosClient.post(`/stock-count-requests/${id}/cancel`)
+      setCancelId(undefined)
       setRevision((n) => n + 1)
     } catch (e) {
       setError(inventoryError(e))
@@ -126,41 +135,36 @@ export default function StockCountListPage() {
             value={scope.storeId}
             onChange={(storeId) => scope.filter({ storeId })}
           />
-          <details className="count-extra-filters">
-            <summary>Lọc thêm</summary>
-            <div>
-              <label>
-                Loại kiểm kê
-                <select
-                  value={p.get('countType') ?? ''}
-                  onChange={(e) => scope.filter({ countType: e.target.value })}
-                >
-                  <option value="">Tất cả</option>
-                  {Object.entries(countTypeNames).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Từ ngày
-                <input
-                  type="date"
-                  value={p.get('from') ?? ''}
-                  onChange={(e) => scope.filter({ from: e.target.value })}
-                />
-              </label>
-              <label>
-                Đến ngày
-                <input
-                  type="date"
-                  value={p.get('to') ?? ''}
-                  onChange={(e) => scope.filter({ to: e.target.value })}
-                />
-              </label>
-            </div>
-          </details>
+          <label>
+            Loại kiểm kê
+            <select
+              value={p.get('countType') ?? ''}
+              onChange={(e) => scope.filter({ countType: e.target.value })}
+            >
+              <option value="">Tất cả</option>
+              {Object.entries(countTypeNames).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Từ ngày
+            <input
+              type="date"
+              value={p.get('from') ?? ''}
+              onChange={(e) => scope.filter({ from: e.target.value })}
+            />
+          </label>
+          <label>
+            Đến ngày
+            <input
+              type="date"
+              value={p.get('to') ?? ''}
+              onChange={(e) => scope.filter({ to: e.target.value })}
+            />
+          </label>
         </div>
         <InventoryNotice
           loading={r.loading}
@@ -285,7 +289,7 @@ export default function StockCountListPage() {
                         (scope.owner ? (
                           <button
                             disabled={busy}
-                            onClick={() => void cancel(q.id)}
+                            onClick={() => setCancelId(q.id)}
                           >
                             Hủy yêu cầu
                           </button>
@@ -320,10 +324,21 @@ export default function StockCountListPage() {
             onSaved={() => setRevision((n) => n + 1)}
             onClose={() => {
               setDialog(false)
-              scope.filter({ action: '' })
+              setRequestId(undefined)
+              scope.filter({ action: '', requestId: '' })
             }}
           />
         )}
+      {cancelId != null && (
+        <ConfirmDialog
+          title="Hủy yêu cầu kiểm kê"
+          message="Bạn muốn hủy yêu cầu này? Thao tác không hoàn tác được và sẽ thông báo cho quản lý kho."
+          confirmLabel="Hủy yêu cầu"
+          danger
+          onCancel={() => setCancelId(undefined)}
+          onConfirm={() => cancel(cancelId)}
+        />
+      )}
     </main>
   )
 }
@@ -339,14 +354,20 @@ function CountTableFacts({
   owner: boolean
   staff: boolean
 }) {
-  const detail = useInventoryData<CountDto>('/stock-counts/' + id),
+  const [expanded, setExpanded] = useState(false)
+  const detail = useInventoryData<CountDto>(
+      '/stock-counts/' + id,
+      {},
+      0,
+      expanded,
+    ),
     assignment = useInventoryData<
       Assignment & { current: { assigneeName: string; status: string } | null }
     >(
       '/warehouse-tasks',
       { taskType: 'COUNTING', documentId: id },
       0,
-      !owner && !staff,
+      expanded && !owner && !staff,
     ),
     d = detail.data,
     submitted =
@@ -360,11 +381,28 @@ function CountTableFacts({
       submitted && d?.lines.every((l) => l.differenceValue != null)
         ? d.lines.reduce((sum, l) => sum + Number(l.differenceValue), 0)
         : null
-  if (staff) return <td>{d?.lines.length ?? '—'}</td>
+  if (staff)
+    return (
+      <td>
+        <button onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Thu gọn' : 'Xem số dòng'}
+        </button>
+        {expanded && (
+          <span>
+            {detail.loading
+              ? 'Đang tải…'
+              : (detail.error ?? d?.lines.length ?? '—')}
+          </span>
+        )}
+      </td>
+    )
   return (
     <>
       <td title={assignment.error ?? undefined}>
-        {assignment.data?.current?.assigneeName ?? '—'}
+        <button onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Thu gọn' : 'Xem chi tiết'}
+        </button>
+        {expanded && (assignment.data?.current?.assigneeName ?? '—')}
       </td>
       <td title={detail.error ?? undefined}>
         {submitted ? (diff.length ? diff.length + ' dòng' : 'Khớp') : '—'}

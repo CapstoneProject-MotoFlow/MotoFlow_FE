@@ -1,4 +1,3 @@
-import BarcodeScan from '../operations/BarcodeScan'
 import { useEffect, useId, useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import { apiMessage } from '../suppliers/supplierService'
@@ -58,22 +57,6 @@ export default function ProductPicker({
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
       }}
     >
-      <BarcodeScan
-        disabled={disabled}
-        onFound={(p) => {
-          if (excludedIds.includes(p.productId)) {
-            setResult({
-              query: text,
-              items: [],
-              error: 'Phụ tùng đã có trong phiếu.',
-            })
-            return
-          }
-          onSelect({ id: p.productId, sku: p.sku, partName: p.partName })
-          setQuery(undefined)
-          setOpen(false)
-        }}
-      />
       <input
         role="combobox"
         aria-label={label}

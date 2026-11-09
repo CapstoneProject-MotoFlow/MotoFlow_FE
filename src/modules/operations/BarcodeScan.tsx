@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import './operations.css'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import BarcodeCamera from '../sales/BarcodeCamera'
@@ -14,10 +15,14 @@ export default function BarcodeScan({
   onFound,
   storeId,
   disabled = false,
+  allowInactive = false,
+  resolveLocal,
 }: {
   onFound: (part: BarcodePart) => void
   storeId?: number
   disabled?: boolean
+  allowInactive?: boolean
+  resolveLocal?: (code: string) => BarcodePart | undefined
 }) {
   const [code, setCode] = useState(''),
     [camera, setCamera] = useState(false),
@@ -31,11 +36,14 @@ export default function BarcodeScan({
     setError('')
     setCamera(false)
     try {
-      const r = await axiosClient.get<BarcodePart>(
-        '/products/barcode/' + encodeURIComponent(value.trim()),
-        { params: { storeId } },
-      )
-      if (r.data.status !== 'ACTIVE')
+      const local = resolveLocal?.(value.trim())
+      const r = local
+        ? { data: local }
+        : await axiosClient.get<BarcodePart>(
+            '/products/barcode/' + encodeURIComponent(value.trim()),
+            { params: { storeId } },
+          )
+      if (!allowInactive && r.data.status !== 'ACTIVE')
         throw new Error('Phụ tùng đã ngừng kinh doanh.')
       onFound(r.data)
       setCode('')
@@ -49,7 +57,7 @@ export default function BarcodeScan({
   return (
     <div className="operation-barcode">
       <label>
-        Quét mã vạch
+        {resolveLocal ? 'Quét mã hoặc nhập SKU' : 'Quét mã vạch'}
         <input
           disabled={disabled || busy}
           value={code}

@@ -13,6 +13,7 @@ import {
   type Config,
   type Category,
   type Preview,
+  type RoundingRule,
 } from './model'
 
 type ProductRate = { key: number; id: number; name: string; rate: string }
@@ -24,10 +25,12 @@ const vehicleNames: Record<string, string> = {
 }
 export default function SuggestionRules({
   config,
+  scheduled,
   categories,
   onSaved,
 }: {
   config: Config | null
+  scheduled?: Config | null
   categories: Category[]
   onSaved: () => void
 }) {
@@ -69,6 +72,7 @@ export default function SuggestionRules({
     lock = useRef(false),
     counter = useRef(10000)
   const valid =
+    (Object.values(rates).some((v) => v !== '') || products.length > 0) &&
     Object.values(rates).every((v) => v === '' || percentValid(v, 999.99)) &&
     new Set(products.map((p) => p.id)).size === products.length &&
     products.every((p) => p.id > 0 && percentValid(p.rate, 999.99))
@@ -281,7 +285,7 @@ export default function SuggestionRules({
                 <select
                   disabled={busy}
                   value={rounding}
-                  onChange={(e) => setRounding(e.target.value)}
+                  onChange={(e) => setRounding(e.target.value as RoundingRule)}
                 >
                   {Object.entries(roundingNames).map(([v, n]) => (
                     <option key={v} value={v}>
@@ -316,6 +320,12 @@ export default function SuggestionRules({
             {!valid && (
               <p className="pricing-negative">
                 Nhập tỷ lệ 0–999,99% và chọn phụ tùng không trùng nhau.
+              </p>
+            )}
+            {scheduled && effective < scheduled.effectiveFrom.slice(0, 10) && (
+              <p className="pricing-notice">
+                Bản đã hẹn từ {date(scheduled.effectiveFrom)} vẫn sẽ áp dụng vào
+                ngày đó, thay thế cấu hình bạn đang lưu.
               </p>
             )}
             <p className="pricing-subtle">

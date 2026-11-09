@@ -15,9 +15,11 @@ export default function SalesAssignmentDialog({
       documentId={documentId}
       title={'Giao lấy hàng ' + (order?.code ?? '#' + documentId)}
       onClose={onClose}
-      onSaved={() =>
+      onSaved={(name) =>
         window.dispatchEvent(
-          new CustomEvent('sales-changed', { detail: 'Đã giao lấy hàng.' }),
+          new CustomEvent('sales-changed', {
+            detail: 'Đã giao lấy hàng cho ' + name + '.',
+          }),
         )
       }
     />

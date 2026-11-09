@@ -289,7 +289,8 @@ function DiscrepancyForm({
   }>()
 
   useEffect(() => {
-    if (!valid) return
+    if (!valid || (purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)))
+      return
     const controller = new AbortController()
     async function load() {
       setLoading(true)
@@ -341,8 +342,11 @@ function DiscrepancyForm({
         if (!controller.signal.aborted) setLoading(false)
       }
     }
-    void load()
-    return () => controller.abort()
+    const timer = setTimeout(() => void load(), 300)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [receiptId, valid, page, status, scope.storeId, purchaseOrderId])
 
   return (
@@ -389,13 +393,18 @@ function DiscrepancyForm({
           <label>
             Mã đơn mua
             <input
-              type="number"
-              min={1}
-              step={1}
+              type="text"
+              inputMode="numeric"
+              pattern="[1-9][0-9]*"
               value={purchaseOrderId}
               onChange={(e) => {
-                setPurchaseOrderId(e.target.value)
-                setPage(0)
+                if (
+                  e.target.value === '' ||
+                  /^[1-9]\d*$/.test(e.target.value)
+                ) {
+                  setPurchaseOrderId(e.target.value)
+                  setPage(0)
+                }
               }}
             />
           </label>
@@ -572,7 +581,16 @@ function DiscrepancyForm({
                         </td>
                         <td>{row.outstandingReturnQty}</td>
                         <td>{row.outstandingReplacementQty}</td>
-                        <td>{row.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}</td>
+                        <td>
+                          <span
+                            className={
+                              'supplier-case-status ' +
+                              (row.status === 'OPEN' ? 'is-open' : 'is-closed')
+                            }
+                          >
+                            {row.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+                          </span>
+                        </td>
                         <td>
                           <div className="receiving-case-actions">
                             {row.canRecordReturn && (

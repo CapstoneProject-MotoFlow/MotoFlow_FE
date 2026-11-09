@@ -14,6 +14,7 @@ import type { Supplier } from '../suppliers/types'
 import { apiMessage } from '../suppliers/supplierService'
 import { uploadAttachment as uploadReceiptDocument } from '../../shared/api/upload'
 import ProductPicker, { type ProductOption } from './ProductPicker'
+import BarcodeScan from '../operations/BarcodeScan'
 import './receiving.css'
 
 function Panel({
@@ -365,6 +366,48 @@ function OrderFormLayout({
         </aside>
       </div>
       <Panel title="Phụ tùng nhập">
+        <BarcodeScan
+          disabled={!owner || saving}
+          onFound={(p) => {
+            if (draft.lines.some((l) => Number(l.productId) === p.productId)) {
+              setSaveError('Phụ tùng đã có trong phiếu.')
+              return
+            }
+            setSelectedProducts((prev) => ({
+              ...prev,
+              [p.productId]: {
+                id: p.productId,
+                sku: p.sku,
+                partName: p.partName,
+              },
+            }))
+            setDraft((prev) => {
+              const empty = prev.lines.find((l) => !l.productId)
+              return empty
+                ? {
+                    ...prev,
+                    lines: prev.lines.map((l) =>
+                      l.id === empty.id
+                        ? { ...l, productId: String(p.productId) }
+                        : l,
+                    ),
+                  }
+                : {
+                    nextId: prev.nextId + 1,
+                    lines: [
+                      ...prev.lines,
+                      {
+                        id: prev.nextId,
+                        productId: String(p.productId),
+                        quantity: '1',
+                        price: '',
+                      },
+                    ],
+                  }
+            })
+            setSaveError('')
+          }}
+        />
         <div className="table-scroll">
           <table className="receiving-order-lines">
             <thead>

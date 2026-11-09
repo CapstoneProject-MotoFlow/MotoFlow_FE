@@ -9,6 +9,15 @@ import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import './stock-count.css'
 type Product = { id: number; sku: string; partName: string }
+function monthEnd() {
+  const d = new Date(),
+    end = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  return [
+    end.getFullYear(),
+    String(end.getMonth() + 1).padStart(2, '0'),
+    String(end.getDate()).padStart(2, '0'),
+  ].join('-')
+}
 export function StockCountFormDialog({
   owner,
   storeId,
@@ -71,7 +80,8 @@ export function StockCountFormDialog({
     (!owner || !!reason.trim()) &&
     (actualScope !== 'AREA' || !!actualArea.trim()) &&
     (actualScope !== 'PRODUCTS' || actualProducts.length > 0) &&
-    !!date
+    !!date &&
+    (owner || date <= monthEnd())
   async function save() {
     if (lock.current || !valid) return
     lock.current = true
@@ -89,7 +99,7 @@ export function StockCountFormDialog({
           ? { ...body, storeId: actualStore, reason: reason.trim() }
           : {
               ...body,
-              countType,
+              countType: requestId ? 'CYCLE' : countType,
               countDate: date,
               stockCountRequestId: requestId,
             },
@@ -153,7 +163,8 @@ export function StockCountFormDialog({
               <label>
                 Loại kiểm kê
                 <select
-                  value={countType}
+                  disabled={!!requestId}
+                  value={requestId ? 'CYCLE' : countType}
                   onChange={(e) => setType(e.target.value)}
                 >
                   <option value="CYCLE">Định kỳ</option>
@@ -165,6 +176,7 @@ export function StockCountFormDialog({
                 <input
                   required
                   type="date"
+                  max={monthEnd()}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from './api'
 import { InventoryNotice, Pagination, WarehouseFilter } from './components'
 import { today } from './presentation'
-import type { Page, StockRow } from './types'
+import type { Page } from './types'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
 import './inventory.css'
 import '../transfers/transfers.css'
@@ -64,33 +64,39 @@ export default function PastDateStockPage() {
           Tồn cuối ngày {date.split('-').reverse().join('/')} ·{' '}
           {scope.warehouse}
         </h2>
+        <div className="past-stock-quick" aria-label="Chọn nhanh ngày">
+          {[
+            [1, 'Hôm qua'],
+            [7, '7 ngày trước'],
+            [30, '30 ngày trước'],
+          ].map(([days, label]) => (
+            <button
+              type="button"
+              key={days}
+              onClick={() => {
+                const day = new Date()
+                day.setDate(day.getDate() - Number(days))
+                scope.filter({
+                  date: [
+                    day.getFullYear(),
+                    String(day.getMonth() + 1).padStart(2, '0'),
+                    String(day.getDate()).padStart(2, '0'),
+                  ].join('-'),
+                })
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="tf-filters">
-          <div className="past-stock-quick" aria-label="Chọn nhanh ngày">
-            {[
-              [1, 'Hôm qua'],
-              [7, '7 ngày trước'],
-              [30, '30 ngày trước'],
-            ].map(([days, label]) => (
-              <button
-                type="button"
-                key={days}
-                onClick={() => {
-                  const day = new Date()
-                  day.setDate(day.getDate() - Number(days))
-                  scope.filter({
-                    date: [
-                      day.getFullYear(),
-                      String(day.getMonth() + 1).padStart(2, '0'),
-                      String(day.getDate()).padStart(2, '0'),
-                    ].join('-'),
-                  })
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <label>
+          <WarehouseFilter
+            owner={scope.owner}
+            stores={scope.stores}
+            value={scope.storeId}
+            onChange={(value) => scope.filter({ storeId: value })}
+          />
+          <label className="past-stock-category">
             Nhóm phụ tùng
             <select
               value={scope.params.get('categoryId') ?? ''}
@@ -104,13 +110,7 @@ export default function PastDateStockPage() {
               ))}
             </select>
           </label>
-          <WarehouseFilter
-            owner={scope.owner}
-            stores={scope.stores}
-            value={scope.storeId}
-            onChange={(value) => scope.filter({ storeId: value })}
-          />
-          <label>
+          <label className="past-stock-date">
             Ngày tra cứu
             <input
               type="date"
@@ -120,7 +120,7 @@ export default function PastDateStockPage() {
               onChange={(e) => scope.filter({ date: e.target.value })}
             />
           </label>
-          <label>
+          <label className="past-stock-query">
             Tìm phụ tùng
             <input
               value={scope.params.get('q') ?? ''}
@@ -128,7 +128,7 @@ export default function PastDateStockPage() {
               onChange={(e) => scope.filter({ q: e.target.value }, true)}
             />
           </label>
-          <label>
+          <label className="past-stock-zero">
             <input
               type="checkbox"
               checked={scope.params.get('includeZero') === 'true'}
@@ -161,17 +161,11 @@ export default function PastDateStockPage() {
                   <tr>
                     <th>Phụ tùng</th>
                     <th>Tồn cuối ngày</th>
-                    <th>Tồn hiện tại</th>
-                    <th>Thay đổi tới nay</th>
                   </tr>
                 </thead>
                 <tbody>
                   {r.data.page.items.map((l) => (
-                    <PastStockLine
-                      key={l.productId}
-                      line={l}
-                      storeId={r.data!.storeId}
-                    />
+                    <PastStockLine key={l.productId} line={l} />
                   ))}
                 </tbody>
               </table>
@@ -197,21 +191,7 @@ export default function PastDateStockPage() {
     </main>
   )
 }
-function PastStockLine({
-  line,
-  storeId,
-}: {
-  line: History['page']['items'][number]
-  storeId: number
-}) {
-  const stock = useInventoryData<Page<StockRow>>('/inventory/stock', {
-      storeId,
-      productId: line.productId,
-      includeZero: true,
-      page: 0,
-      size: 1,
-    }),
-    current = stock.data?.items[0]?.onHandQty
+function PastStockLine({ line }: { line: History['page']['items'][number] }) {
   return (
     <tr>
       <td>
@@ -220,15 +200,6 @@ function PastStockLine({
       </td>
       <td>
         {line.closingQty} {line.baseUnit}
-      </td>
-      <td title={stock.error}>
-        {current == null ? '—' : current + ' ' + line.baseUnit}
-      </td>
-      <td>
-        {current == null
-          ? '—'
-          : (current - line.closingQty > 0 ? '+' : '') +
-            (current - line.closingQty)}
       </td>
     </tr>
   )

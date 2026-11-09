@@ -20,6 +20,7 @@ type Row = {
   arrivedAt?: string
   assigneeName?: string
 }
+type AssignedReceiptRow = Omit<Row, 'id'> & { goodsReceiptNoteId: number }
 const states: Record<string, string> = {
   ...transferStates,
   ...salesStates,
@@ -46,7 +47,9 @@ function Queue({
   params?: Query
   counts?: boolean
 }) {
-  const r = useInventoryData<Page<Row> | { counts: Page<Row> }>(path, {
+  const r = useInventoryData<
+      Page<Row | AssignedReceiptRow> | { counts: Page<Row> }
+    >(path, {
       ...params,
       page: 0,
       size: 5,
@@ -71,39 +74,48 @@ function Queue({
                 </tr>
               </thead>
               <tbody>
-                {page.items.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <Link
-                        to={
-                          (counts
-                            ? '/stock-counts'
-                            : path === '/goods-receipt-notes/assigned-to-me'
-                              ? '/goods-receipt-notes'
-                              : path) +
-                          '/' +
-                          row.id
-                        }
-                      >
-                        #{row.id}
-                      </Link>
-                    </td>
-                    <td>
-                      {row.supplierName ??
-                        row.customerName ??
-                        row.storeName ??
-                        [row.sourceStoreName, row.destStoreName]
-                          .filter(Boolean)
-                          .join(' → ')}
-                      <small>
-                        {dateTime(
-                          row.createdAt ?? row.arrivedAt ?? row.countDate ?? '',
-                        )}
-                      </small>
-                    </td>
-                    <td>{states[row.status] ?? row.status}</td>
-                  </tr>
-                ))}
+                {page.items.map((row) => {
+                  const id =
+                    'goodsReceiptNoteId' in row
+                      ? row.goodsReceiptNoteId
+                      : row.id
+                  return (
+                    <tr key={id}>
+                      <td>
+                        <Link
+                          to={
+                            (counts
+                              ? '/stock-counts'
+                              : path === '/goods-receipt-notes/assigned-to-me'
+                                ? '/goods-receipt-notes'
+                                : path) +
+                            '/' +
+                            id
+                          }
+                        >
+                          #{id}
+                        </Link>
+                      </td>
+                      <td>
+                        {row.supplierName ??
+                          row.customerName ??
+                          row.storeName ??
+                          [row.sourceStoreName, row.destStoreName]
+                            .filter(Boolean)
+                            .join(' → ')}
+                        <small>
+                          {dateTime(
+                            row.createdAt ??
+                              row.arrivedAt ??
+                              row.countDate ??
+                              '',
+                          )}
+                        </small>
+                      </td>
+                      <td>{states[row.status] ?? row.status}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

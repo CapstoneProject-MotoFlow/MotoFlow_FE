@@ -151,9 +151,6 @@ export default function PartsSearchPage() {
           </span>
         </div>
         <section className="bm-products-panel">
-          <BarcodeScan
-            onFound={(part) => navigate(`${base}/${part.productId}`)}
-          />
           <div className="bm-products-panel-heading">
             <h2>Tìm phụ tùng</h2>
             {canCreate && (
@@ -161,6 +158,12 @@ export default function PartsSearchPage() {
                 + Thêm phụ tùng
               </Link>
             )}
+          </div>
+          <div className="bm-products-barcode">
+            <BarcodeScan
+              allowInactive
+              onFound={(part) => navigate(`${base}/${part.productId}`)}
+            />
           </div>
           <div className="bm-products-search">
             <label className="bm-product-query">

@@ -6,6 +6,7 @@ import { useInventoryData, inventoryError } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import {
   today,
+  date,
   percentValid,
   type Rules,
   type Limits,
@@ -89,6 +90,7 @@ export default function PricingRulesPage() {
             <SuggestionRules
               key={revision}
               config={rules.data.scheduled ?? rules.data.current}
+              scheduled={rules.data.scheduled}
               categories={categories.data}
               onSaved={saved}
             />
@@ -129,6 +131,11 @@ export function LimitEditor({
     [error, setError] = useState(''),
     lock = useRef(false),
     valid = percentValid(rate) && effective >= today()
+  const limits = useInventoryData<Limits>('/pricing/sales-limits')
+  const scheduled =
+    type === 'DISCOUNT_THRESHOLD'
+      ? limits.data?.discountThreshold.scheduled
+      : limits.data?.minimumMargin.scheduled
   return (
     <FormDialog
       title={
@@ -197,6 +204,12 @@ export function LimitEditor({
             />
           </label>
         </div>
+        {scheduled && effective < scheduled.effectiveFrom.slice(0, 10) && (
+          <p className="pricing-notice">
+            Mức {scheduled.rate}% đã hẹn từ {date(scheduled.effectiveFrom)} vẫn
+            sẽ áp dụng vào ngày đó.
+          </p>
+        )}
         <p className="pricing-recap">
           Ngưỡng áp dụng toàn chuỗi. Lưu mới có thể thay thế lịch đã hẹn từ ngày
           áp dụng.

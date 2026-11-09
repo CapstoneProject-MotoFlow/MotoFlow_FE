@@ -14,7 +14,7 @@ const source = ts.transpileModule(
     },
   },
 ).outputText
-const { countFromDto, countScope } = await import(
+const { countFromDto, countScope, canCancelCount } = await import(
   'data:text/javascript;base64,' + Buffer.from(source).toString('base64')
 )
 test('count DTO maps scope, zero, recount and null private values without inventing unit costs or submission state', () => {
@@ -65,4 +65,15 @@ test('count DTO maps scope, zero, recount and null private values without invent
 test('count scopes preserve warehouse and product scopes', () => {
   assert.equal(countScope('WHOLE', null), 'Toàn kho')
   assert.equal(countScope('PRODUCTS', null), 'Theo phụ tùng')
+})
+
+test('confirmed count returned for recount cannot be cancelled', () => {
+  assert.equal(
+    canCancelCount({ status: 'COUNTING', confirmedAt: '2026-11-09' }),
+    false,
+  )
+  assert.equal(canCancelCount({ status: 'COUNTING', confirmedAt: null }), true)
+  assert.equal(canCancelCount({ status: 'DRAFT', confirmedAt: null }), true)
+  for (const status of ['AWAITING_APPROVAL', 'COMPLETED', 'CANCELLED'])
+    assert.equal(canCancelCount({ status, confirmedAt: null }), false)
 })

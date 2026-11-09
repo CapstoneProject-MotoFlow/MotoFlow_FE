@@ -3,6 +3,7 @@ import { useInventoryData } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import type { Page, StockSummary } from '../inventory/types'
 import type { CountList } from '../inventory/countApi'
+import type { ReplenishmentRow } from '../transfers/types'
 import { dateTime } from '../inventory/presentation'
 import './operations.css'
 type Store = { id: number; storeName: string; status: string }
@@ -10,7 +11,6 @@ type Pending = {
   id: number
   createdAt?: string
   arrivedAt?: string
-  requestingStoreName?: string
   storeName?: string
 }
 export default function OwnerMonitoring() {
@@ -24,7 +24,7 @@ export default function OwnerMonitoring() {
       page: 0,
       size: 5,
     }),
-    replenishments = useInventoryData<Page<Pending>>(
+    replenishments = useInventoryData<Page<ReplenishmentRow>>(
       '/replenishment-requests',
       { status: 'AWAITING_COORDINATION', page: 0, size: 5 },
     ),
@@ -56,7 +56,7 @@ export default function OwnerMonitoring() {
       key: 'y' + r.id,
       code: 'YBS-' + String(r.id).padStart(4, '0'),
       at: r.createdAt ?? '',
-      store: r.requestingStoreName,
+      store: r.storeName,
       task: 'Điều phối bổ sung hàng',
       href: '/replenishment-requests/' + r.id + '/coordinate',
     })),
@@ -178,21 +178,18 @@ export default function OwnerMonitoring() {
   )
 }
 function StoreLine({ store }: { store: Store }) {
-  const r = useInventoryData<StockSummary>('/inventory/stock/summary', {
-    storeId: store.id,
-  })
   return (
     <tr>
       <td>{store.storeName}</td>
       <td>—</td>
       <td>—</td>
       <td>
-        <Link to={'/receivables?storeId=' + store.id}>Xem công nợ</Link>
+        <Link className="operation-action" to={'/receivables?storeId=' + store.id}>Xem công nợ →</Link>
       </td>
       <td>—</td>
-      <td title={r.error}>
-        <Link to={'/inventory?view=lowStock&storeId=' + store.id}>
-          {r.data?.lowStock ?? '—'}
+      <td>
+        <Link className="operation-action" to={'/inventory?view=lowStock&storeId=' + store.id}>
+          Xem tồn dưới ngưỡng →
         </Link>
       </td>
     </tr>

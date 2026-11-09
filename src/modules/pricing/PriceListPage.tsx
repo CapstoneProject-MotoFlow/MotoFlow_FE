@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { isAxiosError } from 'axios'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import axiosClient from '../../shared/api/axiosClient'
@@ -48,6 +49,9 @@ export default function PriceListPage() {
     revision,
   )
   const cats = useInventoryData<Category[]>('/part-categories')
+  useEffect(() => {
+    if (prices.error) window.dispatchEvent(new Event('auth-user-refresh'))
+  }, [prices.error])
   function filter(key: string, value: string) {
     setParams(
       (p) => {
@@ -83,7 +87,6 @@ export default function PriceListPage() {
               <button onClick={() => setLimit('MINIMUM_MARGIN')}>
                 Biên lợi nhuận
               </button>
-              <Link to="/pricing/rules">Quy tắc giá →</Link>
             </div>
           )}
         </div>
@@ -136,6 +139,12 @@ export default function PriceListPage() {
           loading={prices.loading}
           error={prices.error || cats.error}
         />
+        {diff && (
+          <p className="pricing-note">
+            Đang lọc phụ tùng có giá gợi ý khác giá hiện hành.{' '}
+            <button onClick={() => filter('diff', '0')}>Xem cả bảng giá</button>
+          </p>
+        )}
         <div className="pricing-table">
           <table>
             <thead>
@@ -191,7 +200,13 @@ export default function PriceListPage() {
                     )}
                     {edit && (
                       <>
-                        <td>{money(suggested)}</td>
+                        <td>
+                          {r.suggestedPrice == null
+                            ? 'Chưa có gợi ý'
+                            : suggested == null
+                              ? 'Bằng giá hiện hành'
+                              : money(suggested)}
+                        </td>
                         <td>
                           {suggested != null && r.currentPrice ? (
                             <span
@@ -366,7 +381,7 @@ function PriceHistory({ row, onClose }: { row: Price; onClose: () => void }) {
   )
 }
 function PriceEditor({
-  row,
+  row: initialRow,
   owner,
   onClose,
   onSaved,
@@ -376,6 +391,7 @@ function PriceEditor({
   onClose: () => void
   onSaved: () => void
 }) {
+  const [row, setRow] = useState(initialRow)
   const [value, setValue] = useState(''),
     [effective, setEffective] = useState(today()),
     [reason, setReason] = useState(''),
@@ -401,6 +417,27 @@ function PriceEditor({
       onSaved()
     } catch (e) {
       setError(inventoryError(e))
+      if (
+        isAxiosError(e) &&
+        e.response?.status === 409 &&
+        e.response.data?.code === 'MSG126'
+      ) {
+        setValue('')
+        setSuggested(false)
+        try {
+          const { data } = await axiosClient.get<Price>(
+            '/pricing/retail-prices/' + row.productId,
+          )
+          setRow(data)
+          setError(
+            'Giá gợi ý đã thay đổi. Dữ liệu mới đã được tải, vui lòng kiểm tra và chọn lại giá.',
+          )
+        } catch (loadError) {
+          setError(inventoryError(loadError))
+        }
+      }
+      if (isAxiosError(e) && e.response?.status === 403)
+        window.dispatchEvent(new Event('auth-user-refresh'))
     } finally {
       lock.current = false
       setBusy(false)

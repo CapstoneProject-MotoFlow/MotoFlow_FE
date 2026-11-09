@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { isAxiosError } from 'axios'
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import {
@@ -136,21 +137,19 @@ export function SalesOrderListPage({
             }) as SalesOrder,
         )
   return (
-    <Shell
-      title={staff ? 'Đơn được giao lấy hàng' : 'Đơn bán'}
-      actions={
-        <>
-          {!staff && <Link to="/unmet-demand">Nhu cầu chưa đáp ứng</Link>}
-          {['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '') && (
-            <Link className="sales-primary" to="/sales-orders/new">
-              Tạo đơn bán
-            </Link>
-          )}
-        </>
-      }
-    >
+    <Shell title={staff ? 'Đơn được giao lấy hàng' : 'Đơn bán'}>
       <InventoryPanel
         title={staff ? 'Việc lấy hàng của tôi' : 'Danh sách đơn bán'}
+        action={
+          <div className="sales-list-actions">
+            {!staff && <Link to="/unmet-demand">Nhu cầu chưa đáp ứng</Link>}
+            {['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '') && (
+              <Link className="sales-primary" to="/sales-orders/new">
+                Tạo đơn bán
+              </Link>
+            )}
+          </div>
+        }
       >
         <div className="stock-tabs">
           {(staff
@@ -342,6 +341,7 @@ type Product = {
   retailPrice: number | null
   status: string
   availableQty?: number | null
+  stock?: { availableQty: number | null } | null
   barcodes?: string[]
 }
 type DraftLine = { product: Product; quantity: number }
@@ -540,7 +540,10 @@ export function SalesOrderFormView({
     setQuery('')
     setError('')
   }
+  const scanLock = useRef(false)
   async function scanBarcode(barcode: string) {
+    if (scanLock.current || !barcode.trim()) return
+    scanLock.current = true
     try {
       const { data } = await axiosClient.get<{
         productId: number
@@ -556,10 +559,20 @@ export function SalesOrderFormView({
         '/products/' + data.productId,
         { params: { storeId: warehouse || undefined } },
       )
-      add(detail.data)
+      add({
+        ...detail.data,
+        availableQty:
+          detail.data.stock?.availableQty ?? detail.data.availableQty,
+      })
       setScan('')
-    } catch {
-      setError('Không tra được mã vạch. Vui lòng thử lại.')
+    } catch (e) {
+      setError(
+        isAxiosError(e) && e.response?.status === 404
+          ? 'Không tìm thấy mã vạch chính xác. Chọn phụ tùng từ kết quả tìm kiếm.'
+          : inventoryError(e),
+      )
+    } finally {
+      scanLock.current = false
     }
   }
   return (
