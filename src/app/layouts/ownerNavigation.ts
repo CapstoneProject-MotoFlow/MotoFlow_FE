@@ -23,10 +23,9 @@ export const ownerNavigation: NavItem[] = [
   { label: 'Khách hàng', href: '/owner/customers', icon: 'users' },
   {
     label: 'Công nợ',
-    href: '#debts',
+    href: '/receivables',
     icon: 'wallet',
     group: 'CÔNG NỢ',
-    pending: true,
   },
   {
     label: 'Yêu cầu nhập hàng',

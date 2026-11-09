@@ -1,0 +1,532 @@
+import DebtEvidence from './DebtEvidence'
+import OpeningDebtPicker from './OpeningDebtPicker'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { useInventoryData, useInventoryScope } from '../inventory/api'
+import {
+  InventoryNotice,
+  Pagination,
+  WarehouseFilter,
+} from '../inventory/components'
+import { money, dateTime, today } from '../inventory/presentation'
+import type { Page } from '../inventory/types'
+import type { Debtor, DebtDetail } from './types'
+import DebtDialog from './DebtDialog'
+import './receivables.css'
+const credit: Record<string, string> = {
+  ELIGIBLE: 'Được mua chịu',
+  NOT_GRANTED: 'Chưa cấp mua chịu',
+  REVOKED: 'Đã thu hồi mua chịu',
+}
+const day = (s: string | null) => (s ? s.split('-').reverse().join('/') : '—')
+export function ReceivableListPage() {
+  const [opening, setOpening] = useState(false),
+    [revision, setRevision] = useState(0)
+  const scope = useInventoryScope(),
+    page = Math.max(0, Number(scope.params.get('page')) || 0)
+  const q = scope.params.get('q') ?? '',
+    overdue = scope.params.get('overdueOnly') === 'true'
+  const resource = useInventoryData<Page<Debtor>>(
+    '/receivables/customers',
+    {
+      storeId: scope.storeId,
+      q,
+      overdueOnly: overdue,
+      page,
+      size: 20,
+    },
+    revision,
+  )
+  return (
+    <main className="dashboard-content rv-page">
+      <header className="stock-heading">
+        <div>
+          <small>Khách hàng / Công nợ</small>
+          <h1>Công nợ khách hàng</h1>
+          <p>Theo dõi khoản còn thu và hạn thanh toán · {scope.warehouse}</p>
+        </div>
+        {scope.owner && (
+          <button className="rv-primary" onClick={() => setOpening(true)}>
+            ＋ Ghi nợ đầu kỳ
+          </button>
+        )}
+      </header>
+      <div className="rv-overview" aria-label="Tổng quan công nợ">
+        <article>
+          <span className="rv-stat-icon">▤</span>
+          <span>Tổng phải thu</span>
+          <strong>—</strong>
+          <small>Chưa có số liệu tổng hợp</small>
+        </article>
+        <button
+          type="button"
+          onClick={() => scope.filter({ overdueOnly: !overdue })}
+          aria-pressed={overdue}
+        >
+          <span className="rv-stat-icon rv-icon-error">▦</span>
+          <span>Quá hạn</span>
+          <strong>—</strong>
+          <small>Xem khách có nợ quá hạn →</small>
+        </button>
+        <article>
+          <span className="rv-stat-icon rv-icon-warning">◷</span>
+          <span>Đến hạn 7 ngày tới</span>
+          <strong>—</strong>
+          <small>Chưa có số liệu tổng hợp</small>
+        </article>
+      </div>
+      <section className="stock-panel">
+        <h2>Khách đang nợ · {scope.warehouse}</h2>
+        <div className="rv-filters">
+          <label>
+            Tìm khách hàng
+            <input
+              value={q}
+              placeholder="Tên hoặc số điện thoại"
+              onChange={(e) => scope.filter({ q: e.target.value }, true)}
+            />
+          </label>
+          <WarehouseFilter
+            owner={scope.owner}
+            stores={scope.stores}
+            value={scope.storeId}
+            onChange={(v) => scope.filter({ storeId: v })}
+          />
+          <label>
+            <input
+              type="checkbox"
+              checked={overdue}
+              onChange={(e) => scope.filter({ overdueOnly: e.target.checked })}
+            />{' '}
+            Chỉ có nợ quá hạn
+          </label>
+        </div>
+        <InventoryNotice
+          loading={resource.loading}
+          error={resource.error || scope.storesError}
+        />
+        <div className="rv-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Khách hàng</th>
+                <th>Quyền mua chịu</th>
+                <th>Dư nợ</th>
+                <th>Nợ quá hạn</th>
+                <th>Khoản chưa tất toán</th>
+                <th>Hạn trả gần nhất</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {resource.data?.items.map((r) => (
+                <tr key={r.customerId}>
+                  <td>
+                    <Link
+                      to={`/receivables/customers/${r.customerId}${scope.storeId ? '?storeId=' + scope.storeId : ''}`}
+                    >
+                      {r.customerName}
+                    </Link>
+                    <small>{r.phone || '—'}</small>
+                  </td>
+                  <td>{credit[r.creditStatus]}</td>
+                  <td>{money.format(r.debt)}</td>
+                  <td className={r.overdueDebt ? 'rv-overdue' : ''}>
+                    {money.format(r.overdueDebt)}
+                  </td>
+                  <td>{r.openDebtCount}</td>
+                  <td>{day(r.earliestDueDate)}</td>
+                  <td>
+                    <Link
+                      className="rv-pay-link"
+                      to={`/receivables/customers/${r.customerId}?action=payment${scope.storeId ? '&storeId=' + scope.storeId : ''}`}
+                    >
+                      Thu nợ
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {resource.data && !resource.data.items.length && (
+          <p className="rv-empty">Không có khách hàng còn nợ phù hợp bộ lọc.</p>
+        )}
+        <Pagination
+          total={resource.data?.totalItems ?? 0}
+          page={page}
+          loading={resource.loading}
+          onPage={(n) =>
+            scope.setParams((p) => {
+              const next = new URLSearchParams(p)
+              next.set('page', String(n))
+              return next
+            })
+          }
+        />
+      </section>
+      {opening && (
+        <OpeningDebtPicker
+          onClose={() => setOpening(false)}
+          onSaved={() => {
+            setOpening(false)
+            setRevision((n) => n + 1)
+          }}
+        />
+      )}
+    </main>
+  )
+}
+export function ReceivableDetailPage() {
+  const { id } = useParams(),
+    scope = useInventoryScope()
+  const [revision, setRevision] = useState(0),
+    [action, setAction] = useState(() =>
+      scope.params.get('action') === 'payment' ? 'payment' : '',
+    ),
+    [tab, setTab] = useState('open'),
+    [allPayments, setAllPayments] = useState(false),
+    [notice, setNotice] = useState('')
+  const resource = useInventoryData<DebtDetail>(
+    `/customers/${id}/debts`,
+    { storeId: scope.storeId },
+    revision,
+    !!id && /^[1-9]\d*$/.test(id),
+  )
+  const { params, setParams } = scope
+  useEffect(() => {
+    if (!params.has('action')) return
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        next.delete('action')
+        return next
+      },
+      { replace: true },
+    )
+  }, [params, setParams])
+  const d = resource.data,
+    rows =
+      d?.debts.filter(
+        (r) =>
+          tab === 'all' ||
+          (tab === 'overdue' ? r.overdue : r.remainingAmount > 0),
+      ) ?? []
+  return (
+    <main className="dashboard-content rv-page rv-detail">
+      <header className="stock-heading">
+        <div>
+          <Link to="/receivables">← Công nợ khách hàng</Link>
+          <h1>{d ? 'Công nợ của ' + d.customerName : 'Chi tiết công nợ'}</h1>
+        </div>
+      </header>
+      {notice && (
+        <p role="status" className="stock-notice">
+          {notice}
+        </p>
+      )}
+      <InventoryNotice
+        loading={resource.loading}
+        error={resource.error || scope.storesError}
+      />
+      {d && (
+        <>
+          <section className="rv-customer-card">
+            <div className="rv-customer-top">
+              <div className="rv-customer-title">
+                <h2>{d.customerName}</h2>
+                <span className={'rv-badge rv-credit-' + d.creditStatus}>
+                  {credit[d.creditStatus]}
+                </span>
+              </div>
+              <div className="rv-actions">
+                {d && (
+                  <>
+                    <Link
+                      to={`${scope.owner ? '/owner' : '/branch-manager'}/customers/${id}`}
+                    >
+                      Hồ sơ khách hàng
+                    </Link>
+                    <button
+                      disabled={d.debt <= 0}
+                      onClick={() => setAction('payment')}
+                    >
+                      Thu nợ
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            <details className="rv-scope-control">
+              <summary>{scope.warehouse} · Đổi phạm vi</summary>{' '}
+              <WarehouseFilter
+                owner={scope.owner}
+                stores={scope.stores}
+                value={scope.storeId}
+                onChange={(v) => {
+                  setAction('')
+                  scope.filter({ storeId: v })
+                }}
+              />
+            </details>
+            <dl>
+              <div>
+                <dt>Điện thoại</dt>
+                <dd>{d.phone || '—'}</dd>
+              </div>
+              <div>
+                <dt>{scope.owner ? 'Còn nợ toàn chuỗi' : 'Còn nợ'}</dt>
+                <dd>{money.format(scope.owner ? d.totalDebt : d.debt)}</dd>
+              </div>
+              <div>
+                <dt>Nợ quá hạn</dt>
+                <dd className={d.overdueDebt ? 'rv-overdue' : ''}>
+                  {money.format(d.overdueDebt)}
+                </dd>
+              </div>
+              <div>
+                <dt>Hạn trả gần nhất</dt>
+                <dd>
+                  {day(
+                    d.debts
+                      .filter((r) => r.remainingAmount > 0 && r.dueDate)
+                      .map((r) => r.dueDate)
+                      .sort()[0] ?? null,
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+          <section className="stock-panel">
+            <h2>Các khoản nợ</h2>
+            <div className="rv-tabs">
+              {[
+                ['open', 'Còn nợ'],
+                ['overdue', 'Quá hạn'],
+                ['all', 'Tất cả'],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  aria-pressed={tab === key}
+                  onClick={() => setTab(key)}
+                >
+                  {label}{' '}
+                  <span>
+                    {
+                      d.debts.filter(
+                        (r) =>
+                          key === 'all' ||
+                          (key === 'overdue'
+                            ? r.overdue
+                            : r.remainingAmount > 0),
+                      ).length
+                    }
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="rv-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Khoản nợ</th>
+                    <th>Nguồn</th>
+                    <th>Ngày ghi nợ</th>
+                    <th>Hạn trả</th>
+                    <th>Số nợ</th>
+                    <th>Đã thu</th>
+                    <th>Còn lại</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        #{r.id}
+                        <small>{r.storeName}</small>
+                      </td>
+                      <td>
+                        {r.salesOrderId ? (
+                          <Link to={'/sales-orders/' + r.salesOrderId}>
+                            Đơn #{r.salesOrderId}
+                          </Link>
+                        ) : (
+                          'Nợ đầu kỳ'
+                        )}
+                        {r.note && <small>{r.note}</small>}
+                        <DebtEvidence files={r.evidence} />
+                      </td>
+                      <td>
+                        {day(r.recognizedAt.slice(0, 10))}
+                        <small>{r.recognizedBy}</small>
+                      </td>
+                      <td className={r.overdue ? 'rv-overdue' : ''}>
+                        {day(r.dueDate)}
+                        {r.overdue && (
+                          <small>
+                            <span className="rv-badge rv-late">
+                              Quá hạn{' '}
+                              {Math.max(
+                                1,
+                                Math.floor(
+                                  (Date.parse(today()) -
+                                    Date.parse(r.dueDate)) /
+                                    86400000,
+                                ),
+                              )}{' '}
+                              ngày
+                            </span>
+                          </small>
+                        )}
+                      </td>
+                      <td
+                        title={
+                          r.correctionAmount
+                            ? 'Gồm điều chỉnh ' +
+                              money.format(r.correctionAmount)
+                            : undefined
+                        }
+                      >
+                        {money.format(r.originalAmount + r.correctionAmount)}
+                      </td>
+                      <td>{money.format(r.collectedAmount)}</td>
+                      <td>{money.format(r.remainingAmount)}</td>
+                      <td>
+                        <span className={'rv-badge rv-debt-' + r.status}>
+                          {(
+                            {
+                              OUTSTANDING: 'Chưa thu',
+                              PARTIALLY_PAID: 'Đã thu một phần',
+                              SETTLED: 'Đã tất toán',
+                            } as Record<string, string>
+                          )[r.status] ?? r.status}
+                        </span>
+                        {r.settledAt && (
+                          <small>Tất toán {dateTime(r.settledAt)}</small>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!rows.length && (
+              <p className="rv-empty">Không có khoản nợ trong mục này.</p>
+            )}
+          </section>
+          <section className="stock-panel">
+            <h2>Lịch sử thu nợ</h2>
+            <p className="rv-ledger-note">
+              Số còn nợ trong phân bổ là số dư hiện tại, sau tất cả các lần thu.
+            </p>
+            <div className="rv-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Phiếu thu</th>
+                    <th>Lúc</th>
+                    <th>Hình thức</th>
+                    <th>Số tiền</th>
+                    <th>Trừ vào</th>
+                    <th>Xác minh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(allPayments ? d.payments : d.payments.slice(0, 10)).map(
+                    (p) => (
+                      <tr key={p.id}>
+                        <td>#{p.id}</td>
+                        <td>
+                          {dateTime(p.recordedAt)}
+                          <small>{p.recordedBy}</small>
+                        </td>
+
+                        <td>
+                          {p.paymentMethod === 'CASH'
+                            ? 'Tiền mặt'
+                            : 'Chuyển khoản'}
+                          <small>{p.transactionReference}</small>
+                          <DebtEvidence files={p.evidence} />
+                        </td>
+                        <td
+                          title={
+                            p.tenderedAmount == null
+                              ? undefined
+                              : 'Khách đưa: ' +
+                                money.format(p.tenderedAmount) +
+                                '; tiền thối: ' +
+                                money.format(p.changeAmount ?? 0)
+                          }
+                        >
+                          {money.format(p.amount)}
+                          <small>{p.storeName}</small>
+                          {p.tenderedAmount != null && (
+                            <small>
+                              Khách đưa: {money.format(p.tenderedAmount)}
+                              <br />
+                              Tiền thối: {money.format(p.changeAmount ?? 0)}
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          {p.allocations.map((a) => (
+                            <small key={a.receivableId}>
+                              #{a.receivableId}:{' '}
+                              {money.format(a.allocatedAmount)}
+                              <span className="rv-balance-note">
+                                Còn nợ hiện tại:{' '}
+                                {money.format(a.remainingAmount)}
+                              </span>
+                            </small>
+                          ))}
+                        </td>
+                        <td>
+                          <span className="rv-badge">
+                            {p.status === 'VERIFIED'
+                              ? 'Đã xác minh'
+                              : p.status === 'REJECTED'
+                                ? 'Đã từ chối'
+                                : 'Chưa xác minh'}
+                          </span>
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {d.payments.length > 10 && (
+              <button
+                className="rv-more"
+                onClick={() => setAllPayments((v) => !v)}
+              >
+                {allPayments
+                  ? 'Thu gọn'
+                  : 'Xem tất cả ' + d.payments.length + ' lần thu'}
+              </button>
+            )}
+            {!d.payments.length && (
+              <p className="rv-empty">Chưa có khoản thu nợ.</p>
+            )}
+          </section>
+          {action && (
+            <DebtDialog
+              key={action}
+              action={action}
+              data={d}
+              owner={scope.owner}
+              stores={scope.stores}
+              onClose={() => setAction('')}
+              onSaved={() => {
+                setAction('')
+                setNotice('Đã lưu thành công.')
+                setRevision((n) => n + 1)
+              }}
+            />
+          )}
+        </>
+      )}
+    </main>
+  )
+}

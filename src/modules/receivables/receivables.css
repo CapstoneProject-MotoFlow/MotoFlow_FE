@@ -1,0 +1,1026 @@
+.rv-page {
+  display: grid;
+  gap: 24px;
+}
+.rv-page h1 {
+  margin: 8px 0;
+}
+.rv-page h2 {
+  font-size: 18px;
+  margin: 20px;
+}
+.rv-page .stock-panel {
+  overflow: hidden;
+}
+.rv-filters,
+.rv-actions,
+.rv-tabs {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.rv-filters,
+.rv-tabs {
+  padding: 20px;
+}
+.rv-filters label,
+.rv-form label {
+  display: grid;
+  gap: 8px;
+}
+.rv-filters input:not([type='checkbox']),
+.rv-filters select,
+.rv-form input:not([type='checkbox']),
+.rv-form select,
+.rv-form textarea {
+  padding: 10px 12px;
+  border: 1px solid #d5dce5;
+  border-radius: 8px;
+  font: inherit;
+}
+.rv-actions button,
+.rv-tabs button {
+  padding: 10px 16px;
+  border: 1px solid #d5dce5;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+.rv-actions button:first-of-type,
+.rv-tabs button[aria-pressed='true'] {
+  background: #17664a;
+  color: white;
+}
+.rv-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.rv-summary article {
+  background: white;
+  border: 1px solid #e4e8ed;
+  border-radius: 12px;
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+.rv-summary strong {
+  font-size: 26px;
+}
+.rv-overdue {
+  color: #b42318;
+}
+.rv-table {
+  overflow-x: auto;
+}
+.rv-table table,
+.rv-form table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+.rv-table th,
+.rv-table td,
+.rv-form th,
+.rv-form td {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9edf2;
+}
+.rv-table th {
+  background: #f7f9fc;
+  color: #58677a;
+  font-size: 13px;
+}
+.rv-table small {
+  display: block;
+  margin-top: 5px;
+  color: #697586;
+}
+.rv-empty {
+  padding: 32px;
+  text-align: center;
+  color: #697586;
+}
+.rv-form {
+  display: grid;
+  gap: 16px;
+}
+.rv-form fieldset {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.rv-form table {
+  font-size: 13px;
+  white-space: normal;
+}
+.rv-form td,
+.rv-form th {
+  padding: 8px;
+}
+.rv-form input[type='checkbox'] {
+  width: auto;
+}
+@media (max-width: 800px) {
+  .rv-summary {
+    grid-template-columns: 1fr;
+  }
+  .rv-actions {
+    align-items: stretch;
+  }
+  .rv-page .stock-heading {
+    flex-wrap: wrap;
+  }
+}
+/* FE-08 follows the TailAdmin light palette of the supplied MotoFlow mockup. */
+.rv-page {
+  gap: 24px;
+  color: #101828;
+  font-size: 16px;
+}
+.rv-page .stock-heading {
+  align-items: center;
+}
+.rv-page .stock-heading h1 {
+  font-size: 30px;
+  line-height: 38px;
+  font-weight: 600;
+}
+.rv-page .stock-heading p {
+  font-size: 14px;
+  color: #475467;
+}
+.rv-page a {
+  color: #3641f5;
+  text-decoration: none;
+}
+.rv-page .stock-panel {
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: none;
+}
+.rv-page h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 24px;
+}
+.rv-filters {
+  border-top: 1px solid #f2f4f7;
+  border-bottom: 1px solid #f2f4f7;
+  padding: 16px 24px;
+}
+.rv-filters label {
+  font-size: 14px;
+  color: #344054;
+}
+.rv-filters input:not([type='checkbox']) {
+  min-width: 260px;
+}
+.rv-page input,
+.rv-page select,
+.rv-form input,
+.rv-form select,
+.rv-form textarea {
+  min-height: 44px;
+}
+.rv-page input[type='checkbox'],
+.rv-form input[type='checkbox'],
+.rv-form input[type='radio'] {
+  min-height: auto;
+  accent-color: #465fff;
+  width: 18px;
+  height: 18px;
+}
+.rv-primary,
+.rv-page .rv-pay-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #465fff;
+  color: white;
+  padding: 12px 20px;
+  border: 1px solid #465fff;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 16px;
+}
+.rv-actions button:first-of-type,
+.rv-tabs button[aria-pressed='true'] {
+  background: #465fff;
+  color: white;
+}
+.rv-actions button {
+  font-size: 14px;
+  min-height: 44px;
+}
+.rv-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.rv-table th {
+  font-size: 14px;
+  font-weight: 500;
+  background: #f9fafb;
+  color: #475467;
+}
+.rv-table td {
+  font-size: 16px;
+  padding: 18px 24px;
+  font-variant-numeric: tabular-nums;
+}
+.rv-table td:first-child a {
+  font-weight: 500;
+}
+.rv-table tr:hover td {
+  background: #fcfcfd;
+}
+.rv-table small {
+  font-size: 14px;
+  color: #475467;
+}
+.rv-table td.rv-overdue {
+  color: #b42318;
+}
+.rv-page .rv-pay-link {
+  padding: 8px 16px;
+  font-size: 14px;
+  background: white;
+  color: #344054;
+  border-color: #d0d5dd;
+}
+.rv-customer-card {
+  background: white;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  padding: 24px;
+}
+.rv-customer-title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.rv-customer-title h2 {
+  margin: 0;
+}
+.rv-customer-card dl {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  border-top: 1px solid #f2f4f7;
+  padding-top: 24px;
+  margin: 24px 0 0;
+}
+.rv-customer-card dt {
+  font-size: 14px;
+  color: #475467;
+  margin-bottom: 8px;
+}
+.rv-customer-card dd {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+.rv-badge {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #f2f4f7;
+  color: #344054;
+}
+.rv-credit-ELIGIBLE,
+.rv-debt-SETTLED {
+  background: #ecfdf3;
+  color: #027a48;
+}
+.rv-credit-REVOKED {
+  background: #fef3f2;
+  color: #b42318;
+}
+.rv-debt-PARTIALLY_PAID {
+  background: #fffaeb;
+  color: #b54708;
+}
+.rv-tabs {
+  padding: 16px 24px;
+  border-top: 1px solid #f2f4f7;
+  gap: 4px;
+}
+.rv-tabs button {
+  background: #f2f4f7;
+  border: 0;
+  font-size: 14px;
+}
+.rv-tabs button[aria-pressed='true'] {
+  background: white;
+  color: #344054;
+  box-shadow: 0 1px 3px #10182822;
+}
+.rv-tabs button span {
+  margin-left: 8px;
+  background: #e4e7ec;
+  border-radius: 20px;
+  padding: 2px 7px;
+  color: #344054;
+}
+.rv-more {
+  display: block;
+  margin: 16px auto;
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  color: #344054;
+  cursor: pointer;
+}
+.rv-dialog {
+  width: min(680px, calc(100vw - 32px));
+  color: #101828;
+}
+.rv-dialog-payment {
+  width: min(760px, calc(100vw - 32px));
+}
+.rv-dialog .rv-form {
+  font-size: 16px;
+}
+.rv-dialog-explanation {
+  line-height: 1.6;
+  color: #344054;
+  margin: 0;
+}
+.rv-recap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 12px;
+}
+.rv-recap span {
+  font-size: 14px;
+  color: #475467;
+}
+.rv-recap strong {
+  font-size: 16px;
+}
+.rv-form label {
+  color: #344054;
+  font-size: 16px;
+}
+.rv-form small,
+.rv-help {
+  font-size: 14px;
+  color: #475467;
+  line-height: 1.5;
+}
+.rv-mode {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rv-mode label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  padding: 14px;
+  min-width: 200px;
+}
+.rv-mode label:has(:checked) {
+  background: #ecf3ff;
+  border-color: #465fff;
+}
+.rv-customer-options {
+  display: grid;
+  gap: 8px;
+  max-height: 350px;
+  overflow: auto;
+}
+.rv-customer-options button {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  color: #344054;
+}
+.rv-customer-options button:hover {
+  background: #ecf3ff;
+}
+.rv-page button:focus-visible,
+.rv-page a:focus-visible,
+.rv-form input:focus-visible {
+  outline: 3px solid #9cb9ff;
+  outline-offset: 2px;
+}
+@media (max-width: 800px) {
+  .rv-customer-card dl {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .rv-page .stock-heading h1 {
+    font-size: 24px;
+  }
+  .rv-dialog {
+    width: calc(100vw - 24px);
+  }
+}
+.rv-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.rv-overview article,
+.rv-overview > button {
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: left;
+  display: grid;
+  gap: 12px;
+  font: inherit;
+  color: #344054;
+}
+.rv-overview > button {
+  cursor: pointer;
+}
+.rv-overview > button[aria-pressed='true'] {
+  border-color: #465fff;
+  background: #f2f7ff;
+}
+.rv-overview strong {
+  font-size: 28px;
+  color: #101828;
+}
+.rv-overview small {
+  font-size: 14px;
+  color: #475467;
+}
+.rv-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #ecf3ff;
+  color: #3641f5;
+  font-size: 26px;
+}
+.rv-icon-error {
+  background: #fef3f2;
+  color: #b42318;
+}
+.rv-icon-warning {
+  background: #fffaeb;
+  color: #b54708;
+}
+@media (max-width: 800px) {
+  .rv-overview {
+    grid-template-columns: 1fr;
+  }
+}
+.rv-opening-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-width: 680px;
+  border-radius: 24px;
+  color: #1d2939;
+}
+.rv-opening-dialog > header {
+  padding: 24px 32px;
+}
+.rv-opening-dialog > header h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.rv-opening-dialog .ui-form-body {
+  padding: 0 32px 24px;
+}
+.rv-opening-dialog > footer {
+  padding: 20px 32px;
+  border-top: 1px solid #f2f4f7;
+}
+.rv-opening-form fieldset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px 20px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.rv-opening-form .rv-full {
+  grid-column: 1/-1;
+}
+.rv-opening-form label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #344054;
+  position: relative;
+}
+.rv-opening-form label > span,
+.rv-evidence > label > span {
+  color: #f04438;
+}
+.rv-opening-form input,
+.rv-opening-form select,
+.rv-opening-form textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  box-shadow: 0 1px 2px #1018280d;
+}
+.rv-opening-form small {
+  display: block;
+  font-size: 12px;
+  color: #475467;
+  margin-top: 6px;
+  font-weight: 400;
+}
+.rv-opening-form .rv-warning {
+  color: #dc6803;
+}
+.rv-money-input {
+  position: relative;
+}
+.rv-money-input input {
+  padding-right: 32px;
+}
+.rv-money-input > span {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  color: #667085;
+}
+.rv-opening-recap {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+.rv-file {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+}
+.rv-file strong {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.rv-file > button {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  font-size: 22px;
+  color: #667085;
+  cursor: pointer;
+}
+.rv-file-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  background: #ecf3ff;
+  color: #465fff;
+  border-radius: 8px;
+}
+.rv-opening-choices {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+.rv-opening-choices button {
+  display: block;
+  text-align: left;
+  border: 0;
+  background: white;
+  padding: 12px;
+  width: 100%;
+  color: #344054;
+  cursor: pointer;
+}
+.rv-opening-choices button:hover {
+  background: #ecf3ff;
+}
+.rv-opening-form input:focus,
+.rv-opening-form select:focus,
+.rv-opening-form textarea:focus {
+  outline: 3px solid #465fff25;
+  border-color: #7592ff;
+}
+@media (max-width: 600px) {
+  .rv-opening-form fieldset {
+    grid-template-columns: 1fr;
+  }
+  .rv-opening-dialog .ui-form-body {
+    padding: 0 20px 20px;
+  }
+  .rv-opening-dialog > header,
+  .rv-opening-dialog > footer {
+    padding: 20px;
+  }
+}
+.dashboard-content.rv-page.rv-detail {
+  width: calc(100% - 48px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 0 40px;
+  gap: 20px;
+}
+.rv-detail .stock-heading {
+  margin: 0;
+  min-height: 24px;
+  position: relative;
+}
+.rv-detail .stock-heading h1 {
+  font-size: 22px;
+  line-height: 28px;
+  margin: 0;
+  font-weight: 600;
+}
+.rv-detail .stock-heading > div > a {
+  position: absolute;
+  right: 0;
+  top: 8px;
+  font-size: 14px;
+}
+.rv-customer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rv-detail .rv-customer-card {
+  padding: 20px;
+}
+.rv-detail .rv-customer-title h2 {
+  font-size: 18px;
+}
+.rv-detail .rv-actions {
+  gap: 10px;
+}
+.rv-detail .rv-actions .rv-profile-link {
+  padding: 10px 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #344054;
+  background: white;
+}
+.rv-detail .rv-actions button {
+  min-height: 38px;
+  padding: 9px 14px;
+  border-radius: 6px;
+}
+.rv-detail .rv-customer-card dl {
+  margin-top: 20px;
+  padding-top: 20px;
+  gap: 20px;
+}
+.rv-detail .rv-customer-card dt {
+  font-size: 13px;
+}
+.rv-detail .rv-customer-card dd {
+  font-size: 18px;
+}
+.rv-detail .stock-panel h2 {
+  font-size: 18px;
+  margin: 0;
+  padding: 20px;
+  border-bottom: 1px solid #f2f4f7;
+}
+.rv-detail .rv-tabs {
+  padding: 14px 20px;
+  gap: 0;
+  border: 0;
+}
+.rv-detail .rv-tabs button {
+  border-radius: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.rv-detail .rv-tabs button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+.rv-detail .rv-tabs button:last-child {
+  border-radius: 0 8px 8px 0;
+}
+.rv-detail .rv-table th {
+  font-size: 13px;
+  padding: 12px 20px;
+}
+.rv-detail .rv-table td {
+  font-size: 14px;
+  padding: 16px 20px;
+  vertical-align: middle;
+}
+.rv-detail .rv-table td small {
+  font-size: 12px;
+  max-width: 200px;
+  white-space: normal;
+}
+.rv-detail .rv-table td:nth-child(2) {
+  white-space: normal;
+  min-width: 140px;
+  max-width: 220px;
+}
+.rv-detail .rv-badge {
+  font-size: 12px;
+  padding: 3px 9px;
+}
+.rv-detail .rv-debt-PARTIALLY_PAID {
+  background: #f0f9ff;
+  color: #026aa2;
+}
+.rv-detail .rv-late {
+  background: #fef3f2;
+  color: #b42318;
+}
+.rv-scope-control {
+  font-size: 12px;
+  color: #667085;
+  margin-top: 10px;
+}
+.rv-scope-control summary {
+  cursor: pointer;
+  text-align: right;
+}
+.rv-scope-control[open] {
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+.rv-scope-control .stock-filter {
+  max-width: 300px;
+}
+.rv-detail .rv-table table {
+  min-width: 960px;
+}
+.rv-detail .rv-empty {
+  padding: 24px;
+}
+@media (max-width: 1100px) {
+  .rv-detail .stock-heading > div > a {
+    position: static;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .rv-customer-top {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 650px) {
+  .dashboard-content.rv-page.rv-detail {
+    width: calc(100% - 32px);
+  }
+  .rv-detail .rv-customer-card dl {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rv-detail .stock-heading h1 {
+    font-size: 20px;
+  }
+}
+.rv-detail .rv-actions > a {
+  padding: 9px 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #344054;
+  background: white;
+}
+.rv-detail .rv-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.rv-detail .rv-table tbody td:nth-last-child(2) {
+  font-weight: 500;
+}
+.rv-detail .rv-table th:nth-child(5),
+.rv-detail .rv-table th:nth-child(6),
+.rv-detail .rv-table th:nth-child(7) {
+  text-align: right;
+}
+.rv-detail .rv-table td:nth-child(5),
+.rv-detail .rv-table td:nth-child(6),
+.rv-detail .rv-table td:nth-child(7) {
+  text-align: right;
+}
+.rv-payment-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-width: 760px;
+  border-radius: 24px;
+  color: #1d2939;
+}
+.rv-payment-dialog > header {
+  padding: 24px 32px;
+}
+.rv-payment-dialog > header h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.rv-payment-dialog .ui-form-body {
+  padding: 0 32px 24px;
+}
+.rv-payment-dialog > footer {
+  padding: 20px 32px;
+}
+.rv-payment-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 22px 20px;
+  min-width: 0;
+}
+.rv-payment-form .rv-full {
+  grid-column: 1/-1;
+}
+.rv-payment-form label,
+.rv-field-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #344054;
+}
+.rv-field-label {
+  display: block;
+  margin-bottom: 8px;
+}
+.rv-payment-form label > span {
+  color: #f04438;
+}
+.rv-payment-form input:not([type='checkbox']):not([type='radio']),
+.rv-payment-form select {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+}
+.rv-payment-form input[type='checkbox'],
+.rv-payment-form input[type='radio'] {
+  accent-color: #465fff;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.rv-payment-form .rv-mode {
+  gap: 10px;
+}
+.rv-payment-form .rv-mode label {
+  min-width: 0;
+  padding: 12px;
+  white-space: nowrap;
+  border-radius: 10px;
+  gap: 8px;
+}
+.rv-payment-table {
+  margin: 0 -32px;
+  overflow: auto;
+}
+.rv-payment-table table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 580px;
+  text-align: left;
+}
+.rv-payment-table th {
+  background: #f9fafb;
+  font-size: 12px;
+  color: #475467;
+  padding: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.rv-payment-table td {
+  padding: 16px 12px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.rv-payment-table th:first-child,
+.rv-payment-table td:first-child {
+  padding-left: 32px;
+}
+.rv-payment-table td small {
+  display: block;
+  font-size: 12px;
+  color: #475467;
+  white-space: normal;
+  max-width: 150px;
+  margin-top: 4px;
+}
+.rv-payment-table td small.rv-overdue {
+  color: #b42318;
+}
+.rv-allocated {
+  background: #f2f7ff;
+}
+.rv-payment-table .rv-allocation-value {
+  color: #3641f5;
+  font-weight: 600;
+}
+.rv-payment-form .rv-received {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rv-payment-recap {
+  padding: 14px;
+  background: #f9fafb;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.rv-payment-dialog input:focus-visible {
+  outline: 3px solid #465fff25;
+  border-color: #7592ff;
+}
+@media (max-width: 650px) {
+  .rv-payment-form fieldset {
+    grid-template-columns: 1fr;
+  }
+  .rv-payment-dialog .ui-form-body {
+    padding: 0 20px 20px;
+  }
+  .rv-payment-table {
+    margin: 0 -20px;
+  }
+  .rv-payment-dialog > header,
+  .rv-payment-dialog > footer {
+    padding: 20px;
+  }
+}
+.rv-evidence-list {
+  margin-top: 8px;
+  font-size: 13px;
+  white-space: normal;
+  max-width: 240px;
+}
+.rv-evidence-list summary {
+  cursor: pointer;
+  color: #3641f5;
+}
+.rv-evidence-list > div {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.rv-evidence-list small,
+.rv-payment-evidence small {
+  display: block;
+  font-size: 12px;
+  color: #667085;
+  margin-top: 5px;
+}
+.rv-balance-note {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+}
+.rv-ledger-note {
+  font-size: 12px;
+  color: #667085;
+  padding: 0 20px;
+}
+.rv-payment-evidence input[type='file'] {
+  font-size: 14px;
+  margin-top: 8px;
+  width: 100%;
+}
