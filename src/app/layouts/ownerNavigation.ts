@@ -35,16 +35,14 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Yêu cầu bổ sung',
-    href: '#replenishments',
+    href: '/replenishment-requests',
     icon: 'transfer',
     group: 'ĐIỀU CHUYỂN',
-    pending: true,
   },
   {
     label: 'Lệnh điều chuyển',
-    href: '#transfers',
+    href: '/transfer-orders',
     icon: 'truck',
-    pending: true,
   },
   {
     label: 'Tồn kho',

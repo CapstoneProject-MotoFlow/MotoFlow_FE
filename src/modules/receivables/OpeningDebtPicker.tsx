@@ -1,3 +1,4 @@
+import './receivables.css'
 import { useRef, useState } from 'react'
 import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
@@ -154,11 +155,13 @@ export default function OpeningDebtPicker({
               onChange={(e) => setStore(e.target.value)}
             >
               <option value="">Chọn cửa hàng</option>
-              {scope.stores.map((s) => (
-                <option value={s.id} key={s.id}>
-                  {s.storeName}
-                </option>
-              ))}
+              {scope.stores
+                .filter((s) => s.status === 'ACTIVE')
+                .map((s) => (
+                  <option value={s.id} key={s.id}>
+                    {s.storeName}
+                  </option>
+                ))}
             </select>
           </label>
           <label>

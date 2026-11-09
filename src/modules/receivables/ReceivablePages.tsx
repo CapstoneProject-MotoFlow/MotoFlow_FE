@@ -111,7 +111,14 @@ export function ReceivableListPage() {
               <tr>
                 <th>Khách hàng</th>
                 <th>Quyền mua chịu</th>
-                <th>Dư nợ</th>
+                {(!scope.owner || !!scope.storeId) && (
+                  <th>Tổng nợ toàn chuỗi</th>
+                )}
+                <th>
+                  {!scope.owner || scope.storeId
+                    ? 'Nợ tại cửa hàng'
+                    : 'Tổng nợ toàn chuỗi'}
+                </th>
                 <th>Nợ quá hạn</th>
                 <th>Khoản chưa tất toán</th>
                 <th>Hạn trả gần nhất</th>
@@ -130,6 +137,9 @@ export function ReceivableListPage() {
                     <small>{r.phone || '—'}</small>
                   </td>
                   <td>{credit[r.creditStatus]}</td>
+                  {(!scope.owner || !!scope.storeId) && (
+                    <td>{money.format(r.totalDebt)}</td>
+                  )}
                   <td>{money.format(r.debt)}</td>
                   <td className={r.overdueDebt ? 'rv-overdue' : ''}>
                     {money.format(r.overdueDebt)}
@@ -275,11 +285,20 @@ export function ReceivableDetailPage() {
                 <dd>{d.phone || '—'}</dd>
               </div>
               <div>
-                <dt>{scope.owner ? 'Còn nợ toàn chuỗi' : 'Còn nợ'}</dt>
-                <dd>{money.format(scope.owner ? d.totalDebt : d.debt)}</dd>
+                <dt>Còn nợ toàn chuỗi</dt>
+                <dd>{money.format(d.totalDebt)}</dd>
               </div>
+              {d.storeId != null && (
+                <div>
+                  <dt>Còn nợ tại {d.storeName}</dt>
+                  <dd>{money.format(d.debt)}</dd>
+                </div>
+              )}
               <div>
-                <dt>Nợ quá hạn</dt>
+                <dt>
+                  Nợ quá hạn{' '}
+                  {d.storeId != null ? 'tại ' + d.storeName : 'toàn chuỗi'}
+                </dt>
                 <dd className={d.overdueDebt ? 'rv-overdue' : ''}>
                   {money.format(d.overdueDebt)}
                 </dd>
