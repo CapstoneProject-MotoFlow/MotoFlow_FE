@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError, type Query } from '../inventory/api'
 import type { Page } from '../inventory/types'
-import type { Transfer } from './types'
+import type { TransferRow } from './types'
 /** Fetch only the prefixes needed for this page, never filter a single server page. */
 export function useOpenTransfers(
   params: Query,
@@ -12,7 +12,7 @@ export function useOpenTransfers(
   const key = JSON.stringify({ params, page }),
     [response, setResponse] = useState<{
       key: string
-      data?: Page<Transfer>
+      data?: Page<TransferRow>
       error?: string
     }>()
   useEffect(() => {
@@ -26,10 +26,10 @@ export function useOpenTransfers(
           const results = await Promise.all(
             ['AWAITING_DISPATCH', 'IN_TRANSIT', 'RECONCILING'].map(
               async (status) => {
-                const items: Transfer[] = []
+                const items: TransferRow[] = []
                 let total = 0
                 for (let next = 0; items.length < needed; next++) {
-                  const { data } = await axiosClient.get<Page<Transfer>>(
+                  const { data } = await axiosClient.get<Page<TransferRow>>(
                     '/transfer-orders',
                     {
                       params: {

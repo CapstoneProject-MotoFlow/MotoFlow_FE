@@ -21,16 +21,23 @@ export type PartLine = {
   extraDispatchedQty: number | null
   unresolvedQty: number | null
 }
-export type Replenishment = {
+/** UC69 list response. Does not include lines or related documents. */
+export type ReplenishmentRow = {
   id: number
   requestingStoreId: number
   storeName: string
   status: string
-  note: string | null
   createdByName: string
   createdAt: string
   lineCount: number
   totalRequestedQty: number
+}
+/** UC70 detail response. Counts belong only to the list response. */
+export type Replenishment = Omit<
+  ReplenishmentRow,
+  'lineCount' | 'totalRequestedQty'
+> & {
+  note: string | null
   lines: {
     productId: number
     sku: string
@@ -45,15 +52,8 @@ export type Replenishment = {
   transferOrders: { id: number; sourceStoreName: string; status: string }[]
   purchaseOrders: { id: number; supplierName: string; status: string }[]
 }
-export type Transfer = {
-  attachments: Evidence[]
-  extraDispatchConfirmedBy: { id: number; fullName: string } | null
-  extraDispatchConfirmedAt: string | null
-  createdBy: { id: number; fullName: string } | null
-  dispatchedBy: { id: number; fullName: string } | null
-  dispatchedAt: string | null
-  closedBy: { id: number; fullName: string } | null
-  closedAt: string | null
+/** UC72 list response. Never use this as a detail response. */
+export type TransferRow = {
   id: number
   status: string
   sourceStoreId: number
@@ -65,6 +65,20 @@ export type Transfer = {
   createdByName: string
   lineCount: number
   totalPlannedQty: number
+  dispatchedAt: string | null
+  closedAt: string | null
+}
+/** UC73 detail response has people and lines rather than list aggregates. */
+export type Transfer = Omit<
+  TransferRow,
+  'createdByName' | 'lineCount' | 'totalPlannedQty'
+> & {
+  attachments: Evidence[]
+  extraDispatchConfirmedBy: { id: number; fullName: string } | null
+  extraDispatchConfirmedAt: string | null
+  createdBy: { id: number; fullName: string } | null
+  dispatchedBy: { id: number; fullName: string } | null
+  closedBy: { id: number; fullName: string } | null
   lines: PartLine[]
   receipts: {
     id: number

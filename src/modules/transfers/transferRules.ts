@@ -25,6 +25,10 @@ type Demand = {
   plannedQty: number
   toPurchaseQty: number
 }
+/** Only cancelled purchase orders permit starting another purchase for the request. */
+export function hasExistingPurchase(orders: { status: string }[]) {
+  return orders.some((order) => order.status !== 'CANCELLED')
+}
 /** Outstanding receipt quantities must not be reused to plan another dispatch. */
 export function unplannedQuantity(line: Demand | undefined) {
   return line

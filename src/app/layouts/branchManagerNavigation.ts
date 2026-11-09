@@ -71,6 +71,6 @@ export const branchManagerNavigation: NavItem[] = [
     icon: 'scale',
     pending: true,
   },
-  { label: 'Bảng giá', href: '#bm-prices', icon: 'tag', pending: true },
+  { label: 'Bảng giá', href: '/pricing/retail-prices', icon: 'tag' },
   { label: 'Phụ tùng', href: '/branch-manager/products', icon: 'tool' },
 ]

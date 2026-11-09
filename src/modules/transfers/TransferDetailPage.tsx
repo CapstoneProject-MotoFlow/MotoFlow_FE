@@ -51,6 +51,7 @@ export default function TransferDetailPage() {
       revision,
       !!id && /^\d+$/.test(id),
     ),
+    coordinator = useCoordinationAccess(r.data?.lines[0]?.productId),
     dispatch = useInventoryData<Dispatch>(
       '/transfer-orders/' + id + '/dispatch-preview',
       {},
@@ -61,7 +62,7 @@ export default function TransferDetailPage() {
       '/transfer-orders/' + id + '/closing-preview',
       {},
       revision,
-      scope.user?.role !== 'STAFF' &&
+      coordinator &&
         !!r.data &&
         ['IN_TRANSIT', 'RECONCILING'].includes(r.data.status),
     ),
@@ -74,7 +75,6 @@ export default function TransferDetailPage() {
       (receipt) =>
         receipt.receiptType === 'TRANSFER_IN' && receipt.status !== 'CONFIRMED',
     )
-  const coordinator = useCoordinationAccess(d?.lines[0]?.productId)
   return (
     <main className="dashboard-content tf-page tf-detail-page">
       <header>

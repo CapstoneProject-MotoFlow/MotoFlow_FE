@@ -4,13 +4,13 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
-import { states, type Transfer, type Preparation } from './types'
+import { states, type Transfer, type TransferRow, type Preparation } from './types'
 import './transfers.css'
 export default function StaffTransferListPage() {
   const scope = useInventoryScope(),
     page = Math.max(0, Number(scope.params.get('page')) || 0),
     done = scope.params.get('status') === 'CLOSED',
-    base = useInventoryData<Page<Transfer>>(
+    base = useInventoryData<Page<TransferRow>>(
       '/transfer-orders',
       {
         page,
@@ -91,7 +91,7 @@ export default function StaffTransferListPage() {
     </main>
   )
 }
-function StaffRow({ row }: { row: Transfer }) {
+function StaffRow({ row }: { row: TransferRow }) {
   const [expanded, setExpanded] = useState(false)
   return (
     <Fragment>
@@ -132,7 +132,7 @@ function StaffRow({ row }: { row: Transfer }) {
     </Fragment>
   )
 }
-function StaffAssignedDetails({ row }: { row: Transfer }) {
+function StaffAssignedDetails({ row }: { row: TransferRow }) {
   const { user } = useInventoryScope(),
     source = user?.storeId === row.sourceStoreId,
     detail = useInventoryData<Transfer>('/transfer-orders/' + row.id),

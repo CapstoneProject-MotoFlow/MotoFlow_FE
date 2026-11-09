@@ -12,10 +12,14 @@ import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
 import { states, type Replenishment } from './types'
 import './transfers.css'
-import { purchaseQuantityLimit } from './transferRules'
+import { purchaseQuantityLimit, hasExistingPurchase } from './transferRules'
 export function ReplenishmentDetailPage() {
   const [revision, setRevision] = useState(0),
-    [purchase, setPurchase] = useState(false)
+    [purchase, setPurchase] = useState(false),
+    [createdPurchase, setCreatedPurchase] = useState<{
+      requestId: number
+      id: number
+    }>()
   const { id } = useParams(),
     scope = useInventoryScope(),
     r = useInventoryData<Replenishment>(
@@ -51,7 +55,9 @@ export function ReplenishmentDetailPage() {
             setPurchase(false)
             setRevision((n) => n + 1)
           }}
-          onSaved={() => {}}
+          onSaved={(purchaseId) =>
+            setCreatedPurchase({ requestId: r.data!.id, id: purchaseId })
+          }
         />
       )}
       {r.data && (
@@ -103,7 +109,20 @@ export function ReplenishmentDetailPage() {
                   {r.data.lines.filter((l) => l.toPurchaseQty > 0).length} phụ
                   tùng cần mua bổ sung.
                 </p>
-                {scope.owner ? (
+                {createdPurchase?.requestId === r.data.id ? (
+                  <p role="status">
+                    Đã tạo{' '}
+                    <Link to={'/purchase-orders/' + createdPurchase.id}>
+                      phiếu nhập hàng #{createdPurchase.id}
+                    </Link>{' '}
+                    cho phần chuyển mua trong lần làm việc này.
+                  </p>
+                ) : hasExistingPurchase(r.data.purchaseOrders) ? (
+                  <p>
+                    Yêu cầu đã có phiếu nhập hàng. Kiểm tra các phiếu liên quan
+                    trước khi lập thêm.
+                  </p>
+                ) : scope.owner && r.data.status !== 'CLOSED' ? (
                   <button
                     className="tf-primary"
                     onClick={() => setPurchase(true)}

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
-import { states, type Replenishment } from './types'
+import { states, type Replenishment, type ReplenishmentRow } from './types'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
@@ -14,7 +14,7 @@ export default function ReplenishmentListPage() {
     [search, setSearch] = useState(''),
     page = Math.max(0, Number(scope.params.get('page')) || 0),
     status = scope.params.get('status') ?? '',
-    base = useInventoryData<Page<Replenishment>>('/replenishment-requests', {
+    base = useInventoryData<Page<ReplenishmentRow>>('/replenishment-requests', {
       page,
       size: 20,
       status: status === 'OPEN' ? undefined : status,
@@ -205,7 +205,7 @@ function ReplenishmentRow({
   search,
   canCoordinate,
 }: {
-  row: Replenishment
+  row: ReplenishmentRow
   search: string
   canCoordinate: boolean
 }) {

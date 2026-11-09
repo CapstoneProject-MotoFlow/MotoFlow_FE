@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError, type Query } from '../inventory/api'
 import type { Page } from '../inventory/types'
-import type { Replenishment } from './types'
+import type { ReplenishmentRow } from './types'
 /** Fetch only the prefixes needed for this page, never filter a single server page. */
 export function useOpenReplenishments(
   params: Query,
@@ -12,7 +12,7 @@ export function useOpenReplenishments(
   const key = JSON.stringify({ params, page }),
     [response, setResponse] = useState<{
       key: string
-      data?: Page<Replenishment>
+      data?: Page<ReplenishmentRow>
       error?: string
     }>()
   useEffect(() => {
@@ -25,10 +25,10 @@ export function useOpenReplenishments(
           const needed = (input.page + 1) * 20
           const results = await Promise.all(
             ['AWAITING_COORDINATION', 'IN_PROGRESS'].map(async (status) => {
-              const items: Replenishment[] = []
+              const items: ReplenishmentRow[] = []
               let total = 0
               for (let next = 0; items.length < needed; next++) {
-                const { data } = await axiosClient.get<Page<Replenishment>>(
+                const { data } = await axiosClient.get<Page<ReplenishmentRow>>(
                   '/replenishment-requests',
                   {
                     params: {

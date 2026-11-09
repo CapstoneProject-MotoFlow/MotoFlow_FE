@@ -13,6 +13,10 @@ import RequireRole from '../guards/RequireRole'
 import RequireCatalogEdit from '../guards/RequireCatalogEdit'
 import RequirePasswordChange from '../guards/RequirePasswordChange'
 
+const PriceListPage = lazy(() => import('../../modules/pricing/PriceListPage'))
+const PricingRulesPage = lazy(
+  () => import('../../modules/pricing/PricingRulesPage'),
+)
 const ReplenishmentCoordinatePage = lazy(
   () => import('../../modules/transfers/ReplenishmentCoordinatePage'),
 )
@@ -301,6 +305,7 @@ export default function AppRoutes() {
               />
             </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
+              <Route path="/pricing/rules" element={<PricingRulesPage />} />
               <Route
                 path="/purchase-orders/new"
                 element={<NewPurchaseOrderPage />}
@@ -502,6 +507,10 @@ export default function AppRoutes() {
                 element={<PastDateStockPage />}
               />
               <Route path="/receivables" element={<ReceivableListPage />} />
+              <Route
+                path="/pricing/retail-prices"
+                element={<PriceListPage />}
+              />
               <Route
                 path="/receivables/customers/:id"
                 element={<ReceivableDetailPage />}
