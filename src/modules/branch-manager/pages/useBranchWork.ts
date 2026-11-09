@@ -1,4 +1,5 @@
 import { useInventoryData } from '../../inventory/api'
+import { useAuth } from '../../../shared/hooks/useAuth'
 import type { Page, StockSummary } from '../../inventory/types'
 import type { CountList } from '../../inventory/countApi'
 import type { SummaryDto } from '../../sales/salesApi'
@@ -23,6 +24,7 @@ type Work = {
   action: string
 }
 export function useBranchWork(coordinator: boolean) {
+  const { user } = useAuth()
   const sales = useInventoryData<Page<SummaryDto>>('/sales-orders', {
       view: 'OPEN',
       page: 0,
@@ -38,11 +40,17 @@ export function useBranchWork(coordinator: boolean) {
       page: 0,
       size: 5,
     }),
-    transfers = useInventoryData<Page<TransferRow>>('/transfer-orders', {
-      status: 'AWAITING_DISPATCH',
-      page: 0,
-      size: 5,
-    }),
+    transfers = useInventoryData<Page<TransferRow>>(
+      '/transfer-orders',
+      {
+        status: 'AWAITING_DISPATCH',
+        sourceStoreId: user?.storeId ?? undefined,
+        page: 0,
+        size: 5,
+      },
+      0,
+      user?.storeId != null,
+    ),
     drafts = useInventoryData<CountList>('/stock-counts', {
       status: 'DRAFT',
       page: 0,

@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import { useInventoryData } from '../../inventory/api'
 import { InventoryNotice } from '../../inventory/components'
 import type { Page } from '../../inventory/types'
-import type { CountList } from '../../inventory/countApi'
+import { useCountList } from '../../inventory/useCountList'
+import { useOpenTransfers } from '../../transfers/useOpenTransfers'
 import type { SummaryDto } from '../../sales/salesApi'
-import type { TransferRow } from '../../transfers/types'
 import { date, dateTime } from '../../inventory/presentation'
 
 type AssignedReceipt = {
@@ -40,11 +40,11 @@ export default function StaffWorkTable() {
       '/goods-receipt-notes/assigned-to-me',
       { page, size: 20 },
     ),
-    transfers = useInventoryData<Page<TransferRow>>('/transfer-orders', {
-      page,
-      size: 20,
-    }),
-    counts = useInventoryData<CountList>('/stock-counts', { page, size: 20 })
+    transfers = useOpenTransfers({}, page, true),
+    counts = useCountList({ status: 'OPEN', page, size: 20 }, 0, true, [
+      'DRAFT',
+      'COUNTING',
+    ])
   const tasks: Task[] = [
     ...(sales.data?.items ?? [])
       .filter((s) => ['AWAITING_PICKING', 'PICKED'].includes(s.status))

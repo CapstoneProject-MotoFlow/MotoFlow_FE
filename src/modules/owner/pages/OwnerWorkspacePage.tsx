@@ -142,6 +142,7 @@ export default function OwnerWorkspacePage({
       </div>
       <section className="owner-panel">
         <BarcodeScan
+          allowInactive
           onFound={(part) => navigate(`/owner/products/${part.productId}`)}
         />
         <header className="parts-panel-heading">

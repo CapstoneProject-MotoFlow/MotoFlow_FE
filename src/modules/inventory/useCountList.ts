@@ -2,9 +2,19 @@ import { useEffect, useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import { useInventoryData, inventoryError, type Query } from './api'
 import type { CountList, CountRow, CountRequest } from './countApi'
-export function useCountList(params: Query, revision: number, enabled = true) {
+const OPEN_STATUSES: readonly CountRow['status'][] = [
+  'DRAFT',
+  'COUNTING',
+  'AWAITING_APPROVAL',
+]
+export function useCountList(
+  params: Query,
+  revision: number,
+  enabled = true,
+  openStatuses = OPEN_STATUSES,
+) {
   const grouped = params.status === 'OPEN',
-    key = JSON.stringify({ ...params, revision }),
+    key = JSON.stringify({ params, revision, openStatuses }),
     normal = useInventoryData<CountList>(
       '/stock-counts',
       params,
@@ -24,12 +34,13 @@ export function useCountList(params: Query, revision: number, enabled = true) {
         try {
           const rows: CountRow[] = []
           const pending = new Map<number, CountRequest>()
-          const query = JSON.parse(key),
+          const input = JSON.parse(key),
+            query = input.params,
             currentPage = Number(query.page) || 0,
             needed = (currentPage + 1) * 20,
             size = Math.min(100, needed)
           let totalItems = 0
-          for (const status of ['DRAFT', 'COUNTING', 'AWAITING_APPROVAL']) {
+          for (const status of input.openStatuses) {
             let received = 0,
               total = 0
             for (let page = 0; ; page++) {
@@ -37,8 +48,7 @@ export function useCountList(params: Query, revision: number, enabled = true) {
                 '/stock-counts',
                 {
                   params: {
-                    ...JSON.parse(key),
-                    revision: undefined,
+                    ...query,
                     status,
                     page,
                     size,
