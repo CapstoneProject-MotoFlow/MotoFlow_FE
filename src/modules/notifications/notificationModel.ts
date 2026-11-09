@@ -26,6 +26,10 @@ export function noticeTarget(
     return { path: '/supplier-discrepancies' }
   if (notice.refType === 'GOODS_RECEIPT_NOTE')
     return { path: '/goods-receipt-notes/' + id }
+  if (notice.refType === 'TRANSFER_ORDER')
+    return { path: '/transfer-orders/' + id }
+  if (notice.refType === 'REPLENISHMENT_REQUEST' && role !== 'STAFF')
+    return { path: '/replenishment-requests/' + id }
   if (notice.refType === 'SALES_ORDER') return { path: '/sales-orders/' + id }
   if (notice.refType === 'STOCK_COUNT') return { path: '/stock-counts/' + id }
   if (notice.refType === 'STOCK_COUNT_REQUEST' && role !== 'STAFF')

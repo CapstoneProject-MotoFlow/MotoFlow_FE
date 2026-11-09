@@ -1,242 +1,281 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import FormDialog from '../../shared/ui/FormDialog'
-import { useInventoryData } from './api'
+import { useInventoryData, inventoryError } from './api'
 import { InventoryNotice } from './components'
-import type { DashboardStore } from '../../shared/types/store'
+import type { CountRequest, CountDto } from './countApi'
 import type { Page } from './types'
 import { today } from './presentation'
+import axiosClient from '../../shared/api/axiosClient'
 import './stock-count.css'
-
-type Product = { id: number; partName: string; sku: string }
+type Product = { id: number; sku: string; partName: string }
 export function StockCountFormDialog({
   owner,
   storeId,
+  requestId,
+  onSaved,
   onClose,
 }: {
   owner: boolean
   storeId?: number | null
+  requestId?: number
+  onSaved?: () => void
   onClose: () => void
 }) {
-  const stores = useInventoryData<DashboardStore[]>('/stores', {}, 0, owner)
-  const [warehouse, setWarehouse] = useState(storeId ? String(storeId) : '')
-  const [scope, setScope] = useState('AREA')
-  const [area, setArea] = useState('')
-  const [query, setQuery] = useState('')
-  const [picked, setPicked] = useState<Product[]>([])
-  const [selected, setSelected] = useState('')
+  const navigate = useNavigate(),
+    [warehouse, setWarehouse] = useState(String(storeId ?? '')),
+    [scope, setScope] = useState('WHOLE'),
+    [area, setArea] = useState(''),
+    [reason, setReason] = useState(''),
+    [countType, setType] = useState('CYCLE'),
+    [date, setDate] = useState(today()),
+    [query, setQuery] = useState(''),
+    [picked, setPicked] = useState<Product[]>([]),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState('')
+  const lock = useRef(false),
+    stores = useInventoryData<{ id: number; storeName: string }[]>(
+      '/stock-count-requests/stores',
+      {},
+      0,
+      owner,
+    ),
+    prefill = useInventoryData<CountRequest>(
+      '/stock-counts/prefill',
+      { requestId },
+      0,
+      !!requestId && !owner,
+    ),
+    source = prefill.data
+  const actualScope = source?.scopeType ?? scope,
+    actualArea = source?.scopeNote ?? area,
+    actualProducts = source
+      ? source.products.map((p) => p.productId)
+      : picked.map((p) => p.id),
+    actualStore = source?.storeId ?? Number(warehouse)
   const areas = useInventoryData<string[]>(
-    '/inventory/stock/storage-areas',
-    { storeId: owner ? warehouse : undefined },
-    0,
-    !!warehouse,
-  )
-  const products = useInventoryData<Page<Product>>(
-    '/products',
-    { q: query, storeId: warehouse, size: 20 },
-    0,
-    !!warehouse && scope === 'PRODUCTS',
-  )
-  const name = owner ? 'Yêu cầu kiểm kê' : 'Tạo phiếu kiểm kê'
+      '/inventory/stock/storage-areas',
+      { storeId: owner ? warehouse : undefined },
+      0,
+      actualScope === 'AREA' && !!actualStore,
+    ),
+    products = useInventoryData<Page<Product>>(
+      '/products',
+      { q: query, status: 'ACTIVE', size: 20 },
+      0,
+      actualScope === 'PRODUCTS' && !source,
+    )
+  const valid =
+    !!actualStore &&
+    (!requestId || !!source) &&
+    (!owner || !!reason.trim()) &&
+    (actualScope !== 'AREA' || !!actualArea.trim()) &&
+    (actualScope !== 'PRODUCTS' || actualProducts.length > 0) &&
+    !!date
+  async function save() {
+    if (lock.current || !valid) return
+    lock.current = true
+    setBusy(true)
+    setError('')
+    try {
+      const body = {
+        scopeType: actualScope,
+        scopeNote: actualScope === 'AREA' ? actualArea : undefined,
+        productIds: actualScope === 'PRODUCTS' ? actualProducts : undefined,
+      }
+      const r = await axiosClient.post<CountDto>(
+        owner ? '/stock-count-requests' : '/stock-counts',
+        owner
+          ? { ...body, storeId: actualStore, reason: reason.trim() }
+          : {
+              ...body,
+              countType,
+              countDate: date,
+              stockCountRequestId: requestId,
+            },
+      )
+      onSaved?.()
+      onClose()
+      if (!owner) navigate('/stock-counts/' + r.data.id)
+    } catch (e) {
+      setError(inventoryError(e))
+    } finally {
+      lock.current = false
+      setBusy(false)
+    }
+  }
   return (
     <FormDialog
-      className="count-create-dialog"
-      title={name}
+      title={owner ? 'Yêu cầu kiểm kê' : 'Tạo phiếu kiểm kê'}
       formId="count-create"
       submitLabel={owner ? 'Gửi yêu cầu' : 'Tạo phiếu'}
-      submitDisabled
+      busy={busy}
+      submitDisabled={!valid || prefill.loading || !!prefill.error}
       onClose={onClose}
     >
       <form
         id="count-create"
         className="count-form"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={(e) => {
+          e.preventDefault()
+          void save()
+        }}
       >
-        {owner && (
-          <label>
-            Kho cần kiểm *
-            <select
-              required
-              value={warehouse}
-              onChange={(e) => {
-                setWarehouse(e.target.value)
-                setArea('')
-                setQuery('')
-                setPicked([])
-                setSelected('')
-              }}
-            >
-              <option value="">Chọn kho</option>
-              {stores.data
-                ?.filter((store) => store.status === 'ACTIVE')
-                .map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.storeName}
-                  </option>
-                ))}
-            </select>
-          </label>
-        )}
-        {!owner && (
-          <fieldset>
-            <legend>Loại kiểm kê</legend>
-            <div className="count-radio-options">
-              {[
-                ['CYCLE', 'Định kỳ'],
-                ['YEAR_END', 'Cuối năm'],
-                ['OPENING', 'Đầu kỳ'],
-              ].map(([value, label]) => (
-                <label key={value}>
-                  <input
-                    type="radio"
-                    name="type"
-                    value={value}
-                    defaultChecked={value === 'CYCLE'}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-        <fieldset>
-          <legend>Phạm vi</legend>
-          <div className="count-radio-options">
-            {[
-              ['WHOLE', 'Toàn kho'],
-              ['AREA', 'Một khu vực'],
-              ['PRODUCTS', 'Một số phụ tùng'],
-            ].map(([value, label]) => (
-              <label key={value}>
-                <input
-                  type="radio"
-                  name="scope"
-                  value={value}
-                  checked={scope === value}
-                  onChange={() => setScope(value)}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        {scope === 'AREA' && (
-          <label>
-            Khu vực *
-            <select
-              required
-              value={area}
-              disabled={!warehouse || areas.loading}
-              onChange={(e) => setArea(e.target.value)}
-            >
-              <option value="">Chọn khu vực</option>
-              {areas.data?.map((area) => (
-                <option key={area}>{area}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        {scope === 'PRODUCTS' && (
-          <div>
+        <InventoryNotice
+          loading={stores.loading || prefill.loading}
+          error={error || stores.error || prefill.error}
+        />
+        <fieldset disabled={busy}>
+          {owner && (
             <label>
-              Tìm phụ tùng
-              <input
-                disabled={!warehouse}
-                placeholder="Tên hoặc SKU…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-            <div className="count-pick">
-              <label>
-                Phụ tùng cần đếm
-                <select
-                  disabled={!warehouse || products.loading}
-                  value={selected}
-                  onChange={(e) => setSelected(e.target.value)}
-                >
-                  <option value="">Chọn phụ tùng</option>
-                  {products.data?.items.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.partName} · {product.sku}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                disabled={!selected}
-                onClick={() => {
-                  const product = products.data?.items.find(
-                    (item) => String(item.id) === selected,
-                  )
-                  if (product && !picked.some((item) => item.id === product.id))
-                    setPicked([...picked, product])
-                  setSelected('')
+              Kho cần kiểm
+              <select
+                aria-label="Kho cần kiểm"
+                required
+                value={warehouse}
+                onChange={(e) => {
+                  setWarehouse(e.target.value)
+                  setArea('')
+                  setPicked([])
                 }}
               >
-                Thêm
-              </button>
-            </div>
-            <ul className="count-chips">
-              {picked.map((item) => (
-                <li key={item.id}>
-                  {item.partName}
-                  <button
-                    type="button"
-                    aria-label={'Bỏ ' + item.partName}
-                    onClick={() =>
-                      setPicked(
-                        picked.filter((product) => product.id !== item.id),
-                      )
-                    }
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {owner ? (
+                <option value="">Chọn kho</option>
+                {stores.data?.map((s) => (
+                  <option value={s.id} key={s.id}>
+                    {s.storeName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {!owner && (
+            <>
+              <label>
+                Loại kiểm kê
+                <select
+                  value={countType}
+                  onChange={(e) => setType(e.target.value)}
+                >
+                  <option value="CYCLE">Định kỳ</option>
+                  <option value="YEAR_END">Cuối năm</option>
+                </select>
+              </label>
+              <label>
+                Ngày kiểm
+                <input
+                  required
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </label>
+            </>
+          )}
+          {source && (
+            <p>
+              Yêu cầu #{source.id} · {source.storeName} · {source.reason}
+            </p>
+          )}
           <label>
-            Lý do *
-            <textarea
-              rows={3}
-              required
-              maxLength={255}
-              placeholder="Nhập lý do cần kiểm kê…"
-            />
+            Phạm vi
+            <select
+              disabled={!!source}
+              value={actualScope}
+              onChange={(e) => setScope(e.target.value)}
+            >
+              <option value="WHOLE">Toàn kho</option>
+              <option value="AREA">Khu vực</option>
+              <option value="PRODUCTS">Theo phụ tùng</option>
+            </select>
           </label>
-        ) : (
-          <label>
-            Ngày kiểm kê *
-            <input type="date" required defaultValue={today()} />
-          </label>
-        )}
-        {owner && warehouse && (
-          <p className="stock-notice">
-            Yêu cầu sẽ được gửi tới Branch Manager của{' '}
-            {stores.data?.find((store) => String(store.id) === warehouse)
-              ?.storeName ?? 'kho đã chọn'}{' '}
-            để lập phiếu kiểm kê.
-          </p>
-        )}
-        {!owner && (
-          <p className="stock-notice">
-            Ngày kiểm kê phải thuộc kỳ kho đang mở. Kiểm kê đầu kỳ chỉ ghi tồn
-            sau khi Owner duyệt giá vốn.
-          </p>
-        )}
-        <InventoryNotice
-          loading={stores.loading || areas.loading || products.loading}
-          error={stores.error ?? areas.error ?? products.error}
-        />
-        <p className="count-unavailable" role="status">
-          {owner
-            ? 'Chưa thể gửi yêu cầu kiểm kê lúc này.'
-            : 'Chưa thể tạo phiếu kiểm kê lúc này.'}{' '}
-          Các thông tin bạn nhập chưa được lưu.
-        </p>
+          {actualScope === 'AREA' && (
+            <label>
+              Khu vực
+              <input
+                required
+                disabled={!!source}
+                list="count-areas"
+                value={actualArea}
+                onChange={(e) => setArea(e.target.value)}
+                maxLength={255}
+              />
+              <datalist id="count-areas">
+                {areas.data?.map((a) => (
+                  <option key={a} value={a} />
+                ))}
+              </datalist>
+            </label>
+          )}
+          {actualScope === 'PRODUCTS' &&
+            (source ? (
+              <ul>
+                {source.products.map((p) => (
+                  <li key={p.productId}>
+                    {p.sku} · {p.partName}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <>
+                <label>
+                  Tìm phụ tùng
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <InventoryNotice
+                  loading={products.loading}
+                  error={products.error}
+                />
+                <select
+                  aria-label="Thêm phụ tùng"
+                  value=""
+                  onChange={(e) => {
+                    const product = products.data?.items.find(
+                      (p) => p.id === Number(e.target.value),
+                    )
+                    if (product) setPicked((v) => [...v, product])
+                  }}
+                >
+                  <option value="">Chọn để thêm</option>
+                  {products.data?.items
+                    .filter((p) => !actualProducts.includes(p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} · {p.partName}
+                      </option>
+                    ))}
+                </select>
+                <ul className="count-chips">
+                  {picked.map((p) => (
+                    <li key={p.id}>
+                      {p.sku}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPicked((v) => v.filter((x) => x.id !== p.id))
+                        }
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ))}
+          {owner && (
+            <label>
+              Lý do
+              <textarea
+                required
+                maxLength={255}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </label>
+          )}
+        </fieldset>
       </form>
     </FormDialog>
   )

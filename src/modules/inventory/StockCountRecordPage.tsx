@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import CountLiveRecord from './CountLiveRecord'
 import { mapCountSheet, readCountFile, type ImportRow } from './countImport'
 import FormDialog from '../../shared/ui/FormDialog'
-import { useParams, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { InventoryHeader, InventoryPanel } from './components'
 import {
   countSubmissionReady,
@@ -13,8 +14,7 @@ import { date } from './presentation'
 import './stock-count.css'
 
 export default function StockCountRecordPage() {
-  const { id } = useParams()
-  return <StockCountRecordView key={id} id={id} />
+  return <CountLiveRecord />
 }
 // This view intentionally has no book-quantity or unit-cost column: counting is blind.
 export function StockCountRecordView(props: {

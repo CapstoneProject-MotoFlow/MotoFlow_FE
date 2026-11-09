@@ -35,10 +35,14 @@ function Header({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <header className="stock-heading">
       <div>
-        <small>Bán hàng</small>
         <h1>{title}</h1>
       </div>
-      <div className="stock-heading-actions">{children}</div>
+      <div className="stock-heading-actions">
+        {children}
+        <nav>
+          <Link to="/dashboard">Trang chủ</Link> › Bán hàng › {title}
+        </nav>
+      </div>
     </header>
   )
 }
@@ -538,23 +542,22 @@ export function SalesOrderFormView({
   }
   async function scanBarcode(barcode: string) {
     try {
-      const { data } = await axiosClient.get<Page<Product>>('/products', {
-        params: { q: barcode, status: 'ACTIVE', size: 20 },
+      const { data } = await axiosClient.get<{
+        productId: number
+        status: string
+      }>('/products/barcode/' + encodeURIComponent(barcode.trim()), {
+        params: { storeId: warehouse || undefined },
       })
-      let hit = data.items.find((item) => item.sku === barcode)
-      if (!hit && data.items.length === 1) {
-        const detail = await axiosClient.get<Product>(
-          '/products/' + data.items[0].id,
-        )
-        if (detail.data.barcodes?.includes(barcode)) hit = detail.data
+      if (data.status !== 'ACTIVE') {
+        setError('Phụ tùng đã ngừng kinh doanh.')
+        return
       }
-      if (hit) {
-        add(hit)
-        setScan('')
-      } else
-        setError(
-          'Không tìm thấy mã vạch chính xác. Chọn phụ tùng từ kết quả tìm kiếm.',
-        )
+      const detail = await axiosClient.get<Product>(
+        '/products/' + data.productId,
+        { params: { storeId: warehouse || undefined } },
+      )
+      add(detail.data)
+      setScan('')
     } catch {
       setError('Không tra được mã vạch. Vui lòng thử lại.')
     }

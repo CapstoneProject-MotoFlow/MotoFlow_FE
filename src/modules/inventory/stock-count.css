@@ -373,3 +373,39 @@
   align-items: center;
   gap: 12px;
 }
+.count-form input[type='checkbox'] {
+  width: auto;
+  accent-color: #465fff;
+}
+.count-workspace .stock-filters > label {
+  display: grid;
+  gap: 8px;
+}
+.count-workspace .stock-filters input:not([type='checkbox']),
+.count-workspace .stock-filters select {
+  min-height: 40px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font: inherit;
+  color: #344054;
+  background: #fff;
+}
+.count-form fieldset {
+  display: grid;
+  gap: 18px;
+}
+.count-workspace .stock-tabs {
+  scrollbar-width: thin;
+}
+.count-workspace .stock-panel-heading {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .count-workspace .stock-filters > label {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+}

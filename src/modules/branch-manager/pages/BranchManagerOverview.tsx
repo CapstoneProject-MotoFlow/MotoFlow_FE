@@ -1,3 +1,4 @@
+import DashboardWork from '../../operations/DashboardWork'
 /**
  * File: modules/branch-manager/pages/BranchManagerOverview.tsx
  * Loại: MÀN HÌNH — Tổng quan quản lý chi nhánh.
@@ -7,7 +8,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
-import { useAuth } from '../../../shared/hooks/useAuth'
 import { loadBranchHome, type BranchHome } from '../services/branchHomeService'
 import './branch-overview.css'
 const cards: {
@@ -59,7 +59,6 @@ const cards: {
 ]
 /** BranchManagerOverview: Tổng quan việc chờ và phạm vi cửa hàng của BM. */
 export default function BranchManagerOverview() {
-  const { user } = useAuth()
   const [data, setData] = useState<BranchHome | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -152,57 +151,7 @@ export default function BranchManagerOverview() {
             </article>
           ))}
       </section>
-      <div className="bm-overview-columns">
-        <section className="bm-panel">
-          <h2>Việc chờ lâu nhất</h2>
-          <div className="bm-work-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Chứng từ</th>
-                  <th>Việc</th>
-                  <th>Đã chờ</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={4} className="bm-unavailable">
-                    {loading
-                      ? 'Đang tải tổng quan…'
-                      : 'Chưa có dữ liệu chi tiết về các công việc chờ xử lý.'}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <footer>
-            Số lượng việc cần xử lý được cập nhật từ hệ thống theo phạm vi cửa
-            hàng.
-          </footer>
-        </section>
-        <aside className="bm-panel bm-monitor">
-          <h2>Theo dõi</h2>
-          <section>
-            <p>Doanh số hôm nay</p>
-            <strong>—</strong>
-            <small>Chưa có dữ liệu doanh số.</small>
-          </section>
-          <section>
-            <p>
-              Tồn dưới ngưỡng ·{' '}
-              {data?.storeName || user?.storeName || 'Cửa hàng được phân công'}
-            </p>
-            <strong>—</strong>
-            <small>Chưa có dữ liệu cảnh báo tồn kho.</small>
-          </section>
-          <section>
-            <p>Lô sắp hết hạn</p>
-            <strong>—</strong>
-            <small>Chưa có dữ liệu hạn sử dụng của lô hàng.</small>
-          </section>
-        </aside>
-      </div>
+      <DashboardWork role="BRANCH_MANAGER" />
     </main>
   )
 }

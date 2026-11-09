@@ -10,6 +10,9 @@ import TransferAction from './TransferAction'
 import { states, type Transfer } from './types'
 import TransferWorkPage from './TransferWorkPage'
 import './transfers.css'
+import { canConfirmExcess } from './transferRules'
+import { useReturnQuantities } from './useReturnQuantities'
+import { resolutionNames } from './types'
 type Dispatch = {
   canConfirm: boolean
   lines: {
@@ -66,6 +69,7 @@ export default function TransferDetailPage() {
     bm = scope.user?.role === 'BRANCH_MANAGER',
     source = bm && scope.user?.storeId === d?.sourceStoreId,
     dest = bm && scope.user?.storeId === d?.destStoreId,
+    returns = useReturnQuantities(d, source && d?.status === 'RECONCILING'),
     pendingReceipt = d?.receipts.find(
       (receipt) =>
         receipt.receiptType === 'TRANSFER_IN' && receipt.status !== 'CONFIRMED',
@@ -178,7 +182,7 @@ export default function TransferDetailPage() {
                     Hàng đã đến
                   </button>
                 ))}
-              {source && d.lines.some((l) => (l.extraReceivedQty ?? 0) > 0) && (
+              {source && canConfirmExcess(d.status, d.lines) && (
                 <Link to={'/transfer-orders/' + id + '/extra'}>
                   Xác nhận xuất thừa
                 </Link>
@@ -328,10 +332,15 @@ export default function TransferDetailPage() {
           {d.discrepancies.length > 0 && (
             <section>
               <h2>Sai lệch</h2>
+              <InventoryNotice
+                loading={returns.loading}
+                error={returns.error}
+              />
               {scope.user?.role !== 'STAFF' && (
                 <CoordinationAction
                   canDecide={coordinator}
-                  canReturn={source}
+                  canReturn={source && d.status === 'RECONCILING'}
+                  returnLines={returns.data ?? []}
                   id={d.id}
                   lines={d.lines
                     .filter((l) => (l.unresolvedQty ?? 0) > 0)
@@ -350,7 +359,8 @@ export default function TransferDetailPage() {
                   Thiếu {c.shortQty} · {states[c.status] ?? c.status}
                   {c.events.map((e) => (
                     <p key={e.id}>
-                      {e.resolutionType} · {e.quantity} · {e.reason}
+                      {resolutionNames[e.resolutionType] ?? e.resolutionType} ·{' '}
+                      {e.quantity} · {e.reason}
                     </p>
                   ))}
                 </div>

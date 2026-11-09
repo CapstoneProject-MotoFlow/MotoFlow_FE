@@ -58,9 +58,8 @@ export const ownerNavigation: NavItem[] = [
   { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
     label: 'Tồn theo ngày',
-    href: '#daily-stock',
+    href: '/inventory/past-date-stock',
     icon: 'calendar',
-    pending: true,
   },
   {
     label: 'Kỳ kho',

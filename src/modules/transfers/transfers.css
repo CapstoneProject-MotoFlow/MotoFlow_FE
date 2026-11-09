@@ -1014,3 +1014,39 @@
 .tf-branch-list .tf-list-search > input {
   width: 290px;
 }
+.tf-request-parts-summary {
+  margin-bottom: 4px;
+  line-height: 1.55;
+}
+.tf-requested-parts > small {
+  display: block;
+}
+.tf-page .tf-requested-parts .tf-request-details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 2px 0;
+  min-height: 24px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: none;
+  color: #4f56e8;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.tf-page .tf-requested-parts .tf-request-details-toggle:hover {
+  color: #353dc5;
+  text-decoration: underline;
+  background: transparent;
+}
+.tf-request-details-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.tf-request-details-toggle:focus-visible {
+  outline: 2px solid #7278ff;
+  outline-offset: 3px;
+}

@@ -1,3 +1,4 @@
+import { unplannedQuantity } from './transferRules'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -94,9 +95,11 @@ export default function TransferOrderCreatePage() {
       rows.every(
         (r) =>
           !request.data ||
+          !!r.makeupForCaseId ||
           r.qty <=
-            (request.data.lines.find((l) => l.productId === r.productId)
-              ?.remainingQty ?? 0),
+            unplannedQuantity(
+              request.data.lines.find((l) => l.productId === r.productId),
+            ),
       )
   async function save() {
     if (lock.current || !valid) return
@@ -152,7 +155,11 @@ export default function TransferOrderCreatePage() {
                   >
                     <option value="">Chọn kho nguồn</option>
                     {options
-                      .filter((s) => String(s.id) !== destination)
+                      .filter(
+                        (s) =>
+                          String(s.id) !== destination &&
+                          (!('status' in s) || s.status === 'ACTIVE'),
+                      )
                       .map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.storeName}
@@ -170,7 +177,13 @@ export default function TransferOrderCreatePage() {
                   >
                     <option value="">Chọn kho đích</option>
                     {options
-                      .filter((s) => String(s.id) !== source)
+                      .filter(
+                        (s) =>
+                          String(s.id) !== source &&
+                          (!('status' in s) ||
+                            s.status === 'ACTIVE' ||
+                            (scope.owner && s.status === 'PLANNED')),
+                      )
                       .map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.storeName}
@@ -191,13 +204,15 @@ export default function TransferOrderCreatePage() {
                         onClick={() =>
                           setRows(
                             request
-                              .data!.lines.filter((l) => l.remainingQty > 0)
+                              .data!.lines.filter(
+                                (l) => unplannedQuantity(l) > 0,
+                              )
                               .map((l) => ({
                                 key: ++counter.current,
                                 productId: l.productId,
                                 sku: l.sku,
                                 partName: l.partName,
-                                qty: l.remainingQty,
+                                qty: unplannedQuantity(l),
                               })),
                           )
                         }
@@ -211,7 +226,6 @@ export default function TransferOrderCreatePage() {
                       xác nhận xuất.
                     </p>
                   )}
-                  <small>API hiện chưa hỗ trợ lưu lý do điều chuyển.</small>
                 </div>
               </div>
             </section>
@@ -328,9 +342,11 @@ export default function TransferOrderCreatePage() {
                         {request.data && row.productId > 0 && (
                           <small>
                             Còn cần:{' '}
-                            {request.data.lines.find(
-                              (l) => l.productId === row.productId,
-                            )?.remainingQty ?? 0}
+                            {unplannedQuantity(
+                              request.data.lines.find(
+                                (l) => l.productId === row.productId,
+                              ),
+                            )}
                           </small>
                         )}
                       </td>
@@ -356,9 +372,13 @@ export default function TransferOrderCreatePage() {
                           type="number"
                           min={1}
                           max={
-                            request.data?.lines.find(
-                              (l) => l.productId === row.productId,
-                            )?.remainingQty ?? 2147483647
+                            request.data && !row.makeupForCaseId
+                              ? unplannedQuantity(
+                                  request.data.lines.find(
+                                    (l) => l.productId === row.productId,
+                                  ),
+                                )
+                              : 2147483647
                           }
                           value={row.qty}
                           onChange={(e) =>

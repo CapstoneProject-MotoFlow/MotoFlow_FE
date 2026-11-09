@@ -12,6 +12,7 @@ import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
 import { states, type Replenishment } from './types'
 import './transfers.css'
+import { purchaseQuantityLimit } from './transferRules'
 export function ReplenishmentDetailPage() {
   const [revision, setRevision] = useState(0),
     [purchase, setPurchase] = useState(false)
@@ -33,7 +34,7 @@ export function ReplenishmentDetailPage() {
           <Link to="/replenishment-requests">← Yêu cầu bổ sung</Link>
           <h1>Yêu cầu bổ sung #{id}</h1>
         </div>
-        {r.data && canCoordinate && (
+        {r.data && r.data.status !== 'CLOSED' && canCoordinate && (
           <Link
             className="tf-primary"
             to={'/transfer-orders/new?requestId=' + id}
@@ -114,16 +115,19 @@ export function ReplenishmentDetailPage() {
                 )}
               </div>
             )}
-            {canCoordinate && (
+            {canCoordinate && r.data.status !== 'CLOSED' && (
               <CoordinationAction
                 replenishment
                 id={r.data.id}
                 lines={r.data.lines
-                  .filter((l) => l.remainingQty > 0)
+                  .filter(
+                    (l) => purchaseQuantityLimit(l) > 0 || l.toPurchaseQty > 0,
+                  )
                   .map((l) => ({
                     productId: l.productId,
                     sku: l.sku,
-                    quantity: l.remainingQty,
+                    quantity: purchaseQuantityLimit(l),
+                    currentPurchaseQty: l.toPurchaseQty,
                   }))}
                 onSaved={() => setRevision((n) => n + 1)}
               />

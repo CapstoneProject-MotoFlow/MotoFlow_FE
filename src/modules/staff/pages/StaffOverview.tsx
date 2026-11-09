@@ -1,3 +1,4 @@
+import DashboardWork from '../../operations/DashboardWork'
 /**
  * File: modules/staff/pages/StaffOverview.tsx
  * Loại: MÀN HÌNH — Tổng quan nhân viên.
@@ -65,31 +66,7 @@ export default function StaffOverview() {
           </p>
         ) : (
           <>
-            <div className="staff-task-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Việc</th>
-                    <th>Chứng từ</th>
-                    <th>Giao lúc</th>
-                    <th>Hạn</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan={6} className="staff-task-message">
-                      {loading
-                        ? 'Đang tải công việc…'
-                        : total === 0
-                          ? 'Chưa có việc mới cần bắt đầu.'
-                          : 'Hệ thống đã có việc được giao, nhưng chưa cung cấp danh sách chứng từ chi tiết.'}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <DashboardWork role="STAFF" />
             {!loading && tasks.length > 0 && (
               <div
                 className="staff-task-summary"
@@ -104,8 +81,8 @@ export default function StaffOverview() {
               </div>
             )}
             <footer>
-              Số lượng trên là việc đã giao và chưa bắt đầu. Chưa có dữ liệu
-              việc đang làm, bị trả về hoặc đã gửi chờ xác nhận.
+              Số lượng trên là việc đã giao và chưa bắt đầu. Mở từng chứng từ để
+              xem kết quả, phân công và thao tác được phép.
             </footer>
           </>
         )}

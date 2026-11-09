@@ -1,3 +1,6 @@
+import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
+import ExcessDispatchEditor from './ExcessDispatchEditor'
+import BarcodeScan from '../operations/BarcodeScan'
 import { uploadAttachment } from '../../shared/api/upload'
 import { receiptAcceptsResult } from './transferRules'
 import { dateTime } from '../inventory/presentation'
@@ -78,11 +81,9 @@ export default function TransferWorkPage({
         />
       )}{' '}
       {mode === 'extra' && order.data && (
-        <WorkEditor
+        <ExcessDispatchEditor
           key={'e' + revision}
           order={order.data}
-          id={id!}
-          mode={mode}
           onSaved={() => setRevision((n) => n + 1)}
         />
       )}{' '}
@@ -102,70 +103,26 @@ function AssignmentPanel({
   documentId,
   onSaved,
 }: {
-  taskType: string
+  taskType: 'DISPATCH_PREPARATION' | 'INSPECTION'
   documentId: number
   onSaved: () => void
 }) {
-  const r = useInventoryData<Assignment>('/warehouse-tasks', {
-      taskType,
-      documentId,
-    }),
-    [choice, setChoice] = useState(''),
-    [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false)
   return (
     <section>
       <h2>Giao việc cho nhân viên</h2>
-      <InventoryNotice loading={r.loading} error={r.error} />
-      {r.data && (
-        <div className="tf-note">
-          <p>
-            {r.data.current
-              ? 'Đang giao: ' + r.data.current.assigneeName
-              : 'Chưa giao người thực hiện'}
-          </p>
-          {r.data.blockedMessage && <p>{r.data.blockedMessage}</p>}
-          {r.data.canAssign && (
-            <>
-              <select
-                value={choice}
-                onChange={(e) => setChoice(e.target.value)}
-              >
-                <option value="">Chọn người thực hiện</option>
-                {r.data.eligibleAssignees.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.fullName} · {p.openTasks} việc
-                  </option>
-                ))}
-              </select>
-              <button
-                className="tf-primary tf-assign-button"
-                disabled={!choice}
-                onClick={() => setOpen(true)}
-              >
-                Giao việc
-              </button>
-            </>
-          )}
-          {r.data.history.map((h) => (
-            <p key={h.id}>
-              {h.assigneeName} · {h.assignedByName} · {dateTime(h.assignedAt)}
-            </p>
-          ))}
-        </div>
-      )}
+      <div className="tf-note">
+        <button className="tf-primary" onClick={() => setOpen(true)}>
+          Giao / đổi nhân viên
+        </button>
+      </div>
       {open && (
-        <TransferAction
-          title="Xác nhận giao việc"
-          path="/warehouse-tasks"
-          payload={() => ({ taskType, documentId, assigneeId: Number(choice) })}
+        <WarehouseAssignmentDialog
+          taskType={taskType}
+          documentId={documentId}
           onClose={() => setOpen(false)}
-          onSaved={() => {
-            setOpen(false)
-            onSaved()
-          }}
-        >
-          <p>Giao việc cho người đã chọn?</p>
-        </TransferAction>
+          onSaved={onSaved}
+        />
       )}
     </section>
   )
@@ -240,7 +197,10 @@ function WorkEditor({
       return (
         Number.isInteger(v.qty) &&
         v.qty >= 0 &&
-        v.qty <= 100000 &&
+        v.qty <=
+          (mode === 'prepare' && 'plannedQty' in l
+            ? l.plannedQty
+            : 2147483647) &&
         Number.isInteger(v.damaged) &&
         v.damaged >= 0 &&
         v.damaged <= 100000 &&
@@ -431,6 +391,28 @@ function WorkEditor({
           </p>
         )}
         <InventoryNotice error={error} />
+        {canRecord && (
+          <div className="tf-note">
+            <BarcodeScan
+              disabled={busy}
+              onFound={(part) => {
+                const match = lines.find((l) => l.productId === part.productId)
+                if (!match) {
+                  setError('Phụ tùng không thuộc phiếu này.')
+                  return
+                }
+                setError('')
+                document
+                  .getElementById('transfer-part-' + part.productId)
+                  ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                document
+                  .getElementById('transfer-part-' + part.productId)
+                  ?.querySelector('input')
+                  ?.focus()
+              }}
+            />
+          </div>
+        )}
         <form
           className="tf-form"
           onSubmit={(e) => {
@@ -457,7 +439,7 @@ function WorkEditor({
                 </thead>
                 <tbody>
                   {lines.map((l) => (
-                    <tr key={l.productId}>
+                    <tr key={l.productId} id={'transfer-part-' + l.productId}>
                       <td>
                         {l.sku}
                         <small>{l.partName}</small>
@@ -498,7 +480,11 @@ function WorkEditor({
                           required
                           type="number"
                           min={0}
-                          max={100000}
+                          max={
+                            mode === 'prepare' && 'plannedQty' in l
+                              ? l.plannedQty
+                              : 2147483647
+                          }
                           value={values[l.productId].qty}
                           onChange={(e) =>
                             setValues({

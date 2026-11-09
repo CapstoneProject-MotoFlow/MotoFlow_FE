@@ -1,8 +1,8 @@
 import { StockCountLines } from './StockCountLines'
+import CountLiveDetail from './CountLiveDetail'
 import { useState } from 'react'
 import { CountActionDialog, type CountAction } from './CountActionDialog'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../shared/hooks/useAuth'
+import { Link, useParams } from 'react-router-dom'
 import { InventoryHeader, InventoryPanel } from './components'
 import { CountBackLink } from './StockCountListPage'
 import {
@@ -16,16 +16,7 @@ import './stock-count.css'
 
 export default function StockCountDetailPage() {
   const { id } = useParams()
-  const { user } = useAuth()
-  const [params] = useSearchParams()
-  return (
-    <StockCountDetailView
-      key={id + ':' + params.toString()}
-      id={id}
-      role={user?.role ?? ''}
-      initialAction={params.get('action') as CountAction | null}
-    />
-  )
+  return <CountLiveDetail key={id} />
 }
 export function StockCountDetailView({
   count,

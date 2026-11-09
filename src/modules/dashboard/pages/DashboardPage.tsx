@@ -98,7 +98,9 @@ export default function DashboardPage() {
         }
         id="overview"
       >
-        <h1 className="dashboard-greeting">Chào {greetingName}</h1>
+        <h1 className="dashboard-greeting">
+          {role === 'OWNER' ? 'Tổng quan' : 'Chào ' + greetingName}
+        </h1>
         <p className="dashboard-role-caption">
           Tổng quan · {roleNames[role] || role}
         </p>

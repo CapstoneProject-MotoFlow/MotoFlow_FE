@@ -1,7 +1,3 @@
-import { lazy as coordinateLazy } from 'react'
-const ReplenishmentCoordinatePage = coordinateLazy(
-  () => import('../../modules/transfers/ReplenishmentCoordinatePage'),
-)
 /**
  * File: app/routes/AppRoutes.tsx
  * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
@@ -16,6 +12,10 @@ import RequireAuth from '../guards/RequireAuth'
 import RequireRole from '../guards/RequireRole'
 import RequireCatalogEdit from '../guards/RequireCatalogEdit'
 import RequirePasswordChange from '../guards/RequirePasswordChange'
+
+const ReplenishmentCoordinatePage = lazy(
+  () => import('../../modules/transfers/ReplenishmentCoordinatePage'),
+)
 
 const SalesOrderListPage = lazy(() =>
   import('../../modules/sales/SalesPages').then((m) => ({
@@ -162,6 +162,9 @@ const TransferDetailPage = lazy(
 )
 const TransferWorkPage = lazy(
   () => import('../../modules/transfers/TransferWorkPage'),
+)
+const PastDateStockPage = lazy(
+  () => import('../../modules/inventory/PastDateStockPage'),
 )
 const CustomersPage = lazy(
   () => import('../../modules/customers/pages/CustomersPage'),
@@ -494,6 +497,10 @@ export default function AppRoutes() {
                 path="/transfer-orders/:id/extra"
                 element={<TransferWorkPage mode="extra" />}
               />
+              <Route
+                path="/inventory/past-date-stock"
+                element={<PastDateStockPage />}
+              />
               <Route path="/receivables" element={<ReceivableListPage />} />
               <Route
                 path="/receivables/customers/:id"
@@ -523,3 +530,4 @@ export default function AppRoutes() {
     </Suspense>
   )
 }
+import '../../modules/operations/operational-pages.css'

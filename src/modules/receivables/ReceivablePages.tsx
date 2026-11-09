@@ -38,18 +38,22 @@ export function ReceivableListPage() {
     revision,
   )
   return (
-    <main className="dashboard-content rv-page">
+    <main className="dashboard-content rv-page rv-list-page">
       <header className="stock-heading">
         <div>
-          <small>Khách hàng / Công nợ</small>
           <h1>Công nợ khách hàng</h1>
-          <p>Theo dõi khoản còn thu và hạn thanh toán · {scope.warehouse}</p>
         </div>
-        {scope.owner && (
-          <button className="rv-primary" onClick={() => setOpening(true)}>
-            ＋ Ghi nợ đầu kỳ
-          </button>
-        )}
+        <div className="rv-heading-actions">
+          {scope.owner && (
+            <button className="rv-primary" onClick={() => setOpening(true)}>
+              ＋ Ghi nợ đầu kỳ
+            </button>
+          )}
+          <nav>
+            <Link to="/dashboard">Trang chủ</Link> › Công nợ › Công nợ khách
+            hàng
+          </nav>
+        </div>
       </header>
       <div className="rv-overview" aria-label="Tổng quan công nợ">
         <article>
@@ -79,10 +83,10 @@ export function ReceivableListPage() {
         <h2>Khách đang nợ · {scope.warehouse}</h2>
         <div className="rv-filters">
           <label>
-            Tìm khách hàng
             <input
+              aria-label="Tìm khách hàng"
               value={q}
-              placeholder="Tên hoặc số điện thoại"
+              placeholder="Tìm tên hoặc số điện thoại khách"
               onChange={(e) => scope.filter({ q: e.target.value }, true)}
             />
           </label>
@@ -148,7 +152,7 @@ export function ReceivableListPage() {
                   <td>{day(r.earliestDueDate)}</td>
                   <td>
                     <Link
-                      className="rv-pay-link"
+                      className={'rv-pay-link'+(r.overdueDebt?' rv-pay-overdue':'')}
                       to={`/receivables/customers/${r.customerId}?action=payment${scope.storeId ? '&storeId=' + scope.storeId : ''}`}
                     >
                       Thu nợ

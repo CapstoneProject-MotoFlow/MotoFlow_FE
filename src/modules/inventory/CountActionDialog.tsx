@@ -1,18 +1,11 @@
+import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import { useState } from 'react'
 import { mapCountSheet, readCountFile } from './countImport'
 import FormDialog from '../../shared/ui/FormDialog'
-import axiosClient from '../../shared/api/axiosClient'
-import { inventoryError, useInventoryData } from './api'
-import { InventoryNotice } from './components'
-import { date, dateTime, money } from './presentation'
+import { date, money } from './presentation'
 import { countDifference, type StockCount } from './stockCountModel'
 
 export type CountAction = 'assign' | 'verify' | 'approve' | 'cancel' | 'opening'
-import {
-  canAssignCounter,
-  submitCountAssignment,
-  type Assignment,
-} from './countAssignment'
 export function CountActionDialog({
   action,
   count,
@@ -43,150 +36,13 @@ function AssignCounterDialog({
   documentId?: string
   onClose: () => void
 }) {
-  const validId =
-    !!documentId &&
-    /^[1-9]\d*$/.test(documentId) &&
-    Number.isSafeInteger(Number(documentId))
-  const [revision, setRevision] = useState(0)
-  const resource = useInventoryData<Assignment>(
-    '/warehouse-tasks',
-    { taskType: 'COUNTING', documentId },
-    revision,
-    validId,
-  )
-  const [choice, setChoice] = useState<number>()
-  const selected = choice ?? resource.data?.current?.assigneeId
-  const [saving, setSaving] = useState(false),
-    [error, setError] = useState(''),
-    [saved, setSaved] = useState(false)
   return (
-    <FormDialog
-      title="Giao việc đếm"
-      formId="count-assign"
-      submitLabel="Giao việc"
-      submitDisabled={
-        !canAssignCounter(
-          resource.data,
-          Number(documentId),
-          selected,
-          resource.loading || saving,
-        )
-      }
-      busy={saving}
+    <WarehouseAssignmentDialog
+      taskType="COUNTING"
+      documentId={count?.id ?? Number(documentId)}
       onClose={onClose}
-    >
-      <form
-        className="count-form"
-        id="count-assign"
-        onSubmit={async (e) => {
-          e.preventDefault()
-          if (
-            !resource.data?.canAssign ||
-            !selected ||
-            saving ||
-            resource.loading
-          )
-            return
-          setSaving(true)
-          setError('')
-          setSaved(false)
-          try {
-            await submitCountAssignment(
-              resource.data,
-              Number(documentId),
-              selected,
-              resource.loading,
-              (payload) => axiosClient.post('/warehouse-tasks', payload),
-            )
-            setRevision((v) => v + 1)
-            setSaved(true)
-          } catch (error) {
-            setError(inventoryError(error))
-          } finally {
-            setSaving(false)
-          }
-        }}
-      >
-        <dl className="stock-facts">
-          <div>
-            <dt>Phạm vi</dt>
-            <dd>{count?.scopeLabel ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>Ngày kiểm kê</dt>
-            <dd>{date(count?.countDate)}</dd>
-          </div>
-        </dl>
-        <InventoryNotice
-          loading={resource.loading}
-          error={resource.error ?? error}
-        />
-        {!validId && (
-          <p className="count-unavailable">
-            Chưa xác định được phiếu kiểm kê cần giao việc.
-          </p>
-        )}
-        {resource.data?.blockedMessage && (
-          <p role="status" className="count-unavailable">
-            {resource.data.blockedMessage}
-          </p>
-        )}
-        {resource.data?.noticeMessage && (
-          <p className="count-unavailable">{resource.data.noticeMessage}</p>
-        )}
-        {resource.data && (
-          <fieldset>
-            <legend>Chọn người đếm của kho</legend>
-            <div className="count-assignees">
-              {resource.data.eligibleAssignees.map((person) => (
-                <label key={person.id}>
-                  <input
-                    type="radio"
-                    name="assignee"
-                    value={person.id}
-                    checked={selected === person.id}
-                    disabled={
-                      !resource.data?.canAssign || saving || resource.loading
-                    }
-                    onChange={() => {
-                      setChoice(person.id)
-                      setSaved(false)
-                    }}
-                  />
-                  <span>{person.self ? 'Tôi tự đếm' : person.fullName}</span>
-                  {!person.self && (
-                    <small>{person.openTasks} phiếu đang đếm</small>
-                  )}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-        {resource.data?.eligibleAssignees.some(
-          (person) => person.id === selected && person.self,
-        ) && (
-          <p className="count-unavailable">
-            Khi bạn tự đếm, người khác phải xác minh kết quả.
-          </p>
-        )}
-        {saved && <p role="status">Đã lưu người được giao đếm.</p>}
-        {!!resource.data?.history.length && (
-          <section>
-            <h3>Lịch sử giao việc</h3>
-            <ol className="count-events">
-              {resource.data.history.map((event) => (
-                <li key={event.id}>
-                  <strong>{event.assigneeName}</strong>
-                  <span>
-                    {event.assignedByName} · {dateTime(event.assignedAt)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
-      </form>
-    </FormDialog>
+      onSaved={() => window.dispatchEvent(new Event('stock-counts-changed'))}
+    />
   )
 }
 function CountReviewDialog({

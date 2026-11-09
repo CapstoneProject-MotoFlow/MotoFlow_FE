@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { isAxiosError } from 'axios'
 import { noticeTarget, type Notice } from './notificationModel'
@@ -14,7 +15,8 @@ export default function NotificationActions({
   const { user } = useAuth(),
     navigate = useNavigate()
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('')
+    [error, setError] = useState(''),
+    [transferFallback, setTransferFallback] = useState(false)
   const pending = useRef<AbortController | null>(null)
   useEffect(() => () => pending.current?.abort(), [])
   const target = noticeTarget(notice, user?.role)
@@ -24,10 +26,29 @@ export default function NotificationActions({
     pending.current = controller
     setBusy(true)
     setError('')
+    setTransferFallback(false)
     try {
       if (!notice.read) await markNoticeRead(notice.id, controller.signal)
       if (controller.signal.aborted) return
       if (open && target) {
+        // Inspection notices use the same reference for supplier and transfer receipts.
+        // The API does not supply the parent transfer ID needed for its detail route.
+        if (notice.refType === 'GOODS_RECEIPT_NOTE') {
+          try {
+            await axiosClient.get(target.path, { signal: controller.signal })
+          } catch (e) {
+            if (isAxiosError(e) && e.response?.status === 404) {
+              setTransferFallback(true)
+              setError(
+                'Phiếu nhận không có trong danh sách nhập từ nhà cung cấp. Mở lệnh điều chuyển để tìm phiếu nhận liên quan.',
+              )
+              refreshNotifications()
+              return
+            }
+            throw e
+          }
+        }
+        if (controller.signal.aborted) return
         onOpened?.()
         navigate(target.path)
       }
@@ -62,6 +83,11 @@ export default function NotificationActions({
         )}
       </div>
       {error && <p role="alert">{error}</p>}
+      {transferFallback && (
+        <Link to="/transfer-orders" onClick={onOpened}>
+          Mở lệnh điều chuyển
+        </Link>
+      )}
     </div>
   )
 }

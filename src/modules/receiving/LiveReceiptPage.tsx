@@ -1,3 +1,4 @@
+import BarcodeScan from '../operations/BarcodeScan'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -286,6 +287,21 @@ function ReceiptForm({
 
   return (
     <form className="receiving-stack" onSubmit={submit}>
+      {editing && (
+        <BarcodeScan
+          disabled={saving}
+          onFound={(p) => {
+            const line = receipt.lines.find((l) => l.productId === p.productId)
+            if (!line) {
+              setScanMessage('Phụ tùng không thuộc phiếu nhận.')
+              return
+            }
+            setFocusedLine(line.id)
+            setScanMessage('Đã tìm ' + p.partName)
+            rowRefs.current.get(line.id)?.scrollIntoView({ block: 'center' })
+          }}
+        />
+      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>Chứng từ giao hàng · {receipt.deliveryDocumentNo}</h2>

@@ -1,3 +1,4 @@
+import { unplannedQuantity } from './transferRules'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -37,12 +38,7 @@ export default function ReplenishmentCoordinatePage() {
       </header>
       <InventoryNotice
         loading={r.loading || stock.loading}
-        error={
-          r.error ||
-          (stock.error
-            ? 'Điều phối chỉ dành cho Owner hoặc BM kho tổng. Nếu bạn có quyền này, hãy thử tải lại dữ liệu.'
-            : undefined)
-        }
+        error={r.error || stock.error}
       />
       {r.data && stock.data && (
         <AllocationEditor request={r.data} stock={stock.data} />
@@ -58,7 +54,9 @@ function AllocationEditor({
   stock: Stock[]
 }) {
   const navigate = useNavigate(),
-    lines = request.lines.filter((l) => l.remainingQty > 0),
+    lines = request.lines
+      .filter((l) => unplannedQuantity(l) > 0)
+      .map((l) => ({ ...l, remainingQty: unplannedQuantity(l) })),
     options = (productId: number) =>
       stock
         .filter(

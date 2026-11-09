@@ -47,6 +47,10 @@ export function SourceDocument({ type, id }: { type: string; id: number }) {
     </>
   ) : type === 'STOCK_COUNT' ? (
     <Link to={'/stock-counts/' + id}>{label}</Link>
+  ) : type === 'SALES_ORDER' ? (
+    <Link to={'/sales-orders/' + id}>{label}</Link>
+  ) : type === 'TRANSFER_ORDER' ? (
+    <Link to={'/transfer-orders/' + id}>{label}</Link>
   ) : (
     <span>{label}</span>
   )
