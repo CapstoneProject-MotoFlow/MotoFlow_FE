@@ -22,15 +22,13 @@ export const branchManagerNavigation: NavItem[] = [
   },
   {
     label: 'Yêu cầu bổ sung',
-    href: '#bm-replenishments',
+    href: '/replenishment-requests',
     icon: 'transfer',
-    pending: true,
   },
   {
     label: 'Lệnh điều chuyển',
-    href: '#bm-transfers',
+    href: '/transfer-orders',
     icon: 'truck',
-    pending: true,
   },
   { label: 'Tồn kho', href: '/inventory', icon: 'box' },
   {

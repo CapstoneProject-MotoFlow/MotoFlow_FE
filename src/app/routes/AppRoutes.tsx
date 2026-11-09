@@ -1,3 +1,7 @@
+import { lazy as coordinateLazy } from 'react'
+const ReplenishmentCoordinatePage = coordinateLazy(
+  () => import('../../modules/transfers/ReplenishmentCoordinatePage'),
+)
 /**
  * File: app/routes/AppRoutes.tsx
  * Loại: CẤU HÌNH ĐIỀU HƯỚNG — nối URL với các màn hình.
@@ -139,6 +143,25 @@ const ReceivableDetailPage = lazy(() =>
   import('../../modules/receivables/ReceivablePages').then((m) => ({
     default: m.ReceivableDetailPage,
   })),
+)
+const TransferListPage = lazy(() =>
+  import('../../modules/transfers/TransferPages').then((m) => ({
+    default: m.TransferListPage,
+  })),
+)
+const ReplenishmentDetailPage = lazy(() =>
+  import('../../modules/transfers/TransferPages').then((m) => ({
+    default: m.ReplenishmentDetailPage,
+  })),
+)
+const TransferCreatePage = lazy(
+  () => import('../../modules/transfers/TransferCreatePage'),
+)
+const TransferDetailPage = lazy(
+  () => import('../../modules/transfers/TransferDetailPage'),
+)
+const TransferWorkPage = lazy(
+  () => import('../../modules/transfers/TransferWorkPage'),
 )
 const CustomersPage = lazy(
   () => import('../../modules/customers/pages/CustomersPage'),
@@ -391,6 +414,19 @@ export default function AppRoutes() {
                 <RequireRole roles={['OWNER', 'BRANCH_MANAGER', 'STAFF']} />
               }
             >
+              <Route path="/transfer-orders" element={<TransferListPage />} />
+              <Route
+                path="/transfer-orders/:id"
+                element={<TransferDetailPage />}
+              />
+              <Route
+                path="/transfer-orders/:id/prepare"
+                element={<TransferWorkPage />}
+              />
+              <Route
+                path="/transfer-orders/:id/receipts/:receiptId"
+                element={<TransferWorkPage mode="receipt" />}
+              />
               <Route path="/sales-orders" element={<SalesOrderListPage />} />
               <Route
                 path="/sales-orders/:id"
@@ -434,6 +470,30 @@ export default function AppRoutes() {
             <Route
               element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
             >
+              <Route
+                path="/replenishment-requests"
+                element={<TransferListPage replenishment />}
+              />
+              <Route
+                path="/replenishment-requests/new"
+                element={<TransferCreatePage replenishment />}
+              />
+              <Route
+                path="/replenishment-requests/:id/coordinate"
+                element={<ReplenishmentCoordinatePage />}
+              />
+              <Route
+                path="/replenishment-requests/:id"
+                element={<ReplenishmentDetailPage />}
+              />
+              <Route
+                path="/transfer-orders/new"
+                element={<TransferCreatePage />}
+              />
+              <Route
+                path="/transfer-orders/:id/extra"
+                element={<TransferWorkPage mode="extra" />}
+              />
               <Route path="/receivables" element={<ReceivableListPage />} />
               <Route
                 path="/receivables/customers/:id"

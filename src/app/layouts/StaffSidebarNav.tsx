@@ -21,9 +21,8 @@ const items: NavItem[] = [
   },
   {
     label: 'Lệnh điều chuyển',
-    href: '#staff-transfers',
+    href: '/transfer-orders',
     icon: 'truck',
-    pending: true,
   },
   { label: 'Kiểm kê', href: '/stock-counts', icon: 'checklist' },
   { label: 'Phụ tùng', href: '/staff/products', icon: 'tool' },
