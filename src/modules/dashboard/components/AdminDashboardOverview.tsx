@@ -173,7 +173,7 @@ function ChangeType({ change }: { change: PermissionHistoryItem }) {
     ROLE_CHANGED: {
       label: 'Đổi vai trò',
       tone: 'blue',
-      description: `${change.oldValue || '—'} → ${change.newValue || '—'}`,
+      description: `${change.oldValue || '—'} thành ${change.newValue || '—'}`,
     },
     STORE_CHANGED: { label: 'Đổi cửa hàng', tone: 'cyan', description: '' },
     PERMISSION_GRANTED: {

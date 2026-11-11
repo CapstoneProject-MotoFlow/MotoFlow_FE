@@ -217,7 +217,7 @@ export default function ManagerTransferListPage() {
                     ) : row.status === 'AWAITING_DISPATCH' &&
                       scope.user?.storeId === row.sourceStoreId ? (
                       <Link to={'/transfer-orders/' + row.id}>
-                        Xem xuất hàng →
+                        Xem xuất hàng
                       </Link>
                     ) : row.status === 'IN_TRANSIT' &&
                       scope.user?.storeId === row.destStoreId ? (
@@ -229,7 +229,7 @@ export default function ManagerTransferListPage() {
                       </Link>
                     ) : (
                       <Link to={'/transfer-orders/' + row.id}>
-                        Xem chi tiết →
+                        Xem chi tiết
                       </Link>
                     )}
                   </td>

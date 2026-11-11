@@ -236,7 +236,7 @@ export default function LotDetailPage() {
                       item.lotId,
                     )}
                   >
-                    Xem toàn bộ lịch sử lô →
+                    Xem toàn bộ lịch sử lô
                   </Link>
                 </div>
               </InventoryPanel>
@@ -356,7 +356,7 @@ export default function LotDetailPage() {
                     encodeURIComponent(item.sku)
                   }
                 >
-                  Xem các lô của phụ tùng →
+                  Xem các lô của phụ tùng
                 </Link>
               </InventoryPanel>
             </aside>

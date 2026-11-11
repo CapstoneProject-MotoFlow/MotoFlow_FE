@@ -138,7 +138,8 @@
   border-bottom: 1px solid #edf0f4;
 }
 .bm-product-filters select,
-.bm-product-filters input {
+.bm-product-filters > input,
+.bm-product-filters .searchable-filter input {
   border: 1px solid #ccd5e3;
   background: white;
   color: inherit;
@@ -149,6 +150,19 @@
   min-width: 130px;
   max-width: 210px;
   flex: 1;
+}
+.bm-product-filters > .searchable-filter {
+  flex: 1 1 130px;
+  max-width: 210px;
+}
+.bm-product-filters .searchable-filter input[role='combobox'] {
+  max-width: 100%;
+  min-width: 0;
+  padding-inline-end: 2rem;
+  text-overflow: ellipsis;
+}
+.bm-products-panel:has(.searchable-filter-menu) {
+  overflow: visible;
 }
 .bm-products-table {
   overflow-x: auto;
@@ -248,34 +262,4 @@
   outline: 2px solid #4b5eff;
   outline-offset: 4px;
   border-radius: 2px;
-}
-.bm-products-barcode {
-  padding: 14px 20px;
-  border-bottom: 1px solid #edf0f4;
-}
-.bm-products-barcode .operation-barcode {
-  margin: 0;
-  gap: 10px;
-}
-.bm-products-barcode .operation-barcode label {
-  flex: 0 1 340px;
-  min-width: 0;
-}
-.bm-products-barcode .operation-barcode input {
-  width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
-}
-.bm-products-barcode .operation-barcode button {
-  min-height: 38px;
-  font: inherit;
-  font-size: 13px;
-}
-@media (max-width: 650px) {
-  .bm-products-barcode {
-    padding: 14px;
-  }
-  .bm-products-barcode .operation-barcode label {
-    flex: 1 1 100%;
-  }
 }

@@ -185,8 +185,7 @@ export default function CountLiveDetail() {
                 <Link to={`/stock-counts/${id}/record`}>
                   {d.status === 'DRAFT' || d.awaitingBookQuantities
                     ? 'Bắt đầu đếm'
-                    : 'Ghi số đếm'}{' '}
-                  →
+                    : 'Ghi số đếm'}
                 </Link>
               )}
               {manager && d.status === 'COUNTING' && submitted && (

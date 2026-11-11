@@ -65,7 +65,7 @@ export default function OwnerOverview() {
               <div>
                 <strong>{counts[m.key] ?? '—'}</strong>
                 {m.href ? (
-                  <Link to={m.href}>Xem →</Link>
+                  <Link to={m.href}>Xem</Link>
                 ) : (
                   <small>Chờ chức năng điều chỉnh</small>
                 )}

@@ -229,33 +229,12 @@
   padding: 10px 14px;
   font: inherit;
 }
-.past-stock-quick {
-  display: flex;
-  gap: 4px;
-  background: #f2f4f7;
-  border-radius: 7px;
-  padding: 3px;
-  align-self: center;
-}
-.tf-page .past-stock-quick button {
-  border: 0;
-  background: transparent;
-  padding: 8px 12px;
-  font-size: 13px;
-  white-space: nowrap;
-}
 .past-stock-page .tf-filters {
   padding: 16px 20px;
   align-items: flex-end;
   gap: 12px;
 }
-.past-stock-page .past-stock-quick {
-  margin: 16px 20px 0;
-  width: fit-content;
-  max-width: calc(100% - 40px);
-  flex-wrap: wrap;
-}
-.past-stock-page .tf-filters > label {
+.past-stock-page .tf-filters > :is(.past-stock-filter, label) {
   min-width: 0;
   max-width: 220px;
   flex: 1 1 160px;
@@ -263,22 +242,20 @@
 .past-stock-page .tf-filters > .past-stock-date {
   flex: 0 1 155px;
 }
-.past-stock-page .tf-filters > .past-stock-zero {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+.past-stock-filter {
+  display: grid;
   gap: 8px;
-  flex: 0 0 auto;
-  min-height: 38px;
-  white-space: nowrap;
-  margin: 0;
+  font-size: 13px;
 }
-.past-stock-page .tf-filters > .past-stock-zero input {
-  margin: 0;
-  flex-shrink: 0;
-}
-.past-stock-page .tf-filters :is(input:not([type='checkbox']), select) {
+.past-stock-page .tf-filters input {
   width: 100%;
+  min-height: 38px;
+}
+.past-stock-page .tf-filters .searchable-filter input {
+  padding-inline-end: 2rem;
+}
+.past-stock-page > section:has(.searchable-filter-menu) {
+  overflow: visible;
 }
 .past-stock-page section > .tf-note {
   margin: 0;
@@ -289,10 +266,6 @@
 }
 .past-stock-page .tf-filters label {
   font-size: 13px;
-}
-.past-stock-page .tf-filters input:not([type='checkbox']),
-.past-stock-page .tf-filters select {
-  min-height: 38px;
 }
 .tf-page .tf-list-search > details[open] {
   display: block;
@@ -391,15 +364,25 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
-.owner-chain-metrics > div {
+.owner-chain-metrics > a {
   padding: 20px;
   border-right: 1px solid #eef0f4;
   display: grid;
   gap: 12px;
   align-content: start;
+  color: inherit;
+  text-decoration: none;
 }
-.owner-chain-metrics > div:last-child {
+.owner-chain-metrics > a:last-child {
   border: 0;
+}
+.owner-monitoring .owner-chain-metrics > a:hover {
+  background: #f5f7ff;
+  text-decoration: none;
+}
+.owner-chain-metrics > a:focus-visible {
+  outline: 2px solid #465fff;
+  outline-offset: -2px;
 }
 .owner-chain-metrics span {
   font-size: 13px;
@@ -408,9 +391,6 @@
 .owner-chain-metrics strong {
   font-size: 22px;
   line-height: 30px;
-}
-.owner-chain-metrics a {
-  font-size: 12px;
 }
 .operation-action {
   display: inline-flex;

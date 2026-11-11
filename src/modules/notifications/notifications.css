@@ -263,6 +263,18 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.notifications-row-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(45%);
+  gap: 12px;
+  align-items: start;
+}
+.notifications-row-content > .notification-item-controls {
+  margin-top: 0;
+}
+.notifications-list .notification-item-controls > div {
+  justify-content: flex-end;
+}
 .notification-item-controls button,
 .notification-popover-list > p button {
   font: inherit;
@@ -317,6 +329,10 @@
   }
   .notifications-list li {
     padding: 14px;
+  }
+  .notifications-row-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
   }
   .notifications-panel > header,
   .notifications-toolbar {

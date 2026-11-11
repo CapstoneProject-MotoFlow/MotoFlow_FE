@@ -2,22 +2,27 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import {
-  InventoryHeader,
   InventoryPanel,
   WarehouseFilter,
   InventoryNotice,
   Pagination,
 } from './components'
 import { StockCountFormDialog } from './StockCountFormDialog'
-import { countScope, type CountDto, type CountRequest } from './countApi'
+import { countScope, type CountList, type CountRequest } from './countApi'
 import { money } from './presentation'
-import type { Assignment } from './countAssignment'
 import { countStateNames, countTypeNames } from './stockCountModel'
 import axiosClient from '../../shared/api/axiosClient'
 import { date, dateTime } from './presentation'
 import './stock-count.css'
 import { useCountList } from './useCountList'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
+const countTabs = [
+  ['OPEN', 'Đang mở'],
+  ['COMPLETED', 'Hoàn tất'],
+  ['CANCELLED', 'Đã hủy'],
+  ['ALL', 'Tất cả'],
+] as const
+
 export default function StockCountListPage() {
   const scope = useInventoryScope(),
     staff = scope.user?.role === 'STAFF',
@@ -33,21 +38,57 @@ export default function StockCountListPage() {
     [cancelId, setCancelId] = useState<number>()
   const lock = useRef(false),
     page = Math.max(0, Number(p.get('page')) || 0),
-    status = p.get('status') ?? (scope.owner ? 'AWAITING_APPROVAL' : 'OPEN'),
+    requestedStatus = p.get('status'),
+    status =
+      countTabs.find(([value]) => value === requestedStatus)?.[0] ?? 'OPEN',
     invalid = !!p.get('from') && !!p.get('to') && p.get('from')! > p.get('to')!
+  const filters = {
+    storeId: scope.storeId,
+    countType: p.get('countType') ?? '',
+    from: p.get('from') ?? '',
+    to: p.get('to') ?? '',
+  }
   const r = useCountList(
     {
-      storeId: scope.storeId,
-      status,
-      countType: p.get('countType') ?? '',
-      from: p.get('from') ?? '',
-      to: p.get('to') ?? '',
+      ...filters,
+      status: status === 'ALL' ? undefined : status,
       page,
       size: 20,
     },
     revision,
     !invalid,
   )
+  const totalQuery = { ...filters, page: 0, size: 1 }
+  const all = useInventoryData<CountList>(
+    '/stock-counts',
+    totalQuery,
+    revision,
+    !invalid,
+  )
+  const completed = useInventoryData<CountList>(
+    '/stock-counts',
+    { ...totalQuery, status: 'COMPLETED' },
+    revision,
+    !invalid,
+  )
+  const cancelled = useInventoryData<CountList>(
+    '/stock-counts',
+    { ...totalQuery, status: 'CANCELLED' },
+    revision,
+    !invalid,
+  )
+  const allTotal = all.data?.counts.totalItems
+  const completedTotal = completed.data?.counts.totalItems
+  const cancelledTotal = cancelled.data?.counts.totalItems
+  const tabTotals = {
+    OPEN:
+      allTotal == null || completedTotal == null || cancelledTotal == null
+        ? undefined
+        : Math.max(0, allTotal - completedTotal - cancelledTotal),
+    COMPLETED: completedTotal,
+    CANCELLED: cancelledTotal,
+    ALL: allTotal,
+  }
   const ownerRequests = useInventoryData<CountRequest[]>(
     '/stock-count-requests',
     { storeId: scope.storeId },
@@ -75,7 +116,6 @@ export default function StockCountListPage() {
   }
   return (
     <main className="inventory-workspace count-workspace">
-      <InventoryHeader title="Kiểm kê" />
       <InventoryPanel
         title={
           staff
@@ -99,32 +139,17 @@ export default function StockCountListPage() {
         }
       >
         <div className="stock-tabs">
-          {[
-            ...(scope.owner ? [['AWAITING_APPROVAL', 'Chờ Owner duyệt']] : []),
-            ['OPEN', 'Đang mở'],
-            ['COMPLETED', 'Hoàn tất'],
-            ['CANCELLED', 'Đã hủy'],
-            ['', 'Tất cả'],
-          ].map(([value, label]) => (
+          {countTabs.map(([value, label]) => (
             <button
               key={value}
               aria-pressed={status === value}
               className={status === value ? 'count-tab-active' : ''}
-              onClick={() =>
-                scope.filter({
-                  status: value,
-                  ...(['OPEN', 'AWAITING_APPROVAL'].includes(value)
-                    ? { from: '', to: '' }
-                    : {}),
-                })
-              }
+              onClick={() => scope.filter({ status: value })}
             >
               {label}
-              {status === value && r.data && (
-                <span className="count-tab-number">
-                  {r.data.counts.totalItems}
-                </span>
-              )}
+              <span className="count-tab-number">
+                {tabTotals[value] ?? '—'}
+              </span>
             </button>
           ))}
         </div>
@@ -171,7 +196,11 @@ export default function StockCountListPage() {
           error={
             invalid
               ? 'Ngày bắt đầu phải trước ngày kết thúc.'
-              : r.error || scope.storesError
+              : r.error ||
+                scope.storesError ||
+                all.error ||
+                completed.error ||
+                cancelled.error
           }
         />
         <div className="stock-table-scroll">
@@ -202,18 +231,34 @@ export default function StockCountListPage() {
                     {countScope(c.scopeType, c.scopeNote)}
                     <small>{date(c.countDate)}</small>
                   </td>
-                  <CountTableFacts
-                    id={c.id}
-                    owner={scope.owner}
-                    staff={staff}
-                  />
+                  <td>
+                    {staff
+                      ? (c.lineCount ?? '—')
+                      : c.counterNames?.join(', ') || 'Chưa ghi nhận'}
+                  </td>
+                  {!staff && (
+                    <td>
+                      {c.differenceLineCount == null
+                        ? '—'
+                        : c.differenceLineCount === 0
+                          ? 'Khớp'
+                          : c.differenceLineCount + ' dòng'}
+                    </td>
+                  )}
+                  {scope.owner && (
+                    <td>
+                      {c.differenceValue == null
+                        ? '—'
+                        : money.format(c.differenceValue)}
+                    </td>
+                  )}
                   <td>
                     <span className={'count-status count-status-' + c.status}>
                       {countStateNames[c.status]}
                     </span>
                   </td>
                   <td>
-                    <Link to={`/stock-counts/${c.id}`}>Xem phiếu →</Link>
+                    <Link to={`/stock-counts/${c.id}`}>Xem phiếu</Link>
                   </td>
                 </tr>
               ))}
@@ -344,70 +389,4 @@ export default function StockCountListPage() {
 }
 export function CountBackLink() {
   return <Link to="/stock-counts">← Danh sách kiểm kê</Link>
-}
-function CountTableFacts({
-  id,
-  owner,
-  staff,
-}: {
-  id: number
-  owner: boolean
-  staff: boolean
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const detail = useInventoryData<CountDto>(
-      '/stock-counts/' + id,
-      {},
-      0,
-      expanded,
-    ),
-    assignment = useInventoryData<
-      Assignment & { current: { assigneeName: string; status: string } | null }
-    >(
-      '/warehouse-tasks',
-      { taskType: 'COUNTING', documentId: id },
-      0,
-      expanded && !owner && !staff,
-    ),
-    d = detail.data,
-    submitted =
-      !!d &&
-      (d.status === 'AWAITING_APPROVAL' ||
-        d.status === 'COMPLETED' ||
-        assignment.data?.current?.status === 'RESULT_SUBMITTED'),
-    diff =
-      d?.lines.filter((l) => l.difference != null && l.difference !== 0) ?? [],
-    value =
-      submitted && d?.lines.every((l) => l.differenceValue != null)
-        ? d.lines.reduce((sum, l) => sum + Number(l.differenceValue), 0)
-        : null
-  if (staff)
-    return (
-      <td>
-        <button onClick={() => setExpanded((v) => !v)}>
-          {expanded ? 'Thu gọn' : 'Xem số dòng'}
-        </button>
-        {expanded && (
-          <span>
-            {detail.loading
-              ? 'Đang tải…'
-              : (detail.error ?? d?.lines.length ?? '—')}
-          </span>
-        )}
-      </td>
-    )
-  return (
-    <>
-      <td title={assignment.error ?? undefined}>
-        <button onClick={() => setExpanded((v) => !v)}>
-          {expanded ? 'Thu gọn' : 'Xem chi tiết'}
-        </button>
-        {expanded && (assignment.data?.current?.assigneeName ?? '—')}
-      </td>
-      <td title={detail.error ?? undefined}>
-        {submitted ? (diff.length ? diff.length + ' dòng' : 'Khớp') : '—'}
-      </td>
-      {owner && <td>{value == null ? '—' : money.format(value)}</td>}
-    </>
-  )
 }

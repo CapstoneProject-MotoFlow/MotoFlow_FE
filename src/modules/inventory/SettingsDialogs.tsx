@@ -22,35 +22,9 @@ export function StockSettingsDialog({
 }) {
   const [area, setArea] = useState(row.storageArea ?? '')
   const [bin, setBin] = useState(row.binLocation ?? '')
-  const candidate = /^(.*)-(\d+)-(\d+)$/.exec(row.binLocation ?? '')
-  const parsed =
-    candidate &&
-    Number(candidate[2]) >= 1 &&
-    Number(candidate[2]) <= 6 &&
-    Number(candidate[3]) >= 1 &&
-    Number(candidate[3]) <= 10
-      ? candidate
-      : null
-  const [manualBin, setManualBin] = useState(!!row.binLocation && !parsed)
-  const [level, setLevel] = useState(
-    parsed?.[2] ? String(Number(parsed[2])) : '',
-  )
-  const [slot, setSlot] = useState(parsed?.[3] ? String(Number(parsed[3])) : '')
   const [thresholdValue, setThresholdValue] = useState(
     String(row.lowStockThreshold ?? ''),
   )
-  function updatePosition(
-    nextArea: string,
-    nextLevel: string,
-    nextSlot: string,
-  ) {
-    setArea(nextArea)
-    setLevel(nextLevel)
-    setSlot(nextSlot)
-    const prefix = nextArea.replace(/^Khu\s*/i, '').trim()
-    if (!manualBin && prefix && nextLevel && nextSlot)
-      setBin(prefix + '-' + nextLevel.padStart(2, '0') + '-' + nextSlot)
-  }
   const occupied = stockRows.filter(
     (item) =>
       item.storeId === row.storeId &&
@@ -125,7 +99,7 @@ export function StockSettingsDialog({
                 name="area"
                 list="stock-areas"
                 value={area}
-                onChange={(e) => updatePosition(e.target.value, level, slot)}
+                onChange={(e) => setArea(e.target.value)}
                 maxLength={50}
                 disabled={saving}
               />
@@ -140,71 +114,10 @@ export function StockSettingsDialog({
               <input
                 name="bin"
                 value={bin}
-                onChange={(e) => {
-                  setManualBin(true)
-                  setBin(e.target.value)
-                  const candidate = /^(.*)-(\d+)-(\d+)$/.exec(e.target.value)
-                  const match =
-                    candidate &&
-                    Number(candidate[2]) >= 1 &&
-                    Number(candidate[2]) <= 6 &&
-                    Number(candidate[3]) >= 1 &&
-                    Number(candidate[3]) <= 10
-                      ? candidate
-                      : null
-                  setLevel(match?.[2] ? String(Number(match[2])) : '')
-                  if (match) {
-                    const matchedArea = areas.find(
-                      (item) =>
-                        item
-                          .replace(/^Khu\s*/i, '')
-                          .trim()
-                          .toLocaleLowerCase() === match[1].toLocaleLowerCase(),
-                    )
-                    if (matchedArea) setArea(matchedArea)
-                  }
-                  setSlot(match?.[3] ? String(Number(match[3])) : '')
-                }}
+                onChange={(e) => setBin(e.target.value)}
                 maxLength={50}
                 disabled={saving}
               />
-            </label>
-            {manualBin && (
-              <small>
-                Mã vị trí nhập tay được giữ nguyên khi đổi khu vực, tầng hoặc ô.
-              </small>
-            )}
-            <label>
-              Tầng kệ
-              <select
-                aria-label="Tầng kệ"
-                value={level}
-                disabled={saving}
-                onChange={(e) => updatePosition(area, e.target.value, slot)}
-              >
-                <option value="">Chọn tầng kệ</option>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Ô
-              <select
-                aria-label="Ô"
-                value={slot}
-                disabled={saving}
-                onChange={(e) => updatePosition(area, level, e.target.value)}
-              >
-                <option value="">Chọn ô</option>
-                {Array.from({ length: 10 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
-                  </option>
-                ))}
-              </select>
             </label>
           </div>
         ) : (
@@ -246,11 +159,11 @@ export function StockSettingsDialog({
         )}
         {mode === 'location' && occupied.length > 0 && (
           <p role="status">
-            Ô {bin} đang có{' '}
+            Vị trí {bin} đang có{' '}
             {occupied
               .map((item) => item.partName + ' (' + item.sku + ')')
               .join(', ')}
-            . Lưu thì các phụ tùng dùng chung một ô.
+            . Lưu thì các phụ tùng dùng chung một vị trí.
           </p>
         )}
         {error && <p role="alert">{error}</p>}

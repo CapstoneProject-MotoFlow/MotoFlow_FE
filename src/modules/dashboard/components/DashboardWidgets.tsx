@@ -36,7 +36,7 @@ export function MetricCard({
       <div className="metric-footer">
         <strong>{value}</strong>
         <a href={href}>
-          Xem <span aria-hidden="true">→</span>
+          Xem
         </a>
       </div>
     </article>

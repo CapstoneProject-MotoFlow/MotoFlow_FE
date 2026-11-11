@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from './api'
-import { InventoryNotice, Pagination, WarehouseFilter } from './components'
+import { InventoryNotice, Pagination } from './components'
 import { today } from './presentation'
 import type { Page } from './types'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
@@ -20,96 +22,97 @@ type History = {
   }>
 }
 function yesterday() {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-')
+  const day = new Date(today() + 'T00:00:00Z')
+  day.setUTCDate(day.getUTCDate() - 1)
+  return day.toISOString().slice(0, 10)
 }
 export default function PastDateStockPage() {
+  const [productSearch, setProductSearch] = useState<string | null>(null)
   const categories = useInventoryData<Category[]>('/part-categories')
-  const scope = useInventoryScope(),
-    date = scope.params.get('date') ?? yesterday(),
-    page = Math.max(0, Number(scope.params.get('page')) || 0),
-    valid =
-      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-      date < today() &&
-      (!scope.owner || !!scope.storeId),
-    r = useInventoryData<History>(
-      '/inventory/past-date-stock',
-      {
-        date,
-        storeId: scope.storeId,
-        q: scope.params.get('q') ?? '',
-        categoryId: scope.params.get('categoryId') ?? '',
-        includeZero: scope.params.get('includeZero') === 'true',
-        page,
-        size: 20,
-      },
-      0,
-      valid,
-    )
+  const scope = useInventoryScope()
+  const defaultStore =
+    scope.stores.find((store) => store.central && store.status === 'ACTIVE') ??
+    scope.stores.find((store) => store.status === 'ACTIVE') ??
+    scope.stores[0]
+  const warehouse =
+    scope.stores.find((store) => String(store.id) === scope.storeId) ??
+    defaultStore
+  const storeId = warehouse ? String(warehouse.id) : ''
+  const warehouseName = scope.owner ? warehouse?.storeName : scope.warehouse
+  const date = scope.params.get('date') ?? yesterday()
+  const page = Math.max(0, Number(scope.params.get('page')) || 0)
+  const q = scope.params.get('q') ?? ''
+  const categoryId = scope.params.get('categoryId') ?? ''
+  const valid =
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    date < today() &&
+    (!scope.owner || !!storeId)
+  const filters = { date, storeId, categoryId }
+  const r = useInventoryData<History>(
+    '/inventory/past-date-stock',
+    { ...filters, q, page, size: 20 },
+    0,
+    valid,
+  )
+  const typed = productSearch?.trim() ?? ''
+  const suggestions = useInventoryData<History>(
+    '/inventory/past-date-stock',
+    { ...filters, q: typed, page: 0, size: 10 },
+    0,
+    valid && productSearch !== null,
+  )
+  const products = new Map<string, string>()
+  if (typed) products.set(typed, 'Tìm “' + typed + '”')
+  else products.set('', 'Mọi phụ tùng')
+  if (productSearch === null && q) products.set(q, q)
+  for (const part of suggestions.data?.page.items ?? []) {
+    if (!products.has(part.sku))
+      products.set(part.sku, part.sku + ' · ' + part.partName)
+  }
   return (
     <main className="dashboard-content tf-page past-stock-page">
       <header>
-        <h1>Tồn theo ngày</h1>
+        <h1>Tra cứu tồn</h1>
         <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Kho hàng › Tồn theo ngày
+          <Link to="/dashboard">Trang chủ</Link> › Kho hàng › Tra cứu tồn
         </nav>
       </header>
       <section>
         <h2>
-          Tồn cuối ngày {date.split('-').reverse().join('/')} ·{' '}
-          {scope.warehouse}
+          Tồn cuối ngày {date.split('-').reverse().join('/')}
+          {warehouseName && ' · ' + warehouseName}
         </h2>
-        <div className="past-stock-quick" aria-label="Chọn nhanh ngày">
-          {[
-            [1, 'Hôm qua'],
-            [7, '7 ngày trước'],
-            [30, '30 ngày trước'],
-          ].map(([days, label]) => (
-            <button
-              type="button"
-              key={days}
-              onClick={() => {
-                const day = new Date()
-                day.setDate(day.getDate() - Number(days))
-                scope.filter({
-                  date: [
-                    day.getFullYear(),
-                    String(day.getMonth() + 1).padStart(2, '0'),
-                    String(day.getDate()).padStart(2, '0'),
-                  ].join('-'),
-                })
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <div className="tf-filters">
-          <WarehouseFilter
-            owner={scope.owner}
-            stores={scope.stores}
-            value={scope.storeId}
-            onChange={(value) => scope.filter({ storeId: value })}
-          />
-          <label className="past-stock-category">
-            Nhóm phụ tùng
-            <select
-              value={scope.params.get('categoryId') ?? ''}
-              onChange={(e) => scope.filter({ categoryId: e.target.value })}
-            >
-              <option value="">Tất cả</option>
-              {categoryOptions(categories.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {scope.owner && (
+            <div className="past-stock-filter">
+              <span>Kho</span>
+              <SearchableFilter
+                label="Kho"
+                value={storeId}
+                disabled={!scope.stores.length}
+                options={scope.stores.map((store) => ({
+                  value: String(store.id),
+                  label: store.storeName,
+                }))}
+                onChange={(value) => scope.filter({ storeId: value })}
+              />
+            </div>
+          )}
+          <div className="past-stock-filter">
+            <span>Nhóm phụ tùng</span>
+            <SearchableFilter
+              label="Nhóm phụ tùng"
+              value={categoryId}
+              options={[
+                { value: '', label: 'Tất cả' },
+                ...categoryOptions(categories.data ?? []).map((category) => ({
+                  value: String(category.id),
+                  label: category.label ?? category.categoryName,
+                })),
+              ]}
+              onChange={(value) => scope.filter({ categoryId: value })}
+            />
+          </div>
           <label className="past-stock-date">
             Ngày tra cứu
             <input
@@ -120,22 +123,22 @@ export default function PastDateStockPage() {
               onChange={(e) => scope.filter({ date: e.target.value })}
             />
           </label>
-          <label className="past-stock-query">
-            Tìm phụ tùng
-            <input
-              value={scope.params.get('q') ?? ''}
-              placeholder="SKU hoặc tên"
-              onChange={(e) => scope.filter({ q: e.target.value }, true)}
+          <div className="past-stock-filter">
+            <span>Tìm phụ tùng</span>
+            <SearchableFilter
+              label="Tìm phụ tùng"
+              searchPlaceholder="SKU hoặc tên…"
+              value={q}
+              options={Array.from(products, ([value, label]) => ({
+                value,
+                label,
+              }))}
+              disabled={!valid}
+              loading={suggestions.loading}
+              onSearch={setProductSearch}
+              onChange={(value) => scope.filter({ q: value })}
             />
-          </label>
-          <label className="past-stock-zero">
-            <input
-              type="checkbox"
-              checked={scope.params.get('includeZero') === 'true'}
-              onChange={(e) => scope.filter({ includeZero: e.target.checked })}
-            />{' '}
-            Bao gồm tồn bằng 0
-          </label>
+          </div>
         </div>
         {!valid && (
           <p className="tf-note">
@@ -144,7 +147,12 @@ export default function PastDateStockPage() {
         )}
         <InventoryNotice
           loading={r.loading}
-          error={r.error || scope.storesError || categories.error}
+          error={
+            r.error ||
+            scope.storesError ||
+            categories.error ||
+            suggestions.error
+          }
         />
         {r.data && (
           <>

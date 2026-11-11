@@ -10,6 +10,8 @@ import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
 import Icon from '../../../shared/ui/Icon'
+import SearchableFilter from '../../../shared/ui/SearchableFilter'
+import { vehicleTypes as types } from '../api/searchProducts'
 import { apiMessage } from '../../suppliers/supplierService'
 import './vehicle-models.css'
 type Model = {
@@ -22,16 +24,9 @@ type Model = {
   productCount: number
   status: string
 }
-const types: Record<string, string> = {
-  MOTORCYCLE: 'Xe máy',
-  BICYCLE: 'Xe đạp',
-  E_MOTORCYCLE: 'Xe máy điện',
-  E_BICYCLE: 'Xe đạp điện',
-}
 /** VehicleModelsPage: Danh sách dòng xe; lọc hãng/tên, loại xe, trạng thái; tạo/sửa và kích hoạt/ngừng dùng. */
 export default function VehicleModelsPage() {
   const [rows, setRows] = useState<Model[]>([])
-  const [counts, setCounts] = useState<Record<number, number>>({})
   const [q, setQ] = useState('')
   const [type, setType] = useState('')
   const [status, setStatus] = useState('ACTIVE')
@@ -60,9 +55,6 @@ export default function VehicleModelsPage() {
           if (!active) return
           setRows(r.data)
           setLoading(false)
-          setCounts(
-            Object.fromEntries(r.data.map((row) => [row.id, row.productCount])),
-          )
         })
         .catch((e) => {
           if (active) {
@@ -164,27 +156,28 @@ export default function VehicleModelsPage() {
               onChange={(e) => setQ(e.target.value)}
             />
           </label>
-          <select
-            aria-label="Loại xe"
+          <SearchableFilter
+            label="Loại xe"
             value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            <option value="">Chọn loại xe</option>
-            {Object.entries(types).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Trạng thái"
+            options={[
+              { value: '', label: 'Mọi loại xe' },
+              ...Object.entries(types).map(([value, label]) => ({
+                value,
+                label,
+              })),
+            ]}
+            onChange={setType}
+          />
+          <SearchableFilter
+            label="Trạng thái"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="ACTIVE">Đang dùng</option>
-            <option value="INACTIVE">Ngừng dùng</option>
-          </select>
+            options={[
+              { value: '', label: 'Tất cả trạng thái' },
+              { value: 'ACTIVE', label: 'Đang dùng' },
+              { value: 'INACTIVE', label: 'Ngừng dùng' },
+            ]}
+            onChange={setStatus}
+          />
         </div>
         {error && (
           <p className="vehicle-message" role="alert">
@@ -204,7 +197,6 @@ export default function VehicleModelsPage() {
                   <th>Dòng xe</th>
                   <th>Loại xe</th>
                   <th>Đời xe</th>
-                  <th className="vehicle-count">Phụ tùng tương thích</th>
                   <th>Trạng thái</th>
                   <th className="vehicle-actions">Thao tác</th>
                 </tr>
@@ -225,7 +217,6 @@ export default function VehicleModelsPage() {
                     </td>
                     <td>{types[row.vehicleType] || row.vehicleType}</td>
                     <td>{years(row)}</td>
-                    <td className="vehicle-count">{counts[row.id] ?? '—'}</td>
                     <td>
                       <span
                         className={
@@ -370,9 +361,9 @@ export default function VehicleModelsPage() {
                     Không chọn được dòng xe này cho khai báo tương thích mới.
                   </p>
                   <p>
-                    {counts[confirming.id] == null
+                    {confirming.productCount == null
                       ? 'Các phụ tùng đã liên kết'
-                      : counts[confirming.id] + ' phụ tùng đã liên kết'}{' '}
+                      : confirming.productCount + ' phụ tùng đã liên kết'}{' '}
                     vẫn giữ dòng xe tương thích hiện có.
                   </p>
                   <p>Có thể bấm “Dùng lại” bất cứ lúc nào.</p>

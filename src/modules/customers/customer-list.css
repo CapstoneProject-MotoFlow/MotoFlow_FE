@@ -173,6 +173,12 @@
 .branch-customer-actions {
   text-align: right;
 }
+.branch-customer-actions > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
 .branch-customer-actions button,
 .branch-customers-panel footer button {
   background: white;

@@ -1,10 +1,9 @@
+import ProductFacetFilters from '../../catalog/components/ProductFacetFilters'
 import {
   categoryOptions,
-  visibleCategories,
   type Category,
 } from '../../catalog/api/searchProducts'
 import ProductRowActions from '../../catalog/components/ProductRowActions'
-import BarcodeScan from '../../operations/BarcodeScan'
 import { searchProducts } from '../../catalog/api/searchProducts'
 /**
  * File: modules/owner/pages/OwnerWorkspacePage.tsx
@@ -141,10 +140,6 @@ export default function OwnerWorkspacePage({
         </span>
       </div>
       <section className="owner-panel">
-        <BarcodeScan
-          allowInactive
-          onFound={(part) => navigate(`/owner/products/${part.productId}`)}
-        />
         <header className="parts-panel-heading">
           <h2>{inventory ? 'Tra cứu tồn kho' : 'Tìm phụ tùng'}</h2>
           {!inventory && (
@@ -186,57 +181,23 @@ export default function OwnerWorkspacePage({
                 ))}
               </select>
             )}
-            <datalist id="vehicle-options">
-              {['Xe máy', 'Xe đạp', 'Xe máy điện', 'Xe đạp điện'].map(
-                (label) => (
-                  <option key={label} value={label} />
-                ),
-              )}
-            </datalist>
-            <datalist id="category-options">
-              {visibleCategories(categories, vehicleText).map((category) => (
-                <option key={category.id} value={category.label} />
-              ))}
-            </datalist>
-            <datalist id="model-options">
-              {models.map((model) => (
-                <option
-                  key={model.id}
-                  value={model.manufacturer + ' ' + model.modelName}
-                />
-              ))}
-            </datalist>
-            <input
-              aria-label="Tìm loại xe"
-              className="text-search-filter"
-              list="vehicle-options"
-              placeholder="Loại xe"
-              value={vehicleText}
-              onChange={(event) => {
-                setVehicleText(event.target.value)
+            <ProductFacetFilters
+              categories={categories}
+              models={models}
+              vehicle={vehicleText}
+              category={categoryText}
+              model={modelText}
+              onVehicle={(value) => {
+                setVehicleText(value)
                 setCategoryText('')
                 setPage(0)
               }}
-            />
-            <input
-              aria-label="Tìm nhóm phụ tùng"
-              className="text-search-filter"
-              list="category-options"
-              placeholder="Nhóm phụ tùng"
-              value={categoryText}
-              onChange={(event) => {
-                setCategoryText(event.target.value)
+              onCategory={(value) => {
+                setCategoryText(value)
                 setPage(0)
               }}
-            />
-            <input
-              aria-label="Tìm dòng xe"
-              className="text-search-filter"
-              list="model-options"
-              placeholder="Dòng xe"
-              value={modelText}
-              onChange={(event) => {
-                setModelText(event.target.value)
+              onModel={(value) => {
+                setModelText(value)
                 setPage(0)
               }}
             />

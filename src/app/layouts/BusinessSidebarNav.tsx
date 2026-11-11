@@ -11,7 +11,6 @@ import { ownerNavigation as ownerItems, type NavItem } from './ownerNavigation'
 import { branchManagerNavigation } from './branchManagerNavigation'
 import { useAuth } from '../../shared/hooks/useAuth'
 const groups: { label: string; icon: IconName; labels: string[] }[] = [
-  { label: 'Bán hàng', icon: 'receipt', labels: ['Đơn bán', 'Khách hàng'] },
   {
     label: 'Điều chuyển',
     icon: 'transfer',
@@ -24,7 +23,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
       'Tồn kho',
       'Lịch sử xuất nhập',
       'Lô hàng',
-      'Tồn theo ngày',
+      'Tra cứu tồn',
       'Kỳ kho',
       'Kiểm kê',
     ],
@@ -194,7 +193,8 @@ export default function BusinessSidebarNav({
     >
       {link({ label: 'Tổng quan', href: '/dashboard', icon: 'grid' })}
       {link(find('Thông báo'))}
-      {group('Bán hàng')}
+      {link(find('Đơn bán'))}
+      {link(find('Khách hàng'))}
       {link(find('Công nợ'))}
       {link(find('Yêu cầu nhập hàng'))}
       {group('Điều chuyển')}

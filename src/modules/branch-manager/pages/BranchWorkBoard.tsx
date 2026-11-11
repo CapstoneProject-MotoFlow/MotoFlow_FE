@@ -72,7 +72,7 @@ export default function BranchWorkBoard({
           <strong>
             {data.summary.data ? data.summary.data.lowStock + ' dòng' : '—'}
           </strong>
-          <Link to="/inventory?view=lowStock">Mở tồn kho →</Link>
+          <Link to="/inventory?view=lowStock">Mở tồn kho</Link>
         </section>
         <section>
           <p>Lô sắp hết hạn</p>
@@ -83,7 +83,7 @@ export default function BranchWorkBoard({
           <strong>
             {data.lots.data ? data.lots.data.page.totalItems + ' lô' : '—'}
           </strong>
-          <Link to="/inventory/lots?tab=NEAR_EXPIRY">Mở danh sách lô →</Link>
+          <Link to="/inventory/lots?tab=NEAR_EXPIRY">Mở danh sách lô</Link>
         </section>
       </aside>
     </div>

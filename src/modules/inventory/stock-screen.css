@@ -67,7 +67,7 @@
 .stock-screen .stock-value-tiles {
   margin: 0;
   border: 0;
-  border-top: 1px solid #f2f4f7;
+  border-bottom: 1px solid #f2f4f7;
   border-radius: 0;
   padding: 6px;
   gap: 4px;
@@ -109,18 +109,23 @@
   padding: 14px 20px;
   align-items: center;
 }
-.stock-screen .stock-filters > select {
+.stock-screen .stock-filters > .searchable-filter {
   width: 150px;
   min-width: 0;
   max-width: 100%;
+}
+.stock-screen .stock-filters .searchable-filter input[role='combobox'] {
   border: 1px solid #d0d5dd;
   border-radius: 6px;
-  padding: 9px 10px;
+  padding: 9px 2rem 9px 10px;
   color: #344054;
   background: #fff;
   font: inherit;
   height: 38px;
   text-overflow: ellipsis;
+}
+.stock-screen .stock-panel:has(.searchable-filter-menu) {
+  overflow: visible;
 }
 .stock-screen .stock-inline-search {
   display: flex;
@@ -294,7 +299,7 @@
   text-decoration: none;
 }
 .stock-screen .stock-actions-heading {
-  text-align: right;
+  text-align: left;
 }
 .stock-screen .stock-pagination {
   font-size: 12px;
@@ -355,7 +360,7 @@
     width: 100%;
     min-width: 0;
   }
-  .stock-screen .stock-filters > select {
+  .stock-screen .stock-filters > .searchable-filter {
     width: calc(50% - 5px);
   }
   .stock-screen .stock-panel-heading {
@@ -365,20 +370,26 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-.stock-screen .stock-filters > select[aria-label='Kho'] {
+.stock-screen .stock-filters > .searchable-filter:has(input[aria-label='Kho']) {
   width: 160px;
 }
-.stock-screen .stock-filters > select[aria-label='Nhóm phụ tùng'] {
+.stock-screen
+  .stock-filters
+  > .searchable-filter:has(input[aria-label='Nhóm phụ tùng']) {
   width: 168px;
 }
-.stock-screen .stock-filters > select[aria-label='Khu vực'] {
+.stock-screen
+  .stock-filters
+  > .searchable-filter:has(input[aria-label='Khu vực']) {
   width: 122px;
 }
-.stock-screen .stock-filters > select[aria-label='Sắp xếp'] {
+.stock-screen
+  .stock-filters
+  > .searchable-filter:has(input[aria-label='Sắp xếp']) {
   width: 170px;
 }
 @media (max-width: 520px) {
-  .stock-screen .stock-filters > select[aria-label] {
+  .stock-screen .stock-filters > .searchable-filter:has(input[aria-label]) {
     width: calc(50% - 5px);
   }
 }

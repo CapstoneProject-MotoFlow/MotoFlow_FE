@@ -113,12 +113,14 @@ export default function NotificationsPage() {
                 <span className="notifications-symbol">
                   <Icon name="bell" />
                 </span>
-                <div>
-                  <p>{item.message}</p>
-                  <small>
-                    {noticeTime(item.createdAt)} ·{' '}
-                    <strong>{item.read ? 'Đã đọc' : 'Chưa đọc'}</strong>
-                  </small>
+                <div className="notifications-row-content">
+                  <div>
+                    <p>{item.message}</p>
+                    <small>
+                      {noticeTime(item.createdAt)} ·{' '}
+                      <strong>{item.read ? 'Đã đọc' : 'Chưa đọc'}</strong>
+                    </small>
+                  </div>
                   <NotificationActions notice={item} />
                 </div>
                 {!item.read && (

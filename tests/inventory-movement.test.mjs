@@ -41,7 +41,7 @@ test('movement date header spans all enabled columns and inventory errors retain
       )
       assert.match(
         html,
-        new RegExp('colspan="' + (balance ? 9 : 8) + '" scope="rowgroup"', 'i'),
+        new RegExp('colspan="' + (balance ? 8 : 7) + '" scope="rowgroup"', 'i'),
       )
     }
     const { inventoryError } = await server.ssrLoadModule(

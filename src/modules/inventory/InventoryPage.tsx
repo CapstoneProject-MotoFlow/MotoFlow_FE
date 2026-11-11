@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
 import { Link } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
@@ -48,7 +49,12 @@ export default function InventoryPage() {
   const includeZero = p.get('includeZero') === 'true',
     view = p.get('view') ?? '',
     sort = p.get('sort') ?? 'name'
-  const complete = useCompleteStock({}, completeRevision, grouped, dataScope)
+  const complete = useCompleteStock(
+    {},
+    completeRevision,
+    scope.owner,
+    dataScope,
+  )
   const filters = {
     q: p.get('q') ?? '',
     categoryId: p.get('categoryId') ?? '',
@@ -286,21 +292,7 @@ export default function InventoryPage() {
       />
       <InventoryHeader title="Tồn kho" />
       <section className="stock-summary-card" aria-label="Tổng quan tồn kho">
-        <div className="stock-metrics">
-          {metrics.map(([key, label, value, icon]) => (
-            <button
-              key={key}
-              aria-pressed={view === key}
-              className={view === key ? 'selected' : ''}
-              onClick={() => scope.filter({ view: key })}
-            >
-              <Icon name={icon} />
-              <span>{label}</span>
-              <strong>{value == null ? '—' : number.format(value)}</strong>
-            </button>
-          ))}
-        </div>
-        {grouped && (
+        {scope.owner && (
           <nav className="stock-value-tiles" aria-label="Giá trị tồn theo kho">
             {[
               { id: '', storeName: 'Toàn chuỗi' },
@@ -311,9 +303,9 @@ export default function InventoryPage() {
                   storeName: store.storeName,
                 })),
             ].map((store) => {
-              const valueTotals = base.data
+              const valueTotals = complete.data
                 ? stockTotals(
-                    base.data.filter(
+                    complete.data.filter(
                       (row) => !store.id || String(row.storeId) === store.id,
                     ),
                   )
@@ -340,6 +332,20 @@ export default function InventoryPage() {
             })}
           </nav>
         )}
+        <div className="stock-metrics">
+          {metrics.map(([key, label, value, icon]) => (
+            <button
+              key={key}
+              aria-pressed={view === key}
+              className={view === key ? 'selected' : ''}
+              onClick={() => scope.filter({ view: key })}
+            >
+              <Icon name={icon} />
+              <span>{label}</span>
+              <strong>{value == null ? '—' : number.format(value)}</strong>
+            </button>
+          ))}
+        </div>
       </section>
       <InventoryPanel
         title={
@@ -367,52 +373,56 @@ export default function InventoryPage() {
             />
           </label>
           {scope.owner && (
-            <select
-              aria-label="Kho"
+            <SearchableFilter
+              label="Kho"
+              maxOptions={5}
               value={scope.storeId}
-              onChange={(e) =>
-                scope.filter({ storeId: e.target.value, storageArea: '' })
+              onChange={(value) =>
+                scope.filter({ storeId: value, storageArea: '' })
               }
-            >
-              <option value="">Mọi kho</option>
-              {scope.stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.storeName}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Mọi kho' },
+                ...scope.stores.map((store) => ({
+                  value: String(store.id),
+                  label: store.storeName,
+                })),
+              ]}
+            />
           )}
-          <select
-            aria-label="Nhóm phụ tùng"
+          <SearchableFilter
+            label="Nhóm phụ tùng"
+            maxOptions={5}
             value={filters.categoryId}
-            onChange={(e) => scope.filter({ categoryId: e.target.value })}
-          >
-            <option value="">Mọi nhóm phụ tùng</option>
-            {categoryOptions(categories.data ?? []).map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Khu vực"
+            onChange={(value) => scope.filter({ categoryId: value })}
+            options={[
+              { value: '', label: 'Mọi nhóm phụ tùng' },
+              ...categoryOptions(categories.data ?? []).map((category) => ({
+                value: String(category.id),
+                label: category.label ?? category.categoryName,
+              })),
+            ]}
+          />
+          <SearchableFilter
+            label="Khu vực"
+            maxOptions={5}
             value={filters.storageArea}
-            onChange={(e) => scope.filter({ storageArea: e.target.value })}
-          >
-            <option value="">Mọi khu vực</option>
-            {areas.map((area) => (
-              <option key={area}>{area}</option>
-            ))}
-          </select>
+            onChange={(value) => scope.filter({ storageArea: value })}
+            options={[
+              { value: '', label: 'Mọi khu vực' },
+              ...areas.map((area) => ({ value: area, label: area })),
+            ]}
+          />
           {grouped && (
-            <select
-              aria-label="Sắp xếp"
+            <SearchableFilter
+              label="Sắp xếp"
+              maxOptions={5}
               value={sort}
-              onChange={(e) => scope.filter({ sort: e.target.value })}
-            >
-              <option value="name">Theo tên phụ tùng</option>
-              <option value="value">Giá trị tồn cao nhất</option>
-            </select>
+              onChange={(value) => scope.filter({ sort: value })}
+              options={[
+                { value: 'name', label: 'Theo tên phụ tùng' },
+                { value: 'value', label: 'Giá trị tồn cao nhất' },
+              ]}
+            />
           )}
           <label className="stock-check">
             <input
