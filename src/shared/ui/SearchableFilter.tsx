@@ -20,6 +20,8 @@ export default function SearchableFilter({
   onSearch,
   searchPlaceholder,
   loading,
+  error,
+  toggleOnClick = false,
   onChange,
 }: {
   label: string
@@ -30,6 +32,8 @@ export default function SearchableFilter({
   onSearch?: (query: string | null) => void
   searchPlaceholder?: string
   loading?: boolean
+  error?: string
+  toggleOnClick?: boolean
   onChange: (value: string) => void
 }) {
   const listId = useId()
@@ -82,8 +86,14 @@ export default function SearchableFilter({
         }
         value={open ? (query ?? '') : (selected?.label ?? '')}
         onFocus={() => updateQuery('')}
-        onClick={() => {
-          if (!open) updateQuery('')
+        onMouseDown={(event) => {
+          if (toggleOnClick && event.button === 0) event.preventDefault()
+        }}
+        onClick={(event) => {
+          if (toggleOnClick) {
+            event.currentTarget.focus()
+            updateQuery(open ? null : '')
+          } else if (!open) updateQuery('')
         }}
         onBlur={close}
         onChange={(event) => updateQuery(event.target.value)}
@@ -128,10 +138,14 @@ export default function SearchableFilter({
               </li>
             ))}
           </ul>
-          {(loading || !results.length) && (
-            <p role="status">
-              {loading ? 'Đang tìm…' : 'Không tìm thấy kết quả.'}
-            </p>
+          {error ? (
+            <p role="alert">{error}</p>
+          ) : (
+            (loading || !results.length) && (
+              <p role="status">
+                {loading ? 'Đang tìm…' : 'Không tìm thấy kết quả.'}
+              </p>
+            )
           )}
         </div>
       )}

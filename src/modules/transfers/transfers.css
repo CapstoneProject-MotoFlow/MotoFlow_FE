@@ -502,36 +502,20 @@
 .tf-add-row button {
   font-size: 13px;
 }
-.tf-part-choice {
-  position: relative;
-}
-.tf-part-choice > input {
-  width: 100%;
+.tf-part-choice input {
   font-size: 13px !important;
 }
-.tf-part-options {
-  position: relative;
-  max-height: 220px;
-  overflow: auto;
-  border: 1px solid #e4e7ec;
-  border-radius: 8px;
-  margin-top: 4px;
-  background: white;
-}
-.tf-page .tf-part-options button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  border-radius: 0;
+.tf-part-choice .searchable-filter-menu {
   font-size: 13px;
   white-space: normal;
 }
-.tf-part-options button:hover {
-  background: #ecf3ff;
+.tf-order-create .tf-part-choice .searchable-filter-menu {
+  position: relative;
+  inset: auto;
+  margin-top: 4px;
 }
-.tf-part-options small {
-  padding: 10px;
+.tf-order-create .tf-part-choice .searchable-filter-caret {
+  top: 20px;
 }
 @media (max-width: 800px) {
   .tf-create-top {
@@ -918,7 +902,28 @@
 }
 .tf-replenishment-form .tf-table td:first-child {
   width: 72%;
-  min-width: 180px;
+  min-width: 0;
+}
+.tf-replenishment-form form section,
+.tf-replenishment-form .tf-table {
+  overflow: visible;
+}
+@media (max-width: 600px) {
+  .tf-replenishment-form .tf-table table {
+    table-layout: fixed;
+  }
+  .tf-replenishment-form .tf-table td:first-child {
+    width: auto;
+  }
+  .tf-replenishment-form .tf-table :is(th, td) {
+    padding-inline: 8px;
+  }
+  .tf-replenishment-form .tf-table th:nth-child(2) {
+    width: 76px;
+  }
+  .tf-replenishment-form .tf-table th:last-child {
+    width: 56px;
+  }
 }
 .tf-replenishment-actions {
   display: flex;

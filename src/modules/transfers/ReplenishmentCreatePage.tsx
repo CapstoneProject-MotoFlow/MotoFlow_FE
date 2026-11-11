@@ -255,84 +255,46 @@ export function PartChoice({
   excluded: number[]
   onChange: (p: { productId: number; sku: string; partName: string }) => void
 }) {
-  const [query, setQuery] = useState(''),
-    [open, setOpen] = useState(false),
-    choices = useInventoryData<
-      Page<{ id: number; sku: string; partName: string }>
-    >('/products', { q: query, page: 0, size: 10 }, 0, open)
+  const [query, setQuery] = useState<string | null>(null)
+  const choices = useInventoryData<
+    Page<{ id: number; sku: string; partName: string }>
+  >('/products', { q: query?.trim(), page: 0, size: 10 }, 0, query !== null)
+  const parts =
+    choices.data?.items.filter((part) => !excluded.includes(part.id)) ?? []
+  const options = parts.map((part) => ({
+    value: String(part.id),
+    label: part.partName + ' · ' + part.sku,
+  }))
+  if (query === null && row.productId) {
+    options.push({
+      value: String(row.productId),
+      label: row.partName + ' · ' + row.sku,
+    })
+  }
   return (
-    <div
-      className="tf-part-choice"
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          setOpen(false)
+    <div className="tf-part-choice">
+      <SearchableFilter
+        label="Tìm và chọn phụ tùng"
+        searchPlaceholder={
+          query === null ? 'Chọn phụ tùng' : 'Tìm theo tên hoặc SKU'
         }
-      }}
-    >
-      <input
-        aria-label="Tìm và chọn phụ tùng"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={'parts-' + row.key}
-        value={
-          open ? query : row.productId ? row.partName + ' · ' + row.sku : ''
-        }
-        placeholder="Chọn phụ tùng"
-        onFocus={() => setOpen(true)}
-        onMouseDown={(event) => {
-          if (event.button !== 0) return
-          event.preventDefault()
-          event.currentTarget.focus()
-          setOpen(!open)
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') event.preventDefault()
-        }}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          setOpen(true)
+        value={String(row.productId)}
+        options={options}
+        maxOptions={10}
+        loading={choices.loading}
+        error={choices.error}
+        toggleOnClick
+        onSearch={setQuery}
+        onChange={(value) => {
+          const part = parts.find((item) => String(item.id) === value)
+          if (part)
+            onChange({
+              productId: part.id,
+              sku: part.sku,
+              partName: part.partName,
+            })
         }}
       />
-      {open && (
-        <div
-          id={'parts-' + row.key}
-          className="tf-part-options"
-          role="listbox"
-          aria-label="Phụ tùng"
-        >
-          {choices.data?.items
-            .filter((p) => !excluded.includes(p.id))
-            .map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                role="option"
-                aria-selected={row.productId === p.id}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  onChange({
-                    productId: p.id,
-                    sku: p.sku,
-                    partName: p.partName,
-                  })
-                  setOpen(false)
-                  setQuery('')
-                }}
-              >
-                {p.partName} · {p.sku}
-              </button>
-            ))}
-          {choices.loading && <small>Đang tải…</small>}
-          {choices.error && <small role="alert">{choices.error}</small>}
-          <button type="button" onClick={() => setOpen(false)}>
-            Đóng lựa chọn
-          </button>
-        </div>
-      )}
     </div>
   )
 }
