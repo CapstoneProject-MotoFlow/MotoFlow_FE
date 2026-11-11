@@ -35,12 +35,11 @@ export default function ReplenishmentPurchaseDialog({
     lines = request.lines
       .map((line) => ({
         ...line,
-        purchaseQty:
-          line.toPurchaseQty +
-          (request.status === 'CLOSED' ? 0 : unplannedQuantity(line)),
+        purchaseQty: line.toPurchaseQty + unplannedQuantity(line),
       }))
       .filter((line) => line.purchaseQty > 0),
     valid =
+      request.status !== 'CLOSED' &&
       !hasExistingPurchase(request.purchaseOrders) &&
       !!supplier &&
       lines.length > 0 &&

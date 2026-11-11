@@ -42,9 +42,10 @@ export function ReplenishmentDetailPage() {
     (hasUnplanned || hasPurchaseLines)
   const handoff = scope.params.get('action') === 'purchase'
   const canPurchase =
+    open &&
     scope.owner &&
     !existingPurchase &&
-    (hasPurchaseLines || (open && hasUnplanned))
+    (hasPurchaseLines || hasUnplanned)
 
   function finishHandoff() {
     scope.filter({ action: undefined }, true)
