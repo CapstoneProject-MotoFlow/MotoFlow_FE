@@ -4,48 +4,75 @@ import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import { useChoicePages } from '../sales/useSalesList'
-import { money } from '../inventory/presentation'
+import { date, money } from '../inventory/presentation'
+import { purchaseOrderCode } from '../receiving/receivingPresentation'
 import type { Replenishment } from './types'
-import { hasExistingPurchase } from './transferRules'
+import { hasExistingPurchase, unplannedQuantity } from './transferRules'
+type SupplierChoice = {
+  id: number
+  supplierName: string
+  status: string
+  email?: string | null
+}
 export default function ReplenishmentPurchaseDialog({
   request,
   onClose,
-  onSaved,
 }: {
   request: Replenishment
   onClose: () => void
-  onSaved: (id: number) => void
 }) {
-  const [supplier, setSupplier] = useState(''),
+  const [supplier, setSupplier] = useState<SupplierChoice>(),
     [q, setQ] = useState(''),
     [arrival, setArrival] = useState(''),
     [prices, setPrices] = useState<Record<number, string>>({}),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [created, setCreated] = useState<number>()
+    [created, setCreated] = useState<number>(),
+    [copyStatus, setCopyStatus] = useState('')
   const lock = useRef(false),
-    suppliers = useChoicePages<{
-      id: number
-      supplierName: string
-      status: string
-    }>('/suppliers', q),
-    lines = request.lines.filter((l) => l.toPurchaseQty > 0),
+    suppliers = useChoicePages<SupplierChoice>('/suppliers', q, !created),
+    options = suppliers.data?.items.filter((s) => s.status === 'ACTIVE') ?? [],
+    lines = request.lines
+      .map((line) => ({
+        ...line,
+        purchaseQty:
+          line.toPurchaseQty +
+          (request.status === 'CLOSED' ? 0 : unplannedQuantity(line)),
+      }))
+      .filter((line) => line.purchaseQty > 0),
     valid =
-      request.status !== 'CLOSED' &&
       !hasExistingPurchase(request.purchaseOrders) &&
       !!supplier &&
       lines.length > 0 &&
       lines.every(
         (l) =>
-          l.toPurchaseQty <= 1000000 &&
+          l.purchaseQty <= 1000000 &&
           Number.isSafeInteger(Number(prices[l.productId])) &&
           Number(prices[l.productId]) > 0 &&
           Number(prices[l.productId]) <= 10000000000,
       ),
     total = lines.reduce(
-      (n, l) => n + l.toPurchaseQty * Number(prices[l.productId] || 0),
+      (n, l) => n + l.purchaseQty * Number(prices[l.productId] || 0),
       0,
     )
+  const shortage = lines.reduce((sum, line) => sum + line.purchaseQty, 0)
+  const subject = created ? 'Đặt hàng ' + purchaseOrderCode(created) : ''
+  const message = [
+    'Kính gửi ' + (supplier?.supplierName ?? '') + ',',
+    '',
+    'Vui lòng xác nhận đơn đặt hàng ' +
+      (created ? purchaseOrderCode(created) : '') +
+      ' của MotoFlow.',
+    'Kho nhận: ' + request.storeName,
+    ...(arrival ? ['Ngày giao dự kiến: ' + date(arrival)] : []),
+    '',
+    ...lines.map(
+      (line) =>
+        `${line.sku} · ${line.partName} · ${line.purchaseQty} ${line.baseUnit} · đơn giá ${money.format(Number(prices[line.productId]))}`,
+    ),
+    'Tổng tiền: ' + money.format(total),
+  ].join('\r\n')
+  const email = supplier?.email?.trim()
   return (
     <FormDialog
       title={
@@ -54,7 +81,9 @@ export default function ReplenishmentPurchaseDialog({
       formId="replenishment-purchase"
       className="tf-purchase-dialog"
       submitLabel={created ? 'Đã tạo phiếu' : 'Tạo phiếu nhập hàng'}
-      submitDisabled={!valid || !Number.isSafeInteger(total) || !!created}
+      submitDisabled={!valid || !Number.isSafeInteger(total)}
+      hideSubmit={!!created}
+      closeLabel={created ? 'Đóng' : 'Để sau'}
       busy={busy}
       footerExtra={
         <span>
@@ -68,7 +97,14 @@ export default function ReplenishmentPurchaseDialog({
         className="tf-form"
         onSubmit={async (e) => {
           e.preventDefault()
-          if (lock.current || !valid || created) return
+          if (
+            lock.current ||
+            !valid ||
+            !supplier ||
+            !Number.isSafeInteger(total) ||
+            created
+          )
+            return
           lock.current = true
           setBusy(true)
           setError('')
@@ -76,21 +112,22 @@ export default function ReplenishmentPurchaseDialog({
             const r = await axiosClient.post<{ id: number }>(
               '/purchase-orders',
               {
-                supplierId: Number(supplier),
+                supplierId: supplier.id,
                 storeId: request.requestingStoreId,
+                replenishmentRequestId: request.id,
+                includeUnallocated: true,
                 expectedArrival: arrival || undefined,
                 note:
                   'Phần chuyển mua từ yêu cầu YBS-' +
                   String(request.id).padStart(4, '0'),
                 lines: lines.map((l) => ({
                   productId: l.productId,
-                  quantity: l.toPurchaseQty,
+                  quantity: l.purchaseQty,
                   purchasePrice: Number(prices[l.productId]),
                 })),
               },
             )
             setCreated(r.data.id)
-            onSaved(r.data.id)
           } catch (err) {
             setError(inventoryError(err))
           } finally {
@@ -111,14 +148,55 @@ export default function ReplenishmentPurchaseDialog({
           </p>
         )}
         {created ? (
-          <p role="status">
-            Đã tạo{' '}
-            <Link to={'/purchase-orders/' + created}>
-              phiếu nhập hàng #{created} →
-            </Link>
-          </p>
+          <div className="tf-form">
+            <p role="status">
+              Đã tạo{' '}
+              <Link to={'/purchase-orders/' + created}>
+                phiếu nhập hàng {purchaseOrderCode(created)}
+              </Link>
+            </p>
+            <div className="tf-replenishment-actions">
+              {email && (
+                <a
+                  href={`mailto:${encodeURIComponent(email).replace('%40', '@')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`}
+                >
+                  Mở email gửi nhà cung cấp
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      subject + '\r\n\r\n' + message,
+                    )
+                    setCopyStatus('Đã sao chép nội dung đơn.')
+                  } catch {
+                    setCopyStatus(
+                      'Hãy chọn và sao chép nội dung trong ô bên dưới.',
+                    )
+                  }
+                }}
+              >
+                Sao chép nội dung gửi
+              </button>
+            </div>
+            {copyStatus && <small role="status">{copyStatus}</small>}
+            <label>
+              Nội dung gửi nhà cung cấp
+              <textarea
+                readOnly
+                rows={7}
+                value={subject + '\r\n\r\n' + message}
+              />
+            </label>
+          </div>
         ) : (
           <fieldset disabled={busy}>
+            <p role="status" className="tf-shortage">
+              Còn thiếu <strong>{shortage} sản phẩm</strong> thuộc{' '}
+              {lines.length} mã phụ tùng.
+            </p>
             <div className="tf-purchase-fields">
               <label>
                 Nhà cung cấp *
@@ -130,17 +208,22 @@ export default function ReplenishmentPurchaseDialog({
                 />
                 <select
                   required
-                  value={supplier}
-                  onChange={(e) => setSupplier(e.target.value)}
+                  value={supplier?.id ?? ''}
+                  onChange={(e) =>
+                    setSupplier(
+                      options.find((s) => s.id === Number(e.target.value)),
+                    )
+                  }
                 >
                   <option value="">Chọn nhà cung cấp</option>
-                  {suppliers.data?.items
-                    .filter((s) => s.status === 'ACTIVE')
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.supplierName}
-                      </option>
-                    ))}
+                  {supplier && !options.some((s) => s.id === supplier.id) && (
+                    <option value={supplier.id}>{supplier.supplierName}</option>
+                  )}
+                  {options.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.supplierName}
+                    </option>
+                  ))}
                 </select>
                 {suppliers.hasMore && (
                   <button
@@ -185,7 +268,7 @@ export default function ReplenishmentPurchaseDialog({
                         <small>{l.sku}</small>
                       </td>
                       <td>
-                        {l.toPurchaseQty} {l.baseUnit}
+                        {l.purchaseQty} {l.baseUnit}
                       </td>
                       <td>
                         <input
@@ -209,7 +292,7 @@ export default function ReplenishmentPurchaseDialog({
                       </td>
                       <td>
                         {money.format(
-                          l.toPurchaseQty * Number(prices[l.productId] || 0),
+                          l.purchaseQty * Number(prices[l.productId] || 0),
                         )}
                       </td>
                     </tr>
@@ -217,10 +300,6 @@ export default function ReplenishmentPurchaseDialog({
                 </tbody>
               </table>
             </div>
-            <p className="tf-purchase-note">
-              Kiểm tra các phiếu nhập hàng đã lập trước khi tạo mới. Phần chuyển
-              mua chưa được tự động trừ sau khi tạo phiếu.
-            </p>
           </fieldset>
         )}
       </form>

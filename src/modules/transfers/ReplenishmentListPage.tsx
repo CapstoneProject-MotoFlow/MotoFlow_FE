@@ -1,9 +1,10 @@
 import { useOpenReplenishments } from './useOpenReplenishments'
 import { useCoordinationAccess } from './useCoordinationAccess'
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
+import { date } from '../inventory/presentation'
 import type { Page } from '../inventory/types'
 import { states, type Replenishment, type ReplenishmentRow } from './types'
 import './transfers.css'
@@ -11,42 +12,41 @@ const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
 export default function ReplenishmentListPage() {
   const scope = useInventoryScope(),
-    [search, setSearch] = useState(''),
+    search = scope.params.get('q') ?? '',
     page = Math.max(0, Number(scope.params.get('page')) || 0),
-    status = scope.params.get('status') ?? '',
-    base = useInventoryData<Page<ReplenishmentRow>>('/replenishment-requests', {
-      page,
-      size: 20,
-      status: status === 'OPEN' ? undefined : status,
-      storeId: scope.storeId,
-      from: scope.params.get('from') ?? '',
-      to: scope.params.get('to') ?? '',
-    })
+    manager = scope.user?.role === 'BRANCH_MANAGER',
+    firstPage = useInventoryData<Page<ReplenishmentRow>>(
+      '/replenishment-requests',
+      { size: 1 },
+      0,
+      manager,
+    )
   const firstDetail = useInventoryData<Replenishment>(
-    '/replenishment-requests/' + base.data?.items[0]?.id,
+    '/replenishment-requests/' + firstPage.data?.items[0]?.id,
     {},
     0,
-    scope.user?.role === 'BRANCH_MANAGER' && !!base.data?.items.length,
+    manager && !!firstPage.data?.items.length,
   )
   const coordinator = useCoordinationAccess(
     firstDetail.data?.lines[0]?.productId,
   )
-  const branch = scope.user?.role === 'BRANCH_MANAGER' && !coordinator
-  const activeStatus = branch
-    ? scope.params.has('status')
-      ? status
-      : 'OPEN'
-    : status
-  const open = useOpenReplenishments(
+  const branch = manager && !coordinator
+  const activeStatus =
+    scope.params.get('status') || (branch ? 'OPEN' : 'AWAITING_COORDINATION')
+  const filters = { storeId: scope.storeId, q: search.trim() }
+  const base = useInventoryData<Page<ReplenishmentRow>>(
+    '/replenishment-requests',
     {
-      storeId: scope.storeId,
-      from: scope.params.get('from') ?? '',
-      to: scope.params.get('to') ?? '',
+      ...filters,
+      page,
+      size: 20,
+      status: activeStatus === 'ALL' ? undefined : activeStatus,
     },
-    page,
-    branch && activeStatus === 'OPEN',
+    0,
+    activeStatus !== 'OPEN',
   )
-  const r = branch && activeStatus === 'OPEN' ? open : base
+  const open = useOpenReplenishments(filters, page, activeStatus === 'OPEN')
+  const r = activeStatus === 'OPEN' ? open : base
   return (
     <main
       className={
@@ -77,27 +77,19 @@ export default function ReplenishmentListPage() {
               ? [
                   ['OPEN', 'Chưa đóng'],
                   ['CLOSED', 'Đã đóng'],
-                  ['', 'Tất cả'],
+                  ['ALL', 'Tất cả'],
                 ]
               : [
                   ['AWAITING_COORDINATION', 'Chờ điều phối'],
                   ['IN_PROGRESS', 'Đang thực hiện'],
                   ['CLOSED', 'Đã đóng'],
-                  ['', 'Tất cả'],
+                  ['ALL', 'Tất cả'],
                 ]
             ).map(([value, label]) => (
               <button
                 key={value}
                 aria-pressed={activeStatus === value}
-                onClick={() => {
-                  setSearch('')
-                  scope.setParams((previous) => {
-                    const next = new URLSearchParams(previous)
-                    next.set('status', value)
-                    next.delete('page')
-                    return next
-                  })
-                }}
+                onClick={() => scope.filter({ status: value })}
               >
                 {label}{' '}
                 {branch && activeStatus === value && r.data && (
@@ -108,46 +100,25 @@ export default function ReplenishmentListPage() {
           </div>
           <div className="tf-list-search">
             <input
-              aria-label="Tìm yêu cầu trong trang"
-              placeholder="Tìm mã yêu cầu hoặc cửa hàng trong trang"
+              aria-label="Tìm yêu cầu"
+              placeholder="Tìm mã yêu cầu hoặc cửa hàng"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => scope.filter({ q: e.target.value }, true)}
             />
             {scope.owner && (
-              <select
-                aria-label="Cửa hàng"
+              <SearchableFilter
+                label="Cửa hàng"
                 value={scope.storeId}
-                onChange={(e) => scope.filter({ storeId: e.target.value })}
-              >
-                <option value="">Mọi cửa hàng</option>
-                {scope.stores.map((s) => (
-                  <option value={s.id} key={s.id}>
-                    {s.storeName}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'Mọi cửa hàng' },
+                  ...scope.stores.map((s) => ({
+                    value: String(s.id),
+                    label: s.storeName,
+                  })),
+                ]}
+                onChange={(storeId) => scope.filter({ storeId })}
+              />
             )}
-            <details>
-              <summary>Lọc ngày</summary>
-              <label>
-                Từ ngày
-                <input
-                  aria-label="Từ ngày"
-                  type="date"
-                  value={scope.params.get('from') ?? ''}
-                  onChange={(e) => scope.filter({ from: e.target.value })}
-                />
-              </label>
-              <label>
-                Đến ngày
-                <input
-                  aria-label="Đến ngày"
-                  type="date"
-                  value={scope.params.get('to') ?? ''}
-                  onChange={(e) => scope.filter({ to: e.target.value })}
-                />
-              </label>
-            </details>
           </div>
         </div>
         <InventoryNotice
@@ -160,10 +131,7 @@ export default function ReplenishmentListPage() {
               <tr>
                 <th>Yêu cầu</th>
                 <th>Cửa hàng</th>
-                <th>Người tạo</th>
-                <th>Ngày tạo</th>
                 <th>Hàng yêu cầu</th>
-                <th>Lệnh điều chuyển</th>
                 <th>Trạng thái</th>
                 <th>Cần làm</th>
               </tr>
@@ -173,7 +141,6 @@ export default function ReplenishmentListPage() {
                 <ReplenishmentRow
                   key={row.id}
                   row={row}
-                  search={search}
                   canCoordinate={coordinator}
                 />
               ))}
@@ -188,7 +155,6 @@ export default function ReplenishmentListPage() {
           page={page}
           loading={r.loading}
           onPage={(n) => {
-            setSearch('')
             scope.setParams((p) => {
               const next = new URLSearchParams(p)
               next.set('page', String(n))
@@ -202,97 +168,24 @@ export default function ReplenishmentListPage() {
 }
 function ReplenishmentRow({
   row,
-  search,
   canCoordinate,
 }: {
   row: ReplenishmentRow
-  search: string
   canCoordinate: boolean
 }) {
-  const [expanded, setExpanded] = useState(false)
-  const detail = useInventoryData<Replenishment>(
-      '/replenishment-requests/' + row.id,
-      {},
-      0,
-      expanded,
-    ),
-    d = detail.data
-  const query = search.toLocaleLowerCase('vi-VN')
-  if (
-    query &&
-    ![code('YBS', row.id), row.storeName]
-      .join(' ')
-      .toLocaleLowerCase('vi-VN')
-      .includes(query)
-  )
-    return null
   return (
     <tr>
       <td>
         <Link to={'/replenishment-requests/' + row.id}>
           {code('YBS', row.id)}
         </Link>
+        <small>{date(row.createdAt)}</small>
       </td>
       <td>{row.storeName}</td>
-      <td>{row.createdByName}</td>
-      <td>{row.createdAt.slice(0, 10).split('-').reverse().join('/')}</td>
       <td className="tf-requested-parts">
-        {expanded &&
-          (d ? (
-            <div className="tf-request-parts-summary">
-              {d.lines
-                .slice(0, 2)
-                .map((l) => l.partName)
-                .join(', ')}
-              {d.lines.length > 2
-                ? ' và ' + (d.lines.length - 2) + ' mã khác'
-                : ''}
-            </div>
-          ) : detail.loading ? (
-            'Đang tải…'
-          ) : (
-            <span title={detail.error}>Không tải được chi tiết</span>
-          ))}
         <small>
           {row.totalRequestedQty} sản phẩm · {row.lineCount} mã
         </small>
-        <button
-          className="tf-request-details-toggle"
-          type="button"
-          aria-expanded={expanded}
-          aria-label={`${expanded ? 'Thu gọn' : 'Xem chi tiết'} ${code('YBS', row.id)}`}
-          onClick={() => setExpanded((v) => !v)}
-        >
-          {expanded ? 'Thu gọn' : 'Xem chi tiết'}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </td>
-      <td>
-        {d ? (
-          d.transferOrders.length ? (
-            d.transferOrders.map((t) => (
-              <Link
-                className="tf-transfer-ref"
-                key={t.id}
-                to={'/transfer-orders/' + t.id}
-              >
-                {code('DC', t.id)}
-              </Link>
-            ))
-          ) : (
-            '—'
-          )
-        ) : expanded && detail.loading ? (
-          '…'
-        ) : expanded ? (
-          'Không tải được'
-        ) : (
-          <Link to={'/replenishment-requests/' + row.id}>
-            Xem trong yêu cầu →
-          </Link>
-        )}
       </td>
       <td>
         <span className={'tf-badge tf-status-' + row.status}>
@@ -310,9 +203,9 @@ function ReplenishmentRow({
             Điều phối
           </Link>
         ) : row.status !== 'CLOSED' ? (
-          <Link to={'/replenishment-requests/' + row.id}>Xem tiến độ →</Link>
+          <Link to={'/replenishment-requests/' + row.id}>Theo dõi</Link>
         ) : (
-          <Link to={'/replenishment-requests/' + row.id}>Xem →</Link>
+          <Link to={'/replenishment-requests/' + row.id}>Xem</Link>
         )}
       </td>
     </tr>
