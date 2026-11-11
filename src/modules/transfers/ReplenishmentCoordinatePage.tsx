@@ -1,10 +1,10 @@
-import { unplannedQuantity } from './transferRules'
+import { hasExistingPurchase, unplannedQuantity } from './transferRules'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useInventoryData, inventoryError } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
-import { dateTime } from '../inventory/presentation'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import type { Replenishment } from './types'
 import './transfers.css'
 type Stock = {
@@ -21,27 +21,40 @@ export default function ReplenishmentCoordinatePage() {
       {},
       0,
       !!id && /^\d+$/.test(id),
-    ),
-    stock = useInventoryData<Stock[]>(
-      '/inventory/availability',
-      { productIds: r.data?.lines.map((l) => l.productId).join(',') },
-      0,
-      !!r.data?.lines.length,
     )
+  const detailPath = '/replenishment-requests/' + id
+  const productIds =
+    r.data?.status !== 'CLOSED'
+      ? r.data?.lines
+          .filter((l) => unplannedQuantity(l) > 0)
+          .map((l) => l.productId)
+          .join(',')
+      : undefined
+  const stock = useInventoryData<Stock[]>(
+    '/inventory/availability',
+    { productIds },
+    0,
+    !!productIds,
+  )
   return (
     <main className="dashboard-content tf-page tf-coordinate">
       <header>
         <h1>Điều phối YBS-{String(id).padStart(4, '0')}</h1>
         <nav>
-          <Link to="/replenishment-requests">Yêu cầu bổ sung</Link> › Điều phối
+          <Link to={detailPath}>Quay lại yêu cầu</Link>
         </nav>
       </header>
       <InventoryNotice
         loading={r.loading || stock.loading}
         error={r.error || stock.error}
       />
-      {r.data && stock.data && (
-        <AllocationEditor request={r.data} stock={stock.data} />
+      {r.data && productIds && stock.data && (
+        <AllocationEditor key={r.data.id} request={r.data} stock={stock.data} />
+      )}
+      {r.data && !productIds && (
+        <section>
+          <p className="tf-empty">Yêu cầu không còn phần cần điều phối.</p>
+        </section>
       )}
     </main>
   )
@@ -57,21 +70,26 @@ function AllocationEditor({
     lines = request.lines
       .filter((l) => unplannedQuantity(l) > 0)
       .map((l) => ({ ...l, remainingQty: unplannedQuantity(l) })),
-    options = (productId: number) =>
+    options = (line: (typeof lines)[number]) =>
       stock
         .filter(
           (s) =>
-            s.productId === productId &&
+            s.productId === line.productId &&
             s.storeId !== request.requestingStoreId &&
             s.sellableQty > 0,
         )
-        .sort((a, b) => Number(b.central) - Number(a.central)),
+        .sort(
+          (a, b) =>
+            Math.min(line.remainingQty, b.sellableQty) -
+              Math.min(line.remainingQty, a.sellableQty) ||
+            Number(b.central) - Number(a.central),
+        ),
     [values, setValues] = useState<
       Record<number, { storeId: number; qty: number }>
     >(() =>
       Object.fromEntries(
         lines.map((l) => {
-          const s = options(l.productId)[0]
+          const s = options(l)[0]
           return [
             l.productId,
             {
@@ -92,11 +110,12 @@ function AllocationEditor({
     if (value.storeId && value.qty > 0)
       groups.set(value.storeId, [...(groups.get(value.storeId) ?? []), line])
   }
+  const canHandOff = !hasExistingPurchase(request.purchaseOrders)
   const valid =
-      groups.size > 0 &&
+      (groups.size > 0 || canHandOff) &&
       lines.every((l) => {
         const v = values[l.productId],
-          available = options(l.productId).find((s) => s.storeId === v.storeId)
+          available = options(l).find((s) => s.storeId === v.storeId)
         return (
           Number.isInteger(v.qty) &&
           v.qty >= 0 &&
@@ -133,7 +152,12 @@ function AllocationEditor({
         saved[storeId] = result.data.id
         setCreated({ ...saved })
       }
-      navigate('/replenishment-requests/' + request.id)
+      navigate(
+        '/replenishment-requests/' +
+          request.id +
+          (remaining > 0 && canHandOff ? '?action=purchase' : ''),
+        { replace: true },
+      )
     } catch (e) {
       setError(
         inventoryError(e) +
@@ -148,29 +172,9 @@ function AllocationEditor({
   }
   return (
     <>
-      <section className="tf-coord-meta">
-        <div>
-          <span>Yêu cầu</span>
-          <Link to={'/replenishment-requests/' + request.id}>
-            YBS-{String(request.id).padStart(4, '0')}
-          </Link>
-        </div>
-        <div>
-          <span>Cửa hàng cần hàng</span>
-          <strong>{request.storeName}</strong>
-        </div>
-        <div>
-          <span>Người tạo</span>
-          <strong>{request.createdByName}</strong>
-          <small>{dateTime(request.createdAt)}</small>
-        </div>
-        <div className="tf-full">
-          <span>Ghi chú</span>
-          <p>{request.note || 'Không có ghi chú'}</p>
-        </div>
-      </section>
       <section>
-        <h2>Lấy hàng từ các kho</h2>
+        <h2>Cửa hàng nhận · {request.storeName}</h2>
+        {request.note && <p className="tf-note">{request.note}</p>}
         <form
           id="coordinate-form"
           onSubmit={(e) => {
@@ -184,18 +188,17 @@ function AllocationEditor({
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th>Còn cần</th>
-                    <th>Lấy từ kho</th>
-                    <th>Số lấy</th>
+                    <th>Chưa điều phối</th>
+                    <th>Kho nguồn</th>
+                    <th>Số lượng lấy</th>
                     <th>Còn thiếu</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((l) => {
                     const v = values[l.productId],
-                      available = options(l.productId).find(
-                        (s) => s.storeId === v.storeId,
-                      )
+                      sources = options(l),
+                      available = sources.find((s) => s.storeId === v.storeId)
                     return (
                       <tr key={l.productId}>
                         <td>
@@ -204,32 +207,37 @@ function AllocationEditor({
                         </td>
                         <td>{l.remainingQty}</td>
                         <td>
-                          <select
-                            aria-label={'Kho nguồn ' + l.sku}
-                            value={v.storeId}
-                            onChange={(e) => {
-                              const storeId = Number(e.target.value),
-                                s = options(l.productId).find(
-                                  (x) => x.storeId === storeId,
-                                )
-                              setValues({
-                                ...values,
-                                [l.productId]: {
-                                  storeId,
-                                  qty: s
-                                    ? Math.min(l.remainingQty, s.sellableQty)
-                                    : 0,
-                                },
-                              })
-                            }}
-                          >
-                            <option value={0}>Chọn kho nguồn</option>
-                            {options(l.productId).map((s) => (
-                              <option key={s.storeId} value={s.storeId}>
-                                {s.storeName} · bán được {s.sellableQty}
-                              </option>
-                            ))}
-                          </select>
+                          {sources.length ? (
+                            <SearchableFilter
+                              label={'Kho nguồn ' + l.sku}
+                              value={String(v.storeId)}
+                              options={[
+                                { value: '0', label: 'Chọn kho nguồn' },
+                                ...sources.map((s) => ({
+                                  value: String(s.storeId),
+                                  label:
+                                    s.storeName +
+                                    ' · khả dụng ' +
+                                    s.sellableQty,
+                                })),
+                              ]}
+                              onChange={(value) => {
+                                const storeId = Number(value),
+                                  s = sources.find((x) => x.storeId === storeId)
+                                setValues({
+                                  ...values,
+                                  [l.productId]: {
+                                    storeId,
+                                    qty: s
+                                      ? Math.min(l.remainingQty, s.sellableQty)
+                                      : 0,
+                                  },
+                                })
+                              }}
+                            />
+                          ) : (
+                            <small>Chưa có kho khả dụng</small>
+                          )}
                         </td>
                         <td>
                           <input
@@ -269,33 +277,6 @@ function AllocationEditor({
             </div>
           </fieldset>
         </form>
-        {!lines.length && (
-          <p className="tf-empty">Yêu cầu không còn phần thiếu để điều phối.</p>
-        )}
-      </section>
-      <section>
-        <h2>Sẽ tạo</h2>
-        {[...groups].map(([storeId, parts]) => (
-          <p className="tf-note" key={storeId}>
-            {created[storeId] ? (
-              <Link to={'/transfer-orders/' + created[storeId]}>
-                Đã tạo DC-{String(created[storeId]).padStart(4, '0')}
-              </Link>
-            ) : (
-              'Lệnh điều chuyển'
-            )}{' '}
-            · {stock.find((s) => s.storeId === storeId)?.storeName} →{' '}
-            {request.storeName} · {parts.length} phụ tùng ·{' '}
-            {parts.reduce((n, l) => n + values[l.productId].qty, 0)} sản phẩm
-          </p>
-        ))}
-        {remaining > 0 && (
-          <p className="tf-note tf-shortage">
-            Còn thiếu {remaining} sản phẩm. Sau khi tạo lệnh, có thể chuyển phần
-            thiếu sang mua từ chi tiết yêu cầu; bước chuyển mua không tự thực
-            hiện.
-          </p>
-        )}
       </section>
       <InventoryNotice error={error} />
       <footer className="tf-coord-footer">
@@ -310,7 +291,7 @@ function AllocationEditor({
           form="coordinate-form"
           disabled={!valid || busy}
         >
-          {partial ? 'Tiếp tục tạo lệnh còn lại' : '✓ Tạo lệnh điều chuyển'}
+          {partial ? 'Tiếp tục tạo lệnh còn lại' : 'Xác nhận điều phối'}
         </button>
       </footer>
     </>

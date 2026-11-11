@@ -1,0 +1,59 @@
+.searchable-filter {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+.searchable-filter input[role='combobox'] {
+  box-sizing: border-box;
+  width: 100%;
+  padding-inline-end: 2rem;
+}
+.searchable-filter input:focus-visible {
+  outline: 2px solid #4658f3;
+  outline-offset: -2px;
+}
+.searchable-filter-caret {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+.searchable-filter input[aria-expanded='true'] + .searchable-filter-caret {
+  transform: translateY(-25%) rotate(225deg);
+}
+.searchable-filter-menu {
+  position: absolute;
+  z-index: 10;
+  inset: calc(100% + 0.25rem) 0 auto;
+  max-height: 13rem;
+  overflow-y: auto;
+  border: 1px solid #dce2eb;
+  border-radius: 0.45rem;
+  background: white;
+  box-shadow: 0 6px 18px rgb(26 42 72 / 14%);
+}
+.searchable-filter-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+}
+.searchable-filter-menu li,
+.searchable-filter-menu p {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  overflow-wrap: anywhere;
+}
+.searchable-filter-menu li {
+  cursor: pointer;
+}
+.searchable-filter-menu li[aria-selected='true'] {
+  background: #eef2ff;
+}
+.searchable-filter-menu li:is(:hover, [data-active='true']) {
+  background: #dfe7ff;
+}

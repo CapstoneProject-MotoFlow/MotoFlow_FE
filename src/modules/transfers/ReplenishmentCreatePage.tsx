@@ -1,4 +1,3 @@
-import BarcodeScan from '../operations/BarcodeScan'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -8,10 +7,9 @@ import {
   inventoryError,
 } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
-import type { DashboardStore } from '../../shared/types/store'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { transferQuantitiesValid } from './transferRules'
-import { useCompleteStock } from '../inventory/useCompleteStock'
-import { useChoicePages } from '../sales/useSalesList'
+import type { Page } from '../inventory/types'
 import './transfers.css'
 type Row = {
   key: number
@@ -33,8 +31,6 @@ export default function ReplenishmentCreatePage() {
   const lock = useRef(false),
     counter = useRef(1),
     destination = scope.owner ? store : String(scope.user?.storeId ?? ''),
-    stores = useInventoryData<DashboardStore[]>('/stores', {}, 0, scope.owner),
-    central = stores.data?.find((s) => s.central),
     valid =
       !!destination &&
       transferQuantitiesValid(
@@ -53,34 +49,8 @@ export default function ReplenishmentCreatePage() {
       0,
       !!destination,
     )
-  const productIds = [
-    ...new Set(rows.filter((r) => r.productId > 0).map((r) => r.productId)),
-  ].join(',')
-  const availability = useInventoryData<
-    { storeId: number; productId: number; sellableQty: number }[]
-  >('/inventory/availability', { productIds }, 0, scope.owner && !!productIds)
-  const ownStock = useCompleteStock(
-    {},
-    0,
-    !scope.owner && !!productIds && !!destination,
-    String(scope.user?.id ?? ''),
-  )
-  function stockText(storeId: string, productId: number) {
-    if (!storeId) return 'Chọn cửa hàng'
-    if (!productId) return 'Chọn phụ tùng'
-    const data = scope.owner ? availability : ownStock
-    if (data.loading) return 'Đang tải…'
-    if (data.error) return <span title={data.error}>Không tải được</span>
-    if (!data.data) return '—'
-    if (scope.owner)
-      return (
-        availability.data?.find(
-          (s) => s.storeId === Number(storeId) && s.productId === productId,
-        )?.sellableQty ?? 0
-      )
-    const row = ownStock.data?.find((s) => s.productId === productId)
-    return row ? Math.max(0, row.availableQty - row.expiredQty) : 0
-  }
+  const selectedRows = rows.filter((row) => row.productId > 0)
+  const totalQuantity = selectedRows.reduce((sum, row) => sum + row.qty, 0)
   async function save() {
     if (lock.current || !valid) return
     lock.current = true
@@ -107,7 +77,7 @@ export default function ReplenishmentCreatePage() {
     }
   }
   return (
-    <main className="dashboard-content tf-page tf-repl-create">
+    <main className="dashboard-content tf-page tf-repl-create tf-replenishment-form">
       <header>
         <h1>Tạo yêu cầu bổ sung</h1>
         <nav>
@@ -115,7 +85,7 @@ export default function ReplenishmentCreatePage() {
           <Link to="/replenishment-requests">Yêu cầu bổ sung</Link> › Tạo mới
         </nav>
       </header>
-      <InventoryNotice error={error || stores.error} />
+      <InventoryNotice error={error || scope.storesError} />
       <form
         id="replenishment-create"
         onSubmit={(e) => {
@@ -124,98 +94,32 @@ export default function ReplenishmentCreatePage() {
         }}
       >
         <fieldset disabled={busy}>
-          <div className="tf-create-top">
-            <section>
-              <h2>Thông tin chung</h2>
-              <div className="tf-general-grid">
-                <label>
-                  Cửa hàng cần hàng <span>*</span>
-                  {scope.owner ? (
-                    <select
-                      required
-                      value={store}
-                      onChange={(e) => setStore(e.target.value)}
-                    >
-                      <option value="">Chọn cửa hàng</option>
-                      {stores.data
-                        ?.filter((s) => s.status !== 'INACTIVE')
-                        .map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.storeName}
-                            {s.status === 'PLANNED'
-                              ? ' · đang chuẩn bị mở'
-                              : ''}
-                          </option>
-                        ))}
-                    </select>
-                  ) : (
-                    <strong>{scope.user?.storeName}</strong>
-                  )}
-                </label>
-                <div>
-                  <span>Gửi tới</span>
-                  <p>
-                    {central
-                      ? 'Branch Manager ' +
-                        central.storeName +
-                        (central.managers?.length
-                          ? ' · ' +
-                            central.managers.map((m) => m.fullName).join(', ')
-                          : '')
-                      : 'Bộ phận điều phối kho tổng'}
-                  </p>
-                </div>
-                <label className="tf-full">
-                  Ghi chú
-                  <textarea
-                    maxLength={500}
-                    rows={2}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Ví dụ: khách sỉ đặt trước, cần trước thứ Hai…"
-                  />
-                </label>
-              </div>
-            </section>
-            <section className="tf-create-summary">
-              <h2>Tóm tắt</h2>
-              <dl>
-                <div>
-                  <dt>Số dòng</dt>
-                  <dd>{rows.filter((r) => r.productId > 0).length}</dd>
-                </div>
-                <div>
-                  <dt>Tổng số lượng</dt>
-                  <dd>
-                    {rows
-                      .filter((r) => r.productId > 0)
-                      .reduce((sum, r) => sum + r.qty, 0)}
-                  </dd>
-                </div>
-              </dl>
-              <button className="tf-primary" disabled={!valid || busy}>
-                ♧ Gửi yêu cầu
-              </button>
-              <Link className="tf-cancel" to="/replenishment-requests">
-                Hủy
-              </Link>
-            </section>
-          </div>
           <section>
             <h2>Phụ tùng cần bổ sung</h2>
+            <div className="tf-replenishment-store">
+              <span>Cửa hàng cần hàng</span>
+              {scope.owner ? (
+                <SearchableFilter
+                  label="Cửa hàng cần hàng"
+                  value={store}
+                  options={scope.stores
+                    .filter((s) => s.status !== 'INACTIVE')
+                    .map((s) => ({
+                      value: String(s.id),
+                      label: s.storeName,
+                    }))}
+                  searchPlaceholder="Chọn cửa hàng"
+                  onChange={setStore}
+                />
+              ) : (
+                <strong>{scope.user?.storeName ?? 'Cửa hàng của tôi'}</strong>
+              )}
+            </div>
             <div className="tf-table">
               <table>
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th>
-                      Tồn ở{' '}
-                      {stores.data?.find((s) => String(s.id) === destination)
-                        ?.storeName ??
-                        scope.user?.storeName ??
-                        'cửa hàng'}
-                    </th>
-                    <th>Bán được ở {central?.storeName ?? 'kho tổng'}</th>
                     <th>Số lượng</th>
                     <th></th>
                   </tr>
@@ -237,18 +141,6 @@ export default function ReplenishmentCreatePage() {
                             )
                           }
                         />
-                      </td>
-                      <td>
-                        {row.productId > 0
-                          ? stockText(destination, row.productId)
-                          : '—'}
-                      </td>
-                      <td>
-                        {row.productId > 0 && central
-                          ? stockText(String(central.id), row.productId)
-                          : scope.owner
-                            ? 'Chọn phụ tùng'
-                            : 'Chưa có dữ liệu được phép xem'}
                       </td>
                       <td>
                         <input
@@ -302,7 +194,7 @@ export default function ReplenishmentCreatePage() {
                   ])
                 }
               >
-                ＋ Thêm dòng
+                ＋ Thêm phụ tùng
               </button>
               <button
                 type="button"
@@ -330,6 +222,24 @@ export default function ReplenishmentCreatePage() {
               </button>
               <InventoryNotice error={suggestions.error} />
             </div>
+            <label className="tf-replenishment-note">
+              Ghi chú (không bắt buộc)
+              <textarea
+                maxLength={500}
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+            <footer className="tf-coord-footer">
+              <span>
+                {selectedRows.length} mã · {totalQuantity} sản phẩm
+              </span>
+              <Link to="/replenishment-requests">Hủy</Link>
+              <button className="tf-primary" disabled={!valid || busy}>
+                {busy ? 'Đang gửi…' : 'Gửi yêu cầu'}
+              </button>
+            </footer>
           </section>
         </fieldset>
       </form>
@@ -345,73 +255,46 @@ export function PartChoice({
   excluded: number[]
   onChange: (p: { productId: number; sku: string; partName: string }) => void
 }) {
-  const [query, setQuery] = useState(''),
-    [open, setOpen] = useState(false),
-    choices = useChoicePages<{ id: number; sku: string; partName: string }>(
-      '/products',
-      query,
-      open,
-    )
+  const [query, setQuery] = useState<string | null>(null)
+  const choices = useInventoryData<
+    Page<{ id: number; sku: string; partName: string }>
+  >('/products', { q: query?.trim(), page: 0, size: 10 }, 0, query !== null)
+  const parts =
+    choices.data?.items.filter((part) => !excluded.includes(part.id)) ?? []
+  const options = parts.map((part) => ({
+    value: String(part.id),
+    label: part.partName + ' · ' + part.sku,
+  }))
+  if (query === null && row.productId) {
+    options.push({
+      value: String(row.productId),
+      label: row.partName + ' · ' + row.sku,
+    })
+  }
   return (
     <div className="tf-part-choice">
-      <BarcodeScan
-        onFound={(p) => {
-          if (excluded.includes(p.productId))
-            throw new Error(
-              'Phụ tùng đã có trong phiếu. Hãy sửa số lượng ở dòng hiện có.',
-            )
-          onChange({ productId: p.productId, sku: p.sku, partName: p.partName })
-          setOpen(false)
-        }}
-      />
-      <input
-        aria-label="Tìm và chọn phụ tùng"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={'parts-' + row.key}
-        value={
-          open ? query : row.productId ? row.partName + ' · ' + row.sku : ''
+      <SearchableFilter
+        label="Tìm và chọn phụ tùng"
+        searchPlaceholder={
+          query === null ? 'Chọn phụ tùng' : 'Tìm theo tên hoặc SKU'
         }
-        placeholder="Chọn phụ tùng"
-        onFocus={() => setOpen(true)}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          setOpen(true)
+        value={String(row.productId)}
+        options={options}
+        maxOptions={10}
+        loading={choices.loading}
+        error={choices.error}
+        toggleOnClick
+        onSearch={setQuery}
+        onChange={(value) => {
+          const part = parts.find((item) => String(item.id) === value)
+          if (part)
+            onChange({
+              productId: part.id,
+              sku: part.sku,
+              partName: part.partName,
+            })
         }}
       />
-      {open && (
-        <div id={'parts-' + row.key} className="tf-part-options">
-          {choices.data?.items
-            .filter((p) => !excluded.includes(p.id))
-            .map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                onClick={() => {
-                  onChange({
-                    productId: p.id,
-                    sku: p.sku,
-                    partName: p.partName,
-                  })
-                  setOpen(false)
-                  setQuery('')
-                }}
-              >
-                {p.partName} · {p.sku}
-              </button>
-            ))}
-          {choices.loading && <small>Đang tải…</small>}
-          {choices.error && <small role="alert">{choices.error}</small>}
-          {choices.hasMore && (
-            <button type="button" onClick={choices.loadMore}>
-              Xem thêm
-            </button>
-          )}
-          <button type="button" onClick={() => setOpen(false)}>
-            Đóng lựa chọn
-          </button>
-        </div>
-      )}
     </div>
   )
 }
