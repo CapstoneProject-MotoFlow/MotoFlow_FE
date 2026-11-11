@@ -1,6 +1,5 @@
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import ExcessDispatchEditor from './ExcessDispatchEditor'
-import BarcodeScan from '../operations/BarcodeScan'
 import { uploadAttachment } from '../../shared/api/upload'
 import { receiptAcceptsResult } from './transferRules'
 import { dateTime } from '../inventory/presentation'
@@ -391,28 +390,6 @@ function WorkEditor({
           </p>
         )}
         <InventoryNotice error={error} />
-        {canRecord && (
-          <div className="tf-note">
-            <BarcodeScan
-              disabled={busy}
-              onFound={(part) => {
-                const match = lines.find((l) => l.productId === part.productId)
-                if (!match) {
-                  setError('Phụ tùng không thuộc phiếu này.')
-                  return
-                }
-                setError('')
-                document
-                  .getElementById('transfer-part-' + part.productId)
-                  ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-                document
-                  .getElementById('transfer-part-' + part.productId)
-                  ?.querySelector('input')
-                  ?.focus()
-              }}
-            />
-          </div>
-        )}
         <form
           className="tf-form"
           onSubmit={(e) => {
@@ -439,7 +416,7 @@ function WorkEditor({
                 </thead>
                 <tbody>
                   {lines.map((l) => (
-                    <tr key={l.productId} id={'transfer-part-' + l.productId}>
+                    <tr key={l.productId}>
                       <td>
                         {l.sku}
                         <small>{l.partName}</small>

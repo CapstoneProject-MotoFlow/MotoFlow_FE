@@ -89,7 +89,7 @@ export default function StaffWorkTable() {
         key: 't' + t.id,
         task: 'Điều chuyển được giao',
         code: 'DC-' + String(t.id).padStart(4, '0'),
-        description: t.sourceStoreName + ' → ' + t.destStoreName,
+        description: t.sourceStoreName + ' đến ' + t.destStoreName,
         assignedAt: null,
         due: null,
         status: 'Mở phiếu để xem kết quả',

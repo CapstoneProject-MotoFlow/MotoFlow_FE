@@ -172,7 +172,6 @@ export function MovementTable({
             {showBalance && <th>Tồn sau</th>}
             <th>Lô</th>
             <th>Chứng từ gốc / người thực hiện</th>
-            <th>Ghi chú</th>
           </tr>
         </thead>
         <tbody>
@@ -190,7 +189,7 @@ export function MovementTable({
           ))}
           {!rows.length && (
             <tr>
-              <td colSpan={showBalance ? 9 : 8} className="stock-empty">
+              <td colSpan={showBalance ? 8 : 7} className="stock-empty">
                 {empty}
               </td>
             </tr>
@@ -213,7 +212,7 @@ function MovementRows({
     <>
       {day && (
         <tr className="stock-day">
-          <th colSpan={showBalance ? 9 : 8} scope="rowgroup">
+          <th colSpan={showBalance ? 8 : 7} scope="rowgroup">
             {date(row.occurredAt)}
           </th>
         </tr>
@@ -243,7 +242,6 @@ function MovementRows({
           <SourceDocument type={row.sourceType} id={row.sourceId} />
           <small>{row.performedByName ?? '—'}</small>
         </td>
-        <td>{row.reason ?? '—'}</td>
       </tr>
     </>
   )

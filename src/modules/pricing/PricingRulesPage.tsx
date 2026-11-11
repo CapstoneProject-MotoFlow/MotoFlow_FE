@@ -89,7 +89,7 @@ export default function PricingRulesPage() {
           {rules.data && categories.data && (
             <SuggestionRules
               key={revision}
-              config={rules.data.scheduled ?? rules.data.current}
+              config={rules.data.current ?? rules.data.scheduled}
               scheduled={rules.data.scheduled}
               categories={categories.data}
               onSaved={saved}

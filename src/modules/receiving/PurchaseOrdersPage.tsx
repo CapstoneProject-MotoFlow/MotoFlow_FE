@@ -1,11 +1,13 @@
 import { isAxiosError } from 'axios'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import Icon from '../../shared/ui/Icon'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import type { DashboardStore } from '../../shared/types/store'
 import { apiMessage } from '../suppliers/supplierService'
+import { dateTime } from '../inventory/presentation'
 import ReceiptActionDialog from './ReceiptActionDialog'
 import { receiptWork, type WorkReceipt } from './receivingRules'
 import {
@@ -46,6 +48,10 @@ type Detail = Order & {
   canUpdate: boolean
   canCancel: boolean
   note: string | null
+  createdByName: string | null
+  cancelledAt: string | null
+  cancelledByName: string | null
+  cancellationReason: string | null
   lines: {
     id: number
     sku: string
@@ -93,6 +99,36 @@ type Detail = Order & {
       newPrice: number | null
     }[]
   }[]
+}
+
+function purchaseOrderHistory(detail: Detail) {
+  const history = [...(detail.history ?? [])]
+  const hasAction = (action: string) =>
+    history.some(
+      (entry) =>
+        entry.action === action || entry.action === 'PURCHASE_ORDER_' + action,
+    )
+  if (detail.createdAt && !hasAction('CREATED')) {
+    history.push({
+      action: 'CREATED',
+      actorName: detail.createdByName,
+      at: detail.createdAt,
+      reason: null,
+      delivery: null,
+      lineChanges: [],
+    })
+  }
+  if (detail.cancelledAt && !hasAction('CANCELLED')) {
+    history.unshift({
+      action: 'CANCELLED',
+      actorName: detail.cancelledByName,
+      at: detail.cancelledAt,
+      reason: detail.cancellationReason,
+      delivery: null,
+      lineChanges: [],
+    })
+  }
+  return history
 }
 
 const views = [
@@ -360,22 +396,6 @@ export default function PurchaseOrdersPage() {
         <h1>Yêu cầu nhập hàng</h1>
         <span>Trang chủ / Nhập hàng / Yêu cầu nhập hàng</span>
       </header>
-      {owner && (
-        <div className="receiving-filter-row">
-          <Link
-            className="receiving-secondary-link"
-            to="/goods-receipt-notes/excess"
-          >
-            Chờ duyệt hàng thừa
-          </Link>
-          <Link
-            className="receiving-secondary-link"
-            to="/supplier-discrepancies"
-          >
-            Hồ sơ sai lệch nhà cung cấp
-          </Link>
-        </div>
-      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>
@@ -388,12 +408,26 @@ export default function PurchaseOrdersPage() {
                   : 'Yêu cầu nhập hàng của cửa hàng'}
           </h2>
           {owner && (
-            <Link
-              className="receiving-layout-primary"
-              to="/purchase-orders/new"
-            >
-              ＋ Tạo yêu cầu nhập hàng
-            </Link>
+            <div className="receiving-filter-row">
+              <Link
+                className="receiving-secondary-link"
+                to="/goods-receipt-notes/excess"
+              >
+                Chờ duyệt hàng thừa
+              </Link>
+              <Link
+                className="receiving-secondary-link"
+                to="/supplier-discrepancies"
+              >
+                Hồ sơ sai lệch nhà cung cấp
+              </Link>
+              <Link
+                className="receiving-layout-primary"
+                to="/purchase-orders/new"
+              >
+                ＋ Tạo yêu cầu nhập hàng
+              </Link>
+            </div>
           )}
         </header>
         {staff && (
@@ -454,39 +488,39 @@ export default function PurchaseOrdersPage() {
                 />
               </div>
               {owner && (
-                <select
-                  aria-label="Kho nhận"
+                <SearchableFilter
+                  label="Kho nhận"
                   value={storeId}
                   disabled={!stores.length}
-                  onChange={(event) => {
-                    setStoreId(event.target.value)
+                  options={[
+                    { value: '', label: 'Mọi kho nhận' },
+                    ...stores.map((store) => ({
+                      value: String(store.id),
+                      label: store.storeName,
+                    })),
+                  ]}
+                  onChange={(value) => {
+                    setStoreId(value)
                     setPage(0)
                   }}
-                >
-                  <option value="">Mọi kho nhận</option>
-                  {stores.map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.storeName}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
-              <select
-                aria-label="Nhà cung cấp"
+              <SearchableFilter
+                label="Nhà cung cấp"
                 value={supplierId}
                 disabled={!suppliers.length}
-                onChange={(event) => {
-                  setSupplierId(event.target.value)
+                options={[
+                  { value: '', label: 'Mọi nhà cung cấp' },
+                  ...suppliers.map((supplier) => ({
+                    value: String(supplier.id),
+                    label: supplier.supplierName,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setSupplierId(value)
                   setPage(0)
                 }}
-              >
-                <option value="">Mọi nhà cung cấp</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.supplierName}
-                  </option>
-                ))}
-              </select>
+              />
               {view !== 'OPEN' && (
                 <>
                   <label>
@@ -611,7 +645,10 @@ export default function PurchaseOrdersPage() {
                         return (
                           <tr key={row.id}>
                             <td>
-                              <Link to={'/purchase-orders/' + row.id}>
+                              <Link
+                                className="receiving-request-link"
+                                to={'/purchase-orders/' + row.id}
+                              >
                                 {purchaseOrderCode(row.id)}
                               </Link>
                             </td>
@@ -741,6 +778,7 @@ export function PurchaseOrderDetailPage() {
 
 function PurchaseOrderDetail({ id }: { id?: string }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const owner = user?.role === 'OWNER'
   const [detail, setDetail] = useState<Detail>()
   const [error, setError] = useState('')
@@ -761,10 +799,17 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
       })
     return () => controller.abort()
   }, [id, validId])
+  const history = detail ? purchaseOrderHistory(detail) : []
 
   return (
     <main className="dashboard-content receiving-page">
-      <Link to="/purchase-orders">← Yêu cầu nhập hàng</Link>
+      <button
+        type="button"
+        className="receiving-back-button"
+        onClick={() => navigate('/purchase-orders')}
+      >
+        <span aria-hidden="true">←</span> Quay lại
+      </button>
       <header className="receiving-heading">
         <h1>Yêu cầu nhập hàng {purchaseOrderCode(id ?? '')}</h1>
         {detail && <Status value={detail.status} />}
@@ -776,9 +821,15 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
           detail.canCreateReplacement) && (
           <div className="receiving-layout-actions">
             {detail.canUpdate && (
-              <Link to={'/purchase-orders/' + detail.id + '/edit'}>
+              <button
+                type="button"
+                className="receiving-layout-primary"
+                onClick={() =>
+                  navigate('/purchase-orders/' + detail.id + '/edit')
+                }
+              >
                 Sửa yêu cầu
-              </Link>
+              </button>
             )}
             {detail.canCancel && (
               <button
@@ -970,26 +1021,32 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
 
           <section className="receiving-panel">
             <h2>Lịch sử</h2>
-            {!detail.history.length ? (
+            {!history.length ? (
               <p>Chưa có lịch sử.</p>
             ) : (
               <ol className="receiving-timeline">
-                {detail.history.map((entry, index) => (
+                {history.map((entry, index) => (
                   <li key={index}>
-                    {day(entry.at)} · {entry.actorName ?? 'Hệ thống'} ·{' '}
-                    {orderHistoryLabels[entry.action] ?? 'Đã cập nhật yêu cầu'}
+                    <strong>
+                      {orderHistoryLabels[entry.action] ??
+                        'Đã cập nhật yêu cầu'}
+                    </strong>
+                    <small>
+                      {dateTime(entry.at)}
+                      {entry.actorName && ' · ' + entry.actorName}
+                    </small>
                     {entry.delivery && (
                       <div>
                         {entry.delivery.oldExpectedArrival !==
                           entry.delivery.newExpectedArrival && (
                           <p>
                             Ngày giao: {day(entry.delivery.oldExpectedArrival)}{' '}
-                            → {day(entry.delivery.newExpectedArrival)}
+                            thành {day(entry.delivery.newExpectedArrival)}
                           </p>
                         )}
                         {entry.delivery.oldNote !== entry.delivery.newNote && (
                           <p>
-                            Ghi chú: {entry.delivery.oldNote || '—'} →{' '}
+                            Ghi chú: {entry.delivery.oldNote || '—'} thành{' '}
                             {entry.delivery.newNote || '—'}
                           </p>
                         )}
@@ -999,7 +1056,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                       <ul>
                         {entry.lineChanges.map((change) => (
                           <li key={change.productId}>
-                            {change.sku}: Số lượng {change.oldQty ?? '—'} →{' '}
+                            {change.sku}: Số lượng {change.oldQty ?? '—'} thành{' '}
                             {change.newQty ?? '—'}
                             {owner && change.oldPrice !== change.newPrice && (
                               <span>
@@ -1008,7 +1065,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                                 {change.oldPrice == null
                                   ? '—'
                                   : money.format(change.oldPrice)}{' '}
-                                →{' '}
+                                thành{' '}
                                 {change.newPrice == null
                                   ? '—'
                                   : money.format(change.newPrice)}
@@ -1018,7 +1075,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                         ))}
                       </ul>
                     )}
-                    {entry.reason ? ' · ' + entry.reason : ''}
+                    {entry.reason && <p>Lý do {entry.reason}</p>}
                   </li>
                 ))}
               </ol>

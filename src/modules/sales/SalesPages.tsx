@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { isAxiosError } from 'axios'
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import {
@@ -28,20 +27,23 @@ import { orderFromDto, type OrderDto, type UnmetRow } from './salesApi'
 import SalesSettlementDialog from './SalesSettlementDialog'
 import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
-import SalesVersions from './SalesVersions'
 import DemandReplenishment from './DemandReplenishment'
-import BarcodeCamera from './BarcodeCamera'
 import './sales.css'
-function Header({ title, children }: { title: string; children?: ReactNode }) {
+function Header({
+  title,
+  breadcrumb = title,
+}: {
+  title: string
+  breadcrumb?: ReactNode
+}) {
   return (
     <header className="stock-heading">
       <div>
         <h1>{title}</h1>
       </div>
       <div className="stock-heading-actions">
-        {children}
         <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Bán hàng › {title}
+          <Link to="/dashboard">Trang chủ</Link> › {breadcrumb}
         </nav>
       </div>
     </header>
@@ -50,15 +52,15 @@ function Header({ title, children }: { title: string; children?: ReactNode }) {
 function Shell({
   title,
   children,
-  actions,
+  breadcrumb,
 }: {
   title: string
   children: ReactNode
-  actions?: ReactNode
+  breadcrumb?: ReactNode
 }) {
   return (
     <main className="inventory-workspace sales-workspace">
-      <Header title={title}>{actions}</Header>
+      <Header title={title} breadcrumb={breadcrumb} />
       {children}
     </main>
   )
@@ -66,21 +68,8 @@ function Shell({
 function Back() {
   return <Link to="/sales-orders">← Danh sách đơn bán</Link>
 }
-export function SalesListAmounts({
-  total,
-  id,
-}: {
-  total?: number | null
-  id: number
-}) {
-  return (
-    <>
-      <td>{total == null ? 'Chưa có dữ liệu' : money.format(total)}</td>
-      <td>
-        <Link to={'/sales-orders/' + id}>Xem thanh toán</Link>
-      </td>
-    </>
-  )
+export function SalesListTotal({ total }: { total?: number | null }) {
+  return <td>{total == null ? 'Chưa có dữ liệu' : money.format(total)}</td>
 }
 export function SalesOrderListPage({
   orders = [],
@@ -142,7 +131,6 @@ export function SalesOrderListPage({
         title={staff ? 'Việc lấy hàng của tôi' : 'Danh sách đơn bán'}
         action={
           <div className="sales-list-actions">
-            {!staff && <Link to="/unmet-demand">Nhu cầu chưa đáp ứng</Link>}
             {['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '') && (
               <Link className="sales-primary" to="/sales-orders/new">
                 Tạo đơn bán
@@ -247,7 +235,7 @@ export function SalesOrderListPage({
                   ...(scope.owner ? ['Cửa hàng'] : []),
                   'Khách hàng',
                   'Ngày tạo',
-                  ...(staff ? ['Người giao'] : ['Thành tiền', 'Thanh toán']),
+                  staff ? 'Người giao' : 'Thành tiền',
                   'Trạng thái',
                   'Cần làm',
                 ].map((h) => (
@@ -267,9 +255,7 @@ export function SalesOrderListPage({
                   {staff ? (
                     <td>{order.assigneeName ?? 'Chưa giao'}</td>
                   ) : (
-                    <>
-                      <SalesListAmounts total={order.total} id={order.id} />
-                    </>
+                    <SalesListTotal total={order.total} />
                   )}
                   <td>{salesStates[order.status]}</td>
                   <td>
@@ -305,10 +291,7 @@ export function SalesOrderListPage({
               ))}
               {!matches.length && (
                 <tr>
-                  <td
-                    colSpan={scope.owner ? 8 : staff ? 6 : 7}
-                    className="stock-empty"
-                  >
+                  <td colSpan={scope.owner ? 7 : 6} className="stock-empty">
                     Chưa có dữ liệu đơn bán để hiển thị.
                   </td>
                 </tr>
@@ -341,10 +324,34 @@ type Product = {
   retailPrice: number | null
   status: string
   availableQty?: number | null
-  stock?: { availableQty: number | null } | null
-  barcodes?: string[]
 }
 type DraftLine = { product: Product; quantity: number }
+type SalesCustomer = Pick<
+  Customer,
+  'id' | 'customerName' | 'phone' | 'creditStatus' | 'totalDebt'
+>
+type SalesDraft = {
+  warehouse: string
+  customer?: SalesCustomer
+  walkin: string
+  walkPhone: string
+  type: SalesOrder['priceType']
+  discount: string
+  lines: DraftLine[]
+}
+
+function readSalesDraft(key: string) {
+  try {
+    const saved = localStorage.getItem(key)
+    if (!saved) return undefined
+    const draft = JSON.parse(saved) as SalesDraft | null
+    if (!draft || !Array.isArray(draft.lines)) return undefined
+    return { saved, draft }
+  } catch {
+    return undefined
+  }
+}
+
 export function SalesOrderFormPage() {
   const { id } = useParams()
   const [prefill] = useSearchParams()
@@ -414,33 +421,53 @@ export function SalesOrderFormView({
   initialQuantity?: number
 }) {
   const [prefill] = useSearchParams()
-  const [camera, setCamera] = useState(false)
   const navigate = useNavigate(),
     scope = useInventoryScope(),
     saveLock = useRef(false)
+  const draftKey =
+    !order && scope.user
+      ? `motoflow:sales-draft:${JSON.stringify([
+          scope.user.id ?? scope.user.username,
+          scope.user.role,
+          scope.user.storeId,
+        ])}`
+      : undefined
+  const [restored] = useState(() =>
+    draftKey && !prefill.size ? readSalesDraft(draftKey) : undefined,
+  )
+  const draft = restored?.draft
+  const savedDraft = useRef(restored?.saved)
+  const [draftNotice, setDraftNotice] = useState('')
   const [busy, setBusy] = useState(false),
     [customerTouched, _setCustomerTouched] = useState(false),
-    [walkPhone, setWalkPhone] = useState(order?.customerPhone ?? ''),
+    [walkPhone, setWalkPhone] = useState(
+      draft?.walkPhone ?? order?.customerPhone ?? '',
+    ),
     [warehouse, setWarehouse] = useState(
       String(
-        order?.storeId ??
+        draft?.warehouse ??
+          order?.storeId ??
           (scope.owner ? prefill.get('storeId') : scope.user?.storeId) ??
           '',
       ),
     ),
     [previewError, setPreviewError] = useState('')
   const [customerQuery, setCustomerQuery] = useState(''),
-    [customer, setCustomer] = useState<Customer | undefined>(initialCustomer),
+    [customer, setCustomer] = useState<SalesCustomer | undefined>(
+      draft?.customer ?? initialCustomer,
+    ),
     [quick, setQuick] = useState(false),
     [walkin, setWalkin] = useState(
-      order?.customerId ? '' : (order?.customerName ?? ''),
+      draft?.walkin ?? (order?.customerId ? '' : (order?.customerName ?? '')),
     ),
     [query, setQuery] = useState(''),
-    [scan, setScan] = useState(''),
-    [type, setType] = useState(order?.priceType ?? 'RETAIL'),
-    [discount, setDiscount] = useState(String(order?.discount ?? 0)),
+    [type, setType] = useState(draft?.type ?? order?.priceType ?? 'RETAIL'),
+    [discount, setDiscount] = useState(
+      draft?.discount ?? String(order?.discount ?? 0),
+    ),
     [lines, setLines] = useState<DraftLine[]>(
       () =>
+        draft?.lines ??
         order?.lines.map((l) => ({
           product: {
             id: l.productId,
@@ -457,6 +484,34 @@ export function SalesOrderFormView({
           : []),
     ),
     [error, setError] = useState('')
+  function saveDraft() {
+    if (!draftKey || saveLock.current) return
+    const data: SalesDraft = {
+      warehouse,
+      customer: customer && {
+        id: customer.id,
+        customerName: customer.customerName,
+        phone: customer.phone,
+        creditStatus: customer.creditStatus,
+        totalDebt: customer.totalDebt,
+      },
+      walkin,
+      walkPhone,
+      type,
+      discount,
+      lines,
+    }
+    setError('')
+    setDraftNotice('')
+    try {
+      const saved = JSON.stringify(data)
+      localStorage.setItem(draftKey, saved)
+      savedDraft.current = saved
+      setDraftNotice('Đã lưu đơn nháp trên trình duyệt này.')
+    } catch {
+      setError('Không thể lưu đơn nháp trên trình duyệt này.')
+    }
+  }
   const customers = useInventoryData<Page<Customer>>('/customers', {
     q: customerQuery,
     size: 20,
@@ -540,41 +595,6 @@ export function SalesOrderFormView({
     setQuery('')
     setError('')
   }
-  const scanLock = useRef(false)
-  async function scanBarcode(barcode: string) {
-    if (scanLock.current || !barcode.trim()) return
-    scanLock.current = true
-    try {
-      const { data } = await axiosClient.get<{
-        productId: number
-        status: string
-      }>('/products/barcode/' + encodeURIComponent(barcode.trim()), {
-        params: { storeId: warehouse || undefined },
-      })
-      if (data.status !== 'ACTIVE') {
-        setError('Phụ tùng đã ngừng kinh doanh.')
-        return
-      }
-      const detail = await axiosClient.get<Product>(
-        '/products/' + data.productId,
-        { params: { storeId: warehouse || undefined } },
-      )
-      add({
-        ...detail.data,
-        availableQty:
-          detail.data.stock?.availableQty ?? detail.data.availableQty,
-      })
-      setScan('')
-    } catch (e) {
-      setError(
-        isAxiosError(e) && e.response?.status === 404
-          ? 'Không tìm thấy mã vạch chính xác. Chọn phụ tùng từ kết quả tìm kiếm.'
-          : inventoryError(e),
-      )
-    } finally {
-      scanLock.current = false
-    }
-  }
   return (
     <Shell
       title={
@@ -582,8 +602,11 @@ export function SalesOrderFormView({
           ? 'Sửa đơn ' + order.code + ' · phiên bản ' + order.version
           : 'Tạo đơn bán'
       }
-      actions={
-        <span>Trang chủ › Đơn bán › {order ? 'Chỉnh sửa' : 'Tạo mới'}</span>
+      breadcrumb={
+        <>
+          <Link to="/sales-orders">Đơn bán</Link> ›{' '}
+          {order ? 'Chỉnh sửa' : 'Tạo mới'}
+        </>
       }
     >
       <form
@@ -620,6 +643,14 @@ export function SalesOrderFormView({
                   version: order.version,
                 })
               : await axiosClient.post<OrderDto>('/sales-orders', body)
+            if (draftKey && savedDraft.current) {
+              try {
+                if (localStorage.getItem(draftKey) === savedDraft.current)
+                  localStorage.removeItem(draftKey)
+              } catch {
+                // Creating the order succeeded even if browser storage is unavailable.
+              }
+            }
             navigate('/sales-orders/' + result.data.id)
           } catch (error) {
             setError(inventoryError(error))
@@ -813,9 +844,15 @@ export function SalesOrderFormView({
           >
             {busy ? 'Đang lưu…' : order ? 'Lưu phiên bản mới' : 'Tạo đơn'}
           </button>
+          {draftKey && (
+            <button type="button" onClick={saveDraft} disabled={busy}>
+              Đơn nháp
+            </button>
+          )}
           <Link className="sales-cancel" to="/sales-orders">
             Quay lại
           </Link>
+          {draftNotice && <p role="status">{draftNotice}</p>}
           {previewError && (
             <p role="alert" className="stock-error">
               {previewError}
@@ -834,14 +871,7 @@ export function SalesOrderFormView({
           )}
         </aside>
         <div className="sales-parts-card">
-          <InventoryPanel
-            title="Phụ tùng"
-            action={
-              <button type="button" onClick={() => setCamera(true)}>
-                Dùng camera
-              </button>
-            }
-          >
+          <InventoryPanel title="Phụ tùng">
             <div className="stock-filters">
               <label>
                 Thêm phụ tùng
@@ -849,23 +879,6 @@ export function SalesOrderFormView({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Tên, SKU hoặc mã vạch…"
-                />
-              </label>
-              <label>
-                Quét mã vạch
-                <input
-                  value={scan}
-                  onChange={(e) => {
-                    setScan(e.target.value)
-                    setQuery(e.target.value)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      void scanBarcode(scan.trim())
-                    }
-                  }}
-                  placeholder="Đưa máy quét vào mã vạch, hoặc gõ mã rồi bấm Enter"
                 />
               </label>
             </div>
@@ -1001,7 +1014,7 @@ export function SalesOrderFormView({
                   {!lines.length && (
                     <tr>
                       <td colSpan={7} className="stock-empty">
-                        Tìm hoặc quét mã phụ tùng để thêm vào đơn.
+                        Tìm phụ tùng để thêm vào đơn.
                       </td>
                     </tr>
                   )}
@@ -1020,15 +1033,6 @@ export function SalesOrderFormView({
           </InventoryPanel>
         </div>
       </form>
-      {camera && (
-        <BarcodeCamera
-          onClose={() => setCamera(false)}
-          onCode={(code) => {
-            setCamera(false)
-            void scanBarcode(code)
-          }}
-        />
-      )}
       {quick && (
         <CustomerForm
           onClose={() => setQuick(false)}
@@ -1143,11 +1147,10 @@ export function SalesOrderDetailView({
   return (
     <Shell
       title={'Đơn bán' + (order ? ' ' + order.code : '')}
-      actions={
-        <span>
-          Trang chủ › <Link to="/sales-orders">Đơn bán</Link> ›{' '}
-          {order?.code ?? id}
-        </span>
+      breadcrumb={
+        <>
+          <Link to="/sales-orders">Đơn bán</Link> › {order?.code ?? id}
+        </>
       }
     >
       <div
@@ -1228,7 +1231,6 @@ export function SalesOrderDetailView({
                           </button>
                         </>
                       )}
-                    <Link to="/unmet-demand">Nhu cầu chưa đáp ứng</Link>
                   </>
                 )}
                 {order?.actions?.canRecordPicking && (
@@ -1415,7 +1417,6 @@ export function SalesOrderDetailView({
               </dl>
             )}
           </section>
-          {!staff && order && <SalesVersions id={order.id} />}
           {!staff && (
             <section className="sales-payment-card">
               <h2>Thanh toán</h2>
@@ -1532,10 +1533,8 @@ export function RecordPickedView({
         (a.binLocation ?? '').localeCompare(b.binLocation ?? '', 'vi'),
       ),
     ),
-    [code, setCode] = useState(''),
     [error, setError] = useState('')
-  const [onlyMissing, setOnlyMissing] = useState(false),
-    [camera, setCamera] = useState(false)
+  const [onlyMissing, setOnlyMissing] = useState(false)
   const recorded = lines.filter(
     (l) =>
       l.picked != null &&
@@ -1546,40 +1545,18 @@ export function RecordPickedView({
   const shortage = lines.filter(
     (l) => l.picked != null && l.picked < l.requested,
   ).length
-  function scanItem(value: string) {
-    const hit = lines.find(
-      (l) => l.sku === value || l.barcodes?.includes(value),
-    )
-    if (!hit || !editable) {
-      setError('Không tìm thấy mã trong đơn.')
-      return
-    }
-    setLines((previous) =>
-      previous.map((l) =>
-        l.productId === hit.productId
-          ? {
-              ...l,
-              picked: Math.min(l.requested, (l.picked ?? 0) + 1),
-              short: (l.picked ?? 0) + 1 < l.requested,
-            }
-          : l,
-      ),
-    )
-    setCode('')
-    setError('')
-  }
   const editable = order?.actions?.canRecordPicking ?? false
   return (
     <Shell
       title={'Ghi số đã lấy' + (order ? ' ' + order.code : '')}
-      actions={
-        <span>
-          Trang chủ › Việc lấy hàng ›{' '}
+      breadcrumb={
+        <>
+          Việc lấy hàng ›{' '}
           <Link to={'/sales-orders/' + (order?.id ?? id)}>
             {order?.code ?? id}
           </Link>{' '}
           › Lấy hàng
-        </span>
+        </>
       }
     >
       <div className="sales-pick-screen">
@@ -1590,31 +1567,8 @@ export function RecordPickedView({
             ' · ' +
             (order?.customerName ?? 'Khách lẻ')
           }
-        >
-          <div className="sales-pick-scan">
-            <label>
-              Quét mã vạch
-              <input
-                placeholder="Đưa máy quét vào mã vạch, hoặc gõ mã rồi bấm Enter"
-                disabled={!editable || busy}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    scanItem(code.trim())
-                  }
-                }}
-              />
-            </label>
-            <button
-              disabled={!editable || busy}
-              onClick={() => setCamera(true)}
-            >
-              Dùng camera
-            </button>
-          </div>
-        </InventoryPanel>
+          children={null}
+        />
         <InventoryPanel
           title="Lấy từng mặt hàng"
           action={
@@ -1865,15 +1819,6 @@ export function RecordPickedView({
           </div>
         </footer>
       </div>
-      {camera && (
-        <BarcodeCamera
-          onClose={() => setCamera(false)}
-          onCode={(value) => {
-            setCamera(false)
-            scanItem(value)
-          }}
-        />
-      )}
     </Shell>
   )
 }
@@ -1926,11 +1871,10 @@ export function UnmetDemandPage() {
   return (
     <Shell
       title="Nhu cầu chưa đáp ứng"
-      actions={
-        <span>
-          Trang chủ › <Link to="/sales-orders">Đơn bán</Link> › Nhu cầu chưa đáp
-          ứng
-        </span>
+      breadcrumb={
+        <>
+          <Link to="/sales-orders">Đơn bán</Link> › Nhu cầu chưa đáp ứng
+        </>
       }
     >
       <div

@@ -1,12 +1,13 @@
-import BarcodeScan from '../operations/BarcodeScan'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { apiMessage } from '../suppliers/supplierService'
 import ReceiptActionDialog from './ReceiptActionDialog'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { inspectionQuantitiesValid } from './receivingRules'
+import ReceiptImage from './ReceiptImage'
+import './receiving.css'
 
 type Line = {
   id: number
@@ -45,7 +46,12 @@ type Receipt = {
   canDecideExcess: boolean
   assignee: { fullName: string } | null
   lines: Line[]
-  documents: { id: number; fileName: string; downloadUrl: string | null }[]
+  documents: {
+    id: number
+    fileName: string
+    contentType: string
+    downloadUrl: string | null
+  }[]
 }
 
 const countFields = [
@@ -63,14 +69,22 @@ export default function LiveReceiptPage({
   id,
   screen,
 }: {
-  id: string
+  id?: string
   screen?: Screen
 }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [receipt, setReceipt] = useState<Receipt>()
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
+  const validId = /^[1-9]\d*$/.test(id ?? '')
+  const back =
+    user?.role !== 'STAFF' && receipt
+      ? '/purchase-orders/' + receipt.purchaseOrderId
+      : '/purchase-orders'
 
   useEffect(() => {
+    if (!validId) return
     const controller = new AbortController()
     const signal = controller.signal
     void axiosClient
@@ -82,33 +96,52 @@ export default function LiveReceiptPage({
         if (!signal.aborted) setError(apiMessage(error))
       })
     return () => controller.abort()
-  }, [id, version])
+  }, [id, validId, version])
 
-  if (error) return <p role="alert">{error}</p>
-  if (!receipt) return <p role="status">Đang tải phiếu nhập…</p>
   return (
-    <ReceiptForm
-      key={version}
-      receipt={receipt}
-      screen={
-        screen ??
-        (receipt.canDecideExcess
-          ? 'excess'
-          : receipt.canConfirm || receipt.canReturnForRecount
-            ? 'confirmation'
-            : 'inspection')
-      }
-      onAssigned={() => setVersion((value) => value + 1)}
-    />
+    <main className="dashboard-content receiving-page">
+      <button
+        type="button"
+        className="receiving-back-button"
+        onClick={() => navigate(back)}
+      >
+        <span aria-hidden="true">←</span> Quay lại
+      </button>
+      <header className="receiving-heading">
+        <h1>Phiếu nhập hàng {id ? '#' + id : ''}</h1>
+      </header>
+      {!validId || error ? (
+        <p role="alert">{error || 'Không tìm thấy phiếu.'}</p>
+      ) : receipt ? (
+        <ReceiptForm
+          key={version}
+          receipt={receipt}
+          back={back}
+          screen={
+            screen ??
+            (receipt.canDecideExcess
+              ? 'excess'
+              : receipt.canConfirm || receipt.canReturnForRecount
+                ? 'confirmation'
+                : 'inspection')
+          }
+          onAssigned={() => setVersion((value) => value + 1)}
+        />
+      ) : (
+        <p role="status">Đang tải phiếu nhập…</p>
+      )}
+    </main>
   )
 }
 
 function ReceiptForm({
   receipt,
+  back,
   screen,
   onAssigned,
 }: {
   receipt: Receipt
+  back: string
   screen: Screen
   onAssigned: () => void
 }) {
@@ -120,9 +153,7 @@ function ReceiptForm({
     receipt.arrivedAt?.slice(0, 16) ?? '',
   )
   const [onlyUnchecked, setOnlyUnchecked] = useState(false)
-  const [scanMessage, setScanMessage] = useState('')
   const [focusedLine, setFocusedLine] = useState<number>()
-  const rowRefs = useRef(new Map<number, HTMLTableRowElement>())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -134,10 +165,6 @@ function ReceiptForm({
   const assignable =
     user?.role === 'BRANCH_MANAGER' &&
     ['AWAITING_INSPECTION', 'AWAITING_RECOUNT'].includes(receipt.status)
-  const back =
-    user?.role === 'STAFF'
-      ? '/purchase-orders'
-      : '/purchase-orders/' + receipt.purchaseOrderId
   const rows = reviewing
     ? receipt.lines.filter((line) => line.excessDecision === 'AWAITING_OWNER')
     : receipt.lines
@@ -242,43 +269,6 @@ function ReceiptForm({
 
   return (
     <form className="receiving-stack" onSubmit={submit}>
-      {editing && (
-        <BarcodeScan
-          allowInactive
-          resolveLocal={(code) => {
-            const l = receipt.lines.find(
-              (l) =>
-                l.sku.toLocaleLowerCase('vi') === code.toLocaleLowerCase('vi'),
-            )
-            return l
-              ? {
-                  productId: l.productId,
-                  sku: l.sku,
-                  partName: l.partName,
-                  status: 'ACTIVE',
-                  barcode: code,
-                  availableQty: null,
-                }
-              : undefined
-          }}
-          disabled={saving}
-          onFound={(p) => {
-            const line = receipt.lines.find((l) => l.productId === p.productId)
-            if (!line) {
-              setScanMessage('Phụ tùng không thuộc phiếu nhận.')
-              return
-            }
-            setOnlyUnchecked(false)
-            setFocusedLine(line.id)
-            setScanMessage('Đã tìm ' + p.partName)
-            requestAnimationFrame(() => {
-              const row = rowRefs.current.get(line.id)
-              row?.scrollIntoView({ block: 'center' })
-              row?.querySelector('input')?.focus()
-            })
-          }}
-        />
-      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>Chứng từ giao hàng · {receipt.deliveryDocumentNo}</h2>
@@ -338,21 +328,25 @@ function ReceiptForm({
                 Bây giờ
               </button>
             </div>
-            {scanMessage && (
-              <p className="receiving-layout-wide" role="status">
-                {scanMessage}
-              </p>
-            )}
           </div>
         )}
         {receipt.recountReason && (
           <p>Yêu cầu kiểm lại: {receipt.recountReason}</p>
         )}
-        {!!receipt.documents.length && (
-          <ul>
+        {!!receipt.documents?.length && (
+          <ul
+            className="receiving-document-list"
+            aria-label="Chứng từ đính kèm"
+          >
             {receipt.documents.map((file) => (
               <li key={file.id}>
-                {file.downloadUrl ? (
+                {file.downloadUrl && file.contentType?.startsWith('image/') ? (
+                  <ReceiptImage
+                    key={file.downloadUrl}
+                    src={file.downloadUrl}
+                    name={file.fileName}
+                  />
+                ) : file.downloadUrl ? (
                   <a href={file.downloadUrl} target="_blank" rel="noreferrer">
                     {file.fileName}
                   </a>
@@ -438,10 +432,6 @@ function ReceiptForm({
                         ? 'receiving-focused-line'
                         : undefined
                     }
-                    ref={(row) => {
-                      if (row) rowRefs.current.set(line.id, row)
-                      else rowRefs.current.delete(line.id)
-                    }}
                     onFocus={
                       editing ? () => setFocusedLine(line.id) : undefined
                     }
@@ -563,35 +553,36 @@ function ReceiptForm({
         </section>
       )}
       {error && <p role="alert">{error}</p>}
-      <div className="receiving-layout-actions">
-        <Link to={back}>Quay lại</Link>
-        {editing && (
-          <label className="receiving-inline">
-            <input type="checkbox" required /> Tôi đã kiểm đếm thực tế và chịu
-            trách nhiệm về kết quả này
-          </label>
-        )}
-        {recounting && (
-          <button type="submit" value="recount" disabled={saving}>
-            Trả về kiểm lại
-          </button>
-        )}
-        {(editing || reviewing || confirming) && (
-          <button
-            type="submit"
-            className="receiving-layout-primary"
-            disabled={saving}
-          >
-            {saving
-              ? 'Đang lưu…'
-              : editing
-                ? 'Gửi kết quả kiểm nhận'
-                : reviewing
-                  ? 'Lưu quyết định'
-                  : 'Xác nhận phiếu nhập'}
-          </button>
-        )}
-      </div>
+      {(editing || recounting || reviewing || confirming) && (
+        <div className="receiving-layout-actions">
+          {editing && (
+            <label className="receiving-inline">
+              <input type="checkbox" required /> Tôi đã kiểm đếm thực tế và chịu
+              trách nhiệm về kết quả này
+            </label>
+          )}
+          {recounting && (
+            <button type="submit" value="recount" disabled={saving}>
+              Trả về kiểm lại
+            </button>
+          )}
+          {(editing || reviewing || confirming) && (
+            <button
+              type="submit"
+              className="receiving-layout-primary"
+              disabled={saving}
+            >
+              {saving
+                ? 'Đang lưu…'
+                : editing
+                  ? 'Gửi kết quả kiểm nhận'
+                  : reviewing
+                    ? 'Lưu quyết định'
+                    : 'Xác nhận phiếu nhập'}
+            </button>
+          )}
+        </div>
+      )}
       {assignment && (
         <ReceiptActionDialog
           receiptId={receipt.id}
@@ -633,17 +624,5 @@ function ReceiptForm({
 
 export function GoodsReceiptPage() {
   const { id } = useParams()
-  return (
-    <main className="dashboard-content receiving-page">
-      <header className="receiving-heading">
-        <h1>Phiếu nhập hàng {id ? '#' + id : ''}</h1>
-        <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
-      </header>
-      {id && /^[1-9]\d*$/.test(id) ? (
-        <LiveReceiptPage key={id} id={id} />
-      ) : (
-        <p role="alert">Không tìm thấy phiếu.</p>
-      )}
-    </main>
-  )
+  return <LiveReceiptPage key={id} id={id} />
 }

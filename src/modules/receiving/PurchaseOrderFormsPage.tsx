@@ -14,7 +14,7 @@ import type { Supplier } from '../suppliers/types'
 import { apiMessage } from '../suppliers/supplierService'
 import { uploadAttachment as uploadReceiptDocument } from '../../shared/api/upload'
 import ProductPicker, { type ProductOption } from './ProductPicker'
-import BarcodeScan from '../operations/BarcodeScan'
+import ReceiptImage from './ReceiptImage'
 import './receiving.css'
 
 function Panel({
@@ -366,48 +366,6 @@ function OrderFormLayout({
         </aside>
       </div>
       <Panel title="Phụ tùng nhập">
-        <BarcodeScan
-          disabled={!owner || saving}
-          onFound={(p) => {
-            if (draft.lines.some((l) => Number(l.productId) === p.productId)) {
-              setSaveError('Phụ tùng đã có trong phiếu.')
-              return
-            }
-            setSelectedProducts((prev) => ({
-              ...prev,
-              [p.productId]: {
-                id: p.productId,
-                sku: p.sku,
-                partName: p.partName,
-              },
-            }))
-            setDraft((prev) => {
-              const empty = prev.lines.find((l) => !l.productId)
-              return empty
-                ? {
-                    ...prev,
-                    lines: prev.lines.map((l) =>
-                      l.id === empty.id
-                        ? { ...l, productId: String(p.productId) }
-                        : l,
-                    ),
-                  }
-                : {
-                    nextId: prev.nextId + 1,
-                    lines: [
-                      ...prev.lines,
-                      {
-                        id: prev.nextId,
-                        productId: String(p.productId),
-                        quantity: '1',
-                        price: '',
-                      },
-                    ],
-                  }
-            })
-            setSaveError('')
-          }}
-        />
         <div className="table-scroll">
           <table className="receiving-order-lines">
             <thead>
@@ -545,6 +503,11 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   const [order, setOrder] = useState<ReceiptOrder>()
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [images, setImages] = useState<{ src: string; name: string }[]>([])
+  useEffect(
+    () => () => images.forEach(({ src }) => URL.revokeObjectURL(src)),
+    [images],
+  )
   const [replacementChoice, setReplacement] = useState<boolean>()
   const replacement =
     replacementChoice ??
@@ -682,8 +645,30 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
               multiple
               required
               disabled={!order || saving}
+              onChange={(event) =>
+                setImages(
+                  Array.from(event.currentTarget.files ?? [])
+                    .filter((file) => file.type.startsWith('image/'))
+                    .map((file) => ({
+                      src: URL.createObjectURL(file),
+                      name: file.name,
+                    })),
+                )
+              }
             />
           </label>
+          {!!images.length && (
+            <ul
+              className="receiving-layout-wide receiving-document-list"
+              aria-label="Ảnh chứng từ đã chọn"
+            >
+              {images.map(({ src, name }) => (
+                <li key={src}>
+                  <ReceiptImage src={src} name={name} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </Panel>
       <Panel title="Loại lượt giao">
@@ -754,10 +739,13 @@ function FormShell({
     <main className="dashboard-content receiving-page receiving-order-page">
       <header className="receiving-heading">
         <h1>{title}</h1>
-        <span>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to="/purchase-orders">Yêu cầu nhập hàng</Link> › {title}
-        </span>
+        <nav className="receiving-breadcrumb" aria-label="Đường dẫn">
+          <Link to="/dashboard">Trang chủ</Link>
+          <span aria-hidden="true">›</span>
+          <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page">{title}</span>
+        </nav>
       </header>
       {children}
     </main>

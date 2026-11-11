@@ -282,7 +282,7 @@ export default function AdminPermissionHistoryPage() {
                   <th>Thời điểm</th>
                   <th>Tài khoản</th>
                   <th>Thay đổi</th>
-                  <th>Trước → Sau</th>
+                  <th>Trước và sau</th>
                   <th>Lý do</th>
                   <th>Người thực hiện</th>
                 </tr>
@@ -325,7 +325,7 @@ export default function AdminPermissionHistoryPage() {
                           )}
                         </td>
                         <td className="history-values">
-                          {detail.before} <span>→</span> {detail.after}
+                          {detail.before} <span>thành</span> {detail.after}
                         </td>
                         <td className="history-reason">{item.reason || '—'}</td>
                         <td>

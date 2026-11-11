@@ -20,8 +20,7 @@
 .customer-edit-form b {
   color: #ed4747;
 }
-.customer-edit-form input,
-.customer-edit-form textarea {
+.customer-edit-form input {
   display: block;
   width: 100%;
   min-width: 0;
@@ -37,16 +36,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 18px;
 }
-.customer-edit-form input:disabled,
-.customer-edit-form textarea:disabled {
+.customer-edit-form input:disabled {
   background: #f8fafc;
   color: #94a3b8;
-}
-.customer-edit-form > small {
-  display: block;
-  margin-top: 14px;
-  color: #74849a;
-  font-size: 12px;
 }
 .customer-edit-form p[role='alert'] {
   color: #b42318;

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { inventoryError, useInventoryData } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
@@ -76,7 +77,7 @@ export default function PriceListPage() {
           {notice}
         </p>
       )}
-      <section className="pricing-card">
+      <section className="pricing-card pricing-retail-list">
         <div className="pricing-heading">
           <h2>Giá bán lẻ toàn chuỗi</h2>
           {owner && (
@@ -99,31 +100,34 @@ export default function PriceListPage() {
               onChange={(e) => filter('q', e.target.value)}
             />
           </label>
-          <label>
-            Nhóm hàng
-            <select
+          <div className="pricing-filter-choice">
+            <span>Nhóm hàng</span>
+            <SearchableFilter
+              label="Nhóm hàng"
               value={params.get('categoryId') ?? ''}
-              onChange={(e) => filter('categoryId', e.target.value)}
-            >
-              <option value="">Mọi nhóm</option>
-              {flattenCategories(cats.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.categoryName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Trạng thái
-            <select
+              options={[
+                { value: '', label: 'Mọi nhóm' },
+                ...flattenCategories(cats.data ?? []).map((category) => ({
+                  value: String(category.id),
+                  label: category.categoryName,
+                })),
+              ]}
+              onChange={(value) => filter('categoryId', value)}
+            />
+          </div>
+          <div className="pricing-filter-choice">
+            <span>Trạng thái</span>
+            <SearchableFilter
+              label="Trạng thái"
               value={params.get('status') ?? 'ACTIVE'}
-              onChange={(e) => filter('status', e.target.value)}
-            >
-              <option value="ACTIVE">Đang kinh doanh</option>
-              <option value="DISCONTINUED">Ngừng kinh doanh</option>
-              <option value="">Tất cả</option>
-            </select>
-          </label>
+              options={[
+                { value: 'ACTIVE', label: 'Đang kinh doanh' },
+                { value: 'DISCONTINUED', label: 'Ngừng kinh doanh' },
+                { value: '', label: 'Tất cả' },
+              ]}
+              onChange={(value) => filter('status', value)}
+            />
+          </div>
           {edit && (
             <label className="pricing-check">
               <input

@@ -20,16 +20,6 @@ export default function CustomerCreditActions({
       <InventoryNotice error={error} />
       {data && (
         <>
-          <button
-            className="cp-primary"
-            onClick={() =>
-              setAction(data!.creditStatus === 'ELIGIBLE' ? 'revoke' : 'grant')
-            }
-          >
-            {data.creditStatus === 'ELIGIBLE'
-              ? 'Thu hồi quyền mua chịu'
-              : 'Cấp quyền mua chịu'}
-          </button>
           <button className="cp-button" onClick={() => setAction('opening')}>
             Ghi nợ đầu kỳ
           </button>

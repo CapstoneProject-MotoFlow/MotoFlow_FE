@@ -28,6 +28,10 @@ export type CountRow = {
   scopeNote: string | null
   status: StockCount['status']
   createdAt: string
+  lineCount?: number
+  counterNames?: string[]
+  differenceLineCount?: number | null
+  differenceValue?: number | null
 }
 export type CountList = {
   counts: Page<CountRow>

@@ -59,7 +59,7 @@ function Queue({
     <section className="operation-work-panel">
       <header>
         <h2>{title}</h2>
-        <Link to={href}>Xem tất cả →</Link>
+        <Link to={href}>Xem tất cả</Link>
       </header>
       <InventoryNotice loading={r.loading} error={r.error} />
       {page && (
@@ -102,7 +102,7 @@ function Queue({
                           row.storeName ??
                           [row.sourceStoreName, row.destStoreName]
                             .filter(Boolean)
-                            .join(' → ')}
+                            .join(' đến ')}
                         <small>
                           {dateTime(
                             row.createdAt ??
@@ -142,7 +142,7 @@ export function InventoryAttention() {
     <section className="operation-work-panel">
       <header>
         <h2>Tồn cần chú ý</h2>
-        <Link to="/inventory">Mở tồn kho →</Link>
+        <Link to="/inventory">Mở tồn kho</Link>
       </header>
       <InventoryNotice
         loading={summary.loading || lots.loading}

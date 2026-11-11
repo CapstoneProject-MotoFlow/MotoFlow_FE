@@ -1,37 +1,32 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
   InventoryNotice,
   InventoryPanel,
   Pagination,
-  WarehouseFilter,
 } from './components'
 import { ExpiryWarningDialog } from './SettingsDialogs'
 import { date, lotLink, money, sourceNames } from './presentation'
 import type { LotDetail, LotList, Page } from './types'
 import './inventory-screens.css'
+const pageSize = 10
+
 function LotCost({ id, storeId }: { id: number; storeId: number }) {
-  const [open, setOpen] = useState(false)
+  const [revision, setRevision] = useState(0)
   const result = useInventoryData<LotDetail>(
     '/inventory/lots/' + id,
     { storeId },
-    0,
-    open,
+    revision,
   )
-  if (!open)
-    return (
-      <button type="button" onClick={() => setOpen(true)}>
-        Xem giá vốn
-      </button>
-    )
   if (result.loading) return <span role="status">Đang tải…</span>
   if (result.error)
     return (
       <span role="alert">
         {result.error}{' '}
-        <button type="button" onClick={() => setOpen(false)}>
+        <button type="button" onClick={() => setRevision((value) => value + 1)}>
           Thử lại
         </button>
       </span>
@@ -49,47 +44,65 @@ export default function LotsPage() {
     p = scope.params
   const [expiry, setExpiry] = useState(false),
     [revision, setRevision] = useState(0),
-    [supplierSearch, setSupplierSearch] = useState('')
+    [lotSearch, setLotSearch] = useState<string | null>(null),
+    [supplierSearch, setSupplierSearch] = useState<string | null>(null)
   const tab = p.get('tab') ?? 'NEAR_EXPIRY',
-    page = Math.max(0, Number(p.get('page')) || 0)
+    page = Math.max(0, Math.floor(Number(p.get('page')) || 0))
   const from = p.get('receivedFrom') ?? '',
     to = p.get('receivedTo') ?? ''
   const invalid = tab === 'DEPLETED' && !!from && !!to && from > to
+  const q = p.get('q') ?? ''
+  const supplierId = p.get('supplierId') ?? ''
+  const filters = {
+    storeId: scope.storeId,
+    tab,
+    supplierId,
+    source: p.get('source') ?? '',
+    receivedFrom: tab === 'DEPLETED' ? from : '',
+    receivedTo: tab === 'DEPLETED' ? to : '',
+  }
   const lots = useInventoryData<LotList>(
     '/inventory/lots',
-    {
-      storeId: scope.storeId,
-      tab,
-      q: p.get('q') ?? '',
-      supplierId: p.get('supplierId') ?? '',
-      source: p.get('source') ?? '',
-      receivedFrom: tab === 'DEPLETED' ? from : '',
-      receivedTo: tab === 'DEPLETED' ? to : '',
-      page,
-      size: 20,
-    },
+    { ...filters, q, page, size: pageSize },
     revision,
     !invalid,
   )
+  const typedLot = lotSearch?.trim() ?? ''
+  const lotQuery = typedLot.replace(/^L-0*(?=\d+$)/i, '')
+  const lotSuggestions = useInventoryData<LotList>(
+    '/inventory/lots',
+    { ...filters, q: lotQuery, page: 0, size: pageSize },
+    revision,
+    !invalid && lotSearch !== null,
+  )
+  const lotOptions = new Map<string, string>()
+  if (typedLot) lotOptions.set(lotQuery, 'Tìm “' + typedLot + '”')
+  else lotOptions.set('', 'Mọi lô hàng')
+  if (lotSearch === null && q) lotOptions.set(q, q)
+  for (const row of lotSuggestions.data?.page.items ?? []) {
+    const id = String(row.lotId)
+    if (!lotOptions.has(id))
+      lotOptions.set(id, 'L-' + id.padStart(4, '0') + ' · ' + row.partName)
+  }
   const suppliers = useInventoryData<
     Page<{ id: number; supplierName: string }>
-  >('/suppliers', { q: supplierSearch, size: 20 }, 0, scope.owner)
+  >(
+    '/suppliers',
+    { q: supplierSearch?.trim(), size: 20 },
+    0,
+    scope.owner && supplierSearch !== null,
+  )
   const selected = useInventoryData<{
     supplier: { id: number; supplierName: string }
-  }>(
-    '/suppliers/' + p.get('supplierId'),
-    {},
-    0,
-    scope.owner && !!p.get('supplierId'),
-  )
+  }>('/suppliers/' + supplierId, {}, 0, scope.owner && !!supplierId)
   const options = [
-    ...(selected.data ? [selected.data.supplier] : []),
+    ...(selected.data && !supplierSearch ? [selected.data.supplier] : []),
     ...(suppliers.data?.items ?? []).filter(
-      (row) => row.id !== selected.data?.supplier.id,
+      (row) => !!supplierSearch || row.id !== selected.data?.supplier.id,
     ),
   ]
   return (
-    <main className="inventory-workspace inventory-screen">
+    <main className="inventory-workspace inventory-screen inventory-lots-screen">
       <InventoryHeader title="Lô hàng" />
       <InventoryPanel
         title={'Lô hàng · ' + scope.warehouse}
@@ -117,59 +130,74 @@ export default function LotsPage() {
           ))}
         </div>
         <div className="stock-filters">
-          <label className="stock-filter stock-search">
+          <div className="stock-filter stock-search">
             <span>Tìm kiếm</span>
-            <input
-              placeholder="Tên phụ tùng, SKU, số lô…"
-              value={p.get('q') ?? ''}
-              onChange={(e) => scope.filter({ q: e.target.value }, true)}
+            <SearchableFilter
+              label="Tìm lô hàng"
+              searchPlaceholder="Tên phụ tùng, SKU, số lô…"
+              value={q}
+              options={Array.from(lotOptions, ([value, label]) => ({
+                value,
+                label,
+              }))}
+              loading={lotSuggestions.loading}
+              onSearch={setLotSearch}
+              onChange={(value) => scope.filter({ q: value })}
             />
-          </label>
-          <WarehouseFilter
-            owner={scope.owner}
-            stores={scope.stores}
-            value={scope.storeId}
-            onChange={(storeId) => scope.filter({ storeId })}
-          />
+          </div>
           {scope.owner && (
             <>
-              <label className="stock-filter">
-                <span>Tìm nhà cung cấp</span>
-                <input
-                  value={supplierSearch}
-                  onChange={(e) => setSupplierSearch(e.target.value)}
+              <div className="stock-filter">
+                <span>Kho</span>
+                <SearchableFilter
+                  label="Kho"
+                  value={scope.storeId}
+                  options={[
+                    { value: '', label: 'Mọi kho' },
+                    ...scope.stores.map((store) => ({
+                      value: String(store.id),
+                      label: store.storeName,
+                    })),
+                  ]}
+                  onChange={(storeId) => scope.filter({ storeId })}
                 />
-              </label>
-              <label className="stock-filter">
+              </div>
+              <div className="stock-filter stock-lot-supplier-filter">
                 <span>Nhà cung cấp</span>
-                <select
-                  value={p.get('supplierId') ?? ''}
-                  onChange={(e) => scope.filter({ supplierId: e.target.value })}
-                >
-                  <option value="">Mọi nhà cung cấp</option>
-                  {options.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.supplierName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <SearchableFilter
+                  label="Nhà cung cấp"
+                  value={supplierId}
+                  options={[
+                    ...(!supplierSearch?.trim()
+                      ? [{ value: '', label: 'Mọi nhà cung cấp' }]
+                      : []),
+                    ...options.map((supplier) => ({
+                      value: String(supplier.id),
+                      label: supplier.supplierName,
+                    })),
+                  ]}
+                  loading={suppliers.loading}
+                  onSearch={setSupplierSearch}
+                  onChange={(value) => scope.filter({ supplierId: value })}
+                />
+              </div>
             </>
           )}
-          <label className="stock-filter">
+          <div className="stock-filter">
             <span>Nguồn lô</span>
-            <select
-              value={p.get('source') ?? ''}
-              onChange={(e) => scope.filter({ source: e.target.value })}
-            >
-              <option value="">Mọi nguồn</option>
-              {['RECEIPT', 'OPENING', 'COUNT_SURPLUS'].map((key) => (
-                <option key={key} value={key}>
-                  {sourceNames[key]}
-                </option>
-              ))}
-            </select>
-          </label>
+            <SearchableFilter
+              label="Nguồn lô"
+              value={filters.source}
+              options={[
+                { value: '', label: 'Mọi nguồn' },
+                ...['RECEIPT', 'OPENING', 'COUNT_SURPLUS'].map((value) => ({
+                  value,
+                  label: sourceNames[value],
+                })),
+              ]}
+              onChange={(value) => scope.filter({ source: value })}
+            />
+          </div>
           {tab === 'DEPLETED' && (
             <>
               <label className="stock-filter">
@@ -202,6 +230,7 @@ export default function LotsPage() {
               ? 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.'
               : (lots.error ??
                 scope.storesError ??
+                lotSuggestions.error ??
                 suppliers.error ??
                 selected.error)
           }
@@ -292,6 +321,7 @@ export default function LotsPage() {
         <Pagination
           total={lots.data?.page.totalItems ?? 0}
           page={page}
+          size={pageSize}
           loading={lots.loading}
           onPage={(next) =>
             scope.setParams((previous) => {

@@ -91,15 +91,21 @@
 .vehicle-search:focus-within {
   outline: 2px solid #4b5eff;
 }
-.vehicle-toolbar select {
+.vehicle-panel:has(.searchable-filter-menu) {
+  overflow: visible;
+}
+.vehicle-toolbar .searchable-filter {
+  width: 160px;
+}
+.vehicle-toolbar .searchable-filter input {
   font: inherit;
   font-size: 14px;
   color: inherit;
   border: 1px solid #ccd5e3;
   border-radius: 7px;
-  padding: 11px 14px;
+  padding: 11px 2rem 11px 14px;
   background: white;
-  min-width: 140px;
+  text-overflow: ellipsis;
 }
 .vehicle-table {
   overflow-x: auto;
@@ -124,10 +130,13 @@
   height: 69px;
 }
 .vehicle-table th:first-child {
-  width: 22%;
+  width: 28%;
 }
-.vehicle-table th:nth-child(3) {
-  width: 18%;
+.vehicle-table th:nth-child(n + 2):nth-child(-n + 4) {
+  width: 16%;
+}
+.vehicle-table th.vehicle-actions {
+  width: 24%;
 }
 .vehicle-name {
   display: flex;
@@ -158,16 +167,14 @@
   width: 18px;
   height: 18px;
 }
-.vehicle-count {
-  text-align: right;
+.vehicle-actions {
+  text-align: center;
   white-space: nowrap;
 }
-.vehicle-actions {
-  text-align: right;
-  white-space: nowrap;
+.vehicle-actions button + button {
+  margin-left: 7px;
 }
 .vehicle-actions button {
-  margin-left: 7px;
   border: 1px solid #d0d8e5;
   background: white;
   border-radius: 6px;

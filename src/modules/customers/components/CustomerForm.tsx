@@ -77,24 +77,6 @@ export default function CustomerForm({
               />
             </label>
             <label>
-              Người liên hệ
-              <input
-                disabled
-                placeholder="Chưa hỗ trợ lưu"
-                title="API chưa có trường người liên hệ"
-              />
-            </label>
-          </div>
-          <label>
-            Địa chỉ
-            <input
-              name="address"
-              maxLength={255}
-              defaultValue={customer?.address || ''}
-            />
-          </label>
-          <div className="customer-edit-row">
-            <label>
               Mã số thuế
               <input
                 name="taxCode"
@@ -106,17 +88,15 @@ export default function CustomerForm({
             </label>
           </div>
           <label>
-            Ghi chú
-            <textarea
-              disabled
-              rows={3}
-              placeholder="Chưa hỗ trợ lưu"
-              title="API chưa có trường ghi chú"
+            Địa chỉ
+            <input
+              name="address"
+              maxLength={255}
+              defaultValue={customer?.address || ''}
             />
           </label>
         </fieldset>
         {error && <p role="alert">{error}</p>}
-        <small>Người liên hệ và ghi chú chưa được hệ thống hỗ trợ lưu.</small>
       </form>
     </FormDialog>
   )

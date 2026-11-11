@@ -46,6 +46,40 @@
 .inventory-screen .stock-filters {
   gap: 10px;
 }
+.inventory-lots-screen .stock-panel:has(.searchable-filter-menu) {
+  overflow: visible;
+}
+.inventory-lots-screen .stock-filter {
+  flex: 0 1 162px;
+}
+.inventory-lots-screen .stock-search {
+  flex: 1 1 240px;
+}
+.inventory-lots-screen .stock-lot-supplier-filter {
+  flex-basis: 210px;
+}
+.inventory-lots-screen .stock-filter .searchable-filter input {
+  padding-inline-end: 2rem;
+}
+.inventory-workspace.inventory-lots-screen
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-table
+  > :is(thead, tbody)
+  > tr
+  > :is(th, td):first-child:not([colspan]) {
+  width: 1%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.inventory-screen .stock-movement-filters {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+.inventory-screen .stock-movement-filters .stock-filters {
+  padding: 0;
+}
 .inventory-screen .stock-search {
   flex: 1 1 220px;
 }

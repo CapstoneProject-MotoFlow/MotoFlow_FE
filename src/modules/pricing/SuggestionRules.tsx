@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
-import { inventoryError } from '../inventory/api'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
+import { inventoryError, useInventoryData } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
-import { useChoicePages } from '../sales/useSalesList'
+import type { Page } from '../inventory/types'
 import {
   date,
   money,
   today,
   percentValid,
-  roundingNames,
   flattenCategories,
   type Config,
   type Category,
   type Preview,
-  type RoundingRule,
 } from './model'
 
-type ProductRate = { key: number; id: number; name: string; rate: string }
+type ProductOption = { id: number; sku: string; partName: string }
+type ProductRate = ProductOption & { rate: string }
 const vehicleNames: Record<string, string> = {
   MOTORCYCLE: 'Xe máy',
   BICYCLE: 'Xe đạp',
@@ -53,31 +53,42 @@ export default function SuggestionRules({
     ),
     [products, setProducts] = useState<ProductRate[]>(
       () =>
-        config?.products.map((p, i) => ({
-          key: i,
+        config?.products.map((p) => ({
           id: p.productId,
-          name: p.partName + ' · ' + p.sku,
+          sku: p.sku,
+          partName: p.partName,
           rate: String(p.markupRate),
         })) ?? [],
     ),
-    [rounding, setRounding] = useState(config?.roundingRule ?? 'UP_1000'),
-    [effective, setEffective] = useState(
-      config && config.effectiveFrom.slice(0, 10) > today()
-        ? config.effectiveFrom.slice(0, 10)
-        : today(),
-    ),
-    [search, setSearch] = useState(''),
+    [search, setSearch] = useState<string | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    lock = useRef(false),
-    counter = useRef(10000)
+    lock = useRef(false)
+  const catalog = useInventoryData<Page<ProductOption>>(
+    '/products',
+    { q: search?.trim(), size: 10 },
+    0,
+    search !== null && !busy,
+  )
+  const productOptions = catalog.data?.items ?? []
+  function chooseProduct(value: string) {
+    const product = productOptions.find((part) => String(part.id) === value)
+    if (!product) return
+    setProducts((rows) =>
+      rows.some((row) => row.id === product.id)
+        ? rows
+        : [...rows, { ...product, rate: '' }],
+    )
+    requestAnimationFrame(() =>
+      document.getElementById('markup-rate-' + product.id)?.focus(),
+    )
+  }
   const valid =
     (Object.values(rates).some((v) => v !== '') || products.length > 0) &&
     Object.values(rates).every((v) => v === '' || percentValid(v, 999.99)) &&
-    new Set(products.map((p) => p.id)).size === products.length &&
-    products.every((p) => p.id > 0 && percentValid(p.rate, 999.99))
+    products.every((p) => percentValid(p.rate, 999.99))
   const payload = {
-      roundingRule: rounding,
+      roundingRule: 'NONE',
       categories: Object.entries(rates)
         .filter(([, v]) => v !== '')
         .map(([id, v]) => ({ categoryId: Number(id), markupRate: Number(v) })),
@@ -115,14 +126,14 @@ export default function SuggestionRules({
   }, [key, valid])
   const shown = valid && preview?.key === key ? preview : undefined
   async function save() {
-    if (!valid || !effective || effective < today() || lock.current) return
+    if (!valid || lock.current) return
     lock.current = true
     setBusy(true)
     setError('')
     try {
       await axiosClient.post('/pricing/markup-rules', {
         ...payload,
-        effectiveDate: effective,
+        effectiveDate: today(),
       })
       onSaved()
     } catch (e) {
@@ -202,35 +213,31 @@ export default function SuggestionRules({
             <h2>Riêng từng phụ tùng</h2>
           </div>
           <div className="pricing-product-filter">
-            <input
-              placeholder="Tìm phụ tùng có tỷ lệ riêng"
-              aria-label="Tìm phụ tùng có tỷ lệ riêng"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+            <SearchableFilter
+              label="Tìm và thêm phụ tùng"
+              searchPlaceholder="Tìm theo tên phụ tùng hoặc SKU…"
+              value=""
+              options={productOptions.map((part) => ({
+                value: String(part.id),
+                label: part.partName + ' · ' + part.sku,
+              }))}
+              disabled={busy}
+              loading={catalog.loading}
+              onSearch={setSearch}
+              onChange={chooseProduct}
             />
+            {catalog.error && <InventoryNotice error={catalog.error} />}
           </div>
           {products.map((p) => (
-            <div
-              key={p.key}
-              className="pricing-override-row"
-              hidden={
-                !!search &&
-                !p.name
-                  .toLocaleLowerCase('vi')
-                  .includes(search.toLocaleLowerCase('vi'))
-              }
-            >
-              <ProductChoice
-                row={p}
-                onChange={(id, name) =>
-                  setProducts((rows) =>
-                    rows.map((x) => (x.key === p.key ? { ...x, id, name } : x)),
-                  )
-                }
-              />
+            <div key={p.id} className="pricing-override-row">
+              <div className="pricing-override-part">
+                <span>{p.partName}</span>
+                <small>{p.sku}</small>
+              </div>
               <div className="pricing-inline-percent">
                 <input
-                  aria-label={'Tỷ lệ riêng ' + (p.name || 'phụ tùng mới')}
+                  id={'markup-rate-' + p.id}
+                  aria-label={'Tỷ lệ riêng ' + p.partName}
                   required
                   type="number"
                   min="0"
@@ -240,7 +247,7 @@ export default function SuggestionRules({
                   onChange={(e) =>
                     setProducts((rows) =>
                       rows.map((x) =>
-                        x.key === p.key ? { ...x, rate: e.target.value } : x,
+                        x.id === p.id ? { ...x, rate: e.target.value } : x,
                       ),
                     )
                   }
@@ -250,95 +257,16 @@ export default function SuggestionRules({
               <button
                 type="button"
                 onClick={() =>
-                  setProducts((rows) => rows.filter((x) => x.key !== p.key))
+                  setProducts((rows) => rows.filter((x) => x.id !== p.id))
                 }
               >
                 Bỏ
               </button>
             </div>
           ))}
-          <div className="pricing-add-product">
-            <button
-              type="button"
-              onClick={() => {
-                setSearch('')
-                setProducts((rows) => [
-                  ...rows,
-                  { key: ++counter.current, id: 0, name: '', rate: '' },
-                ])
-              }}
-            >
-              ＋ Thêm phụ tùng
-            </button>
-          </div>
         </section>
       </fieldset>
       <div className="pricing-suggestion-right">
-        <section className="pricing-card">
-          <div className="pricing-heading">
-            <h2>Làm tròn và ngày áp dụng</h2>
-          </div>
-          <div className="pricing-rounding-body">
-            <div className="pricing-grid">
-              <label>
-                Làm tròn lên tới
-                <select
-                  disabled={busy}
-                  value={rounding}
-                  onChange={(e) => setRounding(e.target.value as RoundingRule)}
-                >
-                  {Object.entries(roundingNames).map(([v, n]) => (
-                    <option key={v} value={v}>
-                      {n.replace('Làm tròn lên ', '')}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Áp dụng từ *
-                <input
-                  disabled={busy}
-                  required
-                  type="date"
-                  min={today()}
-                  value={effective}
-                  onChange={(e) => setEffective(e.target.value)}
-                />
-              </label>
-            </div>
-            <button
-              className="pricing-primary"
-              disabled={!valid || !effective || effective < today() || busy}
-            >
-              {busy ? 'Đang lưu…' : 'Lưu quy tắc'}
-            </button>
-            {error && (
-              <p role="alert" className="pricing-negative">
-                {error}
-              </p>
-            )}
-            {!valid && (
-              <p className="pricing-negative">
-                Nhập tỷ lệ 0–999,99% và chọn phụ tùng không trùng nhau.
-              </p>
-            )}
-            {scheduled && effective < scheduled.effectiveFrom.slice(0, 10) && (
-              <p className="pricing-notice">
-                Bản đã hẹn từ {date(scheduled.effectiveFrom)} vẫn sẽ áp dụng vào
-                ngày đó, thay thế cấu hình bạn đang lưu.
-              </p>
-            )}
-            <p className="pricing-subtle">
-              Lưu thay thế toàn bộ cấu hình từ ngày áp dụng. Để trống tỷ lệ nhóm
-              sẽ bỏ mức riêng của nhóm đó. Giá bán không tự thay đổi.
-            </p>
-            {config && (
-              <small className="pricing-subtle">
-                Cấu hình từ {date(config.effectiveFrom)} · {config.setByName}
-              </small>
-            )}
-          </div>
-        </section>
         <section className="pricing-card">
           <div className="pricing-heading">
             <h2>Xem trước giá gợi ý</h2>
@@ -412,63 +340,33 @@ export default function SuggestionRules({
             </div>
           )}
         </section>
+        <section className="pricing-card">
+          <div className="pricing-rule-save">
+            <button className="pricing-primary" disabled={!valid || busy}>
+              {busy ? 'Đang lưu…' : 'Lưu quy tắc'}
+            </button>
+            {error && (
+              <p role="alert" className="pricing-negative">
+                {error}
+              </p>
+            )}
+            {!valid && (
+              <p className="pricing-negative">
+                Nhập tỷ lệ cộng thêm từ 0 đến 999,99%.
+              </p>
+            )}
+            {scheduled && (
+              <p className="pricing-notice">
+                Bản đã hẹn từ {date(scheduled.effectiveFrom)} vẫn sẽ áp dụng vào
+                ngày đó, thay thế cấu hình bạn đang lưu.
+              </p>
+            )}
+            <p className="pricing-subtle">
+              Quy tắc mới áp dụng ngay cho giá gợi ý.
+            </p>
+          </div>
+        </section>
       </div>
     </form>
-  )
-}
-function ProductChoice({
-  row,
-  onChange,
-}: {
-  row: ProductRate
-  onChange: (id: number, name: string) => void
-}) {
-  const [open, setOpen] = useState(false),
-    [q, setQ] = useState(''),
-    r = useChoicePages<{ id: number; sku: string; partName: string }>(
-      '/products',
-      q,
-      open,
-    )
-  return (
-    <div className="pricing-product-choice">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        {row.name || 'Chọn phụ tùng'} ▾
-      </button>
-      {open && (
-        <div className="pricing-options">
-          <input
-            aria-label="Tìm phụ tùng theo SKU hoặc tên"
-            placeholder="SKU hoặc tên phụ tùng"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <InventoryNotice loading={r.loading} error={r.error} />
-          {r.data?.items.map((p) => (
-            <button
-              type="button"
-              key={p.id}
-              onClick={() => {
-                onChange(p.id, p.partName + ' · ' + p.sku)
-                setOpen(false)
-              }}
-            >
-              {p.partName}
-              <small>{p.sku}</small>
-            </button>
-          ))}
-          {r.data && !r.data.items.length && <p>Không có phụ tùng phù hợp.</p>}
-          {r.hasMore && (
-            <button type="button" disabled={r.loading} onClick={r.loadMore}>
-              Tải thêm
-            </button>
-          )}
-        </div>
-      )}
-    </div>
   )
 }

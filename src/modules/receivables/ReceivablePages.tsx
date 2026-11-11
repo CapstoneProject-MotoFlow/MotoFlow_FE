@@ -70,7 +70,7 @@ export function ReceivableListPage() {
           <span className="rv-stat-icon rv-icon-error">▦</span>
           <span>Quá hạn</span>
           <strong>—</strong>
-          <small>Xem khách có nợ quá hạn →</small>
+          <small>Xem khách có nợ quá hạn</small>
         </button>
         <article>
           <span className="rv-stat-icon rv-icon-warning">◷</span>

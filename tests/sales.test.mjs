@@ -141,37 +141,16 @@ test('sales list renders the BE total without inferring zero unpaid balance from
     appType: 'custom',
   })
   try {
-    const { SalesListAmounts } = await server.ssrLoadModule(
+    const { SalesListTotal } = await server.ssrLoadModule(
       '/src/modules/sales/SalesPages.tsx',
     )
     const html = renderToStaticMarkup(
-      createElement(
-        MemoryRouter,
-        null,
-        createElement(
-          'table',
-          null,
-          createElement(
-            'tbody',
-            null,
-            createElement(
-              'tr',
-              null,
-              createElement(SalesListAmounts, { id: 99, total: 420000 }),
-            ),
-          ),
-        ),
-      ),
+      createElement(SalesListTotal, { total: 420000 }),
     )
     assert.match(html, /420.000/)
-    assert.match(html, /Xem thanh toán/)
-    assert.match(html, /sales-orders\/99/)
+    assert.doesNotMatch(html, /Xem thanh toán/)
     const missing = renderToStaticMarkup(
-      createElement(
-        MemoryRouter,
-        null,
-        createElement(SalesListAmounts, { id: 99, total: null }),
-      ),
+      createElement(SalesListTotal, { total: null }),
     )
     assert.match(missing, /Chưa có dữ liệu/)
     assert.doesNotMatch(missing, />0/)

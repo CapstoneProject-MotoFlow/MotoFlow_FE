@@ -119,7 +119,7 @@ function StaffRow({ row }: { row: TransferRow }) {
           <span className="tf-badge">{states[row.status] ?? row.status}</span>
         </td>
         <td>
-          <Link to={'/transfer-orders/' + row.id}>Xem chi tiết →</Link>
+          <Link to={'/transfer-orders/' + row.id}>Xem chi tiết</Link>
         </td>
       </tr>
       {expanded && (

@@ -27,7 +27,6 @@ export default function OpeningDebtPicker({
           }
         : undefined,
     ),
-    [store, setStore] = useState(scope.storeId),
     [amount, setAmount] = useState(''),
     [due, setDue] = useState(''),
     [note, setNote] = useState(''),
@@ -37,16 +36,16 @@ export default function OpeningDebtPicker({
   const [showChoices, setShowChoices] = useState(false)
   const choices = useChoicePages<Customer>('/customers', query),
     lock = useRef(false)
+  const warehouse = scope.storeId
+    ? scope.stores.find((store) => String(store.id) === scope.storeId)
+    : scope.stores.find((store) => store.central)
   const late = due && due < today(),
     valid =
       customer &&
-      store &&
       Number.isSafeInteger(Number(amount)) &&
       Number(amount) > 0 &&
       Number(amount) <= 100000000000 &&
-      due &&
-      note.trim() &&
-      files.length > 0
+      due
   async function save() {
     if (lock.current || !valid) return
     lock.current = true
@@ -56,10 +55,10 @@ export default function OpeningDebtPicker({
       const evidence = []
       for (const file of files) evidence.push(await uploadAttachment(file))
       await axiosClient.post(`/customers/${customer!.id}/opening-debts`, {
-        storeId: Number(store),
+        storeId: scope.storeId ? Number(scope.storeId) : undefined,
         amount: Number(amount),
         dueDate: due,
-        note: note.trim(),
+        note: note.trim() || undefined,
         evidence,
       })
       onSaved()
@@ -148,23 +147,6 @@ export default function OpeningDebtPicker({
             )}
           </label>
           <label>
-            Cửa hàng ghi nợ <span>*</span>
-            <select
-              required
-              value={store}
-              onChange={(e) => setStore(e.target.value)}
-            >
-              <option value="">Chọn cửa hàng</option>
-              {scope.stores
-                .filter((s) => s.status === 'ACTIVE')
-                .map((s) => (
-                  <option value={s.id} key={s.id}>
-                    {s.storeName}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label>
             Số tiền nợ <span>*</span>
             <div className="rv-money-input">
               <input
@@ -175,11 +157,6 @@ export default function OpeningDebtPicker({
               />
               <span>đ</span>
             </div>
-          </label>
-          <label>
-            Ngày ghi nợ
-            <input type="date" value={today()} readOnly />
-            <small>Hệ thống ghi nhận ngày hiện tại.</small>
           </label>
           <label>
             Hạn trả <span>*</span>
@@ -196,9 +173,7 @@ export default function OpeningDebtPicker({
             )}
           </label>
           <div className="rv-full rv-evidence">
-            <label htmlFor="opening-files">
-              Chứng cứ <span>*</span>
-            </label>
+            <label htmlFor="opening-files">Chứng cứ</label>
             {files.map((file, index) => (
               <div className="rv-file" key={index}>
                 <span className="rv-file-icon">▧</span>
@@ -233,9 +208,8 @@ export default function OpeningDebtPicker({
             <small>JPG, PNG, WebP hoặc PDF, tối đa 10 MB/tệp.</small>
           </div>
           <label className="rv-full">
-            Ghi chú <span>*</span>
+            Ghi chú
             <textarea
-              required
               rows={2}
               maxLength={500}
               value={note}
@@ -243,11 +217,11 @@ export default function OpeningDebtPicker({
               placeholder="Diễn giải khoản nợ và nguồn chứng từ"
             />
           </label>
-          {customer && amount && store && (
+          {customer && amount && (
             <p className="rv-opening-recap rv-full">
               Sẽ ghi nợ đầu kỳ <strong>{money.format(Number(amount))}</strong>{' '}
-              cho {customer.customerName} tại{' '}
-              {scope.stores.find((s) => String(s.id) === store)?.storeName}
+              cho {customer.customerName}
+              {warehouse && ' tại ' + warehouse.storeName}
               {due && (
                 <>
                   , hạn trả{' '}

@@ -79,7 +79,7 @@ export default function InventoryMovementsPage() {
   return (
     <main className="inventory-workspace inventory-screen">
       <InventoryHeader title="Lịch sử xuất nhập" />
-      <section className="stock-panel">
+      <section className="stock-panel stock-movement-filters">
         <div className="stock-filters">
           <WarehouseFilter
             owner={scope.owner}
@@ -111,6 +111,8 @@ export default function InventoryMovementsPage() {
               ))}
             </select>
           </label>
+        </div>
+        <div className="stock-filters">
           <label className="stock-filter">
             <span>Loại biến động</span>
             <select

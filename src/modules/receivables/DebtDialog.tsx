@@ -15,7 +15,14 @@ type Props = {
   onClose: () => void
   onSaved: () => void
 }
-function CreditDialog({ action, data, onClose, onSaved }: Props) {
+export function CreditDialog({
+  action,
+  data,
+  onClose,
+  onSaved,
+}: Pick<Props, 'action' | 'onClose' | 'onSaved'> & {
+  data: Pick<DebtDetail, 'customerId' | 'totalDebt'>
+}) {
   const [reason, setReason] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('')

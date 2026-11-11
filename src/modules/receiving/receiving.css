@@ -96,6 +96,28 @@
   font-size: 0.85rem;
 }
 
+.receiving-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: #536078;
+  font-size: 0.85rem;
+}
+
+.receiving-breadcrumb a {
+  color: #3646ed;
+  text-decoration: none;
+}
+
+.receiving-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.receiving-breadcrumb [aria-hidden='true'] {
+  color: #76839a;
+}
+
 .receiving-panel-head {
   padding: 1rem 1.25rem;
 }
@@ -107,6 +129,22 @@
 .receiving-page button:disabled {
   opacity: 0.55;
   cursor: default;
+}
+
+.receiving-back-button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #344054;
+  background: white;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.receiving-back-button:hover {
+  color: #3646ed;
+  background: #eef2ff;
 }
 
 .receiving-filters {
@@ -144,6 +182,18 @@
 
 .receiving-filter-row input[aria-label] {
   flex: 1 1 15rem;
+}
+
+.receiving-filter-row .searchable-filter {
+  flex: 0 1 14rem;
+}
+
+.receiving-filter-row .searchable-filter input[role='combobox'] {
+  padding-inline-end: 2rem;
+}
+
+.receiving-panel:has(.searchable-filter-menu) {
+  overflow: visible;
 }
 
 .receiving-filter-row label {
@@ -224,6 +274,16 @@
   margin-right: 0.65rem;
 }
 
+.receiving-panel .receiving-timeline {
+  padding-block: 1rem;
+}
+
+.receiving-timeline small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #536078;
+}
+
 @media (max-width: 850px) {
   .receiving-split {
     grid-template-columns: 1fr;
@@ -290,6 +350,38 @@
   border-radius: 0.65rem;
   background: #f8faff;
   color: #465574;
+}
+
+.receiving-document-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.receiving-document-image {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid #dce2eb;
+  border-radius: 0.65rem;
+  background: #f8faff;
+}
+
+.receiving-document-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 28rem;
+  object-fit: contain;
+}
+
+.receiving-document-image figcaption {
+  margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+  color: #536078;
+  font-size: 0.85rem;
 }
 
 .receiving-panel .receiving-empty-cell {
@@ -449,8 +541,14 @@
   text-decoration: none;
 }
 
-.receiving-bm-list td:first-child a:hover {
+.receiving-bm-list td:first-child a:not(.receiving-request-link):hover {
   text-decoration: underline;
+}
+
+.receiving-page .receiving-request-link {
+  color: #3646ed;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .receiving-bm-list :is(th, td):nth-child(5) {

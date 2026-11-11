@@ -144,8 +144,6 @@ export default function SuppliersPage() {
                   <th>Nhà cung cấp</th>
                   <th>Người liên hệ</th>
                   <th>Điện thoại</th>
-                  <th>Phiếu đang mở</th>
-                  <th>Giá trị chưa nhận</th>
                   {status !== 'ACTIVE' && <th>Trạng thái</th>}
                   <th>Thao tác</th>
                 </tr>
@@ -164,8 +162,6 @@ export default function SuppliersPage() {
                     </td>
                     <td>{s.contactName || '—'}</td>
                     <td>{s.phone || '—'}</td>
-                    <td>—</td>
-                    <td>—</td>
                     {status !== 'ACTIVE' && (
                       <td>
                         <span

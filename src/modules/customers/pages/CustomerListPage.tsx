@@ -10,6 +10,7 @@ import Icon from '../../../shared/ui/Icon'
 import CustomerForm from '../components/CustomerForm'
 import type { Customer } from '../types'
 import { apiMessage } from '../../suppliers/supplierService'
+import { CreditDialog } from '../../receivables/DebtDialog'
 import '../customer-list.css'
 type Row = Customer & { totalDebt: number; debtAtOwnStore: number | null }
 const credit: Record<string, string> = {
@@ -39,6 +40,7 @@ export default function CustomerListPage({
   const [revision, setRevision] = useState(0)
   const [page, setPage] = useState(0)
   const [editing, setEditing] = useState<Customer | null | undefined>()
+  const [creditCustomer, setCreditCustomer] = useState<Row>()
   const close = useCallback(() => setEditing(undefined), [])
   useEffect(() => {
     let active = true
@@ -193,7 +195,19 @@ export default function CustomerListPage({
                             : debtOf(row)!.toLocaleString('vi-VN') + ' ₫'}
                       </td>
                       <td className="branch-customer-actions">
-                        <button onClick={() => setEditing(row)}>Sửa</button>
+                        <div>
+                          {chain && (
+                            <button
+                              type="button"
+                              onClick={() => setCreditCustomer(row)}
+                            >
+                              {row.creditStatus === 'ELIGIBLE'
+                                ? 'Thu hồi quyền mua chịu'
+                                : 'Cấp quyền mua chịu'}
+                            </button>
+                          )}
+                          <button onClick={() => setEditing(row)}>Sửa</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -227,6 +241,23 @@ export default function CustomerListPage({
           Ngày mua gần nhất và số nợ quá hạn chưa được API cung cấp.
         </p>
       </section>
+      {creditCustomer && (
+        <CreditDialog
+          action={
+            creditCustomer.creditStatus === 'ELIGIBLE' ? 'revoke' : 'grant'
+          }
+          data={{
+            customerId: creditCustomer.id,
+            totalDebt: creditCustomer.totalDebt,
+          }}
+          onClose={() => setCreditCustomer(undefined)}
+          onSaved={() => {
+            setCreditCustomer(undefined)
+            if (creditOnly) setPage(0)
+            setRevision((x) => x + 1)
+          }}
+        />
+      )}
       {editing !== undefined && (
         <CustomerForm
           customer={editing || undefined}

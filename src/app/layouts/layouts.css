@@ -139,6 +139,7 @@
   display: none;
 }
 .dashboard-main {
+  --dashboard-page-gutter: 56px;
   min-height: 100vh;
   margin-left: 234px;
   transition: margin-left 0.2s ease;
@@ -364,6 +365,26 @@
   width: min(100% - 56px, 1240px);
   margin: 0 auto;
   padding: 20px 0 40px;
+}
+.admin-dashboard
+  > .dashboard-main
+  > main:is(.dashboard-content, .inventory-workspace, .notifications-page) {
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--dashboard-page-gutter));
+  min-width: 0;
+  max-width: none;
+  margin-inline: auto;
+  padding-inline: 0;
+}
+@media (max-width: 1100px) {
+  .dashboard-main {
+    --dashboard-page-gutter: 20px;
+  }
+}
+@media (max-width: 700px) {
+  .dashboard-main {
+    --dashboard-page-gutter: 12px;
+  }
 }
 @media (max-width: 760px) {
   .admin-sidebar {

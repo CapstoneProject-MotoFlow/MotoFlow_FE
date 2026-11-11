@@ -88,7 +88,7 @@ export default function TransferDetailPage() {
         <>
           <section>
             <h2>
-              {d.sourceStoreName} → {d.destStoreName}
+              {d.sourceStoreName} đến {d.destStoreName}
             </h2>
             <div className="tf-detail-meta">
               <div>

@@ -117,7 +117,7 @@ export function useBranchWork(coordinator: boolean) {
       code: 'DC-' + String(t.id).padStart(4, '0'),
       kind: 'Điều chuyển',
       title: 'Chuẩn bị hàng, chờ xuất',
-      description: t.sourceStoreName + ' → ' + t.destStoreName,
+      description: t.sourceStoreName + ' đến ' + t.destStoreName,
       at: t.createdAt,
       href: '/transfer-orders/' + t.id,
       action: 'Xem xuất hàng',

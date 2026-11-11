@@ -1,10 +1,6 @@
+import ProductFacetFilters from '../components/ProductFacetFilters'
 import ProductRowActions from '../components/ProductRowActions'
-import BarcodeScan from '../../operations/BarcodeScan'
-import {
-  categoryOptions,
-  visibleCategories,
-  type Category,
-} from '../api/searchProducts'
+import { categoryOptions, type Category } from '../api/searchProducts'
 import { searchProducts } from '../api/searchProducts'
 /**
  * File: modules/catalog/pages/PartsSearchPage.tsx
@@ -14,7 +10,7 @@ import { searchProducts } from '../api/searchProducts'
 import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import Icon from '../../../shared/ui/Icon'
@@ -24,7 +20,6 @@ type Model = { id: number; manufacturer: string; modelName: string }
 /** PartsSearchPage: Tìm phụ tùng cho BM/Staff; lọc loại xe, nhóm, dòng xe, thương hiệu và hàng còn tồn; mở chi tiết; hiện nút tạo nếu được phép. */
 export default function PartsSearchPage() {
   const { user } = useAuth()
-  const navigate = useNavigate()
   const canCreate = canEditCatalog(user)
   const base =
     user?.role === 'STAFF' ? '/staff/products' : '/branch-manager/products'
@@ -159,35 +154,9 @@ export default function PartsSearchPage() {
               </Link>
             )}
           </div>
-          <div className="bm-products-barcode">
-            <BarcodeScan
-              allowInactive
-              onFound={(part) => navigate(`${base}/${part.productId}`)}
-            />
-          </div>
           <div className="bm-products-search">
             <label className="bm-product-query">
               <Icon name="search" />
-              <datalist id="vehicle-options">
-                {['Xe máy', 'Xe đạp', 'Xe máy điện', 'Xe đạp điện'].map(
-                  (label) => (
-                    <option key={label} value={label} />
-                  ),
-                )}
-              </datalist>
-              <datalist id="category-options">
-                {visibleCategories(categories, vehicleText).map((category) => (
-                  <option key={category.id} value={category.label} />
-                ))}
-              </datalist>
-              <datalist id="model-options">
-                {models.map((model) => (
-                  <option
-                    key={model.id}
-                    value={model.manufacturer + ' ' + model.modelName}
-                  />
-                ))}
-              </datalist>
               <input
                 type="search"
                 aria-label="Tìm phụ tùng"
@@ -218,37 +187,23 @@ export default function PartsSearchPage() {
           </div>
           {expanded && (
             <div id="bm-product-filters" className="bm-product-filters">
-              <input
-                aria-label="Tìm loại xe"
-                className="text-search-filter"
-                list="vehicle-options"
-                placeholder="Loại xe"
-                value={vehicleText}
-                onChange={(event) => {
-                  setVehicleText(event.target.value)
+              <ProductFacetFilters
+                categories={categories}
+                models={models}
+                vehicle={vehicleText}
+                category={categoryText}
+                model={modelText}
+                onVehicle={(value) => {
+                  setVehicleText(value)
                   setCategoryText('')
                   setPage(0)
                 }}
-              />
-              <input
-                aria-label="Tìm nhóm phụ tùng"
-                className="text-search-filter"
-                list="category-options"
-                placeholder="Nhóm phụ tùng"
-                value={categoryText}
-                onChange={(event) => {
-                  setCategoryText(event.target.value)
+                onCategory={(value) => {
+                  setCategoryText(value)
                   setPage(0)
                 }}
-              />
-              <input
-                aria-label="Tìm dòng xe"
-                className="text-search-filter"
-                list="model-options"
-                placeholder="Dòng xe"
-                value={modelText}
-                onChange={(event) => {
-                  setModelText(event.target.value)
+                onModel={(value) => {
+                  setModelText(value)
                   setPage(0)
                 }}
               />
