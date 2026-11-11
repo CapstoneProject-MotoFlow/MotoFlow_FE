@@ -1,11 +1,12 @@
-import { useCoordinationAccess } from './useCoordinationAccess'
+import PageBackLink from '../../shared/ui/PageBackLink'
+import { canCoordinateTransfers } from '../../shared/utils/roles'
 import ManagerTransferListPage from './ManagerTransferListPage'
 import StaffTransferListPage from './StaffTransferListPage'
 import ReplenishmentPurchaseDialog from './ReplenishmentPurchaseDialog'
 import ReplenishmentListPage from './ReplenishmentListPage'
 import TransferAction from './TransferAction'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
@@ -18,7 +19,6 @@ import {
 } from './transferRules'
 
 export function ReplenishmentDetailPage() {
-  const navigate = useNavigate()
   const [revision, setRevision] = useState(0)
   const [purchase, setPurchase] = useState(false)
   const { id } = useParams()
@@ -29,7 +29,7 @@ export function ReplenishmentDetailPage() {
     revision,
     !!id && /^\d+$/.test(id),
   )
-  const canCoordinate = useCoordinationAccess(data?.lines[0]?.productId)
+  const canCoordinate = canCoordinateTransfers(scope.user)
   const open = data?.status !== 'CLOSED'
   const hasUnplanned = data?.lines.some((line) => unplannedQuantity(line) > 0)
   const hasPurchaseLines = data?.lines.some((line) => line.toPurchaseQty > 0)
@@ -53,13 +53,7 @@ export function ReplenishmentDetailPage() {
 
   return (
     <main className="dashboard-content tf-page tf-replenishment-detail">
-      <button
-        type="button"
-        className="tf-back-button"
-        onClick={() => navigate('/replenishment-requests')}
-      >
-        <span aria-hidden="true">←</span> Quay lại
-      </button>
+      <PageBackLink to="/replenishment-requests" />
       <header>
         <h1>Yêu cầu bổ sung YBS-{String(id).padStart(4, '0')}</h1>
         {open && canCoordinate && hasUnplanned && (

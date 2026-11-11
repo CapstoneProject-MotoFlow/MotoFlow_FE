@@ -74,17 +74,6 @@
   background: white;
   color: #344054;
 }
-.tf-page .tf-back-button {
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-}
-.tf-page .tf-back-button:hover {
-  color: #3646ed;
-  background: #eef2ff;
-}
 .tf-page .tf-primary {
   display: inline-block;
   background: #465fff;
@@ -253,21 +242,6 @@
 .tf-list-search > select {
   min-width: 170px;
 }
-.tf-list-search details {
-  font-size: 13px;
-  color: #475467;
-}
-.tf-list-search details summary {
-  cursor: pointer;
-}
-.tf-list-search details[open] {
-  display: flex;
-}
-.tf-list-search details label {
-  display: inline-grid;
-  margin-right: 8px;
-  gap: 4px;
-}
 .tf-repl-list .tf-table th {
   font-size: 12px;
   padding: 12px 16px;
@@ -337,13 +311,19 @@
 .tf-purchase-fields {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
+  align-items: start;
   gap: 18px;
 }
-.tf-purchase-fields label {
+.tf-purchase-fields label,
+.tf-purchase-supplier {
   display: grid;
   gap: 8px;
+  min-width: 0;
   font-size: 14px;
   color: #344054;
+}
+.tf-purchase-supplier input[role='combobox'] {
+  padding-inline-end: 2rem;
 }
 .tf-purchase-fields input,
 .tf-purchase-fields select,
@@ -368,10 +348,39 @@
   width: 150px;
   text-align: right;
 }
+.tf-purchase-dialog .tf-table td input[type='number'] {
+  width: 6rem;
+}
 .tf-purchase-dialog > footer > span {
   margin-right: auto;
   font-size: 14px;
   color: #344054;
+}
+.tf-purchase-copy-text {
+  padding: 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font: inherit;
+  line-height: 1.55;
+  resize: vertical;
+}
+.tf-purchase-copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.tf-purchase-copy-button {
+  padding: 10px 16px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+}
+.tf-purchase-copy-button:hover:not(:disabled) {
+  background: #eef2ff;
 }
 .tf-purchase-note {
   font-size: 13px;
@@ -608,11 +617,7 @@
   font-size: 12px;
 }
 .tf-empty-lots {
-  margin-top: -24px;
-  background: white;
-  border: 1px solid #e4e7ec;
-  border-top: 0;
-  border-radius: 0 0 16px 16px;
+  margin: 0;
   font-size: 14px;
 }
 @media (max-width: 750px) {
@@ -636,6 +641,16 @@
 .tf-preparation-notice p {
   margin: 6px 0 0;
 }
+.tf-success-notice {
+  margin: 16px 20px;
+  padding: 12px 16px;
+  border: 1px solid #abefc6;
+  border-radius: 10px;
+  background: #ecfdf3;
+  color: #067647;
+  font-size: 14px;
+  font-weight: 500;
+}
 .tf-validation-hint {
   font-size: 13px;
   color: #b54708;
@@ -657,6 +672,25 @@
 .tf-staff-list h2 {
   font-size: 16px;
 }
+.tf-staff-list .tf-table table {
+  min-width: 740px;
+  table-layout: fixed;
+}
+.tf-staff-order-col {
+  width: 11%;
+}
+.tf-staff-store-col {
+  width: 18%;
+}
+.tf-staff-actions-col {
+  width: 23%;
+}
+.tf-staff-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
 .tf-staff-list .tf-table td,
 .tf-staff-list .tf-table th {
   font-size: 13px;
@@ -665,7 +699,7 @@
 .tf-staff-list .tf-table td {
   white-space: normal;
 }
-.tf-staff-list .tf-table td:first-child {
+.tf-staff-list .tf-table td:first-child:not(:only-child) {
   white-space: nowrap;
 }
 .tf-staff-list .tf-row-action {
@@ -677,9 +711,6 @@
 @media (max-width: 800px) {
   .tf-staff-list > header nav {
     display: none;
-  }
-  .tf-staff-list .tf-table table {
-    min-width: 1000px;
   }
 }
 .tf-manager-list > header h1 {
@@ -815,6 +846,54 @@
   background: #fff;
   color: #344054;
 }
+.tf-page .tf-detail-actions > .tf-primary {
+  background: #4b5eff;
+  border-color: #4b5eff;
+  color: #fff;
+  font-weight: 600;
+}
+.tf-receipts-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px 20px;
+}
+.tf-page .tf-receipt-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(160px, auto);
+  align-items: center;
+  gap: 12px 16px;
+  min-height: 58px;
+  padding: 12px 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #f9fafb;
+  color: #344054;
+  text-decoration: none;
+}
+.tf-page a.tf-receipt-card:hover {
+  border-color: #b8c3ff;
+  background: #f3f5ff;
+}
+.tf-receipt-card-title {
+  color: #243b80;
+  font-weight: 600;
+}
+.tf-receipt-status {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3646ed;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tf-receipt-card-date {
+  color: #667085;
+  font-size: 13px;
+  text-align: right;
+  white-space: nowrap;
+}
 .tf-page .tf-detail-actions > a.tf-row-action {
   background: #465fff;
   border-color: #465fff;
@@ -835,14 +914,17 @@
     white-space: normal;
     text-align: center;
   }
+  .tf-page .tf-receipt-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .tf-receipt-card-date {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
 }
 .tf-coordinate > header h1 {
   font-size: 22px;
   margin: 0;
-}
-.tf-coordinate nav {
-  font-size: 13px;
-  color: #667085;
 }
 .tf-coordinate fieldset {
   border: 0;
@@ -960,9 +1042,6 @@
   background: #ecf3ff;
   color: #3641f5;
   font-size: 11px;
-}
-.tf-branch-list .tf-list-search > details {
-  display: none;
 }
 .tf-branch-list .tf-table td {
   padding: 14px 16px;

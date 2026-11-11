@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { isAxiosError } from 'axios'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -67,6 +68,7 @@ type Detail = Order & {
     arrivedAt: string
     status: string
     replacement: boolean
+    recordedByName?: string | null
     lines: { excessDecision: string }[]
   }[]
   discrepancies: {
@@ -410,13 +412,13 @@ export default function PurchaseOrdersPage() {
           {owner && (
             <div className="receiving-filter-row">
               <Link
-                className="receiving-secondary-link"
+                className="receiving-layout-primary"
                 to="/goods-receipt-notes/excess"
               >
                 Chờ duyệt hàng thừa
               </Link>
               <Link
-                className="receiving-secondary-link"
+                className="receiving-layout-primary"
                 to="/supplier-discrepancies"
               >
                 Hồ sơ sai lệch nhà cung cấp
@@ -781,6 +783,9 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
   const navigate = useNavigate()
   const owner = user?.role === 'OWNER'
   const [detail, setDetail] = useState<Detail>()
+  const [assignedNames, setAssignedNames] = useState<
+    Record<number, string | null>
+  >({})
   const [error, setError] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -799,17 +804,27 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
       })
     return () => controller.abort()
   }, [id, validId])
+  useEffect(() => {
+    if (!id || !detail?.receipts.some((receipt) => !receipt.recordedByName))
+      return
+    const controller = new AbortController()
+    void loadWorkQueue({ purchaseOrderId: id }, controller.signal)
+      .then((rows) => {
+        if (!controller.signal.aborted)
+          setAssignedNames(
+            Object.fromEntries(rows.map((row) => [row.id, row.assigneeName])),
+          )
+      })
+      .catch(() => {
+        // Receipt cards remain available if assignment information cannot be loaded.
+      })
+    return () => controller.abort()
+  }, [id, detail])
   const history = detail ? purchaseOrderHistory(detail) : []
 
   return (
     <main className="dashboard-content receiving-page">
-      <button
-        type="button"
-        className="receiving-back-button"
-        onClick={() => navigate('/purchase-orders')}
-      >
-        <span aria-hidden="true">←</span> Quay lại
-      </button>
+      <PageBackLink to="/purchase-orders" />
       <header className="receiving-heading">
         <h1>Yêu cầu nhập hàng {purchaseOrderCode(id ?? '')}</h1>
         {detail && <Status value={detail.status} />}
@@ -976,19 +991,32 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
               {!detail.receipts.length ? (
                 <p>Chưa có phiếu nhập hàng.</p>
               ) : (
-                <ul className="receiving-items">
-                  {detail.receipts.map((receipt) => (
-                    <li key={receipt.id}>
-                      <Link to={'/goods-receipt-notes/' + receipt.id}>
-                        {receipt.deliveryDocumentNo}
-                      </Link>
-                      <span>
-                        {day(receipt.arrivedAt)}
-                        {receipt.replacement ? ' · Giao bù' : ''}
-                      </span>
-                      <Status value={receipt.status} />
-                    </li>
-                  ))}
+                <ul className="receiving-receipt-cards">
+                  {detail.receipts.map((receipt) => {
+                    const inspector =
+                      receipt.recordedByName ?? assignedNames[receipt.id]
+                    return (
+                      <li key={receipt.id}>
+                        <Link
+                          className="receiving-receipt-card"
+                          to={'/goods-receipt-notes/' + receipt.id}
+                        >
+                          <div className="receiving-receipt-card-info">
+                            <strong>{detail.supplierName}</strong>
+                            {inspector && (
+                              <span>Người kiểm nhận: {inspector}</span>
+                            )}
+                            <small>
+                              {receipt.deliveryDocumentNo} ·{' '}
+                              {day(receipt.arrivedAt)}
+                              {receipt.replacement ? ' · Giao bù' : ''}
+                            </small>
+                          </div>
+                          <Status value={receipt.status} />
+                        </Link>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </section>

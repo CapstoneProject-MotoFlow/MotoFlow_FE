@@ -245,6 +245,41 @@ export default function CustomerDetailPage() {
             </p>
           </section>
           <PaymentTable rows={data.payments} total={data.paymentCount} />
+          <section className="cp-panel">
+            <h2>Nhu cầu chưa đáp ứng</h2>
+            {data.unmetDemand?.length ? (
+              <div className="cp-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>SKU</th>
+                      <th>Phụ tùng</th>
+                      <th>Số lượng thiếu</th>
+                      <th>Đơn gốc</th>
+                      <th>Cửa hàng</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.unmetDemand.map((row, index) => (
+                      <tr key={index}>
+                        <td>{row.sku}</td>
+                        <td>{row.partName}</td>
+                        <td>{row.missingQty}</td>
+                        <td>#{row.salesOrderId}</td>
+                        <td>{row.storeName}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="cp-empty">
+                {data.unmetDemand == null
+                  ? 'Chưa có dữ liệu nhu cầu chưa đáp ứng từ hệ thống.'
+                  : 'Không có nhu cầu chưa đáp ứng.'}
+              </p>
+            )}
+          </section>
           {data.creditHistory.length > 0 && (
             <section className="cp-panel">
               <h2>Lịch sử quyền mua chịu</h2>
@@ -307,40 +342,6 @@ export default function CustomerDetailPage() {
         </aside>
       </div>
 
-      {data && (
-        <section className="cp-panel">
-          <h2>Nhu cầu chưa đáp ứng</h2>
-          <div className="cp-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Phụ tùng</th>
-                  <th>Số lượng thiếu</th>
-                  <th>Đơn gốc</th>
-                  <th>Cửa hàng</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.unmetDemand?.map((row, index) => (
-                  <tr key={index}>
-                    <td>{row.sku}</td>
-                    <td>{row.partName}</td>
-                    <td>{row.missingQty}</td>
-                    <td>#{row.salesOrderId}</td>
-                    <td>{row.storeName}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {data.unmetDemand == null ? (
-            <p>Chưa có dữ liệu nhu cầu chưa đáp ứng từ hệ thống.</p>
-          ) : (
-            !data.unmetDemand.length && <p>Không có nhu cầu chưa đáp ứng.</p>
-          )}
-        </section>
-      )}
       {editing && (
         <CustomerForm
           customer={c}
@@ -370,49 +371,52 @@ function PaymentTable({
         {debtOnly ? 'Lịch sử thu nợ' : 'Lịch sử thanh toán'}
         {total != null && <small> ({total})</small>}
       </h2>
-      <div className="cp-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Phiếu thu</th>
-              <th>Lúc</th>
-              <th>Loại</th>
-              <th>Hình thức</th>
-              <th>Số tiền</th>
-              <th>Trừ vào / Liên quan</th>
-              <th>Xác minh</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => (
-              <tr key={p.id}>
-                <td>#{p.id}</td>
-                <td>{date(p.recordedAt)}</td>
-                <td>{status[p.paymentType] || p.paymentType}</td>
-                <td>{status[p.paymentMethod] || p.paymentMethod}</td>
-                <td>{money(p.amount)}</td>
-                <td>
-                  {p.salesOrderId != null && (
-                    <small>Đơn #{p.salesOrderId}</small>
-                  )}
-                  {p.receivableIds.map((debtId) => (
-                    <small key={debtId}>Khoản nợ #{debtId}</small>
-                  ))}
-                  {p.salesOrderId == null && !p.receivableIds.length && '—'}
-                </td>
-                <td>{status[p.status] || p.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!rows.length && (
-          <p className="cp-empty">Chưa có thanh toán trong dữ liệu được xem.</p>
-        )}
-      </div>
-      <p className="cp-note">
-        Hiển thị các khoản thanh toán gần nhất trong phạm vi được phép xem. Các
-        khoản nợ đã tất toán có thể không còn trong danh sách công nợ.
-      </p>
+      {rows.length ? (
+        <>
+          <div className="cp-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Phiếu thu</th>
+                  <th>Lúc</th>
+                  <th>Loại</th>
+                  <th>Hình thức</th>
+                  <th>Số tiền</th>
+                  <th>Trừ vào / Liên quan</th>
+                  <th>Xác minh</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((p) => (
+                  <tr key={p.id}>
+                    <td>#{p.id}</td>
+                    <td>{date(p.recordedAt)}</td>
+                    <td>{status[p.paymentType] || p.paymentType}</td>
+                    <td>{status[p.paymentMethod] || p.paymentMethod}</td>
+                    <td>{money(p.amount)}</td>
+                    <td>
+                      {p.salesOrderId != null && (
+                        <small>Đơn #{p.salesOrderId}</small>
+                      )}
+                      {p.receivableIds.map((debtId) => (
+                        <small key={debtId}>Khoản nợ #{debtId}</small>
+                      ))}
+                      {p.salesOrderId == null && !p.receivableIds.length && '—'}
+                    </td>
+                    <td>{status[p.status] || p.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="cp-note">
+            Hiển thị các khoản thanh toán gần nhất trong phạm vi được phép xem.
+            Các khoản nợ đã tất toán có thể không còn trong danh sách công nợ.
+          </p>
+        </>
+      ) : (
+        <p className="cp-empty">Chưa có thanh toán trong dữ liệu được xem.</p>
+      )}
     </section>
   )
 }

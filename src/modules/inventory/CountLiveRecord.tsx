@@ -1,6 +1,7 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
 import { countFromDto, type CountDto } from './countApi'
@@ -18,9 +19,8 @@ export default function CountLiveRecord() {
     r = useInventoryData<CountDto>('/stock-counts/' + id, {}, revision, !!id)
   return (
     <main className="inventory-workspace count-workspace">
-      <InventoryHeader title="Ghi số đếm">
-        <Link to={'/stock-counts/' + id}>← Chi tiết kiểm kê</Link>
-      </InventoryHeader>
+      <PageBackLink to={'/stock-counts/' + id} />
+      <InventoryHeader title="Ghi số đếm" />
       <InventoryNotice loading={r.loading} error={r.error} />
       {r.data && (
         <Editor

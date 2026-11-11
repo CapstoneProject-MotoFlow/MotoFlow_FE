@@ -10,7 +10,8 @@
   display: grid;
   gap: 20px;
 }
-.sales-workspace label {
+.sales-workspace label,
+.sales-warehouse-field {
   display: grid;
   gap: 7px;
   font-size: 14px;
@@ -147,6 +148,16 @@
   margin: 0;
   font-weight: 600;
 }
+.sales-warehouse-field {
+  margin: 20px 20px 0;
+}
+.sales-warehouse-field input[role='combobox'] {
+  padding-inline-end: 2rem;
+}
+.sales-create-form
+  .stock-panel:has(.sales-warehouse-field .searchable-filter-menu) {
+  overflow: visible;
+}
 .sales-create-form .sales-customer-fields {
   display: flex;
   flex-wrap: wrap;
@@ -260,8 +271,7 @@
   top: 12px;
   color: #667085;
 }
-.sales-create-form .sales-price-card button,
-.sales-create-form .sales-cancel {
+.sales-create-form .sales-price-card button {
   width: 100%;
   text-align: center;
   box-sizing: border-box;
@@ -364,6 +374,9 @@
   }
   .sales-create-form .sales-customer-fields {
     padding: 16px;
+  }
+  .sales-warehouse-field {
+    margin: 16px 16px 0;
   }
 }
 .sales-workspace:has(.sales-detail-layout) {

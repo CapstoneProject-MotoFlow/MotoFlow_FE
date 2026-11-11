@@ -4,8 +4,9 @@
  * Công dụng: Ánh xạ URL sang page; chọn trang chủ theo vai trò; ghép guard/layout; lazy-load page và hiển thị trạng thái chờ bằng Suspense.
  */
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
+import { canCoordinateTransfers } from '../../shared/utils/roles'
 import AuthLayout from '../layouts/AuthLayout'
 import DashboardLayout from '../layouts/DashboardLayout'
 import RequireAuth from '../guards/RequireAuth'
@@ -232,6 +233,15 @@ function RootRedirect() {
 }
 
 /** AppRoutes: Ánh xạ URL sang page; chọn trang chủ theo vai trò; ghép guard/layout; lazy-load page và hiển thị trạng thái chờ bằng Suspense. */
+function RequireTransferCoordinator() {
+  const { user } = useAuth()
+  return canCoordinateTransfers(user) ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/transfer-orders" replace />
+  )
+}
+
 export default function AppRoutes() {
   const { user } = useAuth()
   return (
@@ -486,17 +496,19 @@ export default function AppRoutes() {
                 path="/replenishment-requests/new"
                 element={<TransferCreatePage replenishment />}
               />
-              <Route
-                path="/replenishment-requests/:id/coordinate"
-                element={<ReplenishmentCoordinatePage />}
-              />
+              <Route element={<RequireTransferCoordinator />}>
+                <Route
+                  path="/replenishment-requests/:id/coordinate"
+                  element={<ReplenishmentCoordinatePage />}
+                />
+                <Route
+                  path="/transfer-orders/new"
+                  element={<TransferCreatePage />}
+                />
+              </Route>
               <Route
                 path="/replenishment-requests/:id"
                 element={<ReplenishmentDetailPage />}
-              />
-              <Route
-                path="/transfer-orders/new"
-                element={<TransferCreatePage />}
               />
               <Route
                 path="/transfer-orders/:id/extra"

@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   useEffect,
@@ -6,7 +7,6 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
-import { isAxiosError } from 'axios'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import type { DashboardStore } from '../../shared/types/store'
@@ -15,6 +15,8 @@ import { apiMessage } from '../suppliers/supplierService'
 import { uploadAttachment as uploadReceiptDocument } from '../../shared/api/upload'
 import ProductPicker, { type ProductOption } from './ProductPicker'
 import ReceiptImage from './ReceiptImage'
+import { receiptDateLimits, receiptDatesInFuture } from './receivingRules'
+import { inventoryError } from '../inventory/api'
 import './receiving.css'
 
 function Panel({
@@ -252,7 +254,10 @@ function OrderFormLayout({
   }
 
   return (
-    <form className="receiving-stack" onSubmit={createOrder}>
+    <form
+      className="receiving-stack receiving-order-form"
+      onSubmit={createOrder}
+    >
       {owner && !options && <p role="status">Đang tải danh sách lựa chọn…</p>}
       {!!options?.errors.length && (
         <p role="alert">
@@ -366,7 +371,7 @@ function OrderFormLayout({
         </aside>
       </div>
       <Panel title="Phụ tùng nhập">
-        <div className="table-scroll">
+        <div className="table-scroll receiving-order-lines-scroll">
           <table className="receiving-order-lines">
             <thead>
               <tr>
@@ -390,16 +395,11 @@ function OrderFormLayout({
                         .filter((item) => item.id !== line.id)
                         .map((item) => Number(item.productId))}
                       onSelect={(product) => {
-                        if (product)
-                          setSelectedProducts((previous) => ({
-                            ...previous,
-                            [product.id]: product,
-                          }))
-                        updateLine(
-                          line.id,
-                          'productId',
-                          product ? String(product.id) : '',
-                        )
+                        setSelectedProducts((previous) => ({
+                          ...previous,
+                          [product.id]: product,
+                        }))
+                        updateLine(line.id, 'productId', String(product.id))
                       }}
                     />
                   </td>
@@ -498,11 +498,18 @@ type ReceiptOrder = {
   discrepancies: { id: number; partName: string; openReplacementQty: number }[]
 }
 
+const receiptFutureDateMessage =
+  'Ngày chứng từ và thời điểm hàng đến không được sau thời điểm hiện tại.'
+
 function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   const navigate = useNavigate()
   const [order, setOrder] = useState<ReceiptOrder>()
+  const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [stage, setStage] = useState<'uploading' | 'creating'>()
+  const saving = stage !== undefined
+  const saveLock = useRef(false)
+  const [dateLimits, setDateLimits] = useState(receiptDateLimits)
   const [images, setImages] = useState<{ src: string; name: string }[]>([])
   useEffect(
     () => () => images.forEach(({ src }) => URL.revokeObjectURL(src)),
@@ -525,38 +532,83 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         if (!signal.aborted) setOrder(data)
       })
       .catch((error) => {
-        if (!signal.aborted) setError(apiMessage(error))
+        if (!signal.aborted) setLoadError(apiMessage(error))
       })
     return () => controller.abort()
   }, [orderId])
+
+  function refreshDateLimits() {
+    setDateLimits(receiptDateLimits())
+  }
+
+  function reportInvalidField(event: FormEvent<HTMLFormElement>) {
+    const input = event.target
+    if (
+      !(input instanceof HTMLInputElement) ||
+      input !== event.currentTarget.querySelector('input:invalid')
+    )
+      return
+    if (input.validity.rangeOverflow) {
+      const future = receiptDatesInFuture(
+        input.name === 'documentDate' ? input.value : '',
+        input.name === 'arrivedAt' ? input.value : '',
+      )
+      refreshDateLimits()
+      setError(
+        future
+          ? receiptFutureDateMessage
+          : 'Giới hạn ngày giờ đã cập nhật. Bấm Lập phiếu nhập để tiếp tục.',
+      )
+    } else if (input.validity.valueMissing) {
+      if (input.name === 'documentNo') setError('Nhập số chứng từ.')
+      if (input.name === 'documentDate') setError('Chọn ngày chứng từ.')
+      if (input.name === 'documents') setError('Chọn ít nhất một tệp chứng từ.')
+    } else {
+      setError('Kiểm tra lại thông tin chứng từ.')
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (
       !order ||
-      saving ||
+      saveLock.current ||
       (replacement ? !order.canCreateReplacement : !order.canCreateReceipt)
     )
       return
     const fields = new FormData(event.currentTarget)
+    const documentNo = String(fields.get('documentNo') ?? '').trim()
+    if (!documentNo) {
+      setError('Nhập số chứng từ.')
+      event.currentTarget
+        .querySelector<HTMLInputElement>('[name="documentNo"]')
+        ?.focus()
+      return
+    }
+    const documentDate = String(fields.get('documentDate') ?? '')
+    const arrivedAt = String(fields.get('arrivedAt') ?? '')
+    if (receiptDatesInFuture(documentDate, arrivedAt)) {
+      refreshDateLimits()
+      setError(receiptFutureDateMessage)
+      return
+    }
     const replacementForCaseIds = replacement
       ? fields.getAll('case').map(Number)
       : []
     const files = fields
       .getAll('documents')
       .filter((file): file is File => file instanceof File && file.size > 0)
-    if (
-      !files.length ||
-      files.length > 10 ||
-      (replacement && !replacementForCaseIds.length)
-    ) {
-      setError(
-        'Chọn từ 1 đến 10 tệp chứng từ và chọn hồ sơ sai lệch nếu đây là lượt giao bù.',
-      )
+    if (!files.length || files.length > 10) {
+      setError('Chọn từ 1 đến 10 tệp chứng từ.')
       return
     }
+    if (replacement && !replacementForCaseIds.length) {
+      setError('Chọn ít nhất một hồ sơ sai lệch cần giao bù.')
+      return
+    }
+    saveLock.current = true
     setError('')
-    setSaving(true)
+    setStage('uploading')
     try {
       const documents = []
       for (const file of files) {
@@ -565,12 +617,13 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         uploads.current.set(file, document)
         documents.push(document)
       }
+      setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
         '/purchase-orders/' + orderId + '/goods-receipt-notes',
         {
-          deliveryDocumentNo: String(fields.get('documentNo') ?? '').trim(),
-          deliveryDocumentDate: fields.get('documentDate'),
-          arrivedAt: fields.get('arrivedAt') || null,
+          deliveryDocumentNo: documentNo,
+          deliveryDocumentDate: documentDate,
+          arrivedAt: arrivedAt || null,
           delivererName:
             String(fields.get('delivererName') ?? '').trim() || null,
           vehiclePlateNo:
@@ -581,22 +634,21 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       )
       navigate('/goods-receipt-notes/' + data.id)
     } catch (error) {
-      setError(
-        isAxiosError(error)
-          ? apiMessage(error)
-          : error instanceof Error
-            ? error.message
-            : apiMessage(error),
-      )
+      setError(inventoryError(error))
     } finally {
-      setSaving(false)
+      saveLock.current = false
+      setStage(undefined)
     }
   }
 
   return (
-    <form className="receiving-stack" onSubmit={submit}>
+    <form
+      className="receiving-stack"
+      onSubmit={submit}
+      onInvalid={reportInvalidField}
+    >
       <Panel title="Thông tin phiếu nhập">
-        {error && <p role="alert">{error}</p>}
+        {loadError && <p role="alert">{loadError}</p>}
         <dl className="receiving-info">
           <div>
             <dt>Đơn đặt hàng</dt>
@@ -624,10 +676,25 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
             />
           </label>
           <label>
-            Ngày chứng từ <input name="documentDate" type="date" required />
+            Ngày chứng từ
+            <input
+              name="documentDate"
+              type="date"
+              max={dateLimits.date}
+              onFocus={refreshDateLimits}
+              onChange={refreshDateLimits}
+              required
+            />
           </label>
           <label>
-            Thời điểm hàng đến <input name="arrivedAt" type="datetime-local" />
+            Thời điểm hàng đến
+            <input
+              name="arrivedAt"
+              type="datetime-local"
+              max={dateLimits.dateTime}
+              onFocus={refreshDateLimits}
+              onChange={refreshDateLimits}
+            />
           </label>
           <label>
             Người giao hàng <input name="delivererName" maxLength={100} />
@@ -645,16 +712,17 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
               multiple
               required
               disabled={!order || saving}
-              onChange={(event) =>
+              onChange={(event) => {
+                const files = Array.from(event.currentTarget.files ?? [])
                 setImages(
-                  Array.from(event.currentTarget.files ?? [])
+                  files
                     .filter((file) => file.type.startsWith('image/'))
                     .map((file) => ({
                       src: URL.createObjectURL(file),
                       name: file.name,
                     })),
                 )
-              }
+              }}
             />
           </label>
           {!!images.length && (
@@ -708,9 +776,18 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         ) : null}
       </Panel>
       <ActionBar>
-        <Link to={orderId ? '/purchase-orders/' + orderId : '/purchase-orders'}>
-          Quay lại chi tiết
-        </Link>
+        {error && (
+          <p className="receiving-receipt-submit-error" role="alert">
+            {error}
+          </p>
+        )}
+        {stage && (
+          <span role="status">
+            {stage === 'uploading'
+              ? 'Đang tải chứng từ…'
+              : 'Đang lập phiếu nhập…'}
+          </span>
+        )}
         <button
           className="receiving-layout-primary"
           type="submit"
@@ -721,7 +798,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
               : !order?.canCreateReceipt)
           }
         >
-          {saving ? 'Đang lập phiếu…' : 'Lập phiếu nhập'}
+          Lập phiếu nhập
         </button>
       </ActionBar>
     </form>
@@ -731,12 +808,15 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
 function FormShell({
   title,
   children,
+  backTo,
 }: {
   title: string
   children: ReactNode
+  backTo?: string
 }) {
   return (
     <main className="dashboard-content receiving-page receiving-order-page">
+      {backTo && <PageBackLink to={backTo} />}
       <header className="receiving-heading">
         <h1>{title}</h1>
         <nav className="receiving-breadcrumb" aria-label="Đường dẫn">
@@ -775,10 +855,14 @@ export function EditPurchaseOrderPage() {
 
 export function NewGoodsReceiptPage() {
   const { id } = useParams()
+  const orderId = id && /^[1-9]\d*$/.test(id) ? id : null
   return (
-    <FormShell title="Lập phiếu nhập">
-      {id && /^[1-9]\d*$/.test(id) ? (
-        <ReceiptFormLayout key={id} orderId={id} />
+    <FormShell
+      title="Lập phiếu nhập"
+      backTo={orderId ? '/purchase-orders/' + orderId : undefined}
+    >
+      {orderId ? (
+        <ReceiptFormLayout key={orderId} orderId={orderId} />
       ) : (
         <MissingDocument />
       )}
@@ -788,8 +872,9 @@ export function NewGoodsReceiptPage() {
 
 function MissingDocument() {
   return (
-    <p role="alert">
-      Không tìm thấy phiếu. <Link to="/purchase-orders">Về danh sách</Link>
-    </p>
+    <>
+      <PageBackLink to="/purchase-orders" />
+      <p role="alert">Không tìm thấy phiếu.</p>
+    </>
   )
 }

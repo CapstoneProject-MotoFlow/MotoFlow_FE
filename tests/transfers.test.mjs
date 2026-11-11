@@ -2,6 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
+import { createServer } from 'vite'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
 const { outputText } = ts.transpileModule(
   readFileSync(
     new URL('../src/modules/transfers/transferRules.ts', import.meta.url),
@@ -43,6 +47,56 @@ test('planning excludes quantities already planned and assigned to purchasing', 
   // Purchasing replaces its previous total, so the limit includes that old total.
   assert.equal(purchaseQuantityLimit(demand), 4)
   assert.equal(unplannedQuantity({ ...demand, plannedQty: 12 }), 0)
+})
+
+test('central managers default to coordination before any replenishments are loaded', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { default: ReplenishmentListPage } = await server.ssrLoadModule(
+      '/src/modules/transfers/ReplenishmentListPage.tsx',
+    )
+    const { default: ManagerTransferListPage } = await server.ssrLoadModule(
+      '/src/modules/transfers/ManagerTransferListPage.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const render = (role, central, Page = ReplenishmentListPage) =>
+      renderToStaticMarkup(
+        createElement(
+          AuthContext.Provider,
+          { value: { user: { username: 'test', role, central } } },
+          createElement(MemoryRouter, null, createElement(Page)),
+        ),
+      )
+    assert.match(
+      render('BRANCH_MANAGER', true),
+      /aria-pressed="true">Chờ điều phối/,
+    )
+    assert.match(
+      render('BRANCH_MANAGER', false),
+      /aria-pressed="true">Chưa đóng/,
+    )
+    assert.match(render('OWNER', false), /aria-pressed="true">Chờ điều phối/)
+    assert.doesNotMatch(
+      render('BRANCH_MANAGER', false, ManagerTransferListPage),
+      /href="\/transfer-orders\/new"/,
+    )
+    assert.match(
+      render('BRANCH_MANAGER', true, ManagerTransferListPage),
+      /href="\/transfer-orders\/new"/,
+    )
+    assert.match(
+      render('OWNER', false, ManagerTransferListPage),
+      /href="\/transfer-orders\/new"/,
+    )
+  } finally {
+    await server.close()
+  }
 })
 
 test('extra dispatch is available only for outstanding excess during reconciliation', () => {

@@ -1,3 +1,4 @@
+import PageBackLink from '../../../shared/ui/PageBackLink'
 import { isAxiosError } from 'axios'
 import { useInventoryScope } from '../../inventory/api'
 import { useEffect, useRef, useState } from 'react'
@@ -287,6 +288,19 @@ function DiscrepancyForm({
     row: Case
     mode: 'return' | 'waive' | 'history'
   }>()
+  const editable = !!receiptId && rows.some((row) => row.canHandle)
+  const changes = rows.flatMap((row) => {
+    const draft = drafts[row.id]
+    if (!row.canHandle || !draft) return []
+    const returnRequiredQty = Number(draft.returned)
+    const replacementRequiredQty = Number(replacementValue(row, draft))
+    if (
+      returnRequiredQty === row.returnRequiredQty &&
+      replacementRequiredQty === row.replacementRequiredQty
+    )
+      return []
+    return [{ caseId: row.id, returnRequiredQty, replacementRequiredQty }]
+  })
 
   useEffect(() => {
     if (!valid || (purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)))
@@ -351,9 +365,9 @@ function DiscrepancyForm({
 
   return (
     <main className="dashboard-content supplier-discrepancy-page">
+      <PageBackLink to="/purchase-orders" />
       <header className="receiving-heading">
         <h1>Xử lý sai lệch nhà cung cấp</h1>
-        <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
       </header>
       {!receiptId && (
         <div className="receiving-filter-row">
@@ -452,17 +466,7 @@ function DiscrepancyForm({
           <form
             onSubmit={async (event) => {
               event.preventDefault()
-              if (saving || !receiptId) return
-              const lines = rows
-                .filter((row) => row.canHandle && drafts[row.id])
-                .map((row) => ({
-                  caseId: row.id,
-                  returnRequiredQty: Number(drafts[row.id].returned),
-                  replacementRequiredQty: Number(
-                    replacementValue(row, drafts[row.id]),
-                  ),
-                }))
-              if (!lines.length) return
+              if (saving || !editable || !changes.length) return
               const note = String(
                 new FormData(event.currentTarget).get('note') ?? '',
               ).trim()
@@ -472,7 +476,7 @@ function DiscrepancyForm({
               try {
                 const { data } = await axiosClient.put<Case[]>(
                   '/goods-receipt-notes/' + receiptId + '/discrepancies',
-                  { lines, note },
+                  { lines: changes, note },
                 )
                 setRows(data)
                 setDrafts({})
@@ -632,19 +636,29 @@ function DiscrepancyForm({
                 </tbody>
               </table>
             </div>
-            {receiptId && (
-              <div className="receiving-layout-fields">
+            {editable && (
+              <div className="supplier-handling-footer">
                 <label>
-                  Ghi chú{' '}
-                  <textarea name="note" maxLength={255} disabled={saving} />
+                  Ghi chú
+                  <textarea
+                    name="note"
+                    rows={2}
+                    maxLength={255}
+                    disabled={saving}
+                  />
                 </label>
-                <button
-                  type="submit"
-                  className="receiving-layout-primary"
-                  disabled={saving || !Object.keys(drafts).length}
-                >
-                  {saving ? 'Đang lưu…' : 'Lưu hướng xử lý'}
-                </button>
+                <div className="supplier-handling-save">
+                  <button
+                    type="submit"
+                    className="receiving-layout-primary"
+                    disabled={saving || !changes.length}
+                  >
+                    {saving ? 'Đang lưu…' : 'Lưu hướng xử lý'}
+                  </button>
+                  {!changes.length && (
+                    <small>Đổi số trả lại hoặc số giao bù để lưu.</small>
+                  )}
+                </div>
               </div>
             )}
           </form>

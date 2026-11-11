@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { hasExistingPurchase, unplannedQuantity } from './transferRules'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -38,11 +39,9 @@ export default function ReplenishmentCoordinatePage() {
   )
   return (
     <main className="dashboard-content tf-page tf-coordinate">
+      <PageBackLink to={detailPath} />
       <header>
         <h1>Điều phối YBS-{String(id).padStart(4, '0')}</h1>
-        <nav>
-          <Link to={detailPath}>Quay lại yêu cầu</Link>
-        </nav>
       </header>
       <InventoryNotice
         loading={r.loading || stock.loading}

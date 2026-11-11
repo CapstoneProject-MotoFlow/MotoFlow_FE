@@ -17,6 +17,8 @@ const {
   replacementValue,
   receiptWork,
   inspectionQuantitiesValid,
+  receiptDateLimits,
+  receiptDatesInFuture,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -65,6 +67,23 @@ test('quantity validation rejects nonintegers, negatives and defects exceeding d
   ]) {
     assert.equal(inspectionQuantitiesValid(values), false)
   }
+})
+test('receipt dates use the local day and reject a future date or arrival', () => {
+  const now = new Date(2026, 10, 11, 0, 5, 30)
+  assert.deepEqual(receiptDateLimits(now), {
+    date: '2026-11-11',
+    dateTime: '2026-11-11T00:05',
+  })
+  assert.equal(receiptDatesInFuture('2026-11-12', '', now), true)
+  assert.equal(
+    receiptDatesInFuture('2026-11-11', '2026-11-11T00:06', now),
+    true,
+  )
+  assert.equal(
+    receiptDatesInFuture('2026-11-11', '2026-11-11T00:05', now),
+    false,
+  )
+  assert.equal(receiptDatesInFuture('2026-11-10', '', now), false)
 })
 test('BM action prefers confirmation, then unassigned inspection and stays within the PO', () => {
   const receipt = (id, purchaseOrderId, status, assigneeName = null) => ({

@@ -19,3 +19,10 @@ export function canEditCatalog(user: AuthUser | null) {
       !!user.permissions?.includes('CATALOG_EDIT'))
   )
 }
+
+export function canCoordinateTransfers(user: AuthUser | null) {
+  return (
+    user?.role === 'OWNER' ||
+    (user?.role === 'BRANCH_MANAGER' && user.central === true)
+  )
+}

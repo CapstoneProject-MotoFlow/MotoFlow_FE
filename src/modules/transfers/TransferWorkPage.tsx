@@ -1,10 +1,11 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import ExcessDispatchEditor from './ExcessDispatchEditor'
 import { uploadAttachment } from '../../shared/api/upload'
 import { receiptAcceptsResult } from './transferRules'
 import { dateTime } from '../inventory/presentation'
 import { useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import {
   useInventoryData,
@@ -23,7 +24,12 @@ export default function TransferWorkPage({
 }) {
   const { id, receiptId } = useParams(),
     scope = useInventoryScope(),
-    [revision, setRevision] = useState(0)
+    [revision, setRevision] = useState(0),
+    [success, setSuccess] = useState('')
+  const onWorkSaved = (message: string) => {
+    setSuccess(message)
+    setRevision((n) => n + 1)
+  }
   const prep = useInventoryData<Preparation>(
       `/transfer-orders/${id}/preparation`,
       {},
@@ -42,11 +48,31 @@ export default function TransferWorkPage({
       revision,
       mode !== 'prepare',
     )
+  const manager = scope.user?.role === 'BRANCH_MANAGER'
+  const receiptStoreId =
+    receipt.data?.receiptType === 'RETURN_TO_SOURCE'
+      ? order.data?.sourceStoreId
+      : order.data?.destStoreId
+  const managesReceipt =
+    manager && !!receiptStoreId && scope.user?.storeId === receiptStoreId
+  const taskType = mode === 'prepare' ? 'DISPATCH_PREPARATION' : 'INSPECTION'
+  const documentId = Number(mode === 'prepare' ? id : receiptId)
+  const assignment = useInventoryData<Assignment>(
+    '/warehouse-tasks',
+    { taskType, documentId },
+    revision,
+    (manager &&
+      mode === 'prepare' &&
+      prep.data?.status === 'AWAITING_DISPATCH') ||
+      (mode === 'receipt' &&
+        managesReceipt &&
+        receiptAcceptsResult(receipt.data?.status)),
+  )
   return (
     <main className="dashboard-content tf-page">
+      <PageBackLink to={'/transfer-orders/' + id} />
       <header>
         <div>
-          <Link to={'/transfer-orders/' + id}>← Chi tiết điều chuyển</Link>
           <h1>
             {mode === 'prepare'
               ? 'Ghi số đã soạn'
@@ -60,13 +86,19 @@ export default function TransferWorkPage({
         loading={prep.loading || receipt.loading || order.loading}
         error={prep.error || receipt.error || order.error}
       />
+      {success && (
+        <p className="tf-success-notice" role="status">
+          {success}
+        </p>
+      )}
       {mode === 'prepare' && prep.data && (
         <WorkEditor
           key={'p' + revision}
           preparation={prep.data}
           id={id!}
           mode={mode}
-          onSaved={() => setRevision((n) => n + 1)}
+          onSaveStart={() => setSuccess('')}
+          onSaved={onWorkSaved}
         />
       )}{' '}
       {mode === 'receipt' && receipt.data && order.data && (
@@ -74,9 +106,11 @@ export default function TransferWorkPage({
           key={'r' + revision}
           receipt={receipt.data}
           order={order.data}
+          assignment={assignment.data}
           id={id!}
           mode={mode}
-          onSaved={() => setRevision((n) => n + 1)}
+          onSaveStart={() => setSuccess('')}
+          onSaved={onWorkSaved}
         />
       )}{' '}
       {mode === 'extra' && order.data && (
@@ -86,11 +120,11 @@ export default function TransferWorkPage({
           onSaved={() => setRevision((n) => n + 1)}
         />
       )}{' '}
-      {scope.user?.role === 'BRANCH_MANAGER' && mode !== 'extra' && (
+      {assignment.data?.canAssign && (
         <AssignmentPanel
           key={'a' + revision}
-          taskType={mode === 'prepare' ? 'DISPATCH_PREPARATION' : 'INSPECTION'}
-          documentId={Number(mode === 'prepare' ? id : receiptId)}
+          taskType={taskType}
+          documentId={documentId}
           onSaved={() => setRevision((n) => n + 1)}
         />
       )}
@@ -130,16 +164,20 @@ function WorkEditor({
   preparation,
   receipt,
   order,
+  assignment,
   id,
   mode,
+  onSaveStart,
   onSaved,
 }: {
   preparation?: Preparation
   receipt?: Receipt
   order?: Transfer
+  assignment?: Assignment
   id: string
   mode: string
-  onSaved: () => void
+  onSaveStart: () => void
+  onSaved: (message: string) => void
 }) {
   const scope = useInventoryScope(),
     lines =
@@ -172,22 +210,18 @@ function WorkEditor({
     [action, setAction] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('')
-  const receiptAssignment = useInventoryData<Assignment>(
-    '/warehouse-tasks',
-    { taskType: 'INSPECTION', documentId: receipt?.id },
-    0,
-    mode === 'receipt' && scope.user?.role === 'BRANCH_MANAGER' && !!receipt,
-  )
   const lock = useRef(false),
     bm = scope.user?.role === 'BRANCH_MANAGER',
+    resultSubmitted =
+      mode === 'prepare' &&
+      preparation?.preparer?.taskStatus === 'RESULT_SUBMITTED',
     canRecord =
       mode === 'prepare'
         ? !!preparation?.canRecord
         : mode === 'receipt'
           ? ['STAFF', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '') &&
             receiptAcceptsResult(receipt?.status) &&
-            (!bm ||
-              receiptAssignment.data?.current?.assigneeId === scope.user?.id)
+            (!bm || assignment?.current?.assigneeId === scope.user?.id)
           : bm && scope.user?.storeId === order?.sourceStoreId
   const valid =
     lines.length > 0 &&
@@ -214,6 +248,7 @@ function WorkEditor({
     lock.current = true
     setBusy(true)
     setError('')
+    onSaveStart()
     try {
       const evidence = []
       if (mode === 'extra')
@@ -254,7 +289,15 @@ function WorkEditor({
               : '/receipts/' + receipt!.id + '/result'),
           payload,
         )
-      onSaved()
+      onSaved(
+        mode === 'prepare'
+          ? resultSubmitted
+            ? 'Đã cập nhật kết quả soạn hàng.'
+            : 'Đã gửi kết quả soạn hàng.'
+          : mode === 'receipt'
+            ? 'Đã gửi kết quả kiểm nhận.'
+            : 'Đã xác nhận xuất thêm.',
+      )
     } catch (e) {
       setError(inventoryError(e))
     } finally {
@@ -278,7 +321,16 @@ function WorkEditor({
         )}
         {preparation && (
           <div className="tf-preparation-notice" role="status">
-            {preparation.canRecord ? (
+            {resultSubmitted ? (
+              <>
+                <strong>
+                  Đã gửi kết quả soạn hàng, đang chờ BM xác nhận xuất.
+                </strong>
+                <p>
+                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi BM xác nhận xuất.
+                </p>
+              </>
+            ) : preparation.canRecord ? (
               <>
                 <strong>Bạn có thể ghi kết quả soạn hàng.</strong>
                 <p>
@@ -531,7 +583,7 @@ function WorkEditor({
                 className="tf-primary tf-submit-result"
                 disabled={busy || !valid}
               >
-                Gửi kết quả
+                {resultSubmitted ? 'Cập nhật kết quả' : 'Gửi kết quả'}
               </button>
             )}
           </fieldset>
@@ -555,18 +607,14 @@ function WorkEditor({
             >
               Yêu cầu kiểm lại
             </button>
-            <button
-              className="tf-primary tf-confirm-receipt"
-              disabled={receipt.recordedBy === scope.user?.id}
-              title={
-                receipt.recordedBy === scope.user?.id
-                  ? 'Người xác nhận phải khác người ghi kết quả'
-                  : undefined
-              }
-              onClick={() => setAction('confirm')}
-            >
-              Xác nhận nhận hàng
-            </button>
+            {receipt.recordedBy !== scope.user?.id && (
+              <button
+                className="tf-primary tf-confirm-receipt"
+                onClick={() => setAction('confirm')}
+              >
+                Xác nhận nhận hàng
+              </button>
+            )}
           </div>
         )}
       {action && (
@@ -579,7 +627,11 @@ function WorkEditor({
           onClose={() => setAction('')}
           onSaved={() => {
             setAction('')
-            onSaved()
+            onSaved(
+              action === 'confirm'
+                ? 'Đã xác nhận nhận hàng.'
+                : 'Đã gửi yêu cầu kiểm lại.',
+            )
           }}
         >
           {action === 'recount' ? (

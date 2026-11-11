@@ -9,6 +9,7 @@ export default function TransferAction({
   payload,
   children,
   disabled = false,
+  hideSubmit = false,
   onClose,
   onSaved,
 }: {
@@ -18,6 +19,7 @@ export default function TransferAction({
   payload: () => unknown
   children: ReactNode
   disabled?: boolean
+  hideSubmit?: boolean
   onClose: () => void
   onSaved: (data: unknown) => void
 }) {
@@ -32,6 +34,7 @@ export default function TransferAction({
       submitLabel="Xác nhận"
       busy={busy}
       submitDisabled={disabled}
+      hideSubmit={hideSubmit}
       onClose={onClose}
     >
       <form
@@ -39,7 +42,7 @@ export default function TransferAction({
         className="tf-form"
         onSubmit={async (e) => {
           e.preventDefault()
-          if (lock.current || disabled) return
+          if (lock.current || disabled || hideSubmit) return
           lock.current = true
           setBusy(true)
           setError('')

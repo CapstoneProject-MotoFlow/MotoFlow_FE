@@ -1,0 +1,26 @@
+a.page-back-link:any-link {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+a.page-back-link:any-link:hover {
+  background: #eef2ff;
+  color: #3646ed;
+  text-decoration: none;
+}
+
+a.page-back-link:focus-visible {
+  outline: 2px solid #4658f3;
+  outline-offset: 2px;
+}

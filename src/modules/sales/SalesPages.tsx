@@ -11,6 +11,8 @@ import type { Page } from '../inventory/types'
 import { money, dateTime, today } from '../inventory/presentation'
 import CustomerForm from '../customers/components/CustomerForm'
 import type { Customer } from '../customers/types'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
+import PageBackLink from '../../shared/ui/PageBackLink'
 
 import {
   salesStates,
@@ -53,20 +55,20 @@ function Shell({
   title,
   children,
   breadcrumb,
+  backTo,
 }: {
   title: string
   children: ReactNode
   breadcrumb?: ReactNode
+  backTo?: string
 }) {
   return (
     <main className="inventory-workspace sales-workspace">
+      {backTo && <PageBackLink to={backTo} />}
       <Header title={title} breadcrumb={breadcrumb} />
       {children}
     </main>
   )
-}
-function Back() {
-  return <Link to="/sales-orders">← Danh sách đơn bán</Link>
 }
 export function SalesListTotal({ total }: { total?: number | null }) {
   return <td>{total == null ? 'Chưa có dữ liệu' : money.format(total)}</td>
@@ -401,9 +403,12 @@ export function SalesOrderFormPage() {
         />
       ) : (
         !data.loading && (
-          <p role="status">
-            Không thể sửa đơn ở trạng thái hoặc quyền hiện tại. <Back />
-          </p>
+          <>
+            <PageBackLink to="/sales-orders" />
+            <p role="status">
+              Không thể sửa đơn ở trạng thái hoặc quyền hiện tại.
+            </p>
+          </>
         )
       )}
     </>
@@ -597,6 +602,7 @@ export function SalesOrderFormView({
   }
   return (
     <Shell
+      backTo="/sales-orders"
       title={
         order
           ? 'Sửa đơn ' + order.code + ' · phiên bản ' + order.version
@@ -662,12 +668,21 @@ export function SalesOrderFormView({
       >
         <InventoryPanel title="Khách hàng và loại giá">
           {scope.owner && !order && (
-            <WarehouseFilter
-              owner
-              stores={scope.stores}
-              value={warehouse}
-              onChange={setWarehouse}
-            />
+            <div className="sales-warehouse-field">
+              <span>Kho</span>
+              <SearchableFilter
+                label="Kho"
+                value={warehouse}
+                options={[
+                  { value: '', label: 'Mọi kho' },
+                  ...scope.stores.map((store) => ({
+                    value: String(store.id),
+                    label: store.storeName,
+                  })),
+                ]}
+                onChange={setWarehouse}
+              />
+            </div>
           )}
           <div className="stock-filters sales-customer-fields">
             <label>
@@ -849,9 +864,6 @@ export function SalesOrderFormView({
               Đơn nháp
             </button>
           )}
-          <Link className="sales-cancel" to="/sales-orders">
-            Quay lại
-          </Link>
           {draftNotice && <p role="status">{draftNotice}</p>}
           {previewError && (
             <p role="alert" className="stock-error">
