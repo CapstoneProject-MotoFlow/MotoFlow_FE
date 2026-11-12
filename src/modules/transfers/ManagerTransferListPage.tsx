@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
+import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { states, type TransferRow } from './types'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
@@ -21,8 +22,6 @@ export default function ManagerTransferListPage() {
         size: 20,
         sourceStoreId: scope.params.get('sourceStoreId') ?? '',
         destStoreId: scope.params.get('destStoreId') ?? '',
-        from: scope.params.get('from') ?? '',
-        to: scope.params.get('to') ?? '',
       },
       0,
       status !== 'OPEN',
@@ -31,13 +30,12 @@ export default function ManagerTransferListPage() {
     {
       sourceStoreId: scope.params.get('sourceStoreId') ?? '',
       destStoreId: scope.params.get('destStoreId') ?? '',
-      from: scope.params.get('from') ?? '',
-      to: scope.params.get('to') ?? '',
     },
     page,
     status === 'OPEN',
   )
   const r = status === 'OPEN' ? open : base
+  const coordinator = canCoordinateTransfers(scope.user)
   const rows =
     r.data?.items.filter((row) =>
       [
@@ -62,9 +60,11 @@ export default function ManagerTransferListPage() {
       <section>
         <div className="tf-list-heading">
           <h2>Lệnh điều chuyển giữa các kho</h2>
-          <Link className="tf-primary" to="/transfer-orders/new">
-            ＋ Tạo lệnh điều chuyển
-          </Link>
+          {coordinator && (
+            <Link className="tf-primary" to="/transfer-orders/new">
+              ＋ Tạo lệnh điều chuyển
+            </Link>
+          )}
         </div>
         <div className="tf-list-controls">
           <div className="tf-status-tabs">
@@ -132,25 +132,6 @@ export default function ManagerTransferListPage() {
                 </select>
               </>
             )}
-            <details>
-              <summary>Lọc ngày</summary>
-              <label>
-                Từ ngày
-                <input
-                  type="date"
-                  value={scope.params.get('from') ?? ''}
-                  onChange={(e) => scope.filter({ from: e.target.value })}
-                />
-              </label>
-              <label>
-                Đến ngày
-                <input
-                  type="date"
-                  value={scope.params.get('to') ?? ''}
-                  onChange={(e) => scope.filter({ to: e.target.value })}
-                />
-              </label>
-            </details>
           </div>
         </div>
         <InventoryNotice
@@ -168,7 +149,7 @@ export default function ManagerTransferListPage() {
                 <th>Ngày tạo</th>
                 <th>Hàng</th>
                 <th>Trạng thái</th>
-                <th>Cần làm</th>
+                <th>Xem chi tiết</th>
               </tr>
             </thead>
             <tbody>
@@ -180,7 +161,8 @@ export default function ManagerTransferListPage() {
                     </Link>
                   </td>
                   <td>
-                    {row.replenishmentRequestId ? (
+                    {row.replenishmentRequestId &&
+                    (coordinator || scope.user?.storeId === row.destStoreId) ? (
                       <Link
                         to={
                           '/replenishment-requests/' +
@@ -189,6 +171,8 @@ export default function ManagerTransferListPage() {
                       >
                         {code('YBS', row.replenishmentRequestId)}
                       </Link>
+                    ) : row.replenishmentRequestId ? (
+                      code('YBS', row.replenishmentRequestId)
                     ) : (
                       'Lập trực tiếp'
                     )}
@@ -207,12 +191,12 @@ export default function ManagerTransferListPage() {
                     </span>
                   </td>
                   <td>
-                    {row.status === 'RECONCILING' ? (
+                    {row.status === 'RECONCILING' && coordinator ? (
                       <Link
                         className="tf-row-action"
                         to={'/transfer-orders/' + row.id}
                       >
-                        Xử lý sai lệch
+                        Xác nhận
                       </Link>
                     ) : row.status === 'AWAITING_DISPATCH' &&
                       scope.user?.storeId === row.sourceStoreId ? (

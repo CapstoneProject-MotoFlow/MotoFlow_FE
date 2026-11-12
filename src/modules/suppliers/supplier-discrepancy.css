@@ -43,6 +43,7 @@
 .supplier-discrepancy-page .receiving-filter-row label {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 7px;
   font-size: 13px;
   min-width: 140px;
@@ -161,14 +162,32 @@
 .supplier-discrepancy-page input[type='number'] {
   width: 6rem;
 }
-.supplier-discrepancy-page .receiving-layout-fields {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
+.supplier-handling-footer {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #eef1f5;
 }
-.supplier-discrepancy-page .receiving-layout-fields label {
+.supplier-handling-footer label {
+  flex: 1 1 20rem;
+  min-width: 0;
   display: grid;
   gap: 0.35rem;
+  font-size: 13px;
+}
+.supplier-handling-footer textarea {
+  width: 100%;
+}
+.supplier-handling-save {
+  display: grid;
+  justify-items: end;
+  gap: 0.4rem;
+  margin-inline-start: auto;
+}
+.supplier-handling-save small {
+  color: #52627a;
 }
 .supplier-discrepancy-page :is(input, textarea, button) {
   padding: 0.45rem 0.65rem;
@@ -180,7 +199,13 @@
 }
 .supplier-discrepancy-page .receiving-layout-primary {
   background: #4658f3;
+  border-color: #4658f3;
   color: #fff;
+  font-weight: 600;
+}
+.supplier-discrepancy-page .receiving-layout-primary:hover:not(:disabled) {
+  background: #3547db;
+  border-color: #3547db;
 }
 @media (max-width: 700px) {
   .supplier-discrepancy-page .receiving-heading {

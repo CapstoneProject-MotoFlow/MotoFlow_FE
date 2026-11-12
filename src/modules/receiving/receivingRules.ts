@@ -78,3 +78,25 @@ export function inspectionQuantitiesValid(values: number[]) {
     document >= 0
   )
 }
+
+export function receiptDateLimits(now = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  const date = [
+    now.getFullYear(),
+    pad(now.getMonth() + 1),
+    pad(now.getDate()),
+  ].join('-')
+  return {
+    date,
+    dateTime: date + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes()),
+  }
+}
+
+export function receiptDatesInFuture(
+  documentDate: string,
+  arrivedAt: string,
+  now = new Date(),
+) {
+  const limits = receiptDateLimits(now)
+  return documentDate > limits.date || arrivedAt > limits.dateTime
+}

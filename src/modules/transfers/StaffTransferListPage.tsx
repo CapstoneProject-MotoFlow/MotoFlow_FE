@@ -52,10 +52,16 @@ export default function StaffTransferListPage() {
         <InventoryNotice loading={r.loading} error={r.error} />
         <div className="tf-table">
           <table>
+            <colgroup>
+              <col className="tf-staff-order-col" />
+              <col className="tf-staff-store-col" span={2} />
+              <col />
+              <col />
+              <col className="tf-staff-actions-col" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Lệnh</th>
-                <th>Việc của tôi</th>
                 <th>Từ kho</th>
                 <th>Tới kho</th>
                 <th>Hàng</th>
@@ -101,15 +107,6 @@ function StaffRow({ row }: { row: TransferRow }) {
             DC-{String(row.id).padStart(4, '0')}
           </Link>
         </td>
-        <td>
-          <button
-            type="button"
-            aria-expanded={expanded}
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? 'Thu gọn' : 'Xem việc của tôi'}
-          </button>
-        </td>
         <td>{row.sourceStoreName}</td>
         <td>{row.destStoreName}</td>
         <td>
@@ -119,12 +116,21 @@ function StaffRow({ row }: { row: TransferRow }) {
           <span className="tf-badge">{states[row.status] ?? row.status}</span>
         </td>
         <td>
-          <Link to={'/transfer-orders/' + row.id}>Xem chi tiết</Link>
+          <div className="tf-staff-row-actions">
+            <Link to={'/transfer-orders/' + row.id}>Xem chi tiết</Link>
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? 'Thu gọn' : 'Xem việc được giao'}
+            </button>
+          </div>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={7}>
+          <td colSpan={6}>
             <StaffAssignedDetails row={row} />
           </td>
         </tr>

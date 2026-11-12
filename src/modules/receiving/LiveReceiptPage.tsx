@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -72,7 +73,6 @@ export default function LiveReceiptPage({
   id?: string
   screen?: Screen
 }) {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [receipt, setReceipt] = useState<Receipt>()
   const [error, setError] = useState('')
@@ -100,13 +100,7 @@ export default function LiveReceiptPage({
 
   return (
     <main className="dashboard-content receiving-page">
-      <button
-        type="button"
-        className="receiving-back-button"
-        onClick={() => navigate(back)}
-      >
-        <span aria-hidden="true">←</span> Quay lại
-      </button>
+      <PageBackLink to={back} />
       <header className="receiving-heading">
         <h1>Phiếu nhập hàng {id ? '#' + id : ''}</h1>
       </header>
@@ -157,11 +151,13 @@ function ReceiptForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [recountOpen, setRecountOpen] = useState(false)
   const editing =
     screen === 'inspection' && receipt.canRecord && receipt.lines.length > 0
   const reviewing = screen === 'excess' && receipt.canDecideExcess
   const confirming = screen === 'confirmation' && receipt.canConfirm
   const recounting = screen === 'confirmation' && receipt.canReturnForRecount
+  const showRecount = recounting && recountOpen
   const assignable =
     user?.role === 'BRANCH_MANAGER' &&
     ['AWAITING_INSPECTION', 'AWAITING_RECOUNT'].includes(receipt.status)
@@ -201,7 +197,12 @@ function ReceiptForm({
     const submitter = (event.nativeEvent as SubmitEvent).submitter
     const recount =
       submitter instanceof HTMLButtonElement && submitter.value === 'recount'
-    if (recount ? !recounting : !(editing || reviewing || confirming)) return
+    if (
+      recount
+        ? !showRecount
+        : !(editing || reviewing || (confirming && !showRecount))
+    )
+      return
     if (confirming && !recount) {
       setConfirmOpen(true)
       return
@@ -542,12 +543,20 @@ function ReceiptForm({
           </table>
         </div>
       </section>
-      {recounting && (
+      {showRecount && (
         <section className="receiving-panel">
           <h2>Trả về kiểm lại</h2>
           <div className="receiving-layout-fields">
             <label>
-              Lý do kiểm lại <textarea name="reason" maxLength={255} rows={2} />
+              Lý do kiểm lại
+              <textarea
+                name="reason"
+                autoFocus
+                required
+                disabled={saving}
+                maxLength={255}
+                rows={2}
+              />
             </label>
           </div>
         </section>
@@ -561,12 +570,41 @@ function ReceiptForm({
               trách nhiệm về kết quả này
             </label>
           )}
-          {recounting && (
-            <button type="submit" value="recount" disabled={saving}>
-              Trả về kiểm lại
-            </button>
-          )}
-          {(editing || reviewing || confirming) && (
+          {recounting &&
+            (showRecount ? (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => {
+                    setRecountOpen(false)
+                    setError('')
+                  }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  value="recount"
+                  className="receiving-layout-primary"
+                  disabled={saving}
+                >
+                  {saving ? 'Đang lưu…' : 'Gửi yêu cầu kiểm lại'}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  setRecountOpen(true)
+                  setError('')
+                }}
+              >
+                Trả về kiểm lại
+              </button>
+            ))}
+          {(editing || reviewing || (confirming && !showRecount)) && (
             <button
               type="submit"
               className="receiving-layout-primary"

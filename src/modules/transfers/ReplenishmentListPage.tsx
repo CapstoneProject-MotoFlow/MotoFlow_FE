@@ -1,35 +1,21 @@
 import { useOpenReplenishments } from './useOpenReplenishments'
-import { useCoordinationAccess } from './useCoordinationAccess'
 import { Link } from 'react-router-dom'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
+import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import { date } from '../inventory/presentation'
 import type { Page } from '../inventory/types'
-import { states, type Replenishment, type ReplenishmentRow } from './types'
+import { states, type ReplenishmentRow } from './types'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
 export default function ReplenishmentListPage() {
   const scope = useInventoryScope(),
     search = scope.params.get('q') ?? '',
-    page = Math.max(0, Number(scope.params.get('page')) || 0),
-    manager = scope.user?.role === 'BRANCH_MANAGER',
-    firstPage = useInventoryData<Page<ReplenishmentRow>>(
-      '/replenishment-requests',
-      { size: 1 },
-      0,
-      manager,
-    )
-  const firstDetail = useInventoryData<Replenishment>(
-    '/replenishment-requests/' + firstPage.data?.items[0]?.id,
-    {},
-    0,
-    manager && !!firstPage.data?.items.length,
-  )
-  const coordinator = useCoordinationAccess(
-    firstDetail.data?.lines[0]?.productId,
-  )
+    page = Math.max(0, Number(scope.params.get('page')) || 0)
+  const manager = scope.user?.role === 'BRANCH_MANAGER'
+  const coordinator = canCoordinateTransfers(scope.user)
   const branch = manager && !coordinator
   const activeStatus =
     scope.params.get('status') || (branch ? 'OPEN' : 'AWAITING_COORDINATION')
@@ -63,7 +49,7 @@ export default function ReplenishmentListPage() {
       <section>
         <div className="tf-list-heading">
           <h2>
-            {scope.owner
+            {coordinator
               ? 'Yêu cầu bổ sung của các cửa hàng'
               : 'Yêu cầu bổ sung của ' + (scope.user?.storeName ?? 'cửa hàng')}
           </h2>

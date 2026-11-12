@@ -387,6 +387,3 @@ export default function StockCountListPage() {
     </main>
   )
 }
-export function CountBackLink() {
-  return <Link to="/stock-counts">← Danh sách kiểm kê</Link>
-}

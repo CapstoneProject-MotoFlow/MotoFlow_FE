@@ -1,5 +1,6 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import DebtEvidence from '../receivables/DebtEvidence'
-import { useCoordinationAccess } from './useCoordinationAccess'
+import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { dateTime } from '../inventory/presentation'
 import CoordinationAction from './CoordinationAction'
 import { useState } from 'react'
@@ -10,7 +11,7 @@ import TransferAction from './TransferAction'
 import { states, type Transfer } from './types'
 import TransferWorkPage from './TransferWorkPage'
 import './transfers.css'
-import { canConfirmExcess } from './transferRules'
+import { canConfirmExcess, receiptAcceptsResult } from './transferRules'
 import { useReturnQuantities } from './useReturnQuantities'
 import { resolutionNames } from './types'
 type Dispatch = {
@@ -51,12 +52,18 @@ export default function TransferDetailPage() {
       revision,
       !!id && /^\d+$/.test(id),
     ),
-    coordinator = useCoordinationAccess(r.data?.lines[0]?.productId),
+    d = r.data,
+    coordinator = canCoordinateTransfers(scope.user),
+    bm = scope.user?.role === 'BRANCH_MANAGER',
+    source = bm && scope.user?.storeId === d?.sourceStoreId,
+    dest = bm && scope.user?.storeId === d?.destStoreId,
     dispatch = useInventoryData<Dispatch>(
       '/transfer-orders/' + id + '/dispatch-preview',
       {},
       revision,
-      action === 'dispatch',
+      source &&
+        d?.status === 'AWAITING_DISPATCH' &&
+        d.lines.some((line) => (line.preparedQty ?? 0) > 0),
     ),
     closing = useInventoryData<Closing>(
       '/transfer-orders/' + id + '/closing-preview',
@@ -66,10 +73,6 @@ export default function TransferDetailPage() {
         !!r.data &&
         ['IN_TRANSIT', 'RECONCILING'].includes(r.data.status),
     ),
-    d = r.data,
-    bm = scope.user?.role === 'BRANCH_MANAGER',
-    source = bm && scope.user?.storeId === d?.sourceStoreId,
-    dest = bm && scope.user?.storeId === d?.destStoreId,
     returns = useReturnQuantities(d, source && d?.status === 'RECONCILING'),
     pendingReceipt = d?.receipts.find(
       (receipt) =>
@@ -77,9 +80,9 @@ export default function TransferDetailPage() {
     )
   return (
     <main className="dashboard-content tf-page tf-detail-page">
+      <PageBackLink to="/transfer-orders" />
       <header>
         <div>
-          <Link to="/transfer-orders">← Phiếu điều chuyển</Link>
           <h1>Lệnh điều chuyển DC-{String(id).padStart(4, '0')}</h1>
         </div>
       </header>
@@ -106,12 +109,16 @@ export default function TransferDetailPage() {
               </div>
               <div>
                 <span>Yêu cầu bổ sung</span>
-                {d.replenishmentRequestId ? (
+                {d.replenishmentRequestId && (coordinator || dest) ? (
                   <Link
                     to={'/replenishment-requests/' + d.replenishmentRequestId}
                   >
                     YBS-{String(d.replenishmentRequestId).padStart(4, '0')}
                   </Link>
+                ) : d.replenishmentRequestId ? (
+                  <strong>
+                    YBS-{String(d.replenishmentRequestId).padStart(4, '0')}
+                  </strong>
                 ) : (
                   <strong>Lập trực tiếp</strong>
                 )}
@@ -144,6 +151,21 @@ export default function TransferDetailPage() {
             </div>
             <div className="tf-filters tf-detail-actions">
               <span className="tf-badge">{states[d.status]}</span>
+              {scope.user?.role === 'STAFF' &&
+                pendingReceipt &&
+                receiptAcceptsResult(pendingReceipt.status) && (
+                  <Link
+                    className="tf-row-action"
+                    to={
+                      '/transfer-orders/' +
+                      id +
+                      '/receipts/' +
+                      pendingReceipt.id
+                    }
+                  >
+                    Ghi/Đếm
+                  </Link>
+                )}
               {d.status === 'AWAITING_DISPATCH' && (
                 <>
                   {scope.user?.role === 'STAFF' && (
@@ -152,12 +174,18 @@ export default function TransferDetailPage() {
                     </Link>
                   )}
                   {source && (
-                    <Link to={'/transfer-orders/' + id + '/prepare'}>
+                    <Link
+                      className="tf-primary"
+                      to={'/transfer-orders/' + id + '/prepare'}
+                    >
                       Giao việc soạn hàng
                     </Link>
                   )}
-                  {source && (
-                    <button onClick={() => setAction('dispatch')}>
+                  {source && dispatch.data?.canConfirm && (
+                    <button
+                      className="tf-primary"
+                      onClick={() => setAction('dispatch')}
+                    >
                       Xác nhận xuất
                     </button>
                   )}
@@ -177,11 +205,11 @@ export default function TransferDetailPage() {
                   >
                     Tiếp tục phiếu nhận #{pendingReceipt.id}
                   </Link>
-                ) : (
+                ) : d.lines.some((line) => (line.unresolvedQty ?? 0) > 0) ? (
                   <button onClick={() => setAction('arrive')}>
                     Hàng đã đến
                   </button>
-                ))}
+                ) : null)}
               {source && canConfirmExcess(d.status, d.lines) && (
                 <Link to={'/transfer-orders/' + id + '/extra'}>
                   Xác nhận xuất thừa
@@ -230,14 +258,43 @@ export default function TransferDetailPage() {
           </section>
           <section>
             <h2>Các lần nhận hàng</h2>
-            {d.receipts.map((x) => (
-              <p className="tf-note" key={x.id}>
-                <Link to={'/transfer-orders/' + id + '/receipts/' + x.id}>
-                  Phiếu nhận #{x.id}
-                </Link>{' '}
-                · {states[x.status] ?? x.status}
-              </p>
-            ))}
+            {d.receipts.length > 0 && (
+              <div className="tf-receipts-list">
+                {d.receipts.map((receipt) => {
+                  const canOpenReceipt =
+                    coordinator ||
+                    scope.user?.role === 'STAFF' ||
+                    (receipt.receiptType === 'RETURN_TO_SOURCE' ? source : dest)
+                  const content = (
+                    <>
+                      <span className="tf-receipt-card-title">
+                        Phiếu nhận #{receipt.id}
+                      </span>
+                      <span className="tf-receipt-status">
+                        {states[receipt.status] ?? receipt.status}
+                      </span>
+                      <span className="tf-receipt-card-date">
+                        {dateTime(receipt.arrivedAt)}
+                      </span>
+                    </>
+                  )
+
+                  return canOpenReceipt ? (
+                    <Link
+                      className="tf-receipt-card"
+                      key={receipt.id}
+                      to={'/transfer-orders/' + id + '/receipts/' + receipt.id}
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div className="tf-receipt-card" key={receipt.id}>
+                      {content}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             {!d.receipts.length && (
               <p className="tf-empty">
                 {d.status === 'AWAITING_DISPATCH'
@@ -255,44 +312,50 @@ export default function TransferDetailPage() {
                 {dateTime(d.extraDispatchConfirmedAt)}
               </p>
             )}
-            <div className="tf-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Lô</th>
-                    <th>Phụ tùng</th>
-                    <th>Hạn dùng</th>
-                    <th>Số lượng</th>
-                    {scope.owner && <th>Giá vốn</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.lots.map((l, i) => (
-                    <tr key={i}>
-                      <td>{l.manufacturerLotNo || '#' + l.lotId}</td>
-                      <td>
-                        {d.lines.find((p) => p.productId === l.productId)?.sku}
-                      </td>
-                      <td>{l.expiryDate ?? 'Không có'}</td>
-                      <td>{l.quantity}</td>
-                      {scope.owner && (
-                        <td>
-                          {l.unitCost == null
-                            ? '—'
-                            : l.unitCost.toLocaleString('vi-VN')}
-                        </td>
-                      )}
+            {d.lots.length ? (
+              <div className="tf-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Lô</th>
+                      <th>Phụ tùng</th>
+                      <th>Hạn dùng</th>
+                      <th>Số lượng</th>
+                      {scope.owner && <th>Giá vốn</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {d.lots.map((l, i) => (
+                      <tr key={i}>
+                        <td>{l.manufacturerLotNo || '#' + l.lotId}</td>
+                        <td>
+                          {
+                            d.lines.find((p) => p.productId === l.productId)
+                              ?.sku
+                          }
+                        </td>
+                        <td>{l.expiryDate ?? 'Không có'}</td>
+                        <td>{l.quantity}</td>
+                        {scope.owner && (
+                          <td>
+                            {l.unitCost == null
+                              ? '—'
+                              : l.unitCost.toLocaleString('vi-VN')}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="tf-empty tf-empty-lots">
+                {d.status === 'AWAITING_DISPATCH'
+                  ? 'Chưa xuất kho nên chưa phát sinh lô xuất.'
+                  : 'Chưa có thông tin lô xuất.'}
+              </p>
+            )}
           </section>
-          {!d.lots.length && (
-            <p className="tf-empty tf-empty-lots">
-              Chưa xuất kho nên chưa phát sinh lô xuất.
-            </p>
-          )}
           <section>
             <h2>Lịch sử lệnh</h2>
             <ol className="tf-order-history">
@@ -336,10 +399,10 @@ export default function TransferDetailPage() {
                 loading={returns.loading}
                 error={returns.error}
               />
-              {scope.user?.role !== 'STAFF' && (
+              {d.status === 'RECONCILING' && (coordinator || source) && (
                 <CoordinationAction
                   canDecide={coordinator}
-                  canReturn={source && d.status === 'RECONCILING'}
+                  canReturn={source && !!returns.data?.length}
                   returnLines={returns.data ?? []}
                   id={d.id}
                   lines={d.lines
@@ -392,6 +455,7 @@ export default function TransferDetailPage() {
                     ? !closing.data?.canClose
                     : false
               }
+              hideSubmit={action === 'close' && !closing.data?.canClose}
               payload={() =>
                 action === 'dispatch'
                   ? {

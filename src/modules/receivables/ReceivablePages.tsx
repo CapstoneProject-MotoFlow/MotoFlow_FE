@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import DebtEvidence from './DebtEvidence'
 import OpeningDebtPicker from './OpeningDebtPicker'
 import { useEffect, useState } from 'react'
@@ -152,7 +153,9 @@ export function ReceivableListPage() {
                   <td>{day(r.earliestDueDate)}</td>
                   <td>
                     <Link
-                      className={'rv-pay-link'+(r.overdueDebt?' rv-pay-overdue':'')}
+                      className={
+                        'rv-pay-link' + (r.overdueDebt ? ' rv-pay-overdue' : '')
+                      }
                       to={`/receivables/customers/${r.customerId}?action=payment${scope.storeId ? '&storeId=' + scope.storeId : ''}`}
                     >
                       Thu nợ
@@ -228,9 +231,9 @@ export function ReceivableDetailPage() {
       ) ?? []
   return (
     <main className="dashboard-content rv-page rv-detail">
+      <PageBackLink to="/receivables" />
       <header className="stock-heading">
         <div>
-          <Link to="/receivables">← Công nợ khách hàng</Link>
           <h1>{d ? 'Công nợ của ' + d.customerName : 'Chi tiết công nợ'}</h1>
         </div>
       </header>

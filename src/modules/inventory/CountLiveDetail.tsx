@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
@@ -115,9 +116,10 @@ export default function CountLiveDetail() {
           : true
   return (
     <main className="inventory-workspace count-workspace">
-      <InventoryHeader title={c ? 'Phiếu kiểm kê ' + c.code : 'Phiếu kiểm kê'}>
-        <Link to="/stock-counts">← Danh sách kiểm kê</Link>
-      </InventoryHeader>
+      <PageBackLink to="/stock-counts" />
+      <InventoryHeader
+        title={c ? 'Phiếu kiểm kê ' + c.code : 'Phiếu kiểm kê'}
+      />
       <InventoryNotice loading={r.loading} error={r.error} />
       {d && c && (
         <>

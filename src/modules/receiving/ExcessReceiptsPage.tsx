@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -46,9 +47,9 @@ export default function ExcessReceiptsPage() {
   }, [page])
   return (
     <main className="dashboard-content receiving-page">
+      <PageBackLink to="/purchase-orders" />
       <header className="receiving-heading">
         <h1>Chờ duyệt hàng thừa</h1>
-        <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
       </header>
       {loading && <p role="status">Đang tải phiếu…</p>}
       {error && <p role="alert">{error}</p>}

@@ -16,7 +16,12 @@ export default function CoordinationAction({
     quantity: number
     currentPurchaseQty?: number
   }[]
-  returnLines?: { productId: number; sku: string; quantity: number; currentPurchaseQty?:number }[]
+  returnLines?: {
+    productId: number
+    sku: string
+    quantity: number
+    currentPurchaseQty?: number
+  }[]
   replenishment?: boolean
   canDecide?: boolean
   canReturn?: boolean
@@ -52,19 +57,13 @@ export default function CoordinationAction({
   return (
     <div className="tf-note">
       <div className="tf-filters">
-        {canDecide && (
-          <button
-            disabled={!lines.length}
-            onClick={() => open(replenishment ? 'purchase' : 'decision')}
-          >
+        {canDecide && lines.length > 0 && (
+          <button onClick={() => open(replenishment ? 'purchase' : 'decision')}>
             {replenishment ? 'Chuyển phần thiếu sang mua' : 'Xử lý phần thiếu'}
           </button>
         )}
-        {!replenishment && canReturn && (
-          <button
-            disabled={!(returnLines ?? lines).length}
-            onClick={() => open('return')}
-          >
+        {!replenishment && canReturn && (returnLines ?? lines).length > 0 && (
+          <button onClick={() => open('return')}>
             Ghi nhận hàng trả về nguồn
           </button>
         )}
