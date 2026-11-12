@@ -6,7 +6,7 @@ import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import { date } from '../inventory/presentation'
 import type { Page } from '../inventory/types'
-import { states, type ReplenishmentRow } from './types'
+import { states, type Replenishment, type ReplenishmentRow } from './types'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
@@ -119,7 +119,7 @@ export default function ReplenishmentListPage() {
                 <th>Cửa hàng</th>
                 <th>Hàng yêu cầu</th>
                 <th>Trạng thái</th>
-                <th>Cần làm</th>
+                <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -167,8 +167,11 @@ function ReplenishmentRow({
         </Link>
         <small>{date(row.createdAt)}</small>
       </td>
-      <td>{row.storeName}</td>
+      <td>
+        <strong className="tf-store-name">{row.storeName}</strong>
+      </td>
       <td className="tf-requested-parts">
+        <RequestedParts id={row.id} />
         <small>
           {row.totalRequestedQty} sản phẩm · {row.lineCount} mã
         </small>
@@ -195,5 +198,32 @@ function ReplenishmentRow({
         )}
       </td>
     </tr>
+  )
+}
+
+/**
+ * RequestedParts: danh sách phụ tùng của yêu cầu ngay trên dòng (góp ý cô Hoài 12/11: sau khi tạo yêu cầu bổ sung
+ * phải thấy tên cửa hàng và các phụ tùng yêu cầu). API danh sách chỉ trả số dòng, nên đọc chi tiết từng yêu cầu.
+ */
+function RequestedParts({ id }: { id: number }) {
+  const detail = useInventoryData<Replenishment>(
+    '/replenishment-requests/' + id,
+  )
+  const lines = detail.data?.lines ?? []
+  if (!lines.length) return null
+  const shown = lines.slice(0, 3)
+  return (
+    <ul className="tf-part-list">
+      {shown.map((line) => (
+        <li key={line.productId}>
+          {line.partName} <b>× {line.requestedQty}</b>
+        </li>
+      ))}
+      {lines.length > shown.length && (
+        <li className="tf-part-more">
+          và {lines.length - shown.length} phụ tùng khác
+        </li>
+      )}
+    </ul>
   )
 }

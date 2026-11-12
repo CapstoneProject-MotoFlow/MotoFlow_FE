@@ -5,6 +5,7 @@ import { uploadAttachment } from '../../shared/api/upload'
 import FormDialog from '../../shared/ui/FormDialog'
 import { inventoryError } from '../inventory/api'
 import type { Transfer } from './types'
+import CardHead, { HeadButton } from './CardHead'
 import { pendingExcess, canConfirmExcess } from './transferRules'
 export default function ExcessDispatchEditor({
   order,
@@ -63,7 +64,20 @@ export default function ExcessDispatchEditor({
   }
   return (
     <section>
-      <h2>Xác nhận phần xuất thừa còn chờ</h2>
+      <CardHead title="Xác nhận phần xuất thừa còn chờ">
+        {allowed && (
+          <HeadButton
+            action={{
+              key: 'confirm',
+              label: 'Xem và xác nhận xuất thừa',
+              icon: 'check',
+              primary: true,
+              disabled: !valid || busy,
+              onClick: () => setConfirm(true),
+            }}
+          />
+        )}
+      </CardHead>
       {!allowed && (
         <p className="tf-note">
           Phiếu hiện không có phần xuất thừa chờ bạn xác nhận.
@@ -136,13 +150,6 @@ export default function ExcessDispatchEditor({
               onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
             />
           </label>
-          <button
-            className="tf-primary"
-            disabled={!valid || busy}
-            onClick={() => setConfirm(true)}
-          >
-            Xem và xác nhận xuất thừa
-          </button>
         </div>
       )}
       {confirm && (

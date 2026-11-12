@@ -149,7 +149,7 @@ export default function ManagerTransferListPage() {
                 <th>Ngày tạo</th>
                 <th>Hàng</th>
                 <th>Trạng thái</th>
-                <th>Xem chi tiết</th>
+                <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
