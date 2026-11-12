@@ -237,8 +237,10 @@ export default function PriceListPage() {
                       </>
                     )}
                     <td>
-                      <div className="pricing-actions">
+                      <div className="mf-row-actions pricing-actions">
                         <button
+                          type="button"
+                          className="mf-btn mf-btn--sm mf-btn--secondary"
                           onClick={() =>
                             setSelected({ row: r, mode: 'history' })
                           }
@@ -247,7 +249,8 @@ export default function PriceListPage() {
                         </button>
                         {edit && (
                           <button
-                            className="pricing-primary"
+                            type="button"
+                            className="mf-btn mf-btn--sm mf-btn--primary"
                             onClick={() =>
                               setSelected({ row: r, mode: 'edit' })
                             }

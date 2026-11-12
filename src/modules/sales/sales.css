@@ -743,37 +743,12 @@
 .sales-unmet-unit {
   color: #667085;
 }
-.sales-unmet-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
+.sales-unmet-actions.mf-row-actions {
+  min-width: 132px;
 }
-.sales-unmet-actions a,
-.sales-unmet-actions button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  padding: 8px 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 7px;
-  background: #fff;
-  color: #344054;
-  font: inherit;
-  font-size: 12px;
-  white-space: nowrap;
-  min-height: 34px;
-  box-sizing: border-box;
-  text-decoration: none;
-  cursor: pointer;
-}
-.sales-unmet-actions a {
-  background: #465fff;
-  border-color: #465fff;
-  color: #fff;
-}
-.sales-unmet-actions button:hover {
-  background: #f9fafb;
+.sales-unmet-choice {
+  min-width: 0;
+  font-size: 13px;
 }
 .sales-unmet .stock-notice {
   margin: 0 20px 12px;

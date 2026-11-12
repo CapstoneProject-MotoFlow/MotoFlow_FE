@@ -252,12 +252,14 @@ export default function OwnerMonitoring() {
                       <td>{w.task}</td>
                       <td className="mf-num">{dateTime(w.at)}</td>
                       <td>
-                        <Link
-                          className="mf-btn mf-btn--primary mf-btn--sm"
-                          to={w.href}
-                        >
-                          Xử lý
-                        </Link>
+                        <div className="mf-row-actions">
+                          <Link
+                            className="mf-btn mf-btn--primary mf-btn--sm"
+                            to={w.href}
+                          >
+                            Xử lý
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

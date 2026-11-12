@@ -257,7 +257,14 @@ export default function StockCountListPage() {
                     </span>
                   </td>
                   <td>
-                    <Link to={`/stock-counts/${c.id}`}>Xem phiếu</Link>
+                    <div className="mf-row-actions">
+                      <Link
+                        className="mf-btn mf-btn--sm mf-btn--secondary"
+                        to={`/stock-counts/${c.id}`}
+                      >
+                        Xem phiếu
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -329,25 +336,31 @@ export default function StockCountListPage() {
                       }
                     </td>
                     <td>
-                      {q.status === 'PENDING' &&
-                        (scope.owner ? (
-                          <button
-                            disabled={busy}
-                            onClick={() => setCancelId(q.id)}
-                          >
-                            Hủy yêu cầu
-                          </button>
-                        ) : (
-                          <button
-                            className="count-primary"
-                            onClick={() => {
-                              setRequestId(q.id)
-                              setDialog(true)
-                            }}
-                          >
-                            Tạo phiếu từ yêu cầu
-                          </button>
-                        ))}
+                      {q.status === 'PENDING' && (
+                        <div className="mf-row-actions">
+                          {scope.owner ? (
+                            <button
+                              type="button"
+                              className="mf-btn mf-btn--sm mf-btn--danger"
+                              disabled={busy}
+                              onClick={() => setCancelId(q.id)}
+                            >
+                              Hủy yêu cầu
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="mf-btn mf-btn--sm mf-btn--primary"
+                              onClick={() => {
+                                setRequestId(q.id)
+                                setDialog(true)
+                              }}
+                            >
+                              Tạo phiếu từ yêu cầu
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

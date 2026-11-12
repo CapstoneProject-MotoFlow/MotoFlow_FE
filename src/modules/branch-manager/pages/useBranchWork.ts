@@ -120,7 +120,7 @@ export function useBranchWork(coordinator: boolean) {
       description: t.sourceStoreName + ' đến ' + t.destStoreName,
       at: t.createdAt,
       href: '/transfer-orders/' + t.id,
-      action: 'Xem xuất hàng',
+      action: 'Xuất hàng',
     })),
     ...(drafts.data?.pendingRequests ?? []).map((r) => ({
       key: 'q' + r.id,

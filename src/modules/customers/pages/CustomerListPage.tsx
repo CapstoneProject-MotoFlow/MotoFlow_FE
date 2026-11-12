@@ -188,7 +188,7 @@ export default function CustomerListPage({
                       </td>
                       <td className="branch-customer-actions">
                         {/* Review T4: một nút chính trên dòng, quyền mua chịu đưa vào menu. */}
-                        <div>
+                        <div className="mf-row-actions">
                           <button
                             type="button"
                             className="mf-btn mf-btn--secondary mf-btn--sm"

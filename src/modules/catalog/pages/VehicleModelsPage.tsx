@@ -228,18 +228,32 @@ export default function VehicleModelsPage() {
                       </span>
                     </td>
                     <td className="vehicle-actions">
-                      <button disabled={busy} onClick={() => launch(row)}>
-                        Sửa
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => {
-                          setConfirmError('')
-                          setConfirming(row)
-                        }}
-                      >
-                        {row.status === 'ACTIVE' ? 'Ngừng dùng' : 'Mở lại'}
-                      </button>
+                      <div className="mf-row-actions">
+                        <button
+                          type="button"
+                          className="mf-btn mf-btn--sm mf-btn--secondary"
+                          disabled={busy}
+                          onClick={() => launch(row)}
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            'mf-btn mf-btn--sm ' +
+                            (row.status === 'ACTIVE'
+                              ? 'mf-btn--danger'
+                              : 'mf-btn--secondary')
+                          }
+                          disabled={busy}
+                          onClick={() => {
+                            setConfirmError('')
+                            setConfirming(row)
+                          }}
+                        >
+                          {row.status === 'ACTIVE' ? 'Ngừng dùng' : 'Mở lại'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

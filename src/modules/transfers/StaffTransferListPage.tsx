@@ -1,10 +1,9 @@
-import { Fragment, useState } from 'react'
 import { useOpenTransfers } from './useOpenTransfers'
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
-import { states, type Transfer, type TransferRow, type Preparation } from './types'
+import { states, type Transfer, type TransferRow } from './types'
 import './transfers.css'
 export default function StaffTransferListPage() {
   const scope = useInventoryScope(),
@@ -98,89 +97,73 @@ export default function StaffTransferListPage() {
   )
 }
 function StaffRow({ row }: { row: TransferRow }) {
-  const [expanded, setExpanded] = useState(false)
   return (
-    <Fragment>
-      <tr>
-        <td>
-          <Link to={'/transfer-orders/' + row.id}>
-            DC-{String(row.id).padStart(4, '0')}
-          </Link>
-        </td>
-        <td>{row.sourceStoreName}</td>
-        <td>{row.destStoreName}</td>
-        <td>
-          {row.lineCount} mã · {row.totalPlannedQty} sản phẩm
-        </td>
-        <td>
-          <span className="tf-badge">{states[row.status] ?? row.status}</span>
-        </td>
-        <td>
-          <div className="tf-staff-row-actions">
-            <Link to={'/transfer-orders/' + row.id}>Xem chi tiết</Link>
-            <button
-              type="button"
-              aria-expanded={expanded}
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {expanded ? 'Thu gọn' : 'Xem việc được giao'}
-            </button>
-          </div>
-        </td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={6}>
-            <StaffAssignedDetails row={row} />
-          </td>
-        </tr>
-      )}
-    </Fragment>
+    <tr>
+      <td>
+        <Link to={'/transfer-orders/' + row.id}>
+          DC-{String(row.id).padStart(4, '0')}
+        </Link>
+      </td>
+      <td>{row.sourceStoreName}</td>
+      <td>{row.destStoreName}</td>
+      <td>
+        {row.lineCount} mã · {row.totalPlannedQty} sản phẩm
+      </td>
+      <td>
+        <span className="tf-badge">{states[row.status] ?? row.status}</span>
+      </td>
+      <td>
+        <div className="mf-row-actions">
+          <StaffRowAction row={row} />
+        </div>
+      </td>
+    </tr>
   )
 }
-function StaffAssignedDetails({ row }: { row: TransferRow }) {
+/**
+ * Nút trên dòng dẫn thẳng vào phiếu của nhân viên: kho xuất vào phiếu soạn hàng, kho nhận (hoặc kho xuất khi hàng
+ * bị trả về) vào phiếu nhận đang mở. Không có việc đang mở thì chỉ xem chi tiết lệnh.
+ */
+function StaffRowAction({ row }: { row: TransferRow }) {
   const { user } = useInventoryScope(),
     source = user?.storeId === row.sourceStoreId,
-    detail = useInventoryData<Transfer>('/transfer-orders/' + row.id),
-    prep = useInventoryData<Preparation>(
-      '/transfer-orders/' + row.id + '/preparation',
+    open = row.status !== 'CLOSED',
+    preparing = source && row.status === 'AWAITING_DISPATCH',
+    detail = useInventoryData<Transfer>(
+      '/transfer-orders/' + row.id,
       {},
       0,
-      source && row.status !== 'CLOSED',
+      open && !preparing,
+    ),
+    receipt = detail.data?.receipts.find(
+      (r) =>
+        r.status !== 'CONFIRMED' &&
+        r.receiptType === (source ? 'RETURN_TO_SOURCE' : 'TRANSFER_IN'),
+    )
+  if (preparing)
+    return (
+      <Link
+        className="mf-btn mf-btn--sm mf-btn--primary"
+        to={'/transfer-orders/' + row.id + '/prepare'}
+      >
+        Soạn hàng
+      </Link>
+    )
+  if (receipt)
+    return (
+      <Link
+        className="mf-btn mf-btn--sm mf-btn--primary"
+        to={'/transfer-orders/' + row.id + '/receipts/' + receipt.id}
+      >
+        Kiểm nhận hàng
+      </Link>
     )
   return (
-    <div className="tf-note">
-      <InventoryNotice
-        loading={detail.loading || prep.loading}
-        error={detail.error || prep.error}
-      />
-      {prep.data?.preparer && prep.data.preparer.id === user?.id && (
-        <p>
-          {states[prep.data.preparer.taskStatus] ??
-            prep.data.preparer.taskStatus}{' '}
-          ·{' '}
-          <Link
-            className="tf-transfer-ref"
-            to={'/transfer-orders/' + row.id + '/prepare'}
-          >
-            {prep.data.canRecord
-              ? 'Ghi số đã chuẩn bị'
-              : 'Xem kết quả chuẩn bị'}
-          </Link>
-        </p>
-      )}
-      {detail.data?.receipts.map((r) => (
-        <Link
-          className="tf-transfer-ref"
-          key={r.id}
-          to={`/transfer-orders/${row.id}/receipts/${r.id}`}
-        >
-          Mở phiếu nhận #{r.id} · {states[r.status] ?? r.status}
-        </Link>
-      ))}
-      {detail.data && !detail.data.receipts.length && (
-        <p>Chưa có lượt nhận hàng.</p>
-      )}
-    </div>
+    <Link
+      className="mf-btn mf-btn--sm mf-btn--secondary"
+      to={'/transfer-orders/' + row.id + (source && open ? '/prepare' : '')}
+    >
+      {source && open ? 'Xem kết quả soạn' : 'Xem chi tiết'}
+    </Link>
   )
 }

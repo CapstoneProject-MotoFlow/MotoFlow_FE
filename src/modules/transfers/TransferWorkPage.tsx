@@ -277,6 +277,12 @@ function WorkEditor({
     resultSubmitted =
       mode === 'prepare' &&
       preparation?.preparer?.taskStatus === 'RESULT_SUBMITTED',
+    // Đã giao người soạn và chưa có kết quả: tên người soạn đã hiện ở đầu thẻ nên không hiện thêm thông báo xanh.
+    preparedByOther =
+      !!preparation?.preparer &&
+      !resultSubmitted &&
+      !preparation.canRecord &&
+      preparation.status === 'AWAITING_DISPATCH',
     canRecord =
       mode === 'prepare'
         ? !!preparation?.canRecord
@@ -423,7 +429,7 @@ function WorkEditor({
         {receipt?.recountReason && (
           <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
         )}
-        {preparation && (
+        {preparation && !preparedByOther && (
           <div className="tf-preparation-notice" role="status">
             {resultSubmitted ? (
               <>
@@ -447,17 +453,6 @@ function WorkEditor({
               <>
                 <strong>Phiếu đã qua bước soạn hàng.</strong>
                 <p>Kết quả hiện chỉ để xem.</p>
-              </>
-            ) : preparation.preparer ? (
-              <>
-                <strong>
-                  Việc soạn đang giao cho {preparation.preparer.name}.
-                </strong>
-                <p>
-                  Chỉ người được giao mới được nhập và gửi kết quả. Quản lý có
-                  thể giao lại bằng nút Đổi nhân viên ở đầu thẻ; người xác nhận
-                  xuất phải khác người soạn.
-                </p>
               </>
             ) : (
               <>

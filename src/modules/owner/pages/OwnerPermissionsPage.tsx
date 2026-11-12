@@ -10,7 +10,7 @@ import {
  * File: modules/owner/pages/OwnerPermissionsPage.tsx
  * Loại: MÀN HÌNH — Quyền danh mục và giá.
  * Đường dẫn: /owner/catalog-permissions.
- * Công dụng: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ.
+ * Công dụng: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup xác nhận (lý do không bắt buộc); lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ.
  */
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -20,7 +20,7 @@ import FormDialog from '../../../shared/ui/FormDialog'
 import { apiMessage } from '../../suppliers/supplierService'
 import './owner-permissions.css'
 import { formatDateTime } from '../../../shared/utils/format'
-/** OwnerPermissionsPage: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ. */
+/** OwnerPermissionsPage: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup xác nhận (lý do không bắt buộc); lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ. */
 export default function OwnerPermissionsPage() {
   const { user } = useAuth()
   const [history, setHistory] = useState<
@@ -226,7 +226,7 @@ export default function OwnerPermissionsPage() {
                   <small>
                     {formatDateTime(event.at)} · {event.actor}
                   </small>
-                  <blockquote>{event.reason}</blockquote>
+                  {event.reason && <blockquote>{event.reason}</blockquote>}
                 </div>
               </li>
             ))}
@@ -259,10 +259,6 @@ export default function OwnerPermissionsPage() {
               const reason = String(
                 new FormData(e.currentTarget).get('reason') || '',
               ).trim()
-              if (!reason) {
-                setFormError('Vui lòng nhập lý do.')
-                return
-              }
               setBusy(true)
               setFormError('')
               try {
@@ -306,13 +302,8 @@ export default function OwnerPermissionsPage() {
                 : 'sửa giá bán lẻ'}
             </p>
             <label>
-              Lý do
-              <textarea
-                name="reason"
-                required
-                maxLength={255}
-                disabled={busy}
-              />
+              Lý do (không bắt buộc)
+              <textarea name="reason" maxLength={255} disabled={busy} />
             </label>
             {formError && <p role="alert">{formError}</p>}
           </form>

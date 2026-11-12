@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useInventoryData } from '../../inventory/api'
+import { useInventoryData, useInventoryScope } from '../../inventory/api'
 import { InventoryNotice } from '../../inventory/components'
 import type { Page } from '../../inventory/types'
 import { useCountList } from '../../inventory/useCountList'
@@ -31,6 +31,7 @@ type Task = {
 }
 export default function StaffWorkTable() {
   const [page, setPage] = useState(0)
+  const { user } = useInventoryScope()
   const sales = useInventoryData<Page<SummaryDto>>('/sales-orders', {
       view: 'OPEN',
       page,
@@ -85,18 +86,23 @@ export default function StaffWorkTable() {
     })),
     ...(transfers.data?.items ?? [])
       .filter((t) => t.status !== 'CLOSED')
-      .map((t) => ({
-        key: 't' + t.id,
-        task: 'Điều chuyển được giao',
-        code: 'DC-' + String(t.id).padStart(4, '0'),
-        description: t.sourceStoreName + ' đến ' + t.destStoreName,
-        assignedAt: null,
-        due: null,
-        status: 'Mở phiếu để xem kết quả',
-        action: 'Mở việc điều chuyển',
-        href: '/transfer-orders/' + t.id,
-        submitted: false,
-      })),
+      .map((t) => {
+        // Kho xuất đang chờ xuất: vào thẳng phiếu soạn hàng.
+        const preparing =
+          t.status === 'AWAITING_DISPATCH' && user?.storeId === t.sourceStoreId
+        return {
+          key: 't' + t.id,
+          task: preparing ? 'Soạn hàng điều chuyển' : 'Điều chuyển được giao',
+          code: 'DC-' + String(t.id).padStart(4, '0'),
+          description: t.sourceStoreName + ' đến ' + t.destStoreName,
+          assignedAt: null,
+          due: null,
+          status: preparing ? 'Lệnh chờ xuất' : 'Mở phiếu để xem kết quả',
+          action: preparing ? 'Soạn hàng' : 'Mở việc điều chuyển',
+          href: '/transfer-orders/' + t.id + (preparing ? '/prepare' : ''),
+          submitted: false,
+        }
+      }),
     ...(counts.data?.counts.items ?? [])
       .filter((c) => ['DRAFT', 'COUNTING'].includes(c.status))
       .map((c) => ({
@@ -175,9 +181,14 @@ export default function StaffWorkTable() {
                   </span>
                 </td>
                 <td>
-                  <Link className="staff-work-action" to={t.href}>
-                    {t.action}
-                  </Link>
+                  <div className="mf-row-actions">
+                    <Link
+                      className="mf-btn mf-btn--sm mf-btn--primary"
+                      to={t.href}
+                    >
+                      {t.action}
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

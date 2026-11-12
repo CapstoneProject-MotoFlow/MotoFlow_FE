@@ -11,6 +11,7 @@ import type { Page } from '../inventory/types'
 import { money, dateTime, today } from '../inventory/presentation'
 import type { Customer } from '../customers/types'
 import PageBackLink from '../../shared/ui/PageBackLink'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 
 import {
   salesStates,
@@ -261,33 +262,44 @@ export function SalesOrderListPage({
                   )}
                   <td>{salesStates[order.status]}</td>
                   <td>
-                    {order.nextAction === 'RECORD_PICKING' ? (
-                      <Link to={'/sales-orders/' + order.id + '/pick'}>
-                        Ghi số đã nhặt
-                      </Link>
-                    ) : (
-                      <Link
-                        to={
-                          '/sales-orders/' +
-                          order.id +
-                          (order.nextAction === 'ASSIGN_PICKER'
-                            ? '?action=assign'
+                    <div className="mf-row-actions">
+                      {order.nextAction === 'RECORD_PICKING' ? (
+                        <Link
+                          className="mf-btn mf-btn--sm mf-btn--primary"
+                          to={'/sales-orders/' + order.id + '/pick'}
+                        >
+                          Ghi số đã nhặt
+                        </Link>
+                      ) : (
+                        <Link
+                          className={
+                            'mf-btn mf-btn--sm ' +
+                            (order.nextAction
+                              ? 'mf-btn--primary'
+                              : 'mf-btn--secondary')
+                          }
+                          to={
+                            '/sales-orders/' +
+                            order.id +
+                            (order.nextAction === 'ASSIGN_PICKER'
+                              ? '?action=assign'
+                              : order.nextAction === 'CONFIRM'
+                                ? '?action=confirm'
+                                : order.nextAction === 'COLLECT_PAYMENT'
+                                  ? '?action=payment'
+                                  : '')
+                          }
+                        >
+                          {order.nextAction === 'ASSIGN_PICKER'
+                            ? 'Giao việc'
                             : order.nextAction === 'CONFIRM'
-                              ? '?action=confirm'
+                              ? 'Xác nhận'
                               : order.nextAction === 'COLLECT_PAYMENT'
-                                ? '?action=payment'
-                                : '')
-                        }
-                      >
-                        {order.nextAction === 'ASSIGN_PICKER'
-                          ? 'Giao việc'
-                          : order.nextAction === 'CONFIRM'
-                            ? 'Xác nhận'
-                            : order.nextAction === 'COLLECT_PAYMENT'
-                              ? 'Thu tiền'
-                              : 'Chi tiết'}
-                      </Link>
-                    )}{' '}
+                                ? 'Thu tiền'
+                                : 'Chi tiết'}
+                        </Link>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1181,8 +1193,11 @@ export function UnmetDemandPage() {
   const scope = useInventoryScope(),
     p = scope.params,
     page = Math.max(0, Number(p.get('page')) || 0)
-  const customers = useChoicePages<Customer>('/customers', p.get('q') ?? '')
-  const products = useChoicePages<Product>('/products', p.get('q') ?? '')
+  // Ô Phụ tùng và Khách hàng là ô tìm kiếm thả xuống (Truong 12/11: bỏ nút "Tải thêm"), mỗi ô tìm theo chữ gõ riêng.
+  const [productSearch, setProductSearch] = useState('')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const customers = useChoicePages<Customer>('/customers', customerSearch)
+  const products = useChoicePages<Product>('/products', productSearch)
   const selectedProduct = useInventoryData<Product>(
     '/products/' + p.get('productId'),
     {},
@@ -1196,15 +1211,20 @@ export function UnmetDemandPage() {
     !!p.get('customerId'),
   )
   const productOptions = [
-    ...(selectedProduct.data ? [selectedProduct.data] : []),
+    ...(selectedProduct.data && !productSearch.trim()
+      ? [selectedProduct.data]
+      : []),
     ...(products.data?.items ?? []).filter(
-      (item) => item.id !== selectedProduct.data?.id,
+      (item) => productSearch.trim() || item.id !== selectedProduct.data?.id,
     ),
   ]
   const customerOptions = [
-    ...(selectedCustomer.data ? [selectedCustomer.data.customer] : []),
+    ...(selectedCustomer.data && !customerSearch.trim()
+      ? [selectedCustomer.data.customer]
+      : []),
     ...(customers.data?.items ?? []).filter(
-      (item) => item.id !== selectedCustomer.data?.customer.id,
+      (item) =>
+        customerSearch.trim() || item.id !== selectedCustomer.data?.customer.id,
     ),
   ]
   const data = useInventoryData<Page<UnmetRow>>(
@@ -1250,72 +1270,48 @@ export function UnmetDemandPage() {
                 onChange={(e) => scope.filter({ q: e.target.value }, true)}
               />
             </label>
-            <label>
-              Phụ tùng
-              <select
+            <div className="stock-filter sales-unmet-choice">
+              <span>Phụ tùng</span>
+              <SearchableFilter
+                label="Phụ tùng"
+                searchPlaceholder="Tên hoặc SKU…"
                 value={p.get('productId') ?? ''}
-                onChange={(e) => scope.filter({ productId: e.target.value })}
-              >
-                <option value="">Mọi phụ tùng</option>
-                {p.get('productId') &&
-                  !productOptions.some(
-                    (item) => String(item.id) === p.get('productId'),
-                  ) && (
-                    <option value={p.get('productId')!}>
-                      {selectedProduct.error
-                        ? 'Không tải được phụ tùng đã chọn'
-                        : 'Đang tải phụ tùng đã chọn…'}
-                    </option>
-                  )}
-                {productOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.sku} · {item.partName}
-                  </option>
-                ))}
-              </select>
-              {products.hasMore && (
-                <button
-                  type="button"
-                  disabled={products.loading}
-                  onClick={products.loadMore}
-                >
-                  {products.loading ? 'Đang tải…' : 'Tải thêm phụ tùng'}
-                </button>
-              )}
-            </label>
-            <label>
-              Khách hàng
-              <select
+                options={[
+                  ...(!productSearch.trim()
+                    ? [{ value: '', label: 'Mọi phụ tùng' }]
+                    : []),
+                  ...productOptions.map((item) => ({
+                    value: String(item.id),
+                    label: item.sku + ' · ' + item.partName,
+                  })),
+                ]}
+                loading={products.loading}
+                error={products.error}
+                onSearch={(query) => setProductSearch(query ?? '')}
+                onChange={(productId) => scope.filter({ productId })}
+              />
+            </div>
+            <div className="stock-filter sales-unmet-choice">
+              <span>Khách hàng</span>
+              <SearchableFilter
+                label="Khách hàng"
+                searchPlaceholder="Tên hoặc số điện thoại…"
                 value={p.get('customerId') ?? ''}
-                onChange={(e) => scope.filter({ customerId: e.target.value })}
-              >
-                <option value="">Mọi khách hàng</option>
-                {p.get('customerId') &&
-                  !customerOptions.some(
-                    (item) => String(item.id) === p.get('customerId'),
-                  ) && (
-                    <option value={p.get('customerId')!}>
-                      {selectedCustomer.error
-                        ? 'Không tải được khách hàng đã chọn'
-                        : 'Đang tải khách hàng đã chọn…'}
-                    </option>
-                  )}
-                {customerOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.customerName}
-                  </option>
-                ))}
-              </select>
-              {customers.hasMore && (
-                <button
-                  type="button"
-                  disabled={customers.loading}
-                  onClick={customers.loadMore}
-                >
-                  {customers.loading ? 'Đang tải…' : 'Tải thêm khách hàng'}
-                </button>
-              )}
-            </label>
+                options={[
+                  ...(!customerSearch.trim()
+                    ? [{ value: '', label: 'Mọi khách hàng' }]
+                    : []),
+                  ...customerOptions.map((item) => ({
+                    value: String(item.id),
+                    label: item.customerName,
+                  })),
+                ]}
+                loading={customers.loading}
+                error={customers.error}
+                onSearch={(query) => setCustomerSearch(query ?? '')}
+                onChange={(customerId) => scope.filter({ customerId })}
+              />
+            </div>
             <label>
               Từ ngày
               <input
@@ -1388,8 +1384,9 @@ export function UnmetDemandPage() {
                     <td>{row.sellableQty}</td>
                     <td>{dateTime(row.occurredAt)}</td>
                     <td>
-                      <div className="sales-unmet-actions">
+                      <div className="mf-row-actions sales-unmet-actions">
                         <Link
+                          className="mf-btn mf-btn--sm mf-btn--primary"
                           to={
                             '/sales-orders/new?productId=' +
                             row.productId +
@@ -1404,7 +1401,11 @@ export function UnmetDemandPage() {
                         >
                           Lập đơn bán
                         </Link>
-                        <button onClick={() => setReplenishment(row)}>
+                        <button
+                          type="button"
+                          className="mf-btn mf-btn--sm mf-btn--secondary"
+                          onClick={() => setReplenishment(row)}
+                        >
                           Yêu cầu bổ sung
                         </button>
                       </div>

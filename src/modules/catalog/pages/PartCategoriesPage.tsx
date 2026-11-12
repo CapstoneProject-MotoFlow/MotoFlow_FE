@@ -436,15 +436,35 @@ function CategoryRow({
         </span>
       </td>
       <td className="category-actions">
-        <button disabled={busy || row.status !== 'ACTIVE'} onClick={onChild}>
-          ＋ Nhóm con
-        </button>
-        <button disabled={busy} onClick={onEdit}>
-          Sửa
-        </button>
-        <button disabled={busy} onClick={onToggle}>
-          {row.status === 'ACTIVE' ? 'Ngừng dùng' : 'Mở lại'}
-        </button>
+        <div className="mf-row-actions">
+          <button
+            type="button"
+            className="mf-btn mf-btn--sm mf-btn--secondary"
+            disabled={busy || row.status !== 'ACTIVE'}
+            onClick={onChild}
+          >
+            ＋ Nhóm con
+          </button>
+          <button
+            type="button"
+            className="mf-btn mf-btn--sm mf-btn--secondary"
+            disabled={busy}
+            onClick={onEdit}
+          >
+            Sửa
+          </button>
+          <button
+            type="button"
+            className={
+              'mf-btn mf-btn--sm ' +
+              (row.status === 'ACTIVE' ? 'mf-btn--danger' : 'mf-btn--secondary')
+            }
+            disabled={busy}
+            onClick={onToggle}
+          >
+            {row.status === 'ACTIVE' ? 'Ngừng dùng' : 'Mở lại'}
+          </button>
+        </div>
       </td>
     </tr>
   )

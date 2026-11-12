@@ -171,21 +171,9 @@
   text-align: center;
   white-space: nowrap;
 }
-.vehicle-actions button + button {
-  margin-left: 7px;
-}
-.vehicle-actions button {
-  border: 1px solid #d0d8e5;
-  background: white;
-  border-radius: 6px;
-  font: inherit;
-  color: inherit;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-.vehicle-actions button:disabled {
-  opacity: 0.45;
-  cursor: default;
+.vehicle-actions .mf-row-actions {
+  justify-content: center;
+  flex-wrap: nowrap;
 }
 .vehicle-status {
   display: inline-block;

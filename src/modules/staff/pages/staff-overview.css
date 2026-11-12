@@ -118,19 +118,8 @@
 .staff-task-table td:last-child {
   text-align: right;
 }
-.staff-overview a.staff-work-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #4f56ff;
-  color: #fff;
-  white-space: nowrap;
-  min-height: 34px;
-  padding: 7px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.5;
+.staff-task-table .mf-row-actions {
+  justify-content: flex-end;
 }
 .staff-work-status {
   font-size: 11px;
@@ -182,7 +171,6 @@
   opacity: 0.4;
   cursor: default;
 }
-.staff-work-action:focus-visible,
 .staff-submitted-work summary:focus-visible {
   outline: 2px solid #858bff;
   outline-offset: 3px;

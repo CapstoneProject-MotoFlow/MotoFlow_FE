@@ -455,9 +455,9 @@ export default function StoresPage() {
                         </span>
                       </td>
                       <td>
-                        <div className="store-row-actions">
+                        <div className="mf-row-actions store-row-actions">
                           <button
-                            className="edit-store-button"
+                            className="mf-btn mf-btn--sm mf-btn--secondary"
                             type="button"
                             onClick={() => openEditForm(store)}
                           >
@@ -465,14 +465,14 @@ export default function StoresPage() {
                           </button>
                           {user?.role === 'OWNER' && (
                             <Link
-                              className="edit-store-button"
+                              className="mf-btn mf-btn--sm mf-btn--secondary"
                               to={`/owner/inventory?storeId=${store.id}&inStockOnly=true`}
                             >
                               Xem tồn kho
                             </Link>
                           )}
                           <button
-                            className="edit-store-button"
+                            className="mf-btn mf-btn--sm mf-btn--secondary"
                             type="button"
                             onClick={() => {
                               setEmployees([])

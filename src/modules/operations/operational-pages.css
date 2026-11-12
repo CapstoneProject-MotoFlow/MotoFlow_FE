@@ -424,11 +424,6 @@
     min-width: 760px;
   }
 }
-.rv-list-page .rv-table .rv-pay-overdue {
-  background: #465fff;
-  color: #fff;
-  border-color: #465fff;
-}
 .tf-page.tf-branch-list .tf-list-search > details {
   display: none;
 }
