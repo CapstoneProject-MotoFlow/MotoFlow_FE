@@ -5,7 +5,7 @@
  */
 import type { AuthUser } from '../types/auth'
 export const roleNames: Record<string, string> = {
-  ADMIN: 'Admin',
+  ADMIN: 'Quản trị hệ thống',
   OWNER: 'Chủ cửa hàng',
   BRANCH_MANAGER: 'Quản lý cửa hàng',
   STAFF: 'Nhân viên',

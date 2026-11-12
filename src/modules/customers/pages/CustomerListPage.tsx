@@ -4,6 +4,10 @@
  * Công dụng: Danh sách khách; tìm kiếm, lọc mua chịu/đang nợ, phân trang API, mở tạo/sửa. scope quyết định nhãn và cột công nợ theo toàn chuỗi hay cửa hàng.
  */
 import { useEffect, useState, useCallback } from 'react'
+import PageHeader from '../../../shared/ui/PageHeader'
+import RowMenu from '../../../shared/ui/RowMenu'
+import EmptyState from '../../../shared/ui/EmptyState'
+import { formatMoney } from '../../../shared/utils/format'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import Icon from '../../../shared/ui/Icon'
@@ -78,16 +82,10 @@ export default function CustomerListPage({
   const visible = rows
   return (
     <main className="dashboard-content branch-customers">
-      <header className="branch-customers-heading">
-        <h1>Khách hàng</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link>
-          <span>›</span>
-          <span>Bán hàng</span>
-          <span>›</span>
-          <span>Khách hàng</span>
-        </nav>
-      </header>
+      <PageHeader
+        title="Khách hàng"
+        breadcrumb={[{ label: 'Bán hàng' }, { label: 'Khách hàng' }]}
+      />
       <section className="branch-customers-panel">
         <header>
           <h2>
@@ -125,7 +123,7 @@ export default function CustomerListPage({
                 setPage(0)
               }}
             />
-            Chỉ khách được mua nợ
+            Chỉ khách được mua chịu
           </label>
           <label className="branch-customers-debt">
             <input
@@ -156,7 +154,6 @@ export default function CustomerListPage({
                   <tr>
                     <th>Khách hàng</th>
                     <th>Điện thoại</th>
-                    <th>Mua gần nhất</th>
                     <th>Mua chịu</th>
                     <th className="branch-customer-money">
                       {chain ? 'Nợ toàn chuỗi' : 'Nợ tại cửa hàng'}
@@ -171,8 +168,7 @@ export default function CustomerListPage({
                         <Link to={`${base}/${row.id}`}>{row.customerName}</Link>
                         <small>#{row.id}</small>
                       </td>
-                      <td>{row.phone || '—'}</td>
-                      <td title="API chưa cung cấp ngày mua gần nhất">—</td>
+                      <td className="mf-nowrap">{row.phone || '—'}</td>
                       <td>
                         <span
                           className={
@@ -188,25 +184,35 @@ export default function CustomerListPage({
                           (debtOf(row) === 0 ? 'zero' : '')
                         }
                       >
-                        {debtOf(row) == null
-                          ? '—'
-                          : debtOf(row) === 0
-                            ? '0'
-                            : debtOf(row)!.toLocaleString('vi-VN') + ' ₫'}
+                        {formatMoney(debtOf(row))}
                       </td>
                       <td className="branch-customer-actions">
+                        {/* Review T4: một nút chính trên dòng, quyền mua chịu đưa vào menu. */}
                         <div>
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--secondary mf-btn--sm"
+                            onClick={() => setEditing(row)}
+                          >
+                            Sửa
+                          </button>
                           {chain && (
-                            <button
-                              type="button"
-                              onClick={() => setCreditCustomer(row)}
-                            >
-                              {row.creditStatus === 'ELIGIBLE'
-                                ? 'Thu hồi quyền mua chịu'
-                                : 'Cấp quyền mua chịu'}
-                            </button>
+                            <RowMenu
+                              ariaLabel={
+                                'Thao tác khác với ' + row.customerName
+                              }
+                              items={[
+                                {
+                                  label:
+                                    row.creditStatus === 'ELIGIBLE'
+                                      ? 'Thu hồi quyền mua chịu'
+                                      : 'Cấp quyền mua chịu',
+                                  danger: row.creditStatus === 'ELIGIBLE',
+                                  onSelect: () => setCreditCustomer(row),
+                                },
+                              ]}
+                            />
                           )}
-                          <button onClick={() => setEditing(row)}>Sửa</button>
                         </div>
                       </td>
                     </tr>
@@ -214,9 +220,19 @@ export default function CustomerListPage({
                 </tbody>
               </table>
               {!visible.length && (
-                <p className="branch-customers-message">
-                  Không tìm thấy khách hàng phù hợp.
-                </p>
+                <EmptyState
+                  icon="users"
+                  message="Không tìm thấy khách hàng phù hợp."
+                  action={
+                    <button
+                      type="button"
+                      className="mf-btn mf-btn--primary"
+                      onClick={() => setEditing(null)}
+                    >
+                      Thêm khách hàng
+                    </button>
+                  }
+                />
               )}
             </div>
             {totalItems > 20 && (
