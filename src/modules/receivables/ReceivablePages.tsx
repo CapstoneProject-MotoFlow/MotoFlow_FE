@@ -13,6 +13,11 @@ import { money, dateTime, today } from '../inventory/presentation'
 import type { Page } from '../inventory/types'
 import type { Debtor, DebtDetail } from './types'
 import DebtDialog from './DebtDialog'
+import PageHeader from '../../shared/ui/PageHeader'
+import Icon from '../../shared/ui/Icon'
+import EmptyState from '../../shared/ui/EmptyState'
+import { formatMoney } from '../../shared/utils/format'
+import { useOwnerDebtTotals } from '../operations/ownerMetrics'
 import './receivables.css'
 const credit: Record<string, string> = {
   ELIGIBLE: 'Được mua chịu',
@@ -38,46 +43,69 @@ export function ReceivableListPage() {
     },
     revision,
   )
+  // Review C3 + góp ý cô Hoài ("Phải thu" -> "Tổng nợ"): số tổng lấy cùng nguồn với Tổng quan.
+  const totals = useOwnerDebtTotals(scope.storeId)
+  const shown = (value: number | undefined) =>
+    totals.loading ? 'Đang tải…' : totals.error ? '—' : formatMoney(value ?? 0)
   return (
     <main className="dashboard-content rv-page rv-list-page">
-      <header className="stock-heading">
-        <div>
-          <h1>Công nợ khách hàng</h1>
-        </div>
-        <div className="rv-heading-actions">
-          {scope.owner && (
-            <button className="rv-primary" onClick={() => setOpening(true)}>
-              ＋ Ghi nợ đầu kỳ
+      <PageHeader
+        title="Công nợ khách hàng"
+        breadcrumb={[{ label: 'Công nợ' }, { label: 'Công nợ khách hàng' }]}
+        actions={
+          scope.owner && (
+            <button
+              type="button"
+              className="mf-btn mf-btn--secondary"
+              onClick={() => setOpening(true)}
+            >
+              <Icon name="plus" />
+              Ghi nợ đầu kỳ
             </button>
-          )}
-          <nav>
-            <Link to="/dashboard">Trang chủ</Link> › Công nợ › Công nợ khách
-            hàng
-          </nav>
-        </div>
-      </header>
+          )
+        }
+      />
       <div className="rv-overview" aria-label="Tổng quan công nợ">
-        <article>
-          <span className="rv-stat-icon">▤</span>
-          <span>Tổng phải thu</span>
-          <strong>—</strong>
-          <small>Chưa có số liệu tổng hợp</small>
+        <article title={totals.error}>
+          <span className="rv-stat-icon">
+            <Icon name="wallet" />
+          </span>
+          <span>Tổng nợ</span>
+          <strong>{shown(totals.data?.debt)}</strong>
+          <small>Khách đang nợ · {scope.warehouse}</small>
         </article>
         <button
           type="button"
           onClick={() => scope.filter({ overdueOnly: !overdue })}
           aria-pressed={overdue}
+          title={totals.error}
         >
-          <span className="rv-stat-icon rv-icon-error">▦</span>
-          <span>Quá hạn</span>
-          <strong>—</strong>
-          <small>Xem khách có nợ quá hạn</small>
+          <span className="rv-stat-icon rv-icon-error">
+            <Icon name="alert" />
+          </span>
+          <span>Nợ quá hạn</span>
+          <strong className={totals.data?.overdueDebt ? 'rv-overdue' : ''}>
+            {shown(totals.data?.overdueDebt)}
+          </strong>
+          <small>
+            {overdue
+              ? 'Bấm để xem lại tất cả khách'
+              : 'Bấm để chỉ xem khách có nợ quá hạn'}
+          </small>
         </button>
-        <article>
-          <span className="rv-stat-icon rv-icon-warning">◷</span>
+        <article title={totals.error}>
+          <span className="rv-stat-icon rv-icon-warning">
+            <Icon name="calendar" />
+          </span>
           <span>Đến hạn 7 ngày tới</span>
-          <strong>—</strong>
-          <small>Chưa có số liệu tổng hợp</small>
+          <strong>
+            {totals.loading
+              ? 'Đang tải…'
+              : totals.error
+                ? '—'
+                : (totals.data?.dueSoonCustomers ?? 0) + ' khách'}
+          </strong>
+          <small>Khách có khoản nợ gần nhất đến hạn trong 7 ngày</small>
         </article>
       </div>
       <section className="stock-panel">
@@ -114,20 +142,20 @@ export function ReceivableListPage() {
           <table>
             <thead>
               <tr>
+                {/* Review C1: quyền mua chịu thành dòng phụ dưới tên khách để bảng vừa khung 1366px. */}
                 <th>Khách hàng</th>
-                <th>Quyền mua chịu</th>
                 {(!scope.owner || !!scope.storeId) && (
-                  <th>Tổng nợ toàn chuỗi</th>
+                  <th className="mf-num">Tổng nợ toàn chuỗi</th>
                 )}
-                <th>
+                <th className="mf-num">
                   {!scope.owner || scope.storeId
                     ? 'Nợ tại cửa hàng'
                     : 'Tổng nợ toàn chuỗi'}
                 </th>
-                <th>Nợ quá hạn</th>
-                <th>Khoản chưa tất toán</th>
-                <th>Hạn trả gần nhất</th>
-                <th></th>
+                <th className="mf-num">Nợ quá hạn</th>
+                <th className="mf-num">Số khoản nợ</th>
+                <th>Hạn gần nhất</th>
+                <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -139,18 +167,21 @@ export function ReceivableListPage() {
                     >
                       {r.customerName}
                     </Link>
-                    <small>{r.phone || '—'}</small>
+                    <small>
+                      {r.phone || '—'} · {credit[r.creditStatus]}
+                    </small>
                   </td>
-                  <td>{credit[r.creditStatus]}</td>
                   {(!scope.owner || !!scope.storeId) && (
-                    <td>{money.format(r.totalDebt)}</td>
+                    <td className="mf-num">{money.format(r.totalDebt)}</td>
                   )}
-                  <td>{money.format(r.debt)}</td>
-                  <td className={r.overdueDebt ? 'rv-overdue' : ''}>
+                  <td className="mf-num">{money.format(r.debt)}</td>
+                  <td
+                    className={'mf-num' + (r.overdueDebt ? ' rv-overdue' : '')}
+                  >
                     {money.format(r.overdueDebt)}
                   </td>
-                  <td>{r.openDebtCount}</td>
-                  <td>{day(r.earliestDueDate)}</td>
+                  <td className="mf-num">{r.openDebtCount}</td>
+                  <td className="mf-nowrap">{day(r.earliestDueDate)}</td>
                   <td>
                     <Link
                       className={
@@ -167,7 +198,10 @@ export function ReceivableListPage() {
           </table>
         </div>
         {resource.data && !resource.data.items.length && (
-          <p className="rv-empty">Không có khách hàng còn nợ phù hợp bộ lọc.</p>
+          <EmptyState
+            icon="wallet"
+            message="Không có khách hàng còn nợ phù hợp bộ lọc."
+          />
         )}
         <Pagination
           total={resource.data?.totalItems ?? 0}
