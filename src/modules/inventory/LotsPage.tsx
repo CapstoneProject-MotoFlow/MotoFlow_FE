@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
+import Hint from '../../shared/ui/Hint'
 import { useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
@@ -104,6 +105,13 @@ export default function LotsPage() {
   return (
     <main className="inventory-workspace inventory-screen inventory-lots-screen">
       <InventoryHeader title="Lô hàng" />
+      {/* Góp ý cô Hoài: nói rõ lô chỉ phục vụ tính giá vốn. */}
+      <Hint>
+        Lô hàng chỉ dùng để tính <strong>giá vốn</strong>: mỗi lần nhập tạo một
+        lô giữ giá nhập của lần đó, hệ thống dùng các giá này tính giá vốn bình
+        quân. Khi xuất hàng, hệ thống trừ lô cũ trước (lô có hạn dùng thì trừ lô
+        gần hết hạn trước). Giá bán cho khách lấy từ Bảng giá, không theo lô.
+      </Hint>
       <InventoryPanel
         title={'Lô hàng · ' + scope.warehouse}
         action={

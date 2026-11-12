@@ -63,7 +63,7 @@ export default function ExcessReceiptsPage() {
                   <th>Nhà cung cấp</th>
                   <th>Kho nhận</th>
                   <th>Ngày xác nhận</th>
-                  <th>Cần làm</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>

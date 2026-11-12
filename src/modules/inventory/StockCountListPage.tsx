@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import {
+  InventoryHeader,
   InventoryPanel,
   WarehouseFilter,
   InventoryNotice,
@@ -116,6 +117,8 @@ export default function StockCountListPage() {
   }
   return (
     <main className="inventory-workspace count-workspace">
+      {/* Review C6: trang Kiểm kê có tiêu đề và breadcrumb như các trang khác. */}
+      <InventoryHeader title="Kiểm kê" />
       <InventoryPanel
         title={
           staff
@@ -211,8 +214,8 @@ export default function StockCountListPage() {
                 {scope.owner && <th>Kho</th>}
                 <th>Phạm vi, ngày</th>
                 <th>{staff ? 'Số dòng' : 'Người đếm'}</th>
+                {/* Review C1: gộp giá trị chênh lệch thành dòng phụ để bảng vừa khung. */}
                 {!staff && <th>Chênh lệch</th>}
-                {scope.owner && <th>Giá trị chênh lệch</th>}
                 <th>Trạng thái</th>
                 <th>Thao tác</th>
               </tr>
@@ -243,13 +246,9 @@ export default function StockCountListPage() {
                         : c.differenceLineCount === 0
                           ? 'Khớp'
                           : c.differenceLineCount + ' dòng'}
-                    </td>
-                  )}
-                  {scope.owner && (
-                    <td>
-                      {c.differenceValue == null
-                        ? '—'
-                        : money.format(c.differenceValue)}
+                      {scope.owner && c.differenceValue != null && (
+                        <small>{money.format(c.differenceValue)}</small>
+                      )}
                     </td>
                   )}
                   <td>

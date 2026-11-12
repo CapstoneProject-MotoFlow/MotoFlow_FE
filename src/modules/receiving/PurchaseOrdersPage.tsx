@@ -5,6 +5,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import Icon from '../../shared/ui/Icon'
+import PageHeader from '../../shared/ui/PageHeader'
+import Hint from '../../shared/ui/Hint'
+import { formatDateTime } from '../../shared/utils/format'
+import { draftKey, readDraft } from '../../shared/utils/localDraft'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import type { DashboardStore } from '../../shared/types/store'
 import { apiMessage } from '../suppliers/supplierService'
@@ -165,11 +169,8 @@ async function loadWorkQueue(
   }
 }
 function day(value: string | null) {
-  return value
-    ? new Date(value).toLocaleDateString('vi-VN', {
-        timeZone: 'Asia/Ho_Chi_Minh',
-      })
-    : '—'
+  // Review T6: một kiểu ngày dd/MM/yyyy, giữ đúng giờ Việt Nam BE trả về.
+  return value ? formatDateTime(value).slice(0, 10) : '—'
 }
 
 function receivingError(error: unknown) {
@@ -394,10 +395,11 @@ export default function PurchaseOrdersPage() {
           : 'dashboard-content receiving-page'
       }
     >
-      <header className="receiving-heading">
-        <h1>Yêu cầu nhập hàng</h1>
-        <span>Trang chủ / Nhập hàng / Yêu cầu nhập hàng</span>
-      </header>
+      <PageHeader
+        title="Yêu cầu nhập hàng"
+        breadcrumb={[{ label: 'Nhập hàng' }, { label: 'Yêu cầu nhập hàng' }]}
+      />
+      {owner && <PurchaseDraftNotice user={user} />}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>
@@ -411,14 +413,15 @@ export default function PurchaseOrdersPage() {
           </h2>
           {owner && (
             <div className="receiving-filter-row">
+              {/* Một nút chính mỗi vùng: hai lối tắt còn lại là nút phụ. */}
               <Link
-                className="receiving-layout-primary"
+                className="mf-btn mf-btn--secondary"
                 to="/goods-receipt-notes/excess"
               >
                 Chờ duyệt hàng thừa
               </Link>
               <Link
-                className="receiving-layout-primary"
+                className="mf-btn mf-btn--secondary"
                 to="/supplier-discrepancies"
               >
                 Hồ sơ sai lệch nhà cung cấp
@@ -570,7 +573,7 @@ export default function PurchaseOrdersPage() {
                       <th>Ngày nhận</th>
                       <th>Hàng cần nhận</th>
                       <th>Kết quả của tôi</th>
-                      <th>Cần làm</th>
+                      <th>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -634,7 +637,7 @@ export default function PurchaseOrdersPage() {
                         </>
                       )}
                       <th>Trạng thái</th>
-                      <th>{manager ? 'Cần làm' : 'Sai lệch chưa đóng'}</th>
+                      <th>{manager ? 'Thao tác' : 'Sai lệch chưa đóng'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -656,17 +659,18 @@ export default function PurchaseOrdersPage() {
                             </td>
                             <td>{row.supplierName}</td>
                             {owner && <td>{row.storeName}</td>}
-                            <td>{day(row.createdAt)}</td>
+                            <td className="mf-nowrap">{day(row.createdAt)}</td>
                             <td
                               className={
-                                row.overdue ? 'receiving-overdue' : undefined
+                                'mf-nowrap' +
+                                (row.overdue ? ' receiving-overdue' : '')
                               }
                             >
                               {row.overdue && '⚠ '}
                               {day(row.expectedArrival)}
                             </td>
                             {owner && (
-                              <td>
+                              <td className="mf-nowrap">
                                 {row.orderedValue === null
                                   ? '—'
                                   : money.format(row.orderedValue)}
@@ -1112,5 +1116,24 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
         </div>
       )}
     </main>
+  )
+}
+
+/** Nhắc Owner còn bản nháp yêu cầu nhập hàng lưu trên máy này. */
+function PurchaseDraftNotice({
+  user,
+}: {
+  user: Parameters<typeof draftKey>[1]
+}) {
+  const [saved] = useState(() =>
+    readDraft<{ lines: unknown[] }>(draftKey('purchase-order', user)),
+  )
+  if (!saved) return null
+  return (
+    <Hint>
+      Bạn có một bản nháp yêu cầu nhập hàng ({saved.data.lines.length} dòng) lưu
+      lúc {formatDateTime(saved.savedAt)}.{' '}
+      <Link to="/purchase-orders/new">Mở bản nháp</Link>
+    </Hint>
   )
 }
