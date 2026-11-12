@@ -1,7 +1,8 @@
 import { Fragment, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import Hint from '../../shared/ui/Hint'
 import Icon from '../../shared/ui/Icon'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from './api'
@@ -26,9 +27,21 @@ import { useCompleteStock } from './useCompleteStock'
 import type { StockRow, StockSummary, Page } from './types'
 import './stock-screen.css'
 
+/** Mức "sắp hết" theo ví dụ của cô Hoài (còn dưới 20-30 sản phẩm); người dùng vẫn tự nhập khoảng khác. */
+const NEAR_OUT_LEVEL = 30
+/** Số lượng gợi ý giống nút "Thêm phụ tùng dưới ngưỡng" của BE: đủ lại ngưỡng, ít nhất 1. */
+const suggestedQty = (row: StockRow) =>
+  Math.max((row.lowStockThreshold ?? 0) - row.availableQty, 1)
+const parseQty = (value: string) =>
+  value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0
+    ? Math.floor(Number(value))
+    : undefined
+
 export default function InventoryPage() {
   const scope = useInventoryScope(),
     p = scope.params
+  const navigate = useNavigate()
+  const [picked, setPicked] = useState<Map<string, StockRow>>(new Map())
   const [lotRow, setLotRow] = useState<StockRow>()
   const [revision, setRevision] = useState(0)
   const [completeRevision, setCompleteRevision] = useState(0)
@@ -49,6 +62,13 @@ export default function InventoryPage() {
   const includeZero = p.get('includeZero') === 'true',
     view = p.get('view') ?? '',
     sort = p.get('sort') ?? 'name'
+  // Góp ý cô Hoài: tìm tồn kho theo khoảng tồn (tính trên số khả dụng).
+  const minQty = parseQty(p.get('minQty') ?? ''),
+    maxQty = parseQty(p.get('maxQty') ?? '')
+  const rangeActive = minQty !== undefined || maxQty !== undefined
+  const inRange = (qty: number) =>
+    (minQty === undefined || qty >= minQty) &&
+    (maxQty === undefined || qty <= maxQty)
   const complete = useCompleteStock(
     {},
     completeRevision,
@@ -71,6 +91,13 @@ export default function InventoryPage() {
     grouped && remoteFilter,
     dataScope,
   )
+  // BE chưa có tham số lọc theo khoảng tồn: khi có khoảng, đọc đủ tồn của kho rồi lọc trên máy.
+  const ranged = useCompleteStock(
+    { ...filters, storeId: scope.storeId },
+    revision,
+    !grouped && rangeActive,
+    dataScope,
+  )
   const categories = useInventoryData<Category[]>('/part-categories')
   const paged = useInventoryData<Page<StockRow>>(
     '/inventory/stock',
@@ -85,7 +112,7 @@ export default function InventoryPage() {
       expiryAlertOnly: view === 'expiryAlert',
     },
     revision,
-    !grouped,
+    !grouped && !rangeActive,
   )
   const summary = useInventoryData<StockSummary>(
     '/inventory/stock/summary',
@@ -105,7 +132,9 @@ export default function InventoryPage() {
   const matching = remoteFilter ? (filtered.data ?? []) : scoped
   const keys = new Set(matching.map(stockKey))
   const groups = sortStock(
-    groupStock(scoped, matching, includeZero, view),
+    groupStock(scoped, matching, includeZero, view).filter(
+      (group) => !rangeActive || inRange(group.totals.availableQty),
+    ),
     (group) => group.product,
     (group) => group.totals.stockValue,
     sort,
@@ -121,22 +150,91 @@ export default function InventoryPage() {
     (row) => row.stockValue,
     sort,
   )
-  const flat = grouped ? sortedFlat : (paged.data?.items ?? [])
-  const loading = base.loading || filtered.loading
+  const rangedFlat = sortStock(
+    (ranged.data ?? []).filter(
+      (row) =>
+        (!scope.storeId || String(row.storeId) === scope.storeId) &&
+        (includeZero || row.onHandQty + row.inTransitQty > 0) &&
+        matchesStockView(row, view) &&
+        inRange(row.availableQty),
+    ),
+    (row) => row,
+    (row) => row.stockValue,
+    'name',
+  )
+  const clientPaged = !grouped && rangeActive
+  const loading = base.loading || filtered.loading || ranged.loading
   const error =
+    ranged.error ??
     base.error ??
     filtered.error ??
     summary.error ??
     areaResource.error ??
     scope.storesError ??
     categories.error
-  const ready = !!base.data && (!grouped || !remoteFilter || !!filtered.data)
-  const total = grouped ? groups.length : (paged.data?.totalItems ?? 0)
+  const ready = clientPaged
+    ? !!ranged.data
+    : !!base.data && (!grouped || !remoteFilter || !!filtered.data)
+  const total = grouped
+    ? groups.length
+    : clientPaged
+      ? rangedFlat.length
+      : (paged.data?.totalItems ?? 0)
   const boundedPage = Math.min(
     Math.max(0, Math.floor(requestedPage)),
     Math.max(0, Math.ceil(total / 20) - 1),
   )
-  const page = grouped ? boundedPage : requestedPage
+  const page = grouped || clientPaged ? boundedPage : requestedPage
+  const flat = grouped
+    ? sortedFlat
+    : clientPaged
+      ? rangedFlat.slice(page * 20, (page + 1) * 20)
+      : (paged.data?.items ?? [])
+  // Góp ý cô Hoài: tích chọn phụ tùng sắp hết (kể cả chưa chạm ngưỡng) rồi tạo nhanh yêu cầu.
+  // Chỉ chọn khi đang xem một kho, vì yêu cầu bổ sung / nhập hàng luôn gắn với một cửa hàng.
+  const selectable = !grouped
+  const pickedRows = [...picked.values()].filter(
+    (row) => !scope.storeId || String(row.storeId) === scope.storeId,
+  )
+  const pageKeys = flat.map(stockKey)
+  const pageAllPicked =
+    flat.length > 0 && pageKeys.every((key) => picked.has(key))
+  function pick(row: StockRow, on: boolean) {
+    setPicked((previous) => {
+      const next = new Map(previous)
+      if (on) next.set(stockKey(row), row)
+      else next.delete(stockKey(row))
+      return next
+    })
+  }
+  function pickPage(on: boolean) {
+    setPicked((previous) => {
+      const next = new Map(previous)
+      for (const row of flat) {
+        if (on) next.set(stockKey(row), row)
+        else next.delete(stockKey(row))
+      }
+      return next
+    })
+  }
+  function createFromPicked(target: 'replenishment' | 'purchase') {
+    const storeId = pickedRows[0]?.storeId
+    const prefill = {
+      storeId,
+      lines: pickedRows.slice(0, 200).map((row) => ({
+        productId: row.productId,
+        sku: row.sku,
+        partName: row.partName,
+        qty: suggestedQty(row),
+      })),
+    }
+    navigate(
+      target === 'replenishment'
+        ? '/replenishment-requests/new'
+        : '/purchase-orders/new',
+      { state: { prefill } },
+    )
+  }
   const metrics = [
     ['', 'Mã có hàng tồn', summary.data?.withStock, 'box'],
     ['lowStock', 'Dưới ngưỡng', summary.data?.lowStock, 'sliders'],
@@ -153,25 +251,28 @@ export default function InventoryPage() {
       'hourglass',
     ],
   ] as const
+  // Review C1: bảng vừa khung 1366px (cột thao tác 2x2, bỏ bớt khoảng đệm).
   const weights = [
-    28,
+    ...(selectable ? [4] : []),
+    27,
     ...(grouped ? [] : [8]),
-    7,
     8,
     8,
-    10,
-    ...(scope.owner ? [12] : []),
-    14,
-    23,
+    9,
+    9,
+    ...(scope.owner ? [11] : []),
+    12,
+    15,
   ]
   const weightTotal = weights.reduce((a, b) => a + b, 0)
-  const columns = grouped ? 8 : scope.owner ? 9 : 8
+  const columns = (grouped ? 8 : scope.owner ? 9 : 8) + (selectable ? 1 : 0)
   const areas = areaResource.data ?? []
   function saved(row: StockRow) {
     const replace = (rows: StockRow[]) =>
       rows.map((item) => (stockKey(item) === stockKey(row) ? row : item))
     complete.updateData(replace)
     filtered.updateData(replace)
+    ranged.updateData(replace)
     paged.updateData((data) => ({ ...data, items: replace(data.items) }))
     setSettings(undefined)
     if (lotRow && stockKey(lotRow) === stockKey(row)) setLotRow(row)
@@ -432,7 +533,93 @@ export default function InventoryPage() {
             />
             Hiện cả mã tồn bằng 0
           </label>
+          <fieldset className="stock-range" aria-label="Khoảng tồn khả dụng">
+            <legend>Tồn khả dụng</legend>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              aria-label="Tồn khả dụng từ"
+              placeholder="Từ"
+              value={p.get('minQty') ?? ''}
+              onChange={(e) => scope.filter({ minQty: e.target.value }, true)}
+            />
+            <span aria-hidden="true">–</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              aria-label="Tồn khả dụng đến"
+              placeholder="Đến"
+              value={p.get('maxQty') ?? ''}
+              onChange={(e) => scope.filter({ maxQty: e.target.value }, true)}
+            />
+            <button
+              type="button"
+              className="stock-range-preset"
+              aria-pressed={minQty === undefined && maxQty === NEAR_OUT_LEVEL}
+              onClick={() =>
+                scope.filter({ minQty: '', maxQty: NEAR_OUT_LEVEL, view: '' })
+              }
+            >
+              Sắp hết (≤ {NEAR_OUT_LEVEL})
+            </button>
+            {rangeActive && (
+              <button
+                type="button"
+                className="mf-btn mf-btn--link"
+                onClick={() => scope.filter({ minQty: '', maxQty: '' })}
+              >
+                Bỏ khoảng
+              </button>
+            )}
+          </fieldset>
         </div>
+        {grouped && (
+          <Hint>
+            Đang xem toàn chuỗi, khoảng tồn tính trên tổng khả dụng của các kho.
+            Chọn một kho để tích chọn phụ tùng và tạo nhanh yêu cầu.
+          </Hint>
+        )}
+        {selectable && pickedRows.length > 0 && (
+          <div
+            className="stock-pick-bar"
+            role="region"
+            aria-label="Phụ tùng đã chọn"
+          >
+            <span>
+              Đã chọn <strong>{pickedRows.length}</strong> phụ tùng ·{' '}
+              {pickedRows[0].storeName}
+              <small>Số lượng gợi ý theo ngưỡng tồn, sửa lại ở bước sau.</small>
+            </span>
+            <button
+              type="button"
+              className="mf-btn mf-btn--link"
+              onClick={() => setPicked(new Map())}
+            >
+              Bỏ chọn
+            </button>
+            <button
+              type="button"
+              className={
+                'mf-btn ' +
+                (scope.owner ? 'mf-btn--secondary' : 'mf-btn--primary')
+              }
+              onClick={() => createFromPicked('replenishment')}
+            >
+              Tạo yêu cầu bổ sung
+            </button>
+            {scope.owner && (
+              <button
+                type="button"
+                className="mf-btn mf-btn--primary"
+                onClick={() => createFromPicked('purchase')}
+              >
+                Tạo yêu cầu nhập hàng
+              </button>
+            )}
+          </div>
+        )}
         <InventoryNotice loading={loading} error={error} />
         {(base.error || filtered.error) && (
           <button
@@ -457,6 +644,17 @@ export default function InventoryPage() {
             </colgroup>
             <thead>
               <tr>
+                {selectable && (
+                  <th className="stock-pick-cell">
+                    <input
+                      type="checkbox"
+                      aria-label="Chọn tất cả phụ tùng trên trang này"
+                      checked={pageAllPicked}
+                      disabled={!flat.length}
+                      onChange={(e) => pickPage(e.target.checked)}
+                    />
+                  </th>
+                )}
                 <th>Phụ tùng</th>
                 {!grouped && <th>Ô kệ</th>}
                 <th className="stock-numeric">Khả dụng</th>
@@ -569,7 +767,17 @@ export default function InventoryPage() {
                 !grouped &&
                 flat.map((row) => (
                   <Fragment key={stockKey(row)}>
-                    <tr>
+                    <tr
+                      className={picked.has(stockKey(row)) ? 'is-picked' : ''}
+                    >
+                      <td className="stock-pick-cell">
+                        <input
+                          type="checkbox"
+                          aria-label={'Chọn ' + row.partName}
+                          checked={picked.has(stockKey(row))}
+                          onChange={(e) => pick(row, e.target.checked)}
+                        />
+                      </td>
                       <td>
                         <Link
                           className="stock-product-link"

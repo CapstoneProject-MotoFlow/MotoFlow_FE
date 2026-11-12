@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import { apiMessage } from '../suppliers/supplierService'
+import { formatDateTime } from '../../shared/utils/format'
 
 type Assignment = {
   canAssign: boolean
@@ -218,9 +219,7 @@ function ExistingReceiptActionDialog({
                       <tr key={task.id}>
                         <td>{task.assigneeName}</td>
                         <td>{task.assignedByName}</td>
-                        <td>
-                          {new Date(task.assignedAt).toLocaleString('vi-VN')}
-                        </td>
+                        <td>{formatDateTime(task.assignedAt)}</td>
                         <td>
                           {{
                             ASSIGNED: 'Đã giao',

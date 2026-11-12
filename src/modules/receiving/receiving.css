@@ -560,8 +560,14 @@
   font-size: 1.05rem;
 }
 
+/* Review C1: vừa khung 992px ở màn 1366x768. */
 .receiving-bm-list table {
-  min-width: 70rem;
+  min-width: 60rem;
+}
+/* Review T11: mã, ngày, số không xuống dòng. */
+.receiving-page td.mf-nowrap,
+.receiving-page .receiving-request-link {
+  white-space: nowrap;
 }
 
 .receiving-bm-list thead th {
