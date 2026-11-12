@@ -19,6 +19,7 @@ import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
 import { apiMessage } from '../../suppliers/supplierService'
 import './owner-permissions.css'
+import { formatDateTime } from '../../../shared/utils/format'
 /** OwnerPermissionsPage: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup nhập lý do; lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ. */
 export default function OwnerPermissionsPage() {
   const { user } = useAuth()
@@ -223,7 +224,7 @@ export default function OwnerPermissionsPage() {
                     của {event.name}
                   </p>
                   <small>
-                    {new Date(event.at).toLocaleString('vi-VN')} · {event.actor}
+                    {formatDateTime(event.at)} · {event.actor}
                   </small>
                   <blockquote>{event.reason}</blockquote>
                 </div>

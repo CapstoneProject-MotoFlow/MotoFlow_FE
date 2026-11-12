@@ -37,6 +37,12 @@ export type IconName =
   | 'download'
   | 'tag'
   | 'percent'
+  | 'info'
+  | 'plus'
+  | 'note'
+  | 'cash'
+  | 'trend'
+  | 'check'
 
 const paths: Record<IconName, string> = {
   receipt: 'M5 3h14v18l-3-2-4 2-4-2-3 2V3zm3 5h8m-8 4h8',
@@ -76,6 +82,12 @@ const paths: Record<IconName, string> = {
   box: 'M4 7l8-4 8 4-8 4-8-4zm0 0v10l8 4 8-4V7m-8 4v10',
   key: 'M7.5 14a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm4-2.5L21 21m-4-4 2-2m-5-1 2-2',
   logout: 'M10 17l5-5-5-5m5 5H3m9-9h7a2 2 0 012 2v14a2 2 0 01-2 2h-7',
+  info: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 8v6m0-9.5v.5',
+  plus: 'M12 5v14M5 12h14',
+  note: 'M5 4h14v11l-5 5H5V4zm9 16v-5h5M8 9h8m-8 4h5',
+  cash: 'M3 6h18v12H3V6zm9 9a3 3 0 110-6 3 3 0 010 6zM6 9v.01M18 15v.01',
+  trend: 'M3 17l6-6 4 4 8-8m-5 0h5v5',
+  check: 'M5 12l5 5 9-10',
 }
 
 /** Icon: Bộ SVG theo IconName; paths ánh xạ tên biểu tượng sang nét vẽ SVG. */

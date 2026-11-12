@@ -52,12 +52,31 @@ export function noticeTarget(
       return { path: '/purchase-orders/' + id }
   }
 }
+const noticeTimeParts = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+/**
+ * Review T6: cùng kiểu với formatDateTime ("12/11/2026 15:07"). Viết tại chỗ vì file này được test
+ * nạp riêng lẻ, không import được module khác.
+ */
 export function noticeTime(value: string) {
-  return new Date(value).toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  // Giờ BE không kèm múi giờ là giờ Việt Nam: giữ nguyên.
+  const local =
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(
+      value,
+    )
+  if (local)
+    return `${local[3]}/${local[2]}/${local[1]} ${local[4]}:${local[5]}`
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const part = Object.fromEntries(
+    noticeTimeParts.formatToParts(date).map((item) => [item.type, item.value]),
+  )
+  return `${part.day}/${part.month}/${part.year} ${part.hour === '24' ? '00' : part.hour}:${part.minute}`
 }
