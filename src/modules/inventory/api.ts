@@ -19,6 +19,9 @@ export function inventoryError(error: unknown) {
     const fields = error.response?.data?.fieldErrors
     if (fields && Object.keys(fields).length)
       return Object.values(fields).join(' ')
+    const status = error.response?.status
+    if (error.code === 'ERR_NETWORK' || [502, 503, 504].includes(status ?? 0))
+      return 'Kết nối đến máy chủ bị gián đoạn.'
     return (
       error.response?.data?.message ??
       'Không tải được dữ liệu. Vui lòng thử lại.'
@@ -40,7 +43,8 @@ export function useInventoryData<T>(
       .filter(([, value]) => value !== undefined && value !== '')
       .map(([key, value]) => [key, String(value)]),
   ).toString()
-  const key = path + '?' + query + '#' + revision
+  const [attempt, setAttempt] = useState(0)
+  const key = path + '?' + query + '#' + revision + ':' + attempt
   const [response, setResponse] = useState<{
     key: string
     data?: T
@@ -74,11 +78,15 @@ export function useInventoryData<T>(
         : previous,
     )
   }
+  const error = enabled && response?.key === key ? response.error : undefined
   return {
     updateData,
     data: enabled && response?.key === key ? response.data : undefined,
-    error: enabled && response?.key === key ? response.error : undefined,
+    error,
     loading: enabled && response?.key !== key,
+    retry() {
+      if (error) setAttempt((previous) => previous + 1)
+    },
   }
 }
 

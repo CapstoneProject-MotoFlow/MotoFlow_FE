@@ -1,3 +1,4 @@
+import { Breadcrumb } from '../../shared/ui/PageHeader'
 import type { ReactNode } from 'react'
 import { lotStates } from './presentation'
 import './inventory.css'
@@ -14,7 +15,10 @@ export function InventoryHeader({
       <h1>{title}</h1>
       <div className="stock-heading-actions">
         {children}
-        <span>Trang chủ › Kho hàng › {title}</span>
+        {/* Review T8: breadcrumb bấm được, cùng kiểu với các module khác. */}
+        <Breadcrumb
+          items={[{ label: 'Kho hàng', to: '/inventory' }, { label: title }]}
+        />
       </div>
     </header>
   )
@@ -93,9 +97,11 @@ export function LotState({ state }: { state: string }) {
 export function InventoryNotice({
   loading,
   error,
+  onRetry,
 }: {
   loading?: boolean
   error?: string
+  onRetry?: () => void
 }) {
   return (
     <>
@@ -105,8 +111,17 @@ export function InventoryNotice({
         </p>
       )}
       {error && (
-        <p className="stock-notice stock-error" role="alert">
-          {error}
+        <p className="stock-notice stock-error">
+          <span role="alert">{error}</span>
+          {onRetry && (
+            <button
+              className="stock-notice-retry"
+              type="button"
+              onClick={onRetry}
+            >
+              Thử lại
+            </button>
+          )}
         </p>
       )}
     </>

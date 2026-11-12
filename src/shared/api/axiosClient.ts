@@ -13,7 +13,10 @@ const axiosClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 // Separate transport avoids recursively intercepting refresh failures.
-const refreshClient = axios.create({ baseURL: apiBaseUrl, withCredentials: true })
+const refreshClient = axios.create({
+  baseURL: apiBaseUrl,
+  withCredentials: true,
+})
 let pendingRefresh: Promise<LoginResponse> | null = null
 /** refreshSession: Làm mới access token qua cookie, gom request trong tab và tuần tự hóa giữa tab bằng Web Locks khi có hỗ trợ. */
 export function refreshSession() {
@@ -54,9 +57,28 @@ axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config = error.config as
-      (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined
+      | (InternalAxiosRequestConfig & {
+          _retried?: boolean
+          _readRetries?: number
+        })
+      | undefined
+    const status = error.response?.status
     if (
-      error.response?.status !== 401 ||
+      config?.method === 'get' &&
+      !config.signal?.aborted &&
+      (error.code === 'ERR_NETWORK' || [502, 503, 504].includes(status)) &&
+      (config._readRetries ?? 0) < 2
+    ) {
+      const retries = (config._readRetries ?? 0) + 1
+      config._readRetries = retries
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, retries === 1 ? 250 : 750),
+      )
+      if (config.signal?.aborted) throw error
+      return axiosClient(config)
+    }
+    if (
+      status !== 401 ||
       !config ||
       config._retried ||
       /\/auth\/(login|refresh|logout)(\?|$)/.test(config.url || '')
