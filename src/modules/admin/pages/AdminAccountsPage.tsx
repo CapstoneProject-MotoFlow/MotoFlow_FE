@@ -10,6 +10,7 @@
  * Shared dashboard navigation and API client are imported rather than duplicated.
  */
 import '../admin.css'
+import RowMenu from '../../../shared/ui/RowMenu'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
@@ -54,11 +55,12 @@ type AccountConfirmation = {
 }
 type Tab = 'ALL' | 'ACTIVE' | 'LOCKED'
 
+// Review T5: vai trò hiện tiếng Việt, cùng chữ với góc phải header.
 const roleLabels: Record<AccountRole, string> = {
-  ADMIN: 'Admin',
-  OWNER: 'Owner',
-  BRANCH_MANAGER: 'Branch Manager',
-  STAFF: 'Staff',
+  ADMIN: 'Quản trị hệ thống',
+  OWNER: 'Chủ cửa hàng',
+  BRANCH_MANAGER: 'Quản lý cửa hàng',
+  STAFF: 'Nhân viên',
 }
 const emptyForm: AccountForm = {
   fullName: '',
@@ -579,42 +581,39 @@ export default function AccountsPage() {
                         </span>
                       </td>
                       <td>
+                        {/* Review T4: icon không chữ khó hiểu; một nút chữ + menu cho thao tác còn lại. */}
                         <div className="account-row-actions">
                           <button
                             type="button"
-                            title="Cập nhật phân quyền"
-                            aria-label={`Cập nhật phân quyền ${account.fullName}`}
+                            className="mf-btn mf-btn--secondary mf-btn--sm"
                             disabled={
                               workingId === account.id || account.id === user.id
                             }
                             onClick={() => void openPermissionEditor(account)}
                           >
-                            <DashboardIcon name="shield" />
+                            Phân quyền
                           </button>
-                          <button
-                            type="button"
-                            title="Cấp lại mật khẩu"
-                            aria-label={`Cấp lại mật khẩu ${account.fullName}`}
-                            disabled={workingId === account.id}
-                            onClick={() => void resetPassword(account)}
-                          >
-                            <DashboardIcon name="key" />
-                          </button>
-                          <button
-                            type="button"
-                            title={
-                              account.state !== 'ACTIVE'
-                                ? 'Mở khóa tài khoản'
-                                : 'Khóa tài khoản'
-                            }
-                            aria-label={`${account.state !== 'ACTIVE' ? 'Mở khóa' : 'Khóa'} ${account.fullName}`}
-                            disabled={
-                              workingId === account.id || account.id === user.id
-                            }
-                            onClick={() => void setLocked(account)}
-                          >
-                            <DashboardIcon name="lock" />
-                          </button>
+                          <RowMenu
+                            ariaLabel={'Thao tác khác với ' + account.fullName}
+                            items={[
+                              {
+                                label: 'Cấp lại mật khẩu',
+                                disabled: workingId === account.id,
+                                onSelect: () => void resetPassword(account),
+                              },
+                              {
+                                label:
+                                  account.state !== 'ACTIVE'
+                                    ? 'Mở khóa tài khoản'
+                                    : 'Khóa tài khoản',
+                                danger: account.state === 'ACTIVE',
+                                disabled:
+                                  workingId === account.id ||
+                                  account.id === user.id,
+                                onSelect: () => void setLocked(account),
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
