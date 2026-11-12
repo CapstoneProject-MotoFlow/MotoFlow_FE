@@ -12,6 +12,11 @@ import { branchManagerNavigation } from './branchManagerNavigation'
 import { useAuth } from '../../shared/hooks/useAuth'
 const groups: { label: string; icon: IconName; labels: string[] }[] = [
   {
+    label: 'Bán hàng',
+    icon: 'receipt',
+    labels: ['Đơn bán', 'Nhu cầu chưa đáp ứng', 'Khách hàng'],
+  },
+  {
     label: 'Điều chuyển',
     icon: 'transfer',
     labels: ['Yêu cầu bổ sung', 'Lệnh điều chuyển'],
@@ -66,25 +71,28 @@ export default function BusinessSidebarNav({
 }) {
   const { user } = useAuth()
   const canEditCatalog = hasCatalogPermission(user)
-  const ownerNavigation: NavItem[] = owner
-    ? ownerItems
-    : [
-        ...branchManagerNavigation,
-        ...(canEditCatalog
-          ? [
-              {
-                label: 'Nhóm phụ tùng',
-                href: '/branch-manager/categories',
-                icon: 'tool' as const,
-              },
-              {
-                label: 'Dòng xe',
-                href: '/branch-manager/vehicles',
-                icon: 'tool' as const,
-              },
-            ]
-          : []),
-      ]
+  // Review C4: mục chưa có màn (pending) không hiện trên menu, tránh bấm vào "không có gì".
+  const ownerNavigation: NavItem[] = (
+    owner
+      ? ownerItems
+      : [
+          ...branchManagerNavigation,
+          ...(canEditCatalog
+            ? [
+                {
+                  label: 'Nhóm phụ tùng',
+                  href: '/branch-manager/categories',
+                  icon: 'tool' as const,
+                },
+                {
+                  label: 'Dòng xe',
+                  href: '/branch-manager/vehicles',
+                  icon: 'tool' as const,
+                },
+              ]
+            : []),
+        ]
+  ).filter((item) => !item.pending)
   const availableGroups = groups.map((group) => ({
     ...group,
     labels: group.labels.filter((label) =>
@@ -99,15 +107,15 @@ export default function BusinessSidebarNav({
         (href !== '/owner/inventory' &&
           href !== '/inventory' &&
           location.pathname.startsWith(href + '/'))
-  const [open, setOpen] = useState<string[]>(() =>
-    availableGroups
-      .filter((group) =>
-        ownerNavigation.some(
-          (item) => group.labels.includes(item.label) && active(item.href),
-        ),
-      )
-      .map((group) => group.label),
-  )
+  // Review C5: chỉ mở một nhóm mỗi lúc (accordion) để menu không bị đẩy xuống dưới thẻ phạm vi.
+  const [open, setOpen] = useState<string[]>(() => {
+    const current = availableGroups.find((group) =>
+      ownerNavigation.some(
+        (item) => group.labels.includes(item.label) && active(item.href),
+      ),
+    )
+    return current ? [current.label] : []
+  })
   const find = (label: string) =>
     ownerNavigation.find((item) => item.label === label)
   function link(item: NavItem | undefined, child = false) {
@@ -126,16 +134,14 @@ export default function BusinessSidebarNav({
         }}
       >
         {!child && <Icon name={item.icon} />}
-        {!collapsed && (
-          <span>
-            {item.label === 'Báo cáo kho hàng' ? 'Báo cáo kho' : item.label}
-          </span>
-        )}
+        {!collapsed && <span>{item.label}</span>}
       </Link>
     )
   }
   function group(label: string) {
     const entry = availableGroups.find((item) => item.label === label)!
+    if (!entry.labels.length) return null
+    if (entry.labels.length === 1) return link(find(entry.labels[0]))
     const expanded = open.includes(label)
     return (
       <div key={label} className="owner-nav-group">
@@ -147,13 +153,7 @@ export default function BusinessSidebarNav({
           title={collapsed ? label : undefined}
           aria-expanded={expanded && !collapsed}
           aria-controls={`owner-nav-${entry.icon}`}
-          onClick={() =>
-            setOpen((old) =>
-              old.includes(label)
-                ? old.filter((value) => value !== label)
-                : [...old, label],
-            )
-          }
+          onClick={() => setOpen((old) => (old.includes(label) ? [] : [label]))}
         >
           <Icon name={entry.icon} />
           {!collapsed && (
@@ -193,8 +193,7 @@ export default function BusinessSidebarNav({
     >
       {link({ label: 'Tổng quan', href: '/dashboard', icon: 'grid' })}
       {link(find('Thông báo'))}
-      {link(find('Đơn bán'))}
-      {link(find('Khách hàng'))}
+      {group('Bán hàng')}
       {link(find('Công nợ'))}
       {link(find('Yêu cầu nhập hàng'))}
       {group('Điều chuyển')}

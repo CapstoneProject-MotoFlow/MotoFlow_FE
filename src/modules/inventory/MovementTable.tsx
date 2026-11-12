@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import axiosClient from '../../shared/api/axiosClient'
+import { mapConcurrent } from '../../shared/utils/mapConcurrent'
 import { Link } from 'react-router-dom'
 import FormDialog from '../../shared/ui/FormDialog'
 import { useInventoryData } from './api'
@@ -157,12 +159,13 @@ export function MovementTable({
   empty?: string
   showBalance?: boolean
 }) {
+  const nameOf = usePartNames(rows)
   return (
     <div className="stock-table-scroll">
       <table className="stock-table">
         <thead>
           <tr>
-            <th>Thời điểm</th>
+            <th>Giờ</th>
             <th>Phụ tùng</th>
             <th>Loại biến động</th>
             <th title="Xuất điều chuyển trừ khả dụng và cộng đang điều chuyển; đây là hai trạng thái của cùng lượt chuyển.">
@@ -179,6 +182,7 @@ export function MovementTable({
             <MovementRows
               key={row.id}
               row={row}
+              partName={nameOf(row.productId)}
               showBalance={showBalance}
               day={
                 index === 0 ||
@@ -199,14 +203,53 @@ export function MovementTable({
     </div>
   )
 }
+/**
+ * Review T10: cột Phụ tùng hiện tên + SKU như màn Tồn kho. API lịch sử chỉ trả SKU, nên đọc tên theo mã phụ tùng
+ * (tối đa số dòng một trang, nhớ lại tên đã đọc). Nên bổ sung partName vào StockMovementResponse ở BE.
+ */
+const partNames = new Map<number, string>()
+function usePartNames(rows: Movement[]) {
+  const [, setVersion] = useState(0)
+  const missing = [...new Set(rows.map((row) => row.productId))].filter(
+    (id) => !partNames.has(id),
+  )
+  const key = missing.join(',')
+  useEffect(() => {
+    if (!key) return
+    let active = true
+    void mapConcurrent(
+      key.split(',').map(Number),
+      4,
+      async (id) => {
+        try {
+          const { data } = await axiosClient.get<{ partName: string }>(
+            '/products/' + id,
+          )
+          partNames.set(id, data.partName)
+        } catch {
+          partNames.set(id, '')
+        }
+      },
+      () => active,
+    ).finally(() => {
+      if (active) setVersion((value) => value + 1)
+    })
+    return () => {
+      active = false
+    }
+  }, [key])
+  return (id: number) => partNames.get(id)
+}
 function MovementRows({
   row,
   day,
   showBalance,
+  partName,
 }: {
   row: Movement
   day: boolean
   showBalance: boolean
+  partName?: string
 }) {
   return (
     <>
@@ -218,8 +261,20 @@ function MovementRows({
         </tr>
       )}
       <tr>
-        <td>{dateTime(row.occurredAt)}</td>
-        <td>{row.sku}</td>
+        {/* Ngày đã có ở dòng nhóm phía trên, ô này chỉ ghi giờ cho gọn (review C1). */}
+        <td title={dateTime(row.occurredAt)}>
+          {dateTime(row.occurredAt).slice(11) || dateTime(row.occurredAt)}
+        </td>
+        <td className="stock-movement-part">
+          {partName ? (
+            <>
+              {partName}
+              <small>{row.sku}</small>
+            </>
+          ) : (
+            row.sku
+          )}
+        </td>
         <td>{movementNames[row.movementType] ?? row.movementType}</td>
         <td>{stockStatuses[row.stockStatus] ?? row.stockStatus}</td>
         <td

@@ -174,10 +174,8 @@ export function useBranchWork(coordinator: boolean) {
   return {
     rows,
     loading: sources.some((s) => s.loading),
-    error: sources
-      .map((s) => s.error)
-      .filter(Boolean)
-      .join(' '),
+    error: sources.find((source) => source.error)?.error,
+    retry: () => sources.forEach((source) => source.retry()),
     summary,
     lots,
     countTotal:

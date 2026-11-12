@@ -393,3 +393,115 @@
     width: calc(50% - 5px);
   }
 }
+
+/* ---- 12/11: lọc khoảng tồn, tích chọn tạo nhanh yêu cầu, bảng vừa khung (review C1) ---- */
+.stock-screen .stock-filters {
+  flex-wrap: wrap;
+}
+.stock-screen .stock-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.stock-screen .stock-range legend {
+  float: left;
+  margin-right: 4px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--mf-muted, #5b6b82);
+}
+.stock-screen .stock-range input {
+  width: 72px;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.stock-screen .stock-range-preset {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.stock-screen .stock-range-preset[aria-pressed='true'] {
+  border-color: var(--mf-primary, #4b5eff);
+  background: #eef0ff;
+  color: var(--mf-primary, #4b5eff);
+  font-weight: 600;
+}
+.stock-screen .stock-pick-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 20px 12px;
+  padding: 10px 14px;
+  border: 1px solid #c7cdfd;
+  border-radius: 8px;
+  background: #f4f5ff;
+}
+.stock-screen .stock-pick-bar > span {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+.stock-screen .stock-pick-bar > span small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--mf-muted, #5b6b82);
+}
+.stock-screen .stock-pick-cell {
+  text-align: center;
+  padding-left: 12px !important;
+  padding-right: 4px !important;
+}
+.stock-screen .stock-pick-cell input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--mf-primary, #4b5eff);
+  cursor: pointer;
+}
+.stock-screen .stock-overview-table > tbody > tr.is-picked > td {
+  background: #f4f5ff;
+}
+.inventory-workspace.stock-screen
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-overview-table {
+  min-width: 920px;
+}
+.stock-screen .stock-overview-table > thead > tr > th,
+.stock-screen .stock-overview-table > tbody > tr > td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.stock-screen .stock-row-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  justify-content: start;
+  gap: 6px;
+}
+.stock-screen .stock-row-actions > a,
+.stock-screen .stock-row-actions > button {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+.stock-screen > .mf-hint,
+.stock-screen .stock-panel > .mf-hint {
+  margin: 0 20px 12px;
+}

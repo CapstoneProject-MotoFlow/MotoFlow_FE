@@ -1,5 +1,15 @@
-import { useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import PageHeader from '../../shared/ui/PageHeader'
+import CardHead, { HeadButton } from './CardHead'
+import Hint from '../../shared/ui/Hint'
+import { formatDateTime } from '../../shared/utils/format'
+import {
+  clearDraft,
+  draftKey,
+  readDraft,
+  writeDraft,
+} from '../../shared/utils/localDraft'
 import axiosClient from '../../shared/api/axiosClient'
 import {
   useInventoryScope,
@@ -18,18 +28,53 @@ type Row = {
   partName: string
   qty: number
 }
+/** Dữ liệu điền sẵn khi bấm "Tạo yêu cầu bổ sung" từ màn Tồn kho (các dòng đã tích). */
+export type ReplenishmentPrefill = {
+  storeId?: number
+  lines: { productId: number; sku: string; partName: string; qty: number }[]
+}
+type Draft = { store: string; note: string; rows: Row[] }
 export default function ReplenishmentCreatePage() {
   const scope = useInventoryScope(),
     navigate = useNavigate(),
-    [store, setStore] = useState(''),
-    [note, setNote] = useState(''),
-    [rows, setRows] = useState<Row[]>([
-      { key: 1, productId: 0, sku: '', partName: '', qty: 1 },
-    ]),
+    location = useLocation(),
+    prefill = (location.state as { prefill?: ReplenishmentPrefill } | null)
+      ?.prefill,
+    key = draftKey('replenishment', scope.user),
+    [restored] = useState(() => (prefill ? undefined : readDraft<Draft>(key))),
+    [store, setStore] = useState(
+      prefill?.storeId ? String(prefill.storeId) : (restored?.data.store ?? ''),
+    ),
+    [note, setNote] = useState(restored?.data.note ?? ''),
+    [rows, setRows] = useState<Row[]>(() =>
+      prefill?.lines.length
+        ? prefill.lines.map((line, index) => ({ key: index + 1, ...line }))
+        : restored?.data.rows.length
+          ? restored.data.rows
+          : [{ key: 1, productId: 0, sku: '', partName: '', qty: 1 }],
+    ),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('')
+    [error, setError] = useState(''),
+    [draftNotice, setDraftNotice] = useState(
+      restored
+        ? 'Đang mở bản nháp lưu lúc ' + formatDateTime(restored.savedAt) + '.'
+        : prefill
+          ? 'Đã điền sẵn ' +
+            prefill.lines.length +
+            ' phụ tùng chọn từ màn Tồn kho. Kiểm tra số lượng rồi gửi.'
+          : '',
+    )
+  // Dùng dữ liệu điền sẵn một lần; tải lại trang thì không ghi đè bản nháp người dùng đã lưu.
+  useEffect(() => {
+    if (prefill)
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: null,
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const lock = useRef(false),
-    counter = useRef(1),
+    counter = useRef(Math.max(1, ...rows.map((row) => row.key))),
     destination = scope.owner ? store : String(scope.user?.storeId ?? ''),
     valid =
       !!destination &&
@@ -68,7 +113,20 @@ export default function ReplenishmentCreatePage() {
           })),
         },
       )
-      navigate('/replenishment-requests/' + r.data.id)
+      clearDraft(key)
+      navigate('/replenishment-requests/' + r.data.id, {
+        state: {
+          created:
+            'Đã gửi yêu cầu bổ sung cho ' +
+            (scope.owner
+              ? (scope.stores.find((s) => String(s.id) === destination)
+                  ?.storeName ?? 'cửa hàng')
+              : (scope.user?.storeName ?? 'cửa hàng')) +
+            ' gồm ' +
+            selectedRows.length +
+            ' phụ tùng.',
+        },
+      })
     } catch (e) {
       setError(inventoryError(e))
     } finally {
@@ -78,13 +136,35 @@ export default function ReplenishmentCreatePage() {
   }
   return (
     <main className="dashboard-content tf-page tf-repl-create tf-replenishment-form">
-      <header>
-        <h1>Tạo yêu cầu bổ sung</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to="/replenishment-requests">Yêu cầu bổ sung</Link> › Tạo mới
-        </nav>
-      </header>
+      <PageHeader
+        title="Tạo yêu cầu bổ sung"
+        breadcrumb={[
+          { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
+          { label: 'Tạo mới' },
+        ]}
+      />
+      {draftNotice && (
+        <Hint>
+          {draftNotice}{' '}
+          {restored && (
+            <button
+              type="button"
+              className="mf-btn mf-btn--link"
+              onClick={() => {
+                clearDraft(key)
+                setRows([
+                  { key: 1, productId: 0, sku: '', partName: '', qty: 1 },
+                ])
+                setNote('')
+                setStore('')
+                setDraftNotice('Đã bỏ bản nháp.')
+              }}
+            >
+              Bỏ nháp
+            </button>
+          )}
+        </Hint>
+      )}
       <InventoryNotice error={error || scope.storesError} />
       <form
         id="replenishment-create"
@@ -95,7 +175,46 @@ export default function ReplenishmentCreatePage() {
       >
         <fieldset disabled={busy}>
           <section>
-            <h2>Phụ tùng cần bổ sung</h2>
+            <CardHead title="Phụ tùng cần bổ sung">
+              <span className="tf-head-meta">
+                {selectedRows.length} mã · {totalQuantity} sản phẩm
+              </span>
+              <HeadButton
+                action={{
+                  key: 'cancel',
+                  label: 'Hủy',
+                  to: '/replenishment-requests',
+                }}
+              />
+              <HeadButton
+                action={{
+                  key: 'draft',
+                  label: 'Lưu nháp',
+                  icon: 'note',
+                  disabled: busy || !selectedRows.length,
+                  onClick: () => {
+                    const saved = writeDraft<Draft>(key, { store, note, rows })
+                    setDraftNotice(
+                      saved
+                        ? 'Đã lưu nháp lúc ' +
+                            formatDateTime(saved.savedAt) +
+                            ' trên máy này.'
+                        : 'Không lưu được nháp trên máy này.',
+                    )
+                  },
+                }}
+              />
+              <HeadButton
+                action={{
+                  key: 'send',
+                  label: busy ? 'Đang gửi…' : 'Gửi yêu cầu',
+                  icon: 'check',
+                  primary: true,
+                  form: 'replenishment-create',
+                  disabled: !valid || busy,
+                }}
+              />
+            </CardHead>
             <div className="tf-replenishment-store">
               <span>Cửa hàng cần hàng</span>
               {scope.owner ? (
@@ -228,18 +347,10 @@ export default function ReplenishmentCreatePage() {
                 maxLength={500}
                 rows={2}
                 value={note}
+                placeholder="Ví dụ: Garage Tuấn Phát đặt 10 bộ má phanh, cần có hàng trước thứ Bảy."
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-            <footer className="tf-coord-footer">
-              <span>
-                {selectedRows.length} mã · {totalQuantity} sản phẩm
-              </span>
-              <Link to="/replenishment-requests">Hủy</Link>
-              <button className="tf-primary" disabled={!valid || busy}>
-                {busy ? 'Đang gửi…' : 'Gửi yêu cầu'}
-              </button>
-            </footer>
           </section>
         </fieldset>
       </form>

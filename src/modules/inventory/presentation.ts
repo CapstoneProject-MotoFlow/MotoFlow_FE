@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../shared/utils/format'
 export const stockStatuses: Record<string, string> = {
   AVAILABLE: 'Khả dụng',
   AWAITING_INSPECTION: 'Chờ kiểm nhận',
@@ -52,9 +53,7 @@ export function date(value: string | null | undefined) {
     : '—'
 }
 export function dateTime(value: string) {
-  return new Date(value).toLocaleString('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-  })
+  return formatDateTime(value)
 }
 export function today() {
   return new Intl.DateTimeFormat('sv-SE', {

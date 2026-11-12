@@ -149,10 +149,14 @@ const ReceivableDetailPage = lazy(() =>
     default: m.ReceivableDetailPage,
   })),
 )
-const TransferListPage = lazy(() =>
-  import('../../modules/transfers/TransferPages').then((m) => ({
-    default: m.TransferListPage,
-  })),
+const ManagerTransferListPage = lazy(
+  () => import('../../modules/transfers/ManagerTransferListPage'),
+)
+const StaffTransferListPage = lazy(
+  () => import('../../modules/transfers/StaffTransferListPage'),
+)
+const ReplenishmentListPage = lazy(
+  () => import('../../modules/transfers/ReplenishmentListPage'),
 )
 const ReplenishmentDetailPage = lazy(() =>
   import('../../modules/transfers/TransferPages').then((m) => ({
@@ -432,7 +436,16 @@ export default function AppRoutes() {
                 <RequireRole roles={['OWNER', 'BRANCH_MANAGER', 'STAFF']} />
               }
             >
-              <Route path="/transfer-orders" element={<TransferListPage />} />
+              <Route
+                path="/transfer-orders"
+                element={
+                  user?.role === 'STAFF' ? (
+                    <StaffTransferListPage />
+                  ) : (
+                    <ManagerTransferListPage />
+                  )
+                }
+              />
               <Route
                 path="/transfer-orders/:id"
                 element={<TransferDetailPage />}
@@ -490,7 +503,7 @@ export default function AppRoutes() {
             >
               <Route
                 path="/replenishment-requests"
-                element={<TransferListPage replenishment />}
+                element={<ReplenishmentListPage />}
               />
               <Route
                 path="/replenishment-requests/new"

@@ -59,6 +59,22 @@ test('movement date header spans all enabled columns and inventory errors retain
       }),
       'Số ngày không hợp lệ.',
     )
+    const connectionError = inventoryError({
+      isAxiosError: true,
+      response: { status: 502 },
+    })
+    assert.equal(connectionError, 'Kết nối đến máy chủ bị gián đoạn.')
+    const { InventoryNotice } = await server.ssrLoadModule(
+      '/src/modules/inventory/components.tsx',
+    )
+    const notice = renderToStaticMarkup(
+      createElement(InventoryNotice, {
+        error: connectionError,
+        onRetry: () => {},
+      }),
+    )
+    assert.match(notice, /role="alert">Kết nối đến máy chủ bị gián đoạn/)
+    assert.match(notice, /type="button">Thử lại<\/button>/)
   } finally {
     await server.close()
   }

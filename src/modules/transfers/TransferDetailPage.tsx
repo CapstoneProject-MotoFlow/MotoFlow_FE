@@ -1,10 +1,11 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import CardHead, { HeadButton, type HeadAction } from './CardHead'
 import DebtEvidence from '../receivables/DebtEvidence'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { dateTime } from '../inventory/presentation'
 import CoordinationAction from './CoordinationAction'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import TransferAction from './TransferAction'
@@ -45,7 +46,12 @@ export default function TransferDetailPage() {
   const { id } = useParams(),
     scope = useInventoryScope(),
     [revision, setRevision] = useState(0),
-    [action, setAction] = useState('')
+    [action, setAction] = useState(''),
+    navigate = useNavigate()
+  const openReceipt = (receiptId: number) =>
+    navigate('/transfer-orders/' + id + '/receipts/' + receiptId, {
+      state: { assignNow: true },
+    })
   const r = useInventoryData<Transfer>(
       '/transfer-orders/' + id,
       {},
@@ -78,6 +84,103 @@ export default function TransferDetailPage() {
       (receipt) =>
         receipt.receiptType === 'TRANSFER_IN' && receipt.status !== 'CONFIRMED',
     )
+  const unresolvedLines = (d?.lines ?? [])
+    .filter((l) => (l.unresolvedQty ?? 0) > 0)
+    .map((l) => ({
+      productId: l.productId,
+      sku: l.sku,
+      quantity: l.unresolvedQty!,
+    }))
+  // Nút "Xử lý phần thiếu" / "Ghi nhận hàng trả về nguồn" cũng nằm trên đầu thẻ (trước đây ở phần Sai lệch cuối trang).
+  const coordinationInHead =
+    !!d &&
+    d.status === 'RECONCILING' &&
+    d.discrepancies.length > 0 &&
+    (coordinator || source)
+  // Mọi thao tác của lệnh nằm một chỗ ở góc phải tiêu đề thẻ; mỗi vai trò chỉ có một nút chính (nền xanh).
+  const actions: HeadAction[] = []
+  let closeAction: HeadAction | undefined
+  if (d) {
+    const base = '/transfer-orders/' + id
+    const moving = ['IN_TRANSIT', 'RECONCILING'].includes(d.status)
+    if (
+      scope.user?.role === 'STAFF' &&
+      pendingReceipt &&
+      receiptAcceptsResult(pendingReceipt.status)
+    )
+      actions.push({
+        key: 'count',
+        label: 'Ghi/Đếm',
+        icon: 'clipboard',
+        to: base + '/receipts/' + pendingReceipt.id,
+        primary: true,
+      })
+    if (d.status === 'AWAITING_DISPATCH') {
+      if (scope.user?.role === 'STAFF')
+        actions.push({
+          key: 'prepared',
+          label: 'Ghi số đã soạn',
+          icon: 'clipboard',
+          to: base + '/prepare',
+          primary: true,
+        })
+      if (source)
+        actions.push({
+          key: 'assign',
+          label: 'Giao việc soạn hàng',
+          icon: 'users',
+          to: base + '/prepare',
+          primary: !dispatch.data?.canConfirm,
+        })
+      if (source && dispatch.data?.canConfirm)
+        actions.push({
+          key: 'dispatch',
+          label: 'Xác nhận xuất',
+          icon: 'truck',
+          onClick: () => setAction('dispatch'),
+          primary: true,
+        })
+    }
+    if (dest && moving) {
+      if (pendingReceipt)
+        actions.push({
+          key: 'receipt',
+          label: 'Tiếp tục phiếu nhận #' + pendingReceipt.id,
+          icon: 'receipt',
+          to: base + '/receipts/' + pendingReceipt.id,
+          primary: true,
+        })
+      else if (d.lines.some((line) => (line.unresolvedQty ?? 0) > 0))
+        actions.push({
+          key: 'arrive',
+          label: 'Hàng đã đến',
+          icon: 'box',
+          onClick: () => setAction('arrive'),
+          primary: true,
+        })
+    }
+    if (source && canConfirmExcess(d.status, d.lines))
+      actions.push({
+        key: 'extra',
+        label: 'Xác nhận xuất thừa',
+        icon: 'layers',
+        to: base + '/extra',
+      })
+    if (closing.data && moving)
+      closeAction = {
+        key: 'close',
+        label: 'Xem trước đóng phiếu',
+        icon: 'lock',
+        onClick: () => setAction('close'),
+        primary:
+          !actions.some((act) => act.primary) &&
+          !(
+            coordinationInHead &&
+            ((coordinator && unresolvedLines.length > 0) ||
+              (source && !!returns.data?.length))
+          ),
+      }
+  }
   return (
     <main className="dashboard-content tf-page tf-detail-page">
       <PageBackLink to="/transfer-orders" />
@@ -90,9 +193,30 @@ export default function TransferDetailPage() {
       {d && (
         <>
           <section>
-            <h2>
-              {d.sourceStoreName} đến {d.destStoreName}
-            </h2>
+            <CardHead
+              title={d.sourceStoreName + ' đến ' + d.destStoreName}
+              status={states[d.status]}
+            >
+              {actions.map((act) => (
+                <HeadButton key={act.key} action={act} />
+              ))}
+              {coordinationInHead && (
+                <CoordinationAction
+                  inHead
+                  canDecide={coordinator}
+                  canReturn={source && !!returns.data?.length}
+                  returnLines={returns.data ?? []}
+                  id={d.id}
+                  lines={unresolvedLines}
+                  onSaved={(receiptId) =>
+                    receiptId
+                      ? openReceipt(receiptId)
+                      : setRevision((n) => n + 1)
+                  }
+                />
+              )}
+              {closeAction && <HeadButton key="close" action={closeAction} />}
+            </CardHead>
             <div className="tf-detail-meta">
               <div>
                 <span>Kho nguồn</span>
@@ -148,79 +272,6 @@ export default function TransferDetailPage() {
                   {label}
                 </span>
               ))}
-            </div>
-            <div className="tf-filters tf-detail-actions">
-              <span className="tf-badge">{states[d.status]}</span>
-              {scope.user?.role === 'STAFF' &&
-                pendingReceipt &&
-                receiptAcceptsResult(pendingReceipt.status) && (
-                  <Link
-                    className="tf-row-action"
-                    to={
-                      '/transfer-orders/' +
-                      id +
-                      '/receipts/' +
-                      pendingReceipt.id
-                    }
-                  >
-                    Ghi/Đếm
-                  </Link>
-                )}
-              {d.status === 'AWAITING_DISPATCH' && (
-                <>
-                  {scope.user?.role === 'STAFF' && (
-                    <Link to={'/transfer-orders/' + id + '/prepare'}>
-                      Ghi số đã soạn
-                    </Link>
-                  )}
-                  {source && (
-                    <Link
-                      className="tf-primary"
-                      to={'/transfer-orders/' + id + '/prepare'}
-                    >
-                      Giao việc soạn hàng
-                    </Link>
-                  )}
-                  {source && dispatch.data?.canConfirm && (
-                    <button
-                      className="tf-primary"
-                      onClick={() => setAction('dispatch')}
-                    >
-                      Xác nhận xuất
-                    </button>
-                  )}
-                </>
-              )}
-              {dest &&
-                ['IN_TRANSIT', 'RECONCILING'].includes(d.status) &&
-                (pendingReceipt ? (
-                  <Link
-                    className="tf-row-action"
-                    to={
-                      '/transfer-orders/' +
-                      id +
-                      '/receipts/' +
-                      pendingReceipt.id
-                    }
-                  >
-                    Tiếp tục phiếu nhận #{pendingReceipt.id}
-                  </Link>
-                ) : d.lines.some((line) => (line.unresolvedQty ?? 0) > 0) ? (
-                  <button onClick={() => setAction('arrive')}>
-                    Hàng đã đến
-                  </button>
-                ) : null)}
-              {source && canConfirmExcess(d.status, d.lines) && (
-                <Link to={'/transfer-orders/' + id + '/extra'}>
-                  Xác nhận xuất thừa
-                </Link>
-              )}
-              {!!closing.data &&
-                ['IN_TRANSIT', 'RECONCILING'].includes(d.status) && (
-                  <button onClick={() => setAction('close')}>
-                    Xem trước đóng phiếu
-                  </button>
-                )}
             </div>
             <div className="tf-table">
               <table>
@@ -399,22 +450,6 @@ export default function TransferDetailPage() {
                 loading={returns.loading}
                 error={returns.error}
               />
-              {d.status === 'RECONCILING' && (coordinator || source) && (
-                <CoordinationAction
-                  canDecide={coordinator}
-                  canReturn={source && !!returns.data?.length}
-                  returnLines={returns.data ?? []}
-                  id={d.id}
-                  lines={d.lines
-                    .filter((l) => (l.unresolvedQty ?? 0) > 0)
-                    .map((l) => ({
-                      productId: l.productId,
-                      sku: l.sku,
-                      quantity: l.unresolvedQty!,
-                    }))}
-                  onSaved={() => setRevision((n) => n + 1)}
-                />
-              )}
               {d.discrepancies.map((c) => (
                 <div className="tf-note" key={c.id}>
                   #{c.id} ·{' '}
@@ -467,8 +502,12 @@ export default function TransferDetailPage() {
                   : undefined
               }
               onClose={() => setAction('')}
-              onSaved={() => {
+              onSaved={(saved) => {
                 setAction('')
+                // Hàng đến xong mở ngay phiếu nhận với hộp chọn nhân viên kiểm nhận, không bắt quản lý tìm lại phiếu.
+                const receiptId = (saved as { id?: number } | null)?.id
+                if (action === 'arrive' && receiptId)
+                  return openReceipt(receiptId)
                 setRevision((n) => n + 1)
               }}
             >

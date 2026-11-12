@@ -1,5 +1,13 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import Hint from '../../shared/ui/Hint'
+import { formatDateTime } from '../../shared/utils/format'
+import {
+  clearDraft,
+  draftKey,
+  readDraft,
+  writeDraft,
+} from '../../shared/utils/localDraft'
 import {
   useEffect,
   useRef,
@@ -109,6 +117,22 @@ async function loadActiveOptions<T>(path: string, signal: AbortSignal) {
   }
 }
 
+/** Điền sẵn từ màn Tồn kho: Owner tích các phụ tùng sắp hết rồi bấm "Tạo yêu cầu nhập hàng". */
+export type PurchasePrefill = {
+  storeId?: number
+  lines: { productId: number; sku: string; partName: string; qty: number }[]
+}
+/** Bản nháp lưu trên trình duyệt (BE chưa có trạng thái DRAFT cho yêu cầu nhập hàng). */
+type PurchaseDraft = {
+  supplierId: string
+  storeId: string
+  expectedArrival: string
+  note: string
+  nextId: number
+  lines: DraftLine[]
+  products: Record<number, ProductOption>
+}
+
 const orderMoney = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
   currency: 'VND',
@@ -124,6 +148,37 @@ function OrderFormLayout({
   const { user } = useAuth()
   const owner = user?.role === 'OWNER'
   const navigate = useNavigate()
+  const location = useLocation()
+  const prefill = order
+    ? undefined
+    : (location.state as { prefill?: PurchasePrefill } | null)?.prefill
+  const key = draftKey('purchase-order', user)
+  const [restored] = useState(() =>
+    order || prefill ? undefined : readDraft<PurchaseDraft>(key),
+  )
+  const [supplierId, setSupplierId] = useState(restored?.data.supplierId ?? '')
+  const [storeId, setStoreId] = useState(
+    prefill?.storeId ? String(prefill.storeId) : (restored?.data.storeId ?? ''),
+  )
+  const [draftNotice, setDraftNotice] = useState(
+    restored
+      ? 'Đang mở bản nháp lưu lúc ' + formatDateTime(restored.savedAt) + '.'
+      : prefill
+        ? 'Đã điền sẵn ' +
+          prefill.lines.length +
+          ' phụ tùng chọn từ màn Tồn kho. Chọn nhà cung cấp và nhập giá nhập.'
+        : '',
+  )
+  // Dùng dữ liệu điền sẵn một lần; tải lại trang thì không ghi đè bản nháp người dùng đã lưu.
+  useEffect(() => {
+    if (prefill)
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: null,
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const formRef = useRef<HTMLFormElement>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [options, setOptions] = useState<{
@@ -131,17 +186,35 @@ function OrderFormLayout({
     stores: DashboardStore[]
     errors: string[]
   }>()
-  const [draft, setDraft] = useState({
-    nextId: order ? Math.max(0, ...order.lines.map((line) => line.id)) + 1 : 2,
-    lines: order
-      ? order.lines.map((line) => ({
-          id: line.id,
-          productId: String(line.productId),
-          quantity: String(line.orderedQty),
-          price: String(line.purchasePrice),
-        }))
-      : ([{ id: 1, productId: '', quantity: '', price: '' }] as DraftLine[]),
-  })
+  const [draft, setDraft] = useState(() =>
+    restored
+      ? { nextId: restored.data.nextId, lines: restored.data.lines }
+      : prefill?.lines.length
+        ? {
+            nextId: prefill.lines.length + 1,
+            lines: prefill.lines.map((line, index) => ({
+              id: index + 1,
+              productId: String(line.productId),
+              quantity: String(line.qty),
+              price: '',
+            })),
+          }
+        : {
+            nextId: order
+              ? Math.max(0, ...order.lines.map((line) => line.id)) + 1
+              : 2,
+            lines: order
+              ? order.lines.map((line) => ({
+                  id: line.id,
+                  productId: String(line.productId),
+                  quantity: String(line.orderedQty),
+                  price: String(line.purchasePrice),
+                }))
+              : ([
+                  { id: 1, productId: '', quantity: '', price: '' },
+                ] as DraftLine[]),
+          },
+  )
   useEffect(() => {
     if (!owner) return
     const controller = new AbortController()
@@ -176,14 +249,46 @@ function OrderFormLayout({
   const back = order ? '/purchase-orders/' + order.id : '/purchase-orders'
   const [selectedProducts, setSelectedProducts] = useState<
     Record<number, ProductOption>
-  >(
-    Object.fromEntries(
-      (order?.lines ?? []).map((line) => [
-        line.productId,
-        { id: line.productId, sku: line.sku, partName: line.partName },
-      ]),
-    ),
+  >(() =>
+    restored
+      ? restored.data.products
+      : Object.fromEntries(
+          [...(order?.lines ?? []), ...(prefill?.lines ?? [])].map((line) => [
+            line.productId,
+            { id: line.productId, sku: line.sku, partName: line.partName },
+          ]),
+        ),
   )
+  function saveDraft() {
+    const fields = new FormData(formRef.current ?? undefined)
+    const saved = writeDraft<PurchaseDraft>(key, {
+      supplierId,
+      storeId,
+      expectedArrival: String(fields.get('expectedArrival') ?? ''),
+      note: String(fields.get('note') ?? ''),
+      nextId: draft.nextId,
+      lines: draft.lines,
+      products: selectedProducts,
+    })
+    setDraftNotice(
+      saved
+        ? 'Đã lưu nháp lúc ' +
+            formatDateTime(saved.savedAt) +
+            ' trên máy này. Mở lại "Tạo yêu cầu nhập hàng" để làm tiếp.'
+        : 'Không lưu được nháp trên máy này.',
+    )
+  }
+  function discardDraft() {
+    clearDraft(key)
+    setSupplierId('')
+    setStoreId('')
+    setDraft({
+      nextId: 2,
+      lines: [{ id: 1, productId: '', quantity: '', price: '' }],
+    })
+    formRef.current?.reset()
+    setDraftNotice('Đã bỏ bản nháp.')
+  }
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!owner || (editing && !order?.canUpdate) || saving) return
@@ -235,6 +340,7 @@ function OrderFormLayout({
             supplierId,
             storeId,
           })
+      if (!order) clearDraft(key)
       navigate('/purchase-orders/' + data.id)
     } catch (error) {
       setSaveError(apiMessage(error))
@@ -258,9 +364,24 @@ function OrderFormLayout({
 
   return (
     <form
+      ref={formRef}
       className="receiving-stack receiving-order-form"
       onSubmit={createOrder}
     >
+      {draftNotice && (
+        <Hint>
+          {draftNotice}{' '}
+          {restored && (
+            <button
+              type="button"
+              className="mf-btn mf-btn--link"
+              onClick={discardDraft}
+            >
+              Bỏ nháp
+            </button>
+          )}
+        </Hint>
+      )}
       {owner && !options && <p role="status">Đang tải danh sách lựa chọn…</p>}
       {!!options?.errors.length && (
         <p role="alert">
@@ -276,7 +397,8 @@ function OrderFormLayout({
               </span>
               <select
                 name="supplierId"
-                defaultValue=""
+                value={supplierId}
+                onChange={(event) => setSupplierId(event.target.value)}
                 disabled={!!order || !owner || !options?.suppliers.length}
                 required
               >
@@ -296,7 +418,8 @@ function OrderFormLayout({
               </span>
               <select
                 name="storeId"
-                defaultValue=""
+                value={storeId}
+                onChange={(event) => setStoreId(event.target.value)}
                 disabled={!!order || !owner || !options?.stores.length}
                 required
               >
@@ -313,17 +436,19 @@ function OrderFormLayout({
               <input
                 type="date"
                 name="expectedArrival"
-                defaultValue={order?.expectedArrival ?? ''}
+                defaultValue={
+                  order?.expectedArrival ?? restored?.data.expectedArrival ?? ''
+                }
               />
             </label>
             <label className="receiving-layout-wide">
               Ghi chú
               <textarea
                 name="note"
-                defaultValue={order?.note ?? ''}
+                defaultValue={order?.note ?? restored?.data.note ?? ''}
                 rows={2}
                 maxLength={500}
-                placeholder="Ví dụ: giao trong giờ hành chính, gọi trước 30 phút..."
+                placeholder="Ví dụ: Nhập thêm cho mùa bảo dưỡng cuối năm, nhà cung cấp giao đủ một lần, kèm hóa đơn VAT."
               />
             </label>
             {editing && (
@@ -368,8 +493,20 @@ function OrderFormLayout({
                 ? 'Đang tạo phiếu…'
                 : 'Tạo yêu cầu'}
           </button>
+          {!editing && (
+            <button
+              type="button"
+              className="mf-btn mf-btn--secondary receiving-order-draft"
+              disabled={!owner || saving}
+              onClick={saveDraft}
+            >
+              Lưu nháp
+            </button>
+          )}
           <div className="receiving-order-cancel">
-            <Link to={back}>{editing ? 'Hủy thay đổi' : 'Hủy phiếu'}</Link>
+            <Link to={back}>
+              {editing ? 'Hủy thay đổi' : 'Quay lại danh sách'}
+            </Link>
           </div>
         </aside>
       </div>
@@ -641,7 +778,9 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
           documents,
         },
       )
-      navigate('/goods-receipt-notes/' + data.id)
+      navigate('/goods-receipt-notes/' + data.id, {
+        state: { assignNow: true },
+      })
     } catch (error) {
       setError(inventoryError(error))
     } finally {
@@ -658,6 +797,10 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     >
       <Panel title="Thông tin phiếu nhập">
         {loadError && <p role="alert">{loadError}</p>}
+        <Hint>
+          Lập phiếu xong, màn hình mở ngay bước chọn nhân viên kiểm nhận để
+          giao việc.
+        </Hint>
         <dl className="receiving-info">
           <div>
             <dt>Đơn đặt hàng</dt>

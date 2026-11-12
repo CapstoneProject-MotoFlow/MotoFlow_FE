@@ -48,6 +48,53 @@ test('picking requires a quantity for every line and explicit shortage marks', (
   assert.equal(pickedReady([{ requested: 10, picked: 9 }]), false)
   assert.equal(pickedReady([{ requested: 10, picked: 10 }]), true)
 })
+test('the sales form shows chain prices before a warehouse is selected', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderFormView } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesPages.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const product = {
+      id: 7,
+      sku: 'BUG-TEST',
+      partName: 'Bugi',
+      retailPrice: 45000,
+      status: 'ACTIVE',
+    }
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ['/sales-orders/new?productId=7'] },
+        createElement(
+          AuthContext.Provider,
+          { value: { user: { id: 1, role: 'OWNER' } } },
+          createElement(SalesOrderFormView, {
+            initialProduct: product,
+            initialQuantity: 2,
+          }),
+        ),
+      ),
+    )
+    assert.match(html, /45\.000/)
+    assert.match(
+      html,
+      /role="combobox"[^>]*aria-label="Tìm phụ tùng để thêm vào đơn"/,
+    )
+    assert.match(html, /pos-line-total">90\.000/)
+    assert.match(html, /Khách cần trả<\/dt><dd>90\.000/)
+    assert.doesNotMatch(html, /pos-discount-row|Chiết khấu cho cả đơn/)
+    assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Tạo đơn/)
+  } finally {
+    await server.close()
+  }
+})
 test('Staff order and picking views omit financial data and manager actions', async () => {
   const server = await createServer({
     configFile: false,

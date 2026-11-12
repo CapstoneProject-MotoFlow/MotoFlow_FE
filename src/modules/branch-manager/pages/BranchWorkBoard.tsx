@@ -13,7 +13,11 @@ export default function BranchWorkBoard({
     <div className="bm-overview-columns">
       <section className="bm-panel">
         <h2>Việc đang chờ xử lý</h2>
-        <InventoryNotice loading={data.loading} error={data.error} />
+        <InventoryNotice
+          loading={data.loading}
+          error={data.error}
+          onRetry={data.retry}
+        />
         <div className="bm-work-table">
           <table>
             <thead>
@@ -68,6 +72,7 @@ export default function BranchWorkBoard({
           <InventoryNotice
             loading={data.summary.loading}
             error={data.summary.error}
+            onRetry={data.summary.retry}
           />
           <strong>
             {data.summary.data ? data.summary.data.lowStock + ' dòng' : '—'}
@@ -79,6 +84,7 @@ export default function BranchWorkBoard({
           <InventoryNotice
             loading={data.lots.loading}
             error={data.lots.error}
+            onRetry={data.lots.retry}
           />
           <strong>
             {data.lots.data ? data.lots.data.page.totalItems + ' lô' : '—'}

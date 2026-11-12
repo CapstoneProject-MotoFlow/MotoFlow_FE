@@ -1024,3 +1024,41 @@
   margin-top: 8px;
   width: 100%;
 }
+
+/* ---- 12/11: thẻ số tổng dùng icon chung (review T7), gọn hơn (L5), số khớp Tổng quan (C3) ---- */
+.rv-list-page .rv-overview {
+  gap: 16px;
+}
+.rv-list-page .rv-overview article,
+.rv-list-page .rv-overview > button {
+  padding: 16px 20px;
+  gap: 4px;
+}
+.rv-list-page .rv-overview strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.rv-list-page .rv-overview strong.rv-overdue {
+  color: var(--mf-danger, #c4320a);
+}
+.rv-list-page .rv-overview small {
+  font-size: 13px;
+}
+.rv-list-page .rv-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+.rv-list-page .rv-stat-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.rv-list-page .rv-table th,
+.rv-list-page .rv-table td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.rv-list-page .rv-table td.mf-num,
+.rv-list-page .rv-table th.mf-num {
+  text-align: right;
+}

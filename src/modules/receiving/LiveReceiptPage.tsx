@@ -1,6 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { apiMessage } from '../suppliers/supplierService'
@@ -146,7 +146,23 @@ function ReceiptForm({
 }) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [assignment, setAssignment] = useState(false)
+  const location = useLocation()
+  // Góp ý cô Hoài: BM lập phiếu nhập xong thì giao ngay cho nhân viên kiểm nhận, không phải quay lại tìm phiếu.
+  const [assignment, setAssignment] = useState(
+    () =>
+      !!(location.state as { assignNow?: boolean } | null)?.assignNow &&
+      user?.role === 'BRANCH_MANAGER' &&
+      ['AWAITING_INSPECTION', 'AWAITING_RECOUNT'].includes(receipt.status) &&
+      !receipt.assignee,
+  )
+  function closeAssignment() {
+    setAssignment(false)
+    if ((location.state as { assignNow?: boolean } | null)?.assignNow)
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: null,
+      })
+  }
   const [counts, setCounts] = useState<Counts>({})
   const [arrivedAt, setArrivedAt] = useState(
     receipt.arrivedAt?.slice(0, 16) ?? '',
@@ -807,9 +823,9 @@ function ReceiptForm({
           receiptId={receipt.id}
           documentNo={receipt.deliveryDocumentNo}
           mode="assign"
-          onClose={() => setAssignment(false)}
+          onClose={closeAssignment}
           onSaved={() => {
-            setAssignment(false)
+            closeAssignment()
             onAssigned()
           }}
         />

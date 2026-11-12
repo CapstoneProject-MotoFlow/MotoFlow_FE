@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import axiosClient from '../../../shared/api/axiosClient'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
+import RowMenu from '../../../shared/ui/RowMenu'
 
 export default function ProductRowActions({
   id,
@@ -41,19 +42,28 @@ export default function ProductRowActions({
   }
   return (
     <>
+      {/* Review T4: "Ngừng kinh doanh" (nguy hiểm) không nằm sẵn trên mọi dòng, đưa vào menu "Khác". */}
       <div className="parts-row-actions">
-        <Link to={editHref} aria-label={'Sửa ' + name}>
+        <Link
+          className="mf-btn mf-btn--secondary mf-btn--sm"
+          to={editHref}
+          aria-label={'Sửa ' + name}
+        >
           Sửa
         </Link>
-        <button
-          type="button"
-          onClick={() => {
-            setError('')
-            setConfirming(true)
-          }}
-        >
-          {active ? 'Ngừng kinh doanh' : 'Mở lại kinh doanh'}
-        </button>
+        <RowMenu
+          ariaLabel={'Thao tác khác với ' + name}
+          items={[
+            {
+              label: active ? 'Ngừng kinh doanh' : 'Mở lại kinh doanh',
+              danger: active,
+              onSelect: () => {
+                setError('')
+                setConfirming(true)
+              },
+            },
+          ]}
+        />
       </div>
       {confirming && (
         <ConfirmDialog

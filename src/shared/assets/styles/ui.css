@@ -648,3 +648,437 @@ input::placeholder {
   display: none !important;
   opacity: 0;
 }
+
+/* ==========================================================================
+ * CHUẨN GIAO DIỆN DÙNG CHUNG (review UI 12/11, mục T1, T2, T6, T11, L3)
+ * Token màu, cỡ chữ, bo góc, chiều cao ô nhập. Phần dưới ghi đè đồng bộ
+ * tiêu đề trang, tiêu đề card, bảng, select gốc và phân trang cho mọi module,
+ * để khi chuyển màn cỡ chữ và ô nhập không "nhảy". Selector lặp
+ * .admin-dashboard hai lần chỉ để thắng các rule riêng của từng module.
+ * ========================================================================== */
+:root {
+  --mf-primary: #4b5eff;
+  --mf-primary-hover: #394cf0;
+  --mf-primary-soft: #edf2ff;
+  --mf-text: #14213a;
+  --mf-text-2: #33445f;
+  --mf-muted: #5b6b82;
+  --mf-border: #d8dfe9;
+  --mf-border-soft: #e7ecf3;
+  --mf-surface: #fff;
+  --mf-bg: #f8fafc;
+  --mf-success: #157a4f;
+  --mf-success-soft: #e7f6ee;
+  --mf-warning: #a35200;
+  --mf-warning-soft: #fff3e3;
+  --mf-danger: #c33440;
+  --mf-danger-soft: #fdecee;
+  --mf-fs-h1: 22px;
+  --mf-fs-card: 16px;
+  --mf-fs-body: 14px;
+  --mf-fs-th: 12px;
+  --mf-fs-small: 12px;
+  --mf-radius-sm: 6px;
+  --mf-radius: 8px;
+  --mf-radius-lg: 12px;
+  --mf-control-h: 40px;
+  --mf-control-h-sm: 36px;
+}
+/* Tiêu đề trang (h1) và tiêu đề card (h2): một cỡ cho mọi màn. */
+.admin-dashboard.admin-dashboard .dashboard-main h1 {
+  color: var(--mf-text);
+  font-size: var(--mf-fs-h1);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.admin-dashboard.admin-dashboard
+  .dashboard-main
+  h2:not(:where([role='dialog'], dialog, .ui-confirm-dialog, .rv-dialog) h2) {
+  color: var(--mf-text);
+  font-size: var(--mf-fs-card);
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+/* Bảng: header 12px/600 xám, ô 14px; số, ngày, mã, điện thoại không gãy dòng. */
+.admin-dashboard.admin-dashboard .dashboard-main table th {
+  color: var(--mf-muted);
+  font-size: var(--mf-fs-th);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+.admin-dashboard.admin-dashboard .dashboard-main table td {
+  font-size: var(--mf-fs-body);
+}
+.admin-dashboard.admin-dashboard .dashboard-main table td small {
+  font-size: var(--mf-fs-small);
+}
+.admin-dashboard .dashboard-main :is(td, th) :is(button, a) {
+  white-space: nowrap;
+}
+.admin-dashboard .dashboard-main .mf-nowrap,
+.admin-dashboard .dashboard-main td.mf-num,
+.admin-dashboard .dashboard-main td time {
+  white-space: nowrap;
+}
+/* Select gốc của trình duyệt: cùng kiểu với dropdown tự vẽ (nền trắng, mũi tên, bo 8px, cao 40px). */
+.admin-dashboard.admin-dashboard .dashboard-main select:not([multiple]) {
+  min-height: var(--mf-control-h);
+  padding: 0 34px 0 12px;
+  border: 1px solid var(--mf-border);
+  border-radius: var(--mf-radius);
+  color: var(--mf-text);
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%235b6b82' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 16px;
+  appearance: none;
+  font-size: var(--mf-fs-body);
+}
+.admin-dashboard.admin-dashboard .dashboard-main td select:not([multiple]) {
+  min-height: var(--mf-control-h-sm);
+}
+.admin-dashboard.admin-dashboard .dashboard-main select:disabled {
+  color: var(--mf-muted);
+  background-color: #f3f5f9;
+}
+/* Ô ngày: cùng chiều cao và bo góc với ô nhập khác. */
+.admin-dashboard.admin-dashboard
+  .dashboard-main
+  input:is([type='date'], [type='datetime-local'], [type='month']) {
+  min-height: var(--mf-control-h);
+  border: 1px solid var(--mf-border);
+  border-radius: var(--mf-radius);
+  padding: 0 10px;
+  background: #fff;
+  color: var(--mf-text);
+}
+.admin-dashboard .dashboard-main :is(select, input, textarea):focus-visible {
+  outline: 2px solid #5264ff40;
+  outline-offset: 0;
+  border-color: var(--mf-primary);
+}
+/* Phân trang: cùng một cỡ nút 34px ở mọi màn (L3). */
+.admin-dashboard.admin-dashboard
+  .dashboard-main
+  :is(.stock-pagination, .mf-pagination)
+  button {
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid var(--mf-border);
+  border-radius: var(--mf-radius);
+  background: #fff;
+  color: var(--mf-text-2);
+  font-size: 16px;
+  line-height: 1;
+}
+.admin-dashboard.admin-dashboard
+  .dashboard-main
+  :is(.stock-pagination, .mf-pagination)
+  button:disabled {
+  color: #a7b1c2;
+  background: #f6f8fb;
+}
+
+/* ---------- PageHeader: tiêu đề + breadcrumb + nút chính (T8) ---------- */
+.mf-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+}
+.mf-page-header-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.admin-dashboard.admin-dashboard .dashboard-main .mf-page-header h1 {
+  margin: 0;
+}
+.mf-page-header-sub {
+  margin: 0;
+  color: var(--mf-muted);
+  font-size: 14px;
+}
+.mf-page-header-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 16px;
+}
+.mf-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--mf-muted);
+  font-size: 13px;
+}
+.mf-breadcrumb a {
+  color: var(--mf-muted);
+  text-decoration: none;
+}
+.mf-breadcrumb a:hover {
+  color: var(--mf-primary);
+  text-decoration: underline;
+}
+.mf-breadcrumb [aria-current='page'] {
+  color: var(--mf-text-2);
+}
+.mf-breadcrumb-sep {
+  color: #a7b1c2;
+}
+.mf-page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Button dùng chung (T3): primary / secondary / danger / link ---------- */
+.mf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--mf-control-h);
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--mf-radius);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.mf-btn svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+.mf-btn--sm {
+  min-height: var(--mf-control-h-sm);
+  padding: 0 12px;
+}
+.mf-btn--lg {
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 16px;
+}
+.mf-btn--primary {
+  color: #fff;
+  background: var(--mf-primary);
+}
+.mf-btn--primary:hover:not(:disabled) {
+  background: var(--mf-primary-hover);
+}
+.mf-btn--secondary {
+  border-color: var(--mf-border);
+  color: var(--mf-text);
+  background: #fff;
+}
+.mf-btn--secondary:hover:not(:disabled) {
+  border-color: #b9c4d6;
+  background: #f6f8fb;
+}
+.mf-btn--danger {
+  border-color: #f2c4c8;
+  color: var(--mf-danger);
+  background: #fff;
+}
+.mf-btn--danger:hover:not(:disabled) {
+  background: var(--mf-danger-soft);
+}
+.mf-btn--link {
+  min-height: auto;
+  padding: 0;
+  color: var(--mf-primary);
+  background: transparent;
+}
+.mf-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Badge ---------- */
+.mf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.mf-badge--success {
+  color: var(--mf-success);
+  background: var(--mf-success-soft);
+}
+.mf-badge--warning {
+  color: var(--mf-warning);
+  background: var(--mf-warning-soft);
+}
+.mf-badge--danger {
+  color: var(--mf-danger);
+  background: var(--mf-danger-soft);
+}
+.mf-badge--info {
+  color: var(--mf-primary);
+  background: var(--mf-primary-soft);
+}
+.mf-badge--muted {
+  color: var(--mf-muted);
+  background: #f1f4f8;
+}
+
+/* ---------- EmptyState ---------- */
+.mf-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--mf-muted);
+  font-size: 14px;
+  text-align: center;
+}
+.mf-empty-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--mf-muted);
+  background: #f1f4f8;
+}
+.mf-empty-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.mf-empty p {
+  margin: 0;
+}
+
+/* ---------- Hộp ghi chú nghiệp vụ (ví dụ "Lô chỉ dùng để tính giá vốn") ---------- */
+.mf-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #d9e2ff;
+  border-radius: var(--mf-radius);
+  color: var(--mf-text-2);
+  background: #f5f7ff;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.mf-hint svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--mf-primary);
+}
+.mf-hint p {
+  margin: 0;
+}
+.mf-hint--warning {
+  border-color: #f7d9ad;
+  background: var(--mf-warning-soft);
+}
+.mf-hint--warning svg {
+  color: var(--mf-warning);
+}
+
+/* Review C1: bảng danh sách vừa khung nội dung 992px ở màn 1366x768 (chỉ bảng báo cáo được cuộn ngang). */
+.admin-dashboard.admin-dashboard
+  .inventory-workspace
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-table {
+  min-width: 960px;
+}
+.admin-dashboard.admin-dashboard
+  .inventory-workspace
+  > .stock-panel
+  > .stock-table-scroll
+  > .stock-table
+  > tbody
+  > tr
+  > td:first-child {
+  min-width: 150px;
+}
+
+/* Review T4: nút "⋯ Khác" và menu thao tác phụ trên từng dòng bảng. */
+.mf-row-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--mf-control-h-sm, 36px);
+  padding: 0 10px;
+  border: 1px solid var(--mf-border, #d8dfe9);
+  border-radius: var(--mf-radius-sm, 6px);
+  background: #fff;
+  color: var(--mf-text, #1d2939);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mf-row-menu-toggle[aria-expanded='true'] {
+  border-color: var(--mf-primary, #4b5eff);
+  color: var(--mf-primary, #4b5eff);
+}
+.mf-row-menu {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--mf-border, #d8dfe9);
+  border-radius: var(--mf-radius, 8px);
+  background: #fff;
+  box-shadow: 0 12px 28px #1018282e;
+}
+.mf-row-menu > button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--mf-text, #1d2939);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mf-row-menu > button:hover:not(:disabled),
+.mf-row-menu > button:focus-visible {
+  background: #f2f4f7;
+  outline: none;
+}
+.mf-row-menu > button.is-danger {
+  color: var(--mf-danger, #c4320a);
+}
+.mf-row-menu > button:disabled {
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+.admin-dashboard .mf-row-menu-toggle.mf-row-menu-toggle {
+  color: var(--mf-text, #1d2939);
+  padding: 0 10px;
+}
+.admin-dashboard .mf-row-menu-toggle.mf-row-menu-toggle[aria-expanded='true'] {
+  color: var(--mf-primary, #4b5eff);
+}

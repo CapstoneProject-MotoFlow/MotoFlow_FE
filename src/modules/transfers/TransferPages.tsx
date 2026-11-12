@@ -1,12 +1,11 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
-import ManagerTransferListPage from './ManagerTransferListPage'
-import StaffTransferListPage from './StaffTransferListPage'
 import ReplenishmentPurchaseDialog from './ReplenishmentPurchaseDialog'
-import ReplenishmentListPage from './ReplenishmentListPage'
 import TransferAction from './TransferAction'
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import CardHead, { HeadButton } from './CardHead'
+import { useState, type ReactNode } from 'react'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import Hint from '../../shared/ui/Hint'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
@@ -23,6 +22,8 @@ export function ReplenishmentDetailPage() {
   const [purchase, setPurchase] = useState(false)
   const { id } = useParams()
   const scope = useInventoryScope()
+  // Góp ý cô Hoài: tạo yêu cầu xong phải thấy ngay cửa hàng nào và các phụ tùng đã yêu cầu.
+  const created = (useLocation().state as { created?: string } | null)?.created
   const { data, loading, error } = useInventoryData<Replenishment>(
     '/replenishment-requests/' + id,
     {},
@@ -56,42 +57,50 @@ export function ReplenishmentDetailPage() {
       <PageBackLink to="/replenishment-requests" />
       <header>
         <h1>Yêu cầu bổ sung YBS-{String(id).padStart(4, '0')}</h1>
-        {open && canCoordinate && hasUnplanned && (
-          <Link
-            className="tf-primary"
-            to={'/replenishment-requests/' + id + '/coordinate'}
-          >
-            Điều phối
-          </Link>
-        )}
       </header>
+      {created && (
+        <Hint>{created} Danh sách phụ tùng đã yêu cầu ở bảng bên dưới.</Hint>
+      )}
       <InventoryNotice loading={loading} error={error} />
       {data && (
         <>
-          <ReplenishmentProgress request={data} />
-          {(canHandOff || canPurchase) && (
-            <div className="tf-replenishment-actions">
-              {canHandOff && (
-                <button
-                  type="button"
-                  onClick={() => scope.filter({ action: 'purchase' }, true)}
-                >
-                  {hasUnplanned
+          <ReplenishmentProgress request={data}>
+            {open && canCoordinate && hasUnplanned && (
+              <HeadButton
+                action={{
+                  key: 'coordinate',
+                  label: 'Điều phối',
+                  icon: 'transfer',
+                  primary: true,
+                  to: '/replenishment-requests/' + id + '/coordinate',
+                }}
+              />
+            )}
+            {canHandOff && (
+              <HeadButton
+                action={{
+                  key: 'handoff',
+                  label: hasUnplanned
                     ? 'Báo Owner phần còn thiếu'
-                    : 'Sửa số lượng đề nghị mua'}
-                </button>
-              )}
-              {canPurchase && (
-                <button
-                  className="tf-primary"
-                  type="button"
-                  onClick={() => setPurchase(true)}
-                >
-                  Lập phiếu nhập hàng
-                </button>
-              )}
-            </div>
-          )}
+                    : 'Sửa số lượng đề nghị mua',
+                  icon: 'alert',
+                  primary: !hasUnplanned,
+                  onClick: () => scope.filter({ action: 'purchase' }, true),
+                }}
+              />
+            )}
+            {canPurchase && (
+              <HeadButton
+                action={{
+                  key: 'purchase',
+                  label: 'Lập phiếu nhập hàng',
+                  icon: 'receipt',
+                  primary: !(open && canCoordinate && hasUnplanned),
+                  onClick: () => setPurchase(true),
+                }}
+              />
+            )}
+          </ReplenishmentProgress>
           {handoff && canHandOff && (
             <PurchaseHandoff
               request={data}
@@ -124,17 +133,26 @@ export function ReplenishmentDetailPage() {
   )
 }
 
-function ReplenishmentProgress({ request }: { request: Replenishment }) {
+function ReplenishmentProgress({
+  request,
+  children,
+}: {
+  request: Replenishment
+  children?: ReactNode
+}) {
   return (
     <section>
-      <div className="tf-list-heading">
-        <h2>{request.storeName}</h2>
-        <span className={'tf-badge tf-status-' + request.status}>
-          {request.status === 'IN_PROGRESS'
+      <CardHead
+        title={request.storeName}
+        statusClass={'tf-status-' + request.status}
+        status={
+          request.status === 'IN_PROGRESS'
             ? 'Đang thực hiện'
-            : states[request.status]}
-        </span>
-      </div>
+            : states[request.status]
+        }
+      >
+        {children}
+      </CardHead>
       {request.note && <p className="tf-note">{request.note}</p>}
       <div className="tf-table">
         <table>
@@ -290,14 +308,4 @@ function RelatedDocuments({
       </details>
     </section>
   )
-}
-
-export function TransferListPage({
-  replenishment = false,
-}: {
-  replenishment?: boolean
-}) {
-  const scope = useInventoryScope()
-  if (scope.user?.role === 'STAFF') return <StaffTransferListPage />
-  return replenishment ? <ReplenishmentListPage /> : <ManagerTransferListPage />
 }
