@@ -9,9 +9,7 @@ import {
 } from '../inventory/components'
 import type { Page } from '../inventory/types'
 import { money, dateTime, today } from '../inventory/presentation'
-import CustomerForm from '../customers/components/CustomerForm'
 import type { Customer } from '../customers/types'
-import SearchableFilter from '../../shared/ui/SearchableFilter'
 import PageBackLink from '../../shared/ui/PageBackLink'
 
 import {
@@ -30,6 +28,8 @@ import SalesSettlementDialog from './SalesSettlementDialog'
 import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
 import DemandReplenishment from './DemandReplenishment'
+import { SalesOrderFormView, type SalesProduct } from './SalesOrderForm'
+export { SalesOrderFormView }
 import './sales.css'
 function Header({
   title,
@@ -239,7 +239,7 @@ export function SalesOrderListPage({
                   'Ngày tạo',
                   staff ? 'Người giao' : 'Thành tiền',
                   'Trạng thái',
-                  'Cần làm',
+                  'Thao tác',
                 ].map((h) => (
                   <th key={h}>{h}</th>
                 ))}
@@ -318,42 +318,7 @@ export function SalesOrderListPage({
     </Shell>
   )
 }
-type Product = {
-  id: number
-  sku: string
-  partName: string
-  baseUnit: string
-  retailPrice: number | null
-  status: string
-  availableQty?: number | null
-}
-type DraftLine = { product: Product; quantity: number }
-type SalesCustomer = Pick<
-  Customer,
-  'id' | 'customerName' | 'phone' | 'creditStatus' | 'totalDebt'
->
-type SalesDraft = {
-  warehouse: string
-  customer?: SalesCustomer
-  walkin: string
-  walkPhone: string
-  type: SalesOrder['priceType']
-  discount: string
-  lines: DraftLine[]
-}
-
-function readSalesDraft(key: string) {
-  try {
-    const saved = localStorage.getItem(key)
-    if (!saved) return undefined
-    const draft = JSON.parse(saved) as SalesDraft | null
-    if (!draft || !Array.isArray(draft.lines)) return undefined
-    return { saved, draft }
-  } catch {
-    return undefined
-  }
-}
-
+type Product = SalesProduct
 export function SalesOrderFormPage() {
   const { id } = useParams()
   const [prefill] = useSearchParams()
@@ -412,650 +377,6 @@ export function SalesOrderFormPage() {
         )
       )}
     </>
-  )
-}
-export function SalesOrderFormView({
-  order,
-  initialProduct,
-  initialCustomer,
-  initialQuantity = 1,
-}: {
-  order?: SalesOrder
-  initialCustomer?: Customer
-  initialProduct?: Product
-  initialQuantity?: number
-}) {
-  const [prefill] = useSearchParams()
-  const navigate = useNavigate(),
-    scope = useInventoryScope(),
-    saveLock = useRef(false)
-  const draftKey =
-    !order && scope.user
-      ? `motoflow:sales-draft:${JSON.stringify([
-          scope.user.id ?? scope.user.username,
-          scope.user.role,
-          scope.user.storeId,
-        ])}`
-      : undefined
-  const [restored] = useState(() =>
-    draftKey && !prefill.size ? readSalesDraft(draftKey) : undefined,
-  )
-  const draft = restored?.draft
-  const savedDraft = useRef(restored?.saved)
-  const [draftNotice, setDraftNotice] = useState('')
-  const [busy, setBusy] = useState(false),
-    [customerTouched, _setCustomerTouched] = useState(false),
-    [walkPhone, setWalkPhone] = useState(
-      draft?.walkPhone ?? order?.customerPhone ?? '',
-    ),
-    [warehouse, setWarehouse] = useState(
-      String(
-        draft?.warehouse ??
-          order?.storeId ??
-          (scope.owner ? prefill.get('storeId') : scope.user?.storeId) ??
-          '',
-      ),
-    ),
-    [previewError, setPreviewError] = useState('')
-  const [customerQuery, setCustomerQuery] = useState(''),
-    [customer, setCustomer] = useState<SalesCustomer | undefined>(
-      draft?.customer ?? initialCustomer,
-    ),
-    [quick, setQuick] = useState(false),
-    [walkin, setWalkin] = useState(
-      draft?.walkin ?? (order?.customerId ? '' : (order?.customerName ?? '')),
-    ),
-    [query, setQuery] = useState(''),
-    [type, setType] = useState(draft?.type ?? order?.priceType ?? 'RETAIL'),
-    [discount, setDiscount] = useState(
-      draft?.discount ?? String(order?.discount ?? 0),
-    ),
-    [lines, setLines] = useState<DraftLine[]>(
-      () =>
-        draft?.lines ??
-        order?.lines.map((l) => ({
-          product: {
-            id: l.productId,
-            sku: l.sku,
-            partName: l.partName,
-            baseUnit: l.baseUnit,
-            retailPrice: l.retailPrice,
-            status: 'ACTIVE',
-          },
-          quantity: l.requested,
-        })) ??
-        (initialProduct
-          ? [{ product: initialProduct, quantity: initialQuantity }]
-          : []),
-    ),
-    [error, setError] = useState('')
-  function saveDraft() {
-    if (!draftKey || saveLock.current) return
-    const data: SalesDraft = {
-      warehouse,
-      customer: customer && {
-        id: customer.id,
-        customerName: customer.customerName,
-        phone: customer.phone,
-        creditStatus: customer.creditStatus,
-        totalDebt: customer.totalDebt,
-      },
-      walkin,
-      walkPhone,
-      type,
-      discount,
-      lines,
-    }
-    setError('')
-    setDraftNotice('')
-    try {
-      const saved = JSON.stringify(data)
-      localStorage.setItem(draftKey, saved)
-      savedDraft.current = saved
-      setDraftNotice('Đã lưu đơn nháp trên trình duyệt này.')
-    } catch {
-      setError('Không thể lưu đơn nháp trên trình duyệt này.')
-    }
-  }
-  const customers = useInventoryData<Page<Customer>>('/customers', {
-    q: customerQuery,
-    size: 20,
-  })
-  const products = useInventoryData<Page<Product>>(
-    '/products',
-    { q: query, size: 20, status: 'ACTIVE' },
-    0,
-    !!query.trim(),
-  )
-  const [preview, setPreview] = useState<{
-    key: string
-    total: number
-    referenceTotal: number
-    discountAmount: number
-    priced: boolean
-    withinThreshold: boolean
-    discountThreshold: number
-    lines: {
-      productId: number
-      sellableQty: number
-      retailPrice: number | null
-      actualUnitPrice: number | null
-      lineTotal: number | null
-    }[]
-  }>()
-  const previewBody = JSON.stringify({
-    customerId: customerTouched
-      ? (customer?.id ?? null)
-      : (customer?.id ??
-        order?.customerId ??
-        (Number(prefill.get('customerId')) || null)),
-    storeId: warehouse ? Number(warehouse) : undefined,
-    walkInPhone: walkPhone,
-    walkInName: walkin,
-    priceType: type,
-    discountRate: type === 'WHOLESALE' ? Number(discount) : 0,
-    lines: lines.map((l) => ({
-      productId: l.product.id,
-      quantity: l.quantity,
-    })),
-  })
-  useEffect(() => {
-    if (!lines.length) return
-    const controller = new AbortController()
-    const timer = setTimeout(() => {
-      void axiosClient
-        .post('/sales-orders/preview', JSON.parse(previewBody), {
-          signal: controller.signal,
-        })
-        .then(({ data }) => {
-          if (!controller.signal.aborted) {
-            setPreview({ ...data, key: previewBody })
-            setPreviewError('')
-          }
-        })
-        .catch((error) => {
-          if (!controller.signal.aborted) setPreviewError(inventoryError(error))
-        })
-    }, 300)
-    return () => {
-      clearTimeout(timer)
-      controller.abort()
-    }
-  }, [previewBody, lines.length])
-  const pricePreview = preview?.key === previewBody ? preview : undefined
-  function add(product: Product) {
-    if (product.status !== 'ACTIVE') {
-      setError('Phụ tùng đã ngừng kinh doanh.')
-      return
-    }
-    setLines((previous) =>
-      previous.some((l) => l.product.id === product.id)
-        ? previous.map((l) =>
-            l.product.id === product.id
-              ? { ...l, quantity: l.quantity + 1 }
-              : l,
-          )
-        : [...previous, { product, quantity: 1 }],
-    )
-    setQuery('')
-    setError('')
-  }
-  return (
-    <Shell
-      backTo="/sales-orders"
-      title={
-        order
-          ? 'Sửa đơn ' + order.code + ' · phiên bản ' + order.version
-          : 'Tạo đơn bán'
-      }
-      breadcrumb={
-        <>
-          <Link to="/sales-orders">Đơn bán</Link> ›{' '}
-          {order ? 'Chỉnh sửa' : 'Tạo mới'}
-        </>
-      }
-    >
-      <form
-        className="sales-form sales-create-form"
-        onSubmit={async (e) => {
-          e.preventDefault()
-          if (saveLock.current) return
-          if (
-            !lines.length ||
-            lines.length > 200 ||
-            lines.some(
-              (l) =>
-                !Number.isInteger(l.quantity) ||
-                l.quantity < 1 ||
-                l.quantity > 100000,
-            ) ||
-            !pricePreview?.priced ||
-            !pricePreview.withinThreshold
-          ) {
-            setError(
-              'Kiểm tra số lượng, giá và ngưỡng chiết khấu trước khi lưu.',
-            )
-            return
-          }
-          saveLock.current = true
-          setBusy(true)
-          setError('')
-          try {
-            const body = JSON.parse(previewBody)
-            const result = order
-              ? await axiosClient.put<OrderDto>('/sales-orders/' + order.id, {
-                  ...body,
-                  storeId: undefined,
-                  version: order.version,
-                })
-              : await axiosClient.post<OrderDto>('/sales-orders', body)
-            if (draftKey && savedDraft.current) {
-              try {
-                if (localStorage.getItem(draftKey) === savedDraft.current)
-                  localStorage.removeItem(draftKey)
-              } catch {
-                // Creating the order succeeded even if browser storage is unavailable.
-              }
-            }
-            navigate('/sales-orders/' + result.data.id)
-          } catch (error) {
-            setError(inventoryError(error))
-          } finally {
-            saveLock.current = false
-            setBusy(false)
-          }
-        }}
-      >
-        <InventoryPanel title="Khách hàng và loại giá">
-          {scope.owner && !order && (
-            <div className="sales-warehouse-field">
-              <span>Kho</span>
-              <SearchableFilter
-                label="Kho"
-                value={warehouse}
-                options={[
-                  { value: '', label: 'Mọi kho' },
-                  ...scope.stores.map((store) => ({
-                    value: String(store.id),
-                    label: store.storeName,
-                  })),
-                ]}
-                onChange={setWarehouse}
-              />
-            </div>
-          )}
-          <div className="stock-filters sales-customer-fields">
-            <label>
-              Tìm khách hàng
-              <input
-                value={customerQuery}
-                onChange={(e) => setCustomerQuery(e.target.value)}
-                placeholder="Tên, số điện thoại…"
-              />
-            </label>
-            <label>
-              Khách hàng
-              <select
-                value={
-                  customer?.id ??
-                  (!customerTouched ? order?.customerId : undefined) ??
-                  ''
-                }
-                onChange={(e) => {
-                  _setCustomerTouched(true)
-                  setCustomer(
-                    customers.data?.items.find(
-                      (c) => c.id === Number(e.target.value),
-                    ),
-                  )
-                }}
-              >
-                <option value="">Khách lẻ</option>
-                {order?.customerId && !customerTouched && !customer && (
-                  <option value={order.customerId}>{order.customerName}</option>
-                )}
-                {[
-                  ...(customer ? [customer] : []),
-                  ...(customers.data?.items ?? []).filter(
-                    (c) => c.id !== customer?.id,
-                  ),
-                ].map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.customerName} · {c.phone ?? 'Chưa có SĐT'}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {!customer && (
-              <label>
-                Tên khách lẻ
-                <input
-                  maxLength={150}
-                  value={walkin}
-                  onChange={(e) => setWalkin(e.target.value)}
-                  placeholder="Khách lẻ"
-                />
-              </label>
-            )}
-            {!customer && (
-              <label>
-                Số điện thoại khách lẻ
-                <input
-                  maxLength={20}
-                  value={walkPhone}
-                  onChange={(e) => setWalkPhone(e.target.value)}
-                />
-              </label>
-            )}
-            <button type="button" onClick={() => setQuick(true)}>
-              + Thêm nhanh khách hàng
-            </button>
-          </div>
-          {customer && (
-            <p className="sales-customer-credit">
-              {customer.creditStatus === 'ELIGIBLE'
-                ? 'Được mua chịu'
-                : 'Chưa được mua chịu'}{' '}
-              · Công nợ: {money.format(customer.totalDebt)}
-            </p>
-          )}
-          <InventoryNotice
-            loading={customers.loading}
-            error={customers.error}
-          />
-          <fieldset className="sales-price-types">
-            <legend>
-              Loại giá <span>*</span>
-            </legend>
-            <div>
-              {(['RETAIL', 'WHOLESALE'] as const).map((value) => (
-                <label key={value} className={type === value ? 'selected' : ''}>
-                  <input
-                    type="radio"
-                    name="priceType"
-                    value={value}
-                    checked={type === value}
-                    onChange={() => {
-                      setType(value)
-                      setDiscount('0')
-                    }}
-                  />
-                  {value === 'RETAIL' ? 'Bán lẻ' : 'Bán buôn'}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        </InventoryPanel>
-        <aside className="sales-price-card">
-          <h2>Giá của đơn</h2>
-          <dl>
-            <div>
-              <dt>Tổng theo giá bán lẻ</dt>
-              <dd>
-                {pricePreview?.priced
-                  ? money.format(pricePreview.referenceTotal)
-                  : !lines.length
-                    ? money.format(0)
-                    : 'Chưa có giá cập nhật'}
-              </dd>
-            </div>
-          </dl>
-          <label>
-            Chiết khấu cho cả đơn
-            <div className="sales-discount-input">
-              <input
-                aria-label="Chiết khấu cho cả đơn"
-                type="number"
-                min="0"
-                max="99.99"
-                step="0.01"
-                disabled={type !== 'WHOLESALE'}
-                value={type === 'WHOLESALE' ? discount : '0'}
-                onChange={(e) => setDiscount(e.target.value)}
-              />
-              <span>%</span>
-            </div>
-          </label>
-          <dl>
-            <div>
-              <dt>Tiền chiết khấu</dt>
-              <dd>
-                {pricePreview?.priced
-                  ? '− ' + money.format(pricePreview.discountAmount)
-                  : !lines.length
-                    ? money.format(0)
-                    : 'Chưa có giá cập nhật'}
-              </dd>
-            </div>
-            <div className="sales-grand-total">
-              <dt>Tổng tiền</dt>
-              <dd>
-                {pricePreview?.priced
-                  ? money.format(pricePreview.total)
-                  : !lines.length
-                    ? money.format(0)
-                    : previewError
-                      ? 'Không tải được giá'
-                      : pricePreview
-                        ? 'Chưa đủ giá bán'
-                        : 'Đang cập nhật giá…'}
-              </dd>
-            </div>
-          </dl>
-          <p>
-            Ngưỡng chiết khấu đang áp dụng:{' '}
-            {pricePreview
-              ? pricePreview.discountThreshold + '%'
-              : 'Chưa có dữ liệu'}
-          </p>
-          <button
-            className="sales-primary"
-            disabled={
-              busy ||
-              !lines.length ||
-              !pricePreview?.priced ||
-              !pricePreview.withinThreshold
-            }
-          >
-            {busy ? 'Đang lưu…' : order ? 'Lưu phiên bản mới' : 'Tạo đơn'}
-          </button>
-          {draftKey && (
-            <button type="button" onClick={saveDraft} disabled={busy}>
-              Đơn nháp
-            </button>
-          )}
-          {draftNotice && <p role="status">{draftNotice}</p>}
-          {previewError && (
-            <p role="alert" className="stock-error">
-              {previewError}
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="stock-error">
-              {error}
-            </p>
-          )}
-          {lines.length > 0 && !pricePreview && !previewError && (
-            <small>Đang cập nhật giá…</small>
-          )}
-          {pricePreview && !pricePreview.withinThreshold && (
-            <p role="alert">Chiết khấu vượt ngưỡng đang áp dụng.</p>
-          )}
-        </aside>
-        <div className="sales-parts-card">
-          <InventoryPanel title="Phụ tùng">
-            <div className="stock-filters">
-              <label>
-                Thêm phụ tùng
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Tên, SKU hoặc mã vạch…"
-                />
-              </label>
-            </div>
-            <InventoryNotice
-              loading={products.loading}
-              error={products.error}
-            />
-            {query && (
-              <ul className="sales-results">
-                {products.data?.items.map((product) => (
-                  <li key={product.id}>
-                    <span>
-                      {product.partName}
-                      <small>
-                        {product.sku} ·{' '}
-                        {product.retailPrice == null
-                          ? 'Chưa có giá bán'
-                          : money.format(product.retailPrice)}
-                      </small>
-                    </span>
-                    <button type="button" onClick={() => add(product)}>
-                      Thêm
-                    </button>
-                  </li>
-                ))}
-                {products.data && !products.data.items.length && (
-                  <li>Không tìm thấy phụ tùng.</li>
-                )}
-              </ul>
-            )}
-            <div className="stock-table-scroll">
-              <table className="stock-table">
-                <thead>
-                  <tr>
-                    <th>Phụ tùng</th>
-                    <th>Tồn khả dụng</th>
-                    <th>Số lượng</th>
-                    <th>Đơn giá bán lẻ</th>
-                    <th>Đơn giá sau chiết khấu</th>
-                    <th>Thành tiền</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map(({ product, quantity }) => (
-                    <tr key={product.id}>
-                      <td>
-                        {product.partName}
-                        <small>{product.sku}</small>
-                      </td>
-                      <td>
-                        {pricePreview?.lines.find(
-                          (l) => l.productId === product.id,
-                        )?.sellableQty ??
-                          product.availableQty ??
-                          'Chưa có dữ liệu'}
-                      </td>
-                      <td>
-                        <input
-                          aria-label={'Số lượng ' + product.sku}
-                          type="number"
-                          min="1"
-                          max="100000"
-                          step="1"
-                          value={quantity}
-                          onChange={(e) =>
-                            setLines((previous) =>
-                              previous.map((l) =>
-                                l.product.id === product.id
-                                  ? { ...l, quantity: Number(e.target.value) }
-                                  : l,
-                              ),
-                            )
-                          }
-                        />
-                      </td>
-                      <td>
-                        {!pricePreview
-                          ? 'Đang cập nhật giá…'
-                          : pricePreview.lines.find(
-                                (l) => l.productId === product.id,
-                              )?.retailPrice == null
-                            ? 'Chưa có giá'
-                            : money.format(
-                                pricePreview.lines.find(
-                                  (l) => l.productId === product.id,
-                                )!.retailPrice!,
-                              )}
-                      </td>
-                      <td>
-                        {!pricePreview
-                          ? 'Đang cập nhật giá…'
-                          : pricePreview.lines.find(
-                                (l) => l.productId === product.id,
-                              )?.actualUnitPrice == null
-                            ? 'Chưa có giá'
-                            : money.format(
-                                pricePreview.lines.find(
-                                  (l) => l.productId === product.id,
-                                )!.actualUnitPrice!,
-                              )}
-                      </td>
-                      <td>
-                        {!pricePreview
-                          ? 'Đang cập nhật giá…'
-                          : pricePreview.lines.find(
-                                (l) => l.productId === product.id,
-                              )?.lineTotal == null
-                            ? 'Chưa tính được'
-                            : money.format(
-                                pricePreview.lines.find(
-                                  (l) => l.productId === product.id,
-                                )!.lineTotal!,
-                              )}
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          aria-label={'Bỏ ' + product.sku}
-                          onClick={() =>
-                            setLines((previous) =>
-                              previous.filter(
-                                (l) => l.product.id !== product.id,
-                              ),
-                            )
-                          }
-                        >
-                          Bỏ
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!lines.length && (
-                    <tr>
-                      <td colSpan={7} className="stock-empty">
-                        Tìm phụ tùng để thêm vào đơn.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {error && (
-              <p role="alert" className="stock-error">
-                {error}
-              </p>
-            )}
-            {lines.some(
-              (l) => l.quantity < 1 || !Number.isInteger(l.quantity),
-            ) && <p role="alert">Số lượng đặt phải là số nguyên dương.</p>}
-          </InventoryPanel>
-        </div>
-      </form>
-      {quick && (
-        <CustomerForm
-          onClose={() => setQuick(false)}
-          onSaved={(value) => {
-            _setCustomerTouched(true)
-            setCustomer(value)
-            setQuick(false)
-          }}
-        />
-      )}
-    </Shell>
   )
 }
 export function SalesOrderDetailPage() {
@@ -1603,6 +924,7 @@ export function RecordPickedView({
                   <th>Số yêu cầu</th>
                   <th>Đã lấy</th>
                   <th>Lấy đủ</th>
+                  <th>Ghi chú</th>
                 </tr>
               </thead>
               <tbody>
@@ -1623,28 +945,6 @@ export function RecordPickedView({
                         {l.lotHint && (
                           <strong className="sales-lot">{l.lotHint}</strong>
                         )}
-                        {(l.picked ?? l.requested) < l.requested && (
-                          <input
-                            disabled={!editable || busy}
-                            aria-label={'Lý do thiếu ' + l.sku}
-                            maxLength={255}
-                            placeholder="Lý do thiếu hàng"
-                            value={l.shortReason ?? ''}
-                            onChange={(e) =>
-                              setLines((previous) =>
-                                previous.map((row) =>
-                                  row.productId === l.productId
-                                    ? {
-                                        ...row,
-                                        short: true,
-                                        shortReason: e.target.value,
-                                      }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        )}{' '}
                       </td>
                       <td>
                         <strong>{l.requested}</strong>
@@ -1668,6 +968,11 @@ export function RecordPickedView({
                                         e.target.value === ''
                                           ? null
                                           : Number(e.target.value),
+                                      short:
+                                        e.target.value !== '' &&
+                                        Number(e.target.value) <
+                                          row.requested &&
+                                        !!row.shortReason?.trim(),
                                     }
                                   : row,
                               ),
@@ -1691,7 +996,44 @@ export function RecordPickedView({
                                         ? row.requested
                                         : null,
                                       short: false,
-                                      shortReason: '',
+                                    }
+                                  : row,
+                              ),
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="sales-pick-note">
+                        {/* Ô Ghi chú cho từng dòng: bắt buộc khi lấy thiếu (lý do thiếu), không bắt buộc khi lấy đủ. */}
+                        <input
+                          disabled={!editable || busy}
+                          aria-label={'Ghi chú ' + l.sku}
+                          aria-required={
+                            (l.picked ?? l.requested) < l.requested
+                          }
+                          aria-invalid={
+                            (l.picked ?? l.requested) < l.requested &&
+                            !l.shortReason?.trim()
+                          }
+                          maxLength={255}
+                          placeholder={
+                            (l.picked ?? l.requested) < l.requested
+                              ? 'Lý do thiếu hàng (bắt buộc)'
+                              : 'Ghi chú (nếu có)'
+                          }
+                          value={l.shortReason ?? ''}
+                          onChange={(e) =>
+                            setLines((previous) =>
+                              previous.map((row) =>
+                                row.productId === l.productId
+                                  ? {
+                                      ...row,
+                                      // Ghi lý do ở dòng lấy thiếu = xác nhận dòng đó thiếu hàng.
+                                      short:
+                                        (row.picked ?? row.requested) <
+                                          row.requested &&
+                                        !!e.target.value.trim(),
+                                      shortReason: e.target.value,
                                     }
                                   : row,
                               ),
@@ -1703,7 +1045,7 @@ export function RecordPickedView({
                   ))}
                 {!lines.length && (
                   <tr>
-                    <td colSpan={4} className="stock-empty">
+                    <td colSpan={5} className="stock-empty">
                       Chưa có dòng được giao để lấy hàng.
                     </td>
                   </tr>
@@ -2022,7 +1364,7 @@ export function UnmetDemandPage() {
                   <th>Số lượng thiếu</th>
                   <th>Còn bán được</th>
                   <th>Ngày phát sinh</th>
-                  <th>Cần làm</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
