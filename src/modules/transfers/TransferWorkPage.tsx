@@ -302,8 +302,8 @@ function WorkEditor({
         Number.isInteger(v.qty) &&
         v.qty >= 0 &&
         v.qty <=
-          (mode === 'prepare' && 'plannedQty' in l
-            ? l.plannedQty
+          ('sellableQty' in l
+            ? Math.min(l.plannedQty, l.sellableQty)
             : 2147483647) &&
         Number.isInteger(v.damaged) &&
         v.damaged >= 0 &&
@@ -472,8 +472,8 @@ function WorkEditor({
         )}
         {preparation?.canRecord && !valid && (
           <p className="tf-validation-hint">
-            Nhập số lượng nguyên từ 0 đến 100.000; nếu thiếu so với kế hoạch,
-            cần có lý do.
+            Số đã soạn phải là số nguyên, từ 0 đến mức thấp hơn giữa kế hoạch và
+            tồn khả dụng. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
           </p>
         )}
         {receipt && !receiptAcceptsResult(receipt.status) && (
@@ -592,6 +592,12 @@ function WorkEditor({
                                 {lot.expiryDate ?? 'Không có'}
                               </small>
                             ))}
+                            {l.sellableQty < l.plannedQty && (
+                              <small className="tf-validation-hint">
+                                Kho nguồn thiếu {l.plannedQty - l.sellableQty}{' '}
+                                so với kế hoạch.
+                              </small>
+                            )}
                           </small>
                         )}
                       </td>
@@ -616,9 +622,13 @@ function WorkEditor({
                           type="number"
                           min={0}
                           max={
-                            mode === 'prepare' && 'plannedQty' in l
-                              ? l.plannedQty
+                            'sellableQty' in l
+                              ? Math.min(l.plannedQty, l.sellableQty)
                               : 2147483647
+                          }
+                          aria-invalid={
+                            'sellableQty' in l &&
+                            values[l.productId].qty > l.sellableQty
                           }
                           value={values[l.productId].qty}
                           onChange={(e) =>

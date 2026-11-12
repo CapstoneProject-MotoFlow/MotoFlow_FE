@@ -651,9 +651,12 @@
   font-size: 14px;
   font-weight: 500;
 }
-.tf-validation-hint {
-  font-size: 13px;
+.tf-validation-hint,
+.tf-table .tf-validation-hint {
   color: #b54708;
+}
+p.tf-validation-hint {
+  font-size: 13px;
   padding: 0 20px;
 }
 .tf-page fieldset:disabled input {

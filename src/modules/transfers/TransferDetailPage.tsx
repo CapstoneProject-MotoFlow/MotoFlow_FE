@@ -91,6 +91,9 @@ export default function TransferDetailPage() {
       sku: l.sku,
       quantity: l.unresolvedQty!,
     }))
+  const dispatchStockShort = dispatch.data?.lines.some(
+    (line) => (line.preparedQty ?? 0) > line.sellableQty,
+  )
   // Nút "Xử lý phần thiếu" / "Ghi nhận hàng trả về nguồn" cũng nằm trên đầu thẻ (trước đây ở phần Sai lệch cuối trang).
   const coordinationInHead =
     !!d &&
@@ -485,7 +488,7 @@ export default function TransferDetailPage() {
               }
               disabled={
                 action === 'dispatch'
-                  ? !dispatch.data?.canConfirm
+                  ? !dispatch.data?.canConfirm || dispatchStockShort
                   : action === 'close'
                     ? !closing.data?.canClose
                     : false
@@ -530,6 +533,12 @@ export default function TransferDetailPage() {
                     ))}
                   </p>
                 ))}
+              {action === 'dispatch' && dispatchStockShort && (
+                <p role="alert" className="stock-error">
+                  Tồn khả dụng của kho nguồn thấp hơn số đã soạn. Hãy kiểm tra
+                  lại tồn và cập nhật kết quả soạn hàng trước khi xác nhận xuất.
+                </p>
+              )}
               {action === 'dispatch' &&
                 dispatch.data &&
                 !dispatch.data.canConfirm && (
