@@ -11,7 +11,10 @@ export type Notice = {
 export type NoticeTarget = { path: string }
 /** Only route to screens implemented in this FE branch. References never become arbitrary URLs. */
 export function noticeTarget(
-  notice: Pick<Notice, 'refType' | 'refId'> & { type?: string },
+  notice: Pick<Notice, 'refType' | 'refId'> & {
+    type?: string
+    message?: string
+  },
   role: string | undefined,
 ): NoticeTarget | undefined {
   const id = notice.refId
@@ -24,6 +27,17 @@ export function noticeTarget(
     return
   if (role === 'OWNER' && notice.type === 'SUPPLIER_DISCREPANCY_OPENED')
     return { path: '/supplier-discrepancies' }
+  // Staff được giao việc nhận hàng (SUPPLIER_RECEIVING / TRANSFER_RECEIVING): mở thẳng màn lập phiếu nhận.
+  // Việc chuẩn bị hàng xuất cũng gắn TRANSFER_ORDER nên phân biệt theo nội dung "nhận hàng".
+  if (role === 'STAFF' && notice.type === 'TASK_ASSIGNED') {
+    if (notice.refType === 'PURCHASE_ORDER')
+      return { path: '/purchase-orders/' + id + '/receipts/new' }
+    if (
+      notice.refType === 'TRANSFER_ORDER' &&
+      /nhận hàng/i.test(notice.message ?? '')
+    )
+      return { path: '/transfer-orders/' + id + '/receipts/new' }
+  }
   if (notice.refType === 'GOODS_RECEIPT_NOTE')
     return { path: '/goods-receipt-notes/' + id }
   if (notice.refType === 'TRANSFER_ORDER')

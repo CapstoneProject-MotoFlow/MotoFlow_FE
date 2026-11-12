@@ -172,6 +172,9 @@ const TransferDetailPage = lazy(
 const TransferWorkPage = lazy(
   () => import('../../modules/transfers/TransferWorkPage'),
 )
+const TransferReceiptCreatePage = lazy(
+  () => import('../../modules/transfers/TransferReceiptCreatePage'),
+)
 const PastDateStockPage = lazy(
   () => import('../../modules/inventory/PastDateStockPage'),
 )
@@ -381,10 +384,6 @@ export default function AppRoutes() {
               />
             </Route>
             <Route element={<RequireRole roles={['BRANCH_MANAGER']} />}>
-              <Route
-                path="/purchase-orders/:id/receipts/new"
-                element={<NewGoodsReceiptPage />}
-              />
               <Route element={<RequireCatalogEdit />}>
                 <Route
                   path="/branch-manager/categories"
@@ -476,6 +475,15 @@ export default function AppRoutes() {
               <Route
                 path="/stock-counts/:id/record"
                 element={<StockCountRecordPage />}
+              />
+              {/* Người được giao việc nhận hàng (Staff hoặc BM tự nhận) lập phiếu nhận. */}
+              <Route
+                path="/purchase-orders/:id/receipts/new"
+                element={<NewGoodsReceiptPage />}
+              />
+              <Route
+                path="/transfer-orders/:id/receipts/new"
+                element={<TransferReceiptCreatePage />}
               />
             </Route>
             <Route

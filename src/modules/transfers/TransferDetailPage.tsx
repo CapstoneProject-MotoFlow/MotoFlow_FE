@@ -15,6 +15,10 @@ import './transfers.css'
 import { canConfirmExcess, receiptAcceptsResult } from './transferRules'
 import { useReturnQuantities } from './useReturnQuantities'
 import { resolutionNames } from './types'
+import ReceivingAssignment from '../operations/ReceivingAssignment'
+import { useReceivingTasks } from '../operations/useReceivingTasks'
+import { receivingCreatePath } from '../operations/receivingTaskModel'
+import ReceiptDocumentSummary from './ReceiptDocumentSummary'
 type Dispatch = {
   canConfirm: boolean
   lines: {
@@ -47,6 +51,7 @@ export default function TransferDetailPage() {
     scope = useInventoryScope(),
     [revision, setRevision] = useState(0),
     [action, setAction] = useState(''),
+    [success, setSuccess] = useState(''),
     navigate = useNavigate()
   const openReceipt = (receiptId: number) =>
     navigate('/transfer-orders/' + id + '/receipts/' + receiptId, {
@@ -83,7 +88,20 @@ export default function TransferDetailPage() {
     pendingReceipt = d?.receipts.find(
       (receipt) =>
         receipt.receiptType === 'TRANSFER_IN' && receipt.status !== 'CONFIRMED',
-    )
+    ),
+    moving = !!d && ['IN_TRANSIT', 'RECONCILING'].includes(d.status),
+    awaitingArrival =
+      moving &&
+      !pendingReceipt &&
+      // Staff không thấy số chưa xử lý (null): để BE quyết định còn nhận được không.
+      !!d?.lines.some(
+        (line) => line.unresolvedQty == null || line.unresolvedQty > 0,
+      ),
+    // Nhân viên đang giữ việc nhận hàng của lệnh này thì lập phiếu nhận ngay từ trang chi tiết.
+    staffReceiving = useReceivingTasks(
+      ['TRANSFER_RECEIVING'],
+      scope.user?.role === 'STAFF' && awaitingArrival,
+    ).tasks.some((task) => task.documentId === d?.id)
   const unresolvedLines = (d?.lines ?? [])
     .filter((l) => (l.unresolvedQty ?? 0) > 0)
     .map((l) => ({
@@ -105,7 +123,14 @@ export default function TransferDetailPage() {
   let closeAction: HeadAction | undefined
   if (d) {
     const base = '/transfer-orders/' + id
-    const moving = ['IN_TRANSIT', 'RECONCILING'].includes(d.status)
+    if (staffReceiving)
+      actions.push({
+        key: 'create-receipt',
+        label: 'Lập phiếu nhập',
+        icon: 'receipt',
+        to: receivingCreatePath('TRANSFER_RECEIVING', d.id),
+        primary: true,
+      })
     if (
       scope.user?.role === 'STAFF' &&
       pendingReceipt &&
@@ -144,24 +169,14 @@ export default function TransferDetailPage() {
           primary: true,
         })
     }
-    if (dest && moving) {
-      if (pendingReceipt)
-        actions.push({
-          key: 'receipt',
-          label: 'Tiếp tục phiếu nhận #' + pendingReceipt.id,
-          icon: 'receipt',
-          to: base + '/receipts/' + pendingReceipt.id,
-          primary: true,
-        })
-      else if (d.lines.some((line) => (line.unresolvedQty ?? 0) > 0))
-        actions.push({
-          key: 'arrive',
-          label: 'Hàng đã đến',
-          icon: 'box',
-          onClick: () => setAction('arrive'),
-          primary: true,
-        })
-    }
+    if (dest && moving && pendingReceipt)
+      actions.push({
+        key: 'receipt',
+        label: 'Tiếp tục phiếu nhận #' + pendingReceipt.id,
+        icon: 'receipt',
+        to: base + '/receipts/' + pendingReceipt.id,
+        primary: true,
+      })
     if (source && canConfirmExcess(d.status, d.lines))
       actions.push({
         key: 'extra',
@@ -193,6 +208,11 @@ export default function TransferDetailPage() {
         </div>
       </header>
       <InventoryNotice loading={r.loading} error={r.error} />
+      {success && (
+        <p className="tf-success-notice" role="status">
+          {success}
+        </p>
+      )}
       {d && (
         <>
           <section>
@@ -203,6 +223,16 @@ export default function TransferDetailPage() {
               {actions.map((act) => (
                 <HeadButton key={act.key} action={act} />
               ))}
+              {dest && awaitingArrival && (
+                <ReceivingAssignment
+                  key="receiving"
+                  taskType="TRANSFER_RECEIVING"
+                  documentId={d.id}
+                  onSaved={(name) =>
+                    setSuccess('Đã giao việc nhận hàng cho ' + name + '.')
+                  }
+                />
+              )}
               {coordinationInHead && (
                 <CoordinationAction
                   inHead
@@ -330,6 +360,7 @@ export default function TransferDetailPage() {
                       <span className="tf-receipt-card-date">
                         {dateTime(receipt.arrivedAt)}
                       </span>
+                      <ReceiptDocumentSummary receipt={receipt} compact />
                     </>
                   )
 
@@ -353,7 +384,7 @@ export default function TransferDetailPage() {
               <p className="tf-empty">
                 {d.status === 'AWAITING_DISPATCH'
                   ? 'Phiếu chưa xuất kho nên chưa có lần nhận hàng.'
-                  : 'Chưa ghi nhận hàng đến. BM kho nhận tạo phiếu khi hàng tới.'}
+                  : 'Chưa có phiếu nhận. Nhân viên được BM kho nhận giao việc nhận hàng sẽ lập phiếu khi hàng tới.'}
               </p>
             )}
           </section>
@@ -473,18 +504,12 @@ export default function TransferDetailPage() {
               title={
                 action === 'dispatch'
                   ? 'Xác nhận xuất kho'
-                  : action === 'arrive'
-                    ? 'Ghi nhận hàng đã đến'
-                    : 'Đóng phiếu điều chuyển'
+                  : 'Đóng phiếu điều chuyển'
               }
               path={
                 '/transfer-orders/' +
                 id +
-                (action === 'arrive'
-                  ? '/receipts'
-                  : action === 'dispatch'
-                    ? '/dispatch'
-                    : '/close')
+                (action === 'dispatch' ? '/dispatch' : '/close')
               }
               disabled={
                 action === 'dispatch'
@@ -505,12 +530,8 @@ export default function TransferDetailPage() {
                   : undefined
               }
               onClose={() => setAction('')}
-              onSaved={(saved) => {
+              onSaved={() => {
                 setAction('')
-                // Hàng đến xong mở ngay phiếu nhận với hộp chọn nhân viên kiểm nhận, không bắt quản lý tìm lại phiếu.
-                const receiptId = (saved as { id?: number } | null)?.id
-                if (action === 'arrive' && receiptId)
-                  return openReceipt(receiptId)
                 setRevision((n) => n + 1)
               }}
             >
@@ -608,9 +629,6 @@ export default function TransferDetailPage() {
                     </tbody>
                   </table>
                 </div>
-              )}
-              {action === 'arrive' && (
-                <p>Tạo phiếu nhận để giao người kiểm nhận hàng.</p>
               )}
             </TransferAction>
           )}

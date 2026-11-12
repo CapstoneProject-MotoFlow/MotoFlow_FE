@@ -4,6 +4,8 @@ import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
 import { states, type Transfer, type TransferRow } from './types'
+import { useReceivingTasks } from '../operations/useReceivingTasks'
+import { receivingCreatePath } from '../operations/receivingTaskModel'
 import './transfers.css'
 export default function StaffTransferListPage() {
   const scope = useInventoryScope(),
@@ -20,7 +22,9 @@ export default function StaffTransferListPage() {
       done,
     ),
     open = useOpenTransfers({}, page, !done),
-    r = done ? base : open
+    r = done ? base : open,
+    receiving = useReceivingTasks(['TRANSFER_RECEIVING'], !done)
+  const receivingIds = new Set(receiving.tasks.map((task) => task.documentId))
   return (
     <main className="dashboard-content tf-page tf-staff-list">
       <header>
@@ -70,7 +74,11 @@ export default function StaffTransferListPage() {
             </thead>
             <tbody>
               {r.data?.items.map((row) => (
-                <StaffRow key={row.id} row={row} />
+                <StaffRow
+                  key={row.id}
+                  row={row}
+                  receiving={receivingIds.has(row.id)}
+                />
               ))}
             </tbody>
           </table>
@@ -96,7 +104,13 @@ export default function StaffTransferListPage() {
     </main>
   )
 }
-function StaffRow({ row }: { row: TransferRow }) {
+function StaffRow({
+  row,
+  receiving,
+}: {
+  row: TransferRow
+  receiving: boolean
+}) {
   return (
     <tr>
       <td>
@@ -114,7 +128,7 @@ function StaffRow({ row }: { row: TransferRow }) {
       </td>
       <td>
         <div className="mf-row-actions">
-          <StaffRowAction row={row} />
+          <StaffRowAction row={row} receiving={receiving} />
         </div>
       </td>
     </tr>
@@ -122,9 +136,16 @@ function StaffRow({ row }: { row: TransferRow }) {
 }
 /**
  * Nút trên dòng dẫn thẳng vào phiếu của nhân viên: kho xuất vào phiếu soạn hàng, kho nhận (hoặc kho xuất khi hàng
- * bị trả về) vào phiếu nhận đang mở. Không có việc đang mở thì chỉ xem chi tiết lệnh.
+ * bị trả về) vào phiếu nhận đang mở. Được BM giao việc nhận hàng mà chưa có phiếu thì lập phiếu nhận.
+ * Không có việc đang mở thì chỉ xem chi tiết lệnh.
  */
-function StaffRowAction({ row }: { row: TransferRow }) {
+function StaffRowAction({
+  row,
+  receiving,
+}: {
+  row: TransferRow
+  receiving: boolean
+}) {
   const { user } = useInventoryScope(),
     source = user?.storeId === row.sourceStoreId,
     open = row.status !== 'CLOSED',
@@ -133,7 +154,7 @@ function StaffRowAction({ row }: { row: TransferRow }) {
       '/transfer-orders/' + row.id,
       {},
       0,
-      open && !preparing,
+      open && !preparing && !receiving,
     ),
     receipt = detail.data?.receipts.find(
       (r) =>
@@ -147,6 +168,15 @@ function StaffRowAction({ row }: { row: TransferRow }) {
         to={'/transfer-orders/' + row.id + '/prepare'}
       >
         Soạn hàng
+      </Link>
+    )
+  if (receiving)
+    return (
+      <Link
+        className="mf-btn mf-btn--sm mf-btn--primary"
+        to={receivingCreatePath('TRANSFER_RECEIVING', row.id)}
+      >
+        Lập phiếu nhập
       </Link>
     )
   if (receipt)

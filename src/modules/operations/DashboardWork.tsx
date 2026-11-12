@@ -6,6 +6,8 @@ import { dateTime } from '../inventory/presentation'
 import { states as transferStates } from '../transfers/types'
 import { salesStates } from '../sales/salesModel'
 import { countStateNames } from '../inventory/stockCountModel'
+import { useReceivingTasks } from './useReceivingTasks'
+import { receivingWork } from './receivingTaskModel'
 import './operations.css'
 type Row = {
   id: number
@@ -131,6 +133,61 @@ function Queue({
     </section>
   )
 }
+/** Việc nhận hàng BM giao cho nhân viên: nhân viên lập phiếu nhập/phiếu nhận khi hàng tới. */
+function ReceivingQueue() {
+  const r = useReceivingTasks()
+  return (
+    <section className="operation-work-panel">
+      <header>
+        <h2>Việc nhận hàng được giao</h2>
+        <Link to="/purchase-orders">Xem tất cả</Link>
+      </header>
+      <InventoryNotice loading={r.loading} />
+      {!r.loading && (
+        <>
+          <div className="stock-table-scroll">
+            <table className="stock-table">
+              <thead>
+                <tr>
+                  <th>Việc</th>
+                  <th>Chứng từ</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.tasks.map((task) => {
+                  const row = receivingWork(task)
+                  return (
+                    <tr key={row.key}>
+                      <td>{row.task}</td>
+                      <td>
+                        {row.code}
+                        {row.description && <small>{row.description}</small>}
+                      </td>
+                      <td>
+                        <div className="mf-row-actions">
+                          <Link
+                            className="mf-btn mf-btn--sm mf-btn--primary"
+                            to={row.href}
+                          >
+                            {row.action}
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {!r.tasks.length && (
+            <p className="stock-empty">Chưa có việc nhận hàng được giao.</p>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
 export function InventoryAttention() {
   const summary = useInventoryData<StockSummary>('/inventory/stock/summary'),
     lots = useInventoryData<{ page: Page<unknown> }>('/inventory/lots', {
@@ -187,6 +244,7 @@ export default function DashboardWork({
         </>
       ) : (
         <>
+          {role === 'STAFF' && <ReceivingQueue />}
           <Queue
             title="Đơn bán của tôi"
             path="/sales-orders"

@@ -8,6 +8,13 @@ import { dateTime } from '../inventory/presentation'
 import type { Assignment } from '../inventory/countAssignment'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
+export type WarehouseTaskType =
+  | 'PICKING'
+  | 'INSPECTION'
+  | 'DISPATCH_PREPARATION'
+  | 'COUNTING'
+  | 'SUPPLIER_RECEIVING'
+  | 'TRANSFER_RECEIVING'
 export default function WarehouseAssignmentDialog({
   taskType,
   documentId,
@@ -15,7 +22,7 @@ export default function WarehouseAssignmentDialog({
   onClose,
   onSaved,
 }: {
-  taskType: 'PICKING' | 'INSPECTION' | 'DISPATCH_PREPARATION' | 'COUNTING'
+  taskType: WarehouseTaskType
   documentId: number
   title?: string
   onClose: () => void
