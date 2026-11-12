@@ -205,3 +205,296 @@
   flex-wrap: wrap;
   min-height: 72px;
 }
+
+/* ===== Tổng quan Owner theo góp ý cô Hoài 12/11 ===== */
+.owner-content {
+  max-width: 1180px;
+}
+.owner-overview .mf-page-header {
+  margin-bottom: 14px;
+}
+.owner-overview a.mf-btn {
+  font-size: 14px;
+}
+.owner-overview a.mf-btn--primary,
+.owner-overview a.mf-btn--primary:hover {
+  color: #fff;
+  text-decoration: none;
+}
+.owner-overview a.mf-btn--secondary {
+  color: var(--mf-text);
+}
+.owner-overview a.mf-btn:hover {
+  text-decoration: none;
+}
+.owner-overview .mf-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.owner-waiting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--mf-border-soft);
+  border-radius: var(--mf-radius-lg);
+  background: #fff;
+}
+.owner-waiting-title {
+  margin-right: 4px;
+  color: var(--mf-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.owner-overview .owner-waiting-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 6px 0 12px;
+  border: 1px solid #f6d7a8;
+  border-radius: 999px;
+  color: #5a3a00;
+  background: #fff8ec;
+  font-size: 14px;
+}
+.owner-overview .owner-waiting-chip:hover {
+  text-decoration: none;
+  border-color: #eab662;
+}
+.owner-waiting-chip.is-static {
+  border-color: var(--mf-border-soft);
+  color: var(--mf-muted);
+  background: #f6f8fb;
+}
+.owner-waiting-chip svg,
+.owner-waiting-empty svg {
+  width: 16px;
+  height: 16px;
+}
+.owner-waiting-chip strong {
+  display: inline-grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: #fff;
+  background: #e07a00;
+  font-size: 13px;
+}
+.owner-waiting-chip.is-static strong {
+  background: #8a97ab;
+}
+.owner-waiting-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mf-success);
+  font-size: 14px;
+}
+.owner-monitoring {
+  display: grid;
+  gap: 16px;
+}
+.owner-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--mf-border-soft);
+  border-radius: var(--mf-radius-lg);
+  background: #fff;
+}
+.owner-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #eef1f5;
+}
+.owner-card-head h2 {
+  margin: 0;
+}
+.owner-card-head p {
+  margin: 2px 0 0;
+  color: var(--mf-muted);
+  font-size: 13px;
+}
+.owner-period {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: #f1f4f8;
+}
+.owner-period button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--mf-text-2);
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+}
+.owner-period button.is-active {
+  color: var(--mf-text);
+  background: #fff;
+  box-shadow: 0 1px 3px #1e2b4320;
+  font-weight: 600;
+}
+.owner-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.owner-overview .owner-kpi {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px;
+  border-right: 1px solid #eef1f5;
+  color: inherit;
+}
+.owner-overview a.owner-kpi:hover {
+  text-decoration: none;
+  background: #f8faff;
+}
+.owner-kpi:last-child {
+  border-right: 0;
+}
+.owner-kpi-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+}
+.owner-kpi-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.owner-kpi-icon--blue {
+  color: var(--mf-primary);
+  background: var(--mf-primary-soft);
+}
+.owner-kpi-icon--green {
+  color: var(--mf-success);
+  background: var(--mf-success-soft);
+}
+.owner-kpi-icon--amber {
+  color: #c26a00;
+  background: #fff3e0;
+}
+.owner-kpi-icon--slate {
+  color: #475569;
+  background: #f1f3f6;
+}
+.owner-kpi-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.owner-kpi-label {
+  color: var(--mf-muted);
+  font-size: 14px;
+}
+.owner-kpi-value {
+  color: var(--mf-text);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.owner-kpi-note {
+  color: #7a879b;
+  font-size: 12px;
+}
+.owner-two-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.owner-attention {
+  display: grid;
+}
+.owner-overview .owner-attention a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid #f0f2f6;
+  color: var(--mf-text-2);
+  font-size: 14px;
+}
+.owner-overview .owner-attention a:last-child {
+  border-bottom: 0;
+}
+.owner-overview .owner-attention a:hover {
+  text-decoration: none;
+  background: #f8faff;
+}
+.owner-attention strong {
+  color: var(--mf-text);
+  font-size: 17px;
+  white-space: nowrap;
+}
+.owner-attention a.is-danger strong {
+  color: var(--mf-danger);
+}
+.owner-monitoring .owner-work-table td,
+.owner-monitoring .owner-store-table td,
+.owner-monitoring .owner-store-table th,
+.owner-monitoring .owner-work-table th {
+  padding: 11px 18px;
+}
+.owner-monitoring .stock-table :is(th, td).mf-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.owner-monitoring .owner-work-table td:last-child {
+  text-align: right;
+}
+@media (max-width: 1100px) {
+  .owner-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .owner-kpi:nth-child(2) {
+    border-right: 0;
+  }
+  .owner-kpi:nth-child(-n + 2) {
+    border-bottom: 1px solid #eef1f5;
+  }
+  .owner-two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .owner-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .owner-kpi {
+    border-right: 0;
+    border-bottom: 1px solid #eef1f5;
+  }
+}
+.owner-monitoring .owner-work-table,
+.owner-monitoring .owner-store-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: auto;
+}
+.owner-monitoring .owner-store-table th,
+.owner-monitoring .owner-store-table td {
+  padding-right: 14px;
+  padding-left: 14px;
+}
+.owner-monitoring .owner-work-table td:last-child,
+.owner-monitoring .owner-work-table th:last-child {
+  width: 1%;
+}

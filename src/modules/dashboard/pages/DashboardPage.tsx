@@ -98,13 +98,17 @@ export default function DashboardPage() {
         }
         id="overview"
       >
-        <h1 className="dashboard-greeting">
-          {role === 'OWNER' ? 'Tổng quan' : 'Chào ' + greetingName}
-        </h1>
-        <p className="dashboard-role-caption">
-          Tổng quan · {roleNames[role] || role}
-        </p>
-        {loading && <div className="dashboard-banner">Đang tải dữ liệu…</div>}
+        {role !== 'OWNER' && (
+          <>
+            <h1 className="dashboard-greeting">Chào {greetingName}</h1>
+            <p className="dashboard-role-caption">
+              Tổng quan · {roleNames[role] || role}
+            </p>
+          </>
+        )}
+        {loading && role !== 'OWNER' && (
+          <div className="dashboard-banner">Đang tải dữ liệu…</div>
+        )}
         {error && (
           <div className="dashboard-banner error-banner" role="alert">
             {error}
