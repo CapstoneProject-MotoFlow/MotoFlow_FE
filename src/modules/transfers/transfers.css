@@ -278,15 +278,6 @@
   display: block;
   margin: 3px 0;
 }
-.tf-row-action {
-  display: inline-block;
-  background: #465fff;
-  color: white !important;
-  padding: 8px 12px;
-  border-radius: 6px;
-  white-space: nowrap;
-  font-size: 12px;
-}
 @media (max-width: 800px) {
   .tf-repl-list > header nav {
     display: none;
@@ -651,9 +642,12 @@
   font-size: 14px;
   font-weight: 500;
 }
-.tf-validation-hint {
-  font-size: 13px;
+.tf-validation-hint,
+.tf-table .tf-validation-hint {
   color: #b54708;
+}
+p.tf-validation-hint {
+  font-size: 13px;
   padding: 0 20px;
 }
 .tf-page fieldset:disabled input {
@@ -685,12 +679,6 @@
 .tf-staff-actions-col {
   width: 23%;
 }
-.tf-staff-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-}
 .tf-staff-list .tf-table td,
 .tf-staff-list .tf-table th {
   font-size: 13px;
@@ -701,9 +689,6 @@
 }
 .tf-staff-list .tf-table td:first-child:not(:only-child) {
   white-space: nowrap;
-}
-.tf-staff-list .tf-row-action {
-  font-size: 12px;
 }
 .tf-staff-list .tf-badge {
   font-size: 11px;
@@ -749,9 +734,6 @@
 .tf-status-RECONCILING {
   background: #fef3f2;
   color: #b42318;
-}
-.tf-manager-list .tf-row-action {
-  font-size: 12px;
 }
 @media (max-width: 800px) {
   .tf-manager-list > header nav {

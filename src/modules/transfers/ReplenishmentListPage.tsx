@@ -184,18 +184,23 @@ function ReplenishmentRow({
         </span>
       </td>
       <td>
-        {row.status === 'AWAITING_COORDINATION' && canCoordinate ? (
-          <Link
-            className="tf-row-action"
-            to={'/replenishment-requests/' + row.id + '/coordinate'}
-          >
-            Điều phối
-          </Link>
-        ) : row.status !== 'CLOSED' ? (
-          <Link to={'/replenishment-requests/' + row.id}>Theo dõi</Link>
-        ) : (
-          <Link to={'/replenishment-requests/' + row.id}>Xem</Link>
-        )}
+        <div className="mf-row-actions">
+          {row.status === 'AWAITING_COORDINATION' && canCoordinate ? (
+            <Link
+              className="mf-btn mf-btn--sm mf-btn--primary"
+              to={'/replenishment-requests/' + row.id + '/coordinate'}
+            >
+              Điều phối
+            </Link>
+          ) : (
+            <Link
+              className="mf-btn mf-btn--sm mf-btn--secondary"
+              to={'/replenishment-requests/' + row.id}
+            >
+              {row.status !== 'CLOSED' ? 'Theo dõi' : 'Xem chi tiết'}
+            </Link>
+          )}
+        </div>
       </td>
     </tr>
   )

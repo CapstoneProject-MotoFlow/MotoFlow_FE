@@ -191,31 +191,9 @@ export default function ManagerTransferListPage() {
                     </span>
                   </td>
                   <td>
-                    {row.status === 'RECONCILING' && coordinator ? (
-                      <Link
-                        className="tf-row-action"
-                        to={'/transfer-orders/' + row.id}
-                      >
-                        Xác nhận
-                      </Link>
-                    ) : row.status === 'AWAITING_DISPATCH' &&
-                      scope.user?.storeId === row.sourceStoreId ? (
-                      <Link to={'/transfer-orders/' + row.id}>
-                        Xem xuất hàng
-                      </Link>
-                    ) : row.status === 'IN_TRANSIT' &&
-                      scope.user?.storeId === row.destStoreId ? (
-                      <Link
-                        className="tf-row-action"
-                        to={'/transfer-orders/' + row.id}
-                      >
-                        Nhận hàng
-                      </Link>
-                    ) : (
-                      <Link to={'/transfer-orders/' + row.id}>
-                        Xem chi tiết
-                      </Link>
-                    )}
+                    <div className="mf-row-actions">
+                      <RowAction row={row} coordinator={coordinator} />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -242,5 +220,35 @@ export default function ManagerTransferListPage() {
         />
       </section>
     </main>
+  )
+}
+/** Cột Thao tác: việc của cửa hàng mình hiện nút chính, còn lại chỉ là nút xem. */
+function RowAction({
+  row,
+  coordinator,
+}: {
+  row: TransferRow
+  coordinator: boolean
+}) {
+  const { user } = useInventoryScope(),
+    to = '/transfer-orders/' + row.id,
+    label =
+      row.status === 'RECONCILING' && coordinator
+        ? 'Xác nhận'
+        : row.status === 'AWAITING_DISPATCH' &&
+            user?.storeId === row.sourceStoreId
+          ? 'Xuất hàng'
+          : row.status === 'IN_TRANSIT' && user?.storeId === row.destStoreId
+            ? 'Nhận hàng'
+            : ''
+  return (
+    <Link
+      className={
+        'mf-btn mf-btn--sm ' + (label ? 'mf-btn--primary' : 'mf-btn--secondary')
+      }
+      to={to}
+    >
+      {label || 'Xem chi tiết'}
+    </Link>
   )
 }

@@ -223,19 +223,6 @@ a.bm-summary-card:hover {
 .bm-overview a.bm-summary-card {
   color: #1d2939;
 }
-.bm-overview .bm-work-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  background: #4f56ff;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 6px;
-  min-height: 34px;
-  padding: 7px 12px;
-}
 .bm-overview .bm-panel h2 {
   font-size: 16px;
   padding: 18px 20px;
@@ -251,8 +238,7 @@ a.bm-summary-card:hover {
   color: #667085;
   font-size: 13px;
 }
-.bm-summary-card:focus-visible,
-.bm-work-action:focus-visible {
+.bm-summary-card:focus-visible {
   outline: 2px solid #858bff;
   outline-offset: 3px;
 }

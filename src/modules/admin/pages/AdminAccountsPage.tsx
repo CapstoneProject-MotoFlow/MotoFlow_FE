@@ -582,7 +582,7 @@ export default function AccountsPage() {
                       </td>
                       <td>
                         {/* Review T4: icon không chữ khó hiểu; một nút chữ + menu cho thao tác còn lại. */}
-                        <div className="account-row-actions">
+                        <div className="mf-row-actions account-row-actions">
                           <button
                             type="button"
                             className="mf-btn mf-btn--secondary mf-btn--sm"

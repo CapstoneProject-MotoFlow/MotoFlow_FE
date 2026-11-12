@@ -181,18 +181,9 @@
   text-align: right;
   white-space: nowrap;
 }
-.category-actions button {
-  border: 1px solid #d0d8e5;
-  background: white;
-  border-radius: 6px;
-  color: #203954;
-  padding: 8px 12px;
-  margin-left: 6px;
-  font-size: 14px;
-}
-.category-actions button:disabled {
-  opacity: 0.45;
-  cursor: default;
+.category-actions .mf-row-actions {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 .category-status {
   font-size: 12px;

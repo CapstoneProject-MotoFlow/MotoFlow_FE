@@ -281,23 +281,6 @@
   gap: 8px;
   white-space: nowrap;
 }
-.stock-screen .stock-row-actions > a,
-.stock-screen .stock-row-actions > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 12px;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
-  background: #fff;
-  color: #344054;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px #1018280d;
-  text-decoration: none;
-}
 .stock-screen .stock-actions-heading {
   text-align: left;
 }
@@ -496,10 +479,16 @@
   justify-content: start;
   gap: 6px;
 }
-.stock-screen .stock-row-actions > a,
-.stock-screen .stock-row-actions > button {
+/* Bốn nút Lô, Lịch sử, Vị trí, Ngưỡng xếp 2x2 nên nhỏ hơn nút thao tác chung một chút. */
+.stock-screen .stock-row-actions > .mf-btn.mf-btn {
   min-height: 30px;
-  padding: 4px 8px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.stock-screen .stock-row-actions > .mf-btn[aria-expanded='true'] {
+  border-color: var(--mf-primary);
+  color: var(--mf-primary);
+  background: var(--mf-primary-soft, #eef0ff);
 }
 .stock-screen > .mf-hint,
 .stock-screen .stock-panel > .mf-hint {

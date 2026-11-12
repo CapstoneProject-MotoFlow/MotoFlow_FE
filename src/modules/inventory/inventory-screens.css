@@ -76,6 +76,11 @@
   display: grid;
   gap: 14px;
   padding: 20px;
+  /* Cho danh sách thả xuống của ô Phụ tùng tràn ra ngoài khung bộ lọc. */
+  overflow: visible;
+}
+.inventory-screen .stock-movement-product {
+  width: min(100%, 380px);
 }
 .inventory-screen .stock-movement-filters .stock-filters {
   padding: 0;

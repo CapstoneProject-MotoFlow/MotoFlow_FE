@@ -290,8 +290,10 @@ export default function InventoryPage() {
   }
   function actions(row: StockRow) {
     return (
-      <div className="stock-row-actions">
+      <div className="mf-row-actions stock-row-actions">
         <button
+          type="button"
+          className="mf-btn mf-btn--sm mf-btn--secondary"
           aria-expanded={
             lotRow?.storeId === row.storeId &&
             lotRow?.productId === row.productId
@@ -306,11 +308,24 @@ export default function InventoryPage() {
         >
           Lô
         </button>
-        <Link to={movementLink(row.productId, row.storeId)}>Lịch sử</Link>
-        <button onClick={() => setSettings({ row, mode: 'location' })}>
+        <Link
+          className="mf-btn mf-btn--sm mf-btn--secondary"
+          to={movementLink(row.productId, row.storeId)}
+        >
+          Lịch sử
+        </Link>
+        <button
+          type="button"
+          className="mf-btn mf-btn--sm mf-btn--secondary"
+          onClick={() => setSettings({ row, mode: 'location' })}
+        >
           Vị trí
         </button>
-        <button onClick={() => setSettings({ row, mode: 'threshold' })}>
+        <button
+          type="button"
+          className="mf-btn mf-btn--sm mf-btn--secondary"
+          onClick={() => setSettings({ row, mode: 'threshold' })}
+        >
           Ngưỡng
         </button>
       </div>

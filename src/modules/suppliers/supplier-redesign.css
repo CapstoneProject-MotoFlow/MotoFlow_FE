@@ -255,11 +255,8 @@
 .supplier-redesign .suppliers-table td:last-child {
   text-align: right;
 }
-.supplier-redesign .suppliers-table td:last-child button {
-  white-space: nowrap;
-  min-height: 36px;
-  font-weight: 400;
-  padding: 7px 12px;
+.supplier-redesign .suppliers-table td:last-child .mf-row-actions {
+  justify-content: flex-end;
 }
 .supplier-redesign .suppliers-toolbar > input {
   width: 340px;

@@ -78,12 +78,14 @@ export default function ExcessReceiptsPage() {
                         : '—'}
                     </td>
                     <td>
-                      <Link
-                        className="receiving-layout-primary"
-                        to={'/goods-receipt-notes/' + row.id}
-                      >
-                        Duyệt hàng thừa
-                      </Link>
+                      <div className="mf-row-actions">
+                        <Link
+                          className="mf-btn mf-btn--sm mf-btn--primary"
+                          to={'/goods-receipt-notes/' + row.id}
+                        >
+                          Duyệt hàng thừa
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

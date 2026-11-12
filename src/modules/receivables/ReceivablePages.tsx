@@ -183,14 +183,20 @@ export function ReceivableListPage() {
                   <td className="mf-num">{r.openDebtCount}</td>
                   <td className="mf-nowrap">{day(r.earliestDueDate)}</td>
                   <td>
-                    <Link
-                      className={
-                        'rv-pay-link' + (r.overdueDebt ? ' rv-pay-overdue' : '')
-                      }
-                      to={`/receivables/customers/${r.customerId}?action=payment${scope.storeId ? '&storeId=' + scope.storeId : ''}`}
-                    >
-                      Thu nợ
-                    </Link>
+                    {/* Nợ quá hạn: nút chính nền xanh; còn lại: nút viền. */}
+                    <div className="mf-row-actions">
+                      <Link
+                        className={
+                          'mf-btn mf-btn--sm ' +
+                          (r.overdueDebt
+                            ? 'mf-btn--primary'
+                            : 'mf-btn--secondary')
+                        }
+                        to={`/receivables/customers/${r.customerId}?action=payment${scope.storeId ? '&storeId=' + scope.storeId : ''}`}
+                      >
+                        Thu nợ
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

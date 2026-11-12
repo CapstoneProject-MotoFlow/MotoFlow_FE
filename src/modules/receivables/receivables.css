@@ -196,8 +196,7 @@
   width: 18px;
   height: 18px;
 }
-.rv-primary,
-.rv-page .rv-pay-link {
+.rv-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -246,13 +245,6 @@
 }
 .rv-table td.rv-overdue {
   color: #b42318;
-}
-.rv-page .rv-pay-link {
-  padding: 8px 16px;
-  font-size: 14px;
-  background: white;
-  color: #344054;
-  border-color: #d0d5dd;
 }
 .rv-customer-card {
   background: white;

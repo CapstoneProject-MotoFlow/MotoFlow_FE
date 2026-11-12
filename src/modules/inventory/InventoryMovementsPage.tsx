@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useCompleteLots, useInventoryData, useInventoryScope } from './api'
 import {
   InventoryHeader,
@@ -70,10 +71,12 @@ export default function InventoryMovementsPage() {
     0,
     !invalid,
   )
+  // Khi đang gõ tìm chỉ hiện kết quả tìm; khi đóng danh sách giữ phụ tùng đang chọn ở đầu để ô lọc hiện đúng tên.
+  const searching = !!search.trim()
   const choices = [
-    ...(product.data ? [product.data] : []),
+    ...(product.data && !searching ? [product.data] : []),
     ...(products.data?.items ?? []).filter(
-      (item) => item.id !== product.data?.id,
+      (item) => searching || item.id !== product.data?.id,
     ),
   ]
   return (
@@ -87,30 +90,25 @@ export default function InventoryMovementsPage() {
             value={scope.storeId}
             onChange={(storeId) => scope.filter({ storeId })}
           />
-          <label className="stock-filter">
-            <span>Tìm phụ tùng</span>
-            <input
-              placeholder="Tên hoặc SKU…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
-          <label className="stock-filter">
+          <div className="stock-filter stock-movement-product">
             <span>Phụ tùng</span>
-            <select
+            <SearchableFilter
+              label="Phụ tùng"
+              searchPlaceholder="Tên hoặc SKU…"
               value={p.get('productId') ?? ''}
-              onChange={(e) =>
-                scope.filter({ productId: e.target.value, lotId: '' })
-              }
-            >
-              <option value="">Mọi phụ tùng</option>
-              {choices.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.sku} · {item.partName}
-                </option>
-              ))}
-            </select>
-          </label>
+              options={[
+                ...(!searching ? [{ value: '', label: 'Mọi phụ tùng' }] : []),
+                ...choices.map((item) => ({
+                  value: String(item.id),
+                  label: item.sku + ' · ' + item.partName,
+                })),
+              ]}
+              loading={products.loading}
+              error={products.error}
+              onSearch={(query) => setSearch(query ?? '')}
+              onChange={(productId) => scope.filter({ productId, lotId: '' })}
+            />
+          </div>
         </div>
         <div className="stock-filters">
           <label className="stock-filter">

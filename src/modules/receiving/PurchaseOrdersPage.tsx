@@ -598,16 +598,24 @@ export default function PurchaseOrdersPage() {
                             <Status value={row.taskStatus} />
                           </td>
                           <td>
-                            <Link
-                              className="receiving-layout-primary"
-                              to={
-                                '/goods-receipt-notes/' + row.goodsReceiptNoteId
-                              }
-                            >
-                              {row.taskStatus === 'ASSIGNED'
-                                ? 'Kiểm nhận'
-                                : 'Xem kết quả'}
-                            </Link>
+                            <div className="mf-row-actions">
+                              <Link
+                                className={
+                                  'mf-btn mf-btn--sm ' +
+                                  (row.taskStatus === 'ASSIGNED'
+                                    ? 'mf-btn--primary'
+                                    : 'mf-btn--secondary')
+                                }
+                                to={
+                                  '/goods-receipt-notes/' +
+                                  row.goodsReceiptNoteId
+                                }
+                              >
+                                {row.taskStatus === 'ASSIGNED'
+                                  ? 'Kiểm nhận'
+                                  : 'Xem kết quả'}
+                              </Link>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -687,32 +695,42 @@ export default function PurchaseOrdersPage() {
                             </td>
                             <td>
                               {manager ? (
-                                receipt?.status === 'AWAITING_CONFIRMATION' ? (
-                                  <button
-                                    type="button"
-                                    className="receiving-layout-primary"
-                                    onClick={() =>
-                                      setAction({ receipt, mode: 'confirm' })
-                                    }
-                                  >
-                                    Xác nhận
-                                  </button>
-                                ) : receipt &&
-                                  [
-                                    'AWAITING_INSPECTION',
-                                    'AWAITING_RECOUNT',
-                                  ].includes(receipt.status) &&
-                                  !receipt.assigneeName ? (
-                                  <button
-                                    type="button"
-                                    className="receiving-layout-primary"
-                                    onClick={() =>
-                                      setAction({ receipt, mode: 'assign' })
-                                    }
-                                  >
-                                    Giao việc
-                                  </button>
-                                ) : null
+                                <div className="mf-row-actions">
+                                  {receipt?.status ===
+                                  'AWAITING_CONFIRMATION' ? (
+                                    <button
+                                      type="button"
+                                      className="mf-btn mf-btn--sm mf-btn--primary"
+                                      onClick={() =>
+                                        setAction({ receipt, mode: 'confirm' })
+                                      }
+                                    >
+                                      Xác nhận
+                                    </button>
+                                  ) : receipt &&
+                                    [
+                                      'AWAITING_INSPECTION',
+                                      'AWAITING_RECOUNT',
+                                    ].includes(receipt.status) &&
+                                    !receipt.assigneeName ? (
+                                    <button
+                                      type="button"
+                                      className="mf-btn mf-btn--sm mf-btn--primary"
+                                      onClick={() =>
+                                        setAction({ receipt, mode: 'assign' })
+                                      }
+                                    >
+                                      Giao việc
+                                    </button>
+                                  ) : (
+                                    <Link
+                                      className="mf-btn mf-btn--sm mf-btn--secondary"
+                                      to={'/purchase-orders/' + row.id}
+                                    >
+                                      Xem chi tiết
+                                    </Link>
+                                  )}
+                                </div>
                               ) : (
                                 row.openDiscrepancies || '—'
                               )}

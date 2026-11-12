@@ -597,10 +597,11 @@ function DiscrepancyForm({
                           </span>
                         </td>
                         <td>
-                          <div className="receiving-case-actions">
+                          <div className="mf-row-actions receiving-case-actions">
                             {row.canRecordReturn && (
                               <button
                                 type="button"
+                                className="mf-btn mf-btn--sm mf-btn--primary"
                                 disabled={saving}
                                 onClick={() =>
                                   setAction({ row, mode: 'return' })
@@ -612,6 +613,7 @@ function DiscrepancyForm({
                             {row.canWaiveReplacement && (
                               <button
                                 type="button"
+                                className="mf-btn mf-btn--sm mf-btn--secondary"
                                 disabled={saving}
                                 onClick={() =>
                                   setAction({ row, mode: 'waive' })
@@ -622,6 +624,7 @@ function DiscrepancyForm({
                             )}
                             <button
                               type="button"
+                              className="mf-btn mf-btn--sm mf-btn--secondary"
                               disabled={saving}
                               onClick={() =>
                                 setAction({ row, mode: 'history' })

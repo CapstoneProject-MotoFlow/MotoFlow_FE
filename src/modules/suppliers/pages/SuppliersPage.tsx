@@ -174,12 +174,15 @@ export default function SuppliersPage() {
                       </td>
                     )}
                     <td>
-                      <button
-                        className="secondary-button"
-                        onClick={() => setEditing(s)}
-                      >
-                        Sửa
-                      </button>
+                      <div className="mf-row-actions">
+                        <button
+                          type="button"
+                          className="mf-btn mf-btn--sm mf-btn--secondary"
+                          onClick={() => setEditing(s)}
+                        >
+                          Sửa
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

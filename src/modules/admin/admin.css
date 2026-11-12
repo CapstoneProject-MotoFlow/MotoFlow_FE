@@ -265,37 +265,8 @@
   cursor: not-allowed;
 }
 .account-row-actions {
-  display: flex;
   justify-content: flex-end;
-  align-items: center;
-  gap: 2px;
-}
-.account-row-actions button {
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 5px;
-  color: #66758c;
-  background: transparent;
-  font-size: 1.5rem;
-  cursor: pointer;
-  width: 34px;
-  height: 40px;
-  min-height: 40px;
-  flex-shrink: 0;
-}
-.account-row-actions button:hover:not(:disabled) {
-  color: #4056ff;
-  background: #f0f3ff;
-}
-.account-row-actions button:disabled {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-.account-row-actions svg {
-  width: 18px;
-  height: 18px;
+  flex-wrap: nowrap;
 }
 .accounts-empty {
   height: 120px !important;

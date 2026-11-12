@@ -43,9 +43,14 @@ export default function BranchWorkBoard({
                     <small>{dateTime(w.at)}</small>
                   </td>
                   <td>
-                    <Link className="bm-work-action" to={w.href}>
-                      {w.action}
-                    </Link>
+                    <div className="mf-row-actions">
+                      <Link
+                        className="mf-btn mf-btn--sm mf-btn--primary"
+                        to={w.href}
+                      >
+                        {w.action}
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

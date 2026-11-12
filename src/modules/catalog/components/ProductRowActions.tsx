@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import axiosClient from '../../../shared/api/axiosClient'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
-import RowMenu from '../../../shared/ui/RowMenu'
 
 export default function ProductRowActions({
   id,
@@ -42,8 +41,8 @@ export default function ProductRowActions({
   }
   return (
     <>
-      {/* Review T4: "Ngừng kinh doanh" (nguy hiểm) không nằm sẵn trên mọi dòng, đưa vào menu "Khác". */}
-      <div className="parts-row-actions">
+      {/* Ngừng/mở lại kinh doanh nằm ngay cạnh nút Sửa (Truong 12/11), vẫn hỏi xác nhận trước khi đổi. */}
+      <div className="mf-row-actions parts-row-actions">
         <Link
           className="mf-btn mf-btn--secondary mf-btn--sm"
           to={editHref}
@@ -51,19 +50,22 @@ export default function ProductRowActions({
         >
           Sửa
         </Link>
-        <RowMenu
-          ariaLabel={'Thao tác khác với ' + name}
-          items={[
-            {
-              label: active ? 'Ngừng kinh doanh' : 'Mở lại kinh doanh',
-              danger: active,
-              onSelect: () => {
-                setError('')
-                setConfirming(true)
-              },
-            },
-          ]}
-        />
+        <button
+          type="button"
+          className={
+            'mf-btn mf-btn--sm ' +
+            (active ? 'mf-btn--danger' : 'mf-btn--secondary')
+          }
+          aria-label={
+            (active ? 'Ngừng kinh doanh ' : 'Mở lại kinh doanh ') + name
+          }
+          onClick={() => {
+            setError('')
+            setConfirming(true)
+          }}
+        >
+          {active ? 'Ngừng kinh doanh' : 'Mở lại kinh doanh'}
+        </button>
       </div>
       {confirming && (
         <ConfirmDialog

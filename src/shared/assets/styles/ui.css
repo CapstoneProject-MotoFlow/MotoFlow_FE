@@ -908,6 +908,69 @@ input::placeholder {
   cursor: not-allowed;
 }
 
+/* ---------- Cột "Thao tác" của bảng: mọi nút cùng cỡ ----------
+   Thao tác chính của dòng: mf-btn--primary (nền xanh). Xem/sửa: mf-btn--secondary (viền).
+   Ngừng, khóa, hủy: mf-btn--danger (chữ đỏ). Selector hai class để thắng CSS riêng của từng trang. */
+.mf-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.mf-row-actions > .mf-btn.mf-btn,
+.mf-row-actions > .mf-row-menu-toggle.mf-row-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  height: auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.mf-row-actions > .mf-btn.mf-btn--primary {
+  border-color: var(--mf-primary);
+  color: #fff;
+  background: var(--mf-primary);
+}
+.mf-row-actions > .mf-btn.mf-btn--primary:hover:not(:disabled) {
+  border-color: var(--mf-primary-hover);
+  color: #fff;
+  background: var(--mf-primary-hover);
+}
+.mf-row-actions > .mf-btn.mf-btn--secondary,
+.mf-row-actions > .mf-row-menu-toggle.mf-row-menu-toggle {
+  border-color: var(--mf-border);
+  color: var(--mf-text);
+  background: #fff;
+}
+.mf-row-actions > .mf-btn.mf-btn--secondary:hover:not(:disabled),
+.mf-row-actions > .mf-row-menu-toggle.mf-row-menu-toggle:hover {
+  border-color: #b9c4d6;
+  color: var(--mf-primary);
+  background: #f6f8fb;
+}
+.mf-row-actions > .mf-btn.mf-btn--danger {
+  border-color: #f2c4c8;
+  color: var(--mf-danger);
+  background: #fff;
+}
+.mf-row-actions > .mf-btn.mf-btn--danger:hover:not(:disabled) {
+  color: var(--mf-danger);
+  background: var(--mf-danger-soft);
+}
+.mf-row-actions > .mf-btn.mf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---------- Badge ---------- */
 .mf-badge {
   display: inline-flex;

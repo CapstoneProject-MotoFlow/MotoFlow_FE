@@ -277,6 +277,12 @@ function WorkEditor({
     resultSubmitted =
       mode === 'prepare' &&
       preparation?.preparer?.taskStatus === 'RESULT_SUBMITTED',
+    // Đã giao người soạn và chưa có kết quả: tên người soạn đã hiện ở đầu thẻ nên không hiện thêm thông báo xanh.
+    preparedByOther =
+      !!preparation?.preparer &&
+      !resultSubmitted &&
+      !preparation.canRecord &&
+      preparation.status === 'AWAITING_DISPATCH',
     canRecord =
       mode === 'prepare'
         ? !!preparation?.canRecord
@@ -302,8 +308,8 @@ function WorkEditor({
         Number.isInteger(v.qty) &&
         v.qty >= 0 &&
         v.qty <=
-          (mode === 'prepare' && 'plannedQty' in l
-            ? l.plannedQty
+          ('sellableQty' in l
+            ? Math.min(l.plannedQty, l.sellableQty)
             : 2147483647) &&
         Number.isInteger(v.damaged) &&
         v.damaged >= 0 &&
@@ -423,7 +429,7 @@ function WorkEditor({
         {receipt?.recountReason && (
           <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
         )}
-        {preparation && (
+        {preparation && !preparedByOther && (
           <div className="tf-preparation-notice" role="status">
             {resultSubmitted ? (
               <>
@@ -448,17 +454,6 @@ function WorkEditor({
                 <strong>Phiếu đã qua bước soạn hàng.</strong>
                 <p>Kết quả hiện chỉ để xem.</p>
               </>
-            ) : preparation.preparer ? (
-              <>
-                <strong>
-                  Việc soạn đang giao cho {preparation.preparer.name}.
-                </strong>
-                <p>
-                  Chỉ người được giao mới được nhập và gửi kết quả. Quản lý có
-                  thể giao lại bằng nút Đổi nhân viên ở đầu thẻ; người xác nhận
-                  xuất phải khác người soạn.
-                </p>
-              </>
             ) : (
               <>
                 <strong>Chưa giao người soạn hàng.</strong>
@@ -472,8 +467,8 @@ function WorkEditor({
         )}
         {preparation?.canRecord && !valid && (
           <p className="tf-validation-hint">
-            Nhập số lượng nguyên từ 0 đến 100.000; nếu thiếu so với kế hoạch,
-            cần có lý do.
+            Số đã soạn phải là số nguyên, từ 0 đến mức thấp hơn giữa kế hoạch và
+            tồn khả dụng. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
           </p>
         )}
         {receipt && !receiptAcceptsResult(receipt.status) && (
@@ -592,6 +587,12 @@ function WorkEditor({
                                 {lot.expiryDate ?? 'Không có'}
                               </small>
                             ))}
+                            {l.sellableQty < l.plannedQty && (
+                              <small className="tf-validation-hint">
+                                Kho nguồn thiếu {l.plannedQty - l.sellableQty}{' '}
+                                so với kế hoạch.
+                              </small>
+                            )}
                           </small>
                         )}
                       </td>
@@ -616,9 +617,13 @@ function WorkEditor({
                           type="number"
                           min={0}
                           max={
-                            mode === 'prepare' && 'plannedQty' in l
-                              ? l.plannedQty
+                            'sellableQty' in l
+                              ? Math.min(l.plannedQty, l.sellableQty)
                               : 2147483647
+                          }
+                          aria-invalid={
+                            'sellableQty' in l &&
+                            values[l.productId].qty > l.sellableQty
                           }
                           value={values[l.productId].qty}
                           onChange={(e) =>
