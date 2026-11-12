@@ -8,6 +8,7 @@ import AdminSidebarNav from './AdminSidebarNav'
 import StaffSidebarNav from './StaffSidebarNav'
 import BranchManagerSidebarNav from './BranchManagerSidebarNav'
 import OwnerSidebarNav from './OwnerSidebarNav'
+import PageErrorBoundary from './PageErrorBoundary'
 import './layouts.css'
 import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
 import { useState } from 'react'
@@ -64,7 +65,7 @@ export default function DashboardLayout() {
         )}
         {!collapsed && (
           <div className="sidebar-scope">
-            <span>Phạm vi làm việc</span>
+            <span>Phạm vi:</span>
             <strong>
               {role === 'OWNER'
                 ? 'Toàn chuỗi'
@@ -168,7 +169,9 @@ export default function DashboardLayout() {
           </p>
         )}
         <HeaderSearchTarget.Provider value={searchTarget}>
-          <Outlet key={location.pathname} />
+          <PageErrorBoundary key={location.pathname}>
+            <Outlet />
+          </PageErrorBoundary>
         </HeaderSearchTarget.Provider>
       </div>
     </div>
