@@ -66,7 +66,7 @@ export default function StaffTransferListPage() {
                 <th>Tới kho</th>
                 <th>Hàng</th>
                 <th>Kết quả của tôi</th>
-                <th>Cần làm</th>
+                <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>

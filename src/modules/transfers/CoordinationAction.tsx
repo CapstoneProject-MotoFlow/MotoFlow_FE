@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import TransferAction from './TransferAction'
 export default function CoordinationAction({
   id,
@@ -8,6 +8,7 @@ export default function CoordinationAction({
   canDecide = true,
   canReturn = false,
   returnLines,
+  inHead = false,
 }: {
   id: number
   lines: {
@@ -25,7 +26,10 @@ export default function CoordinationAction({
   replenishment?: boolean
   canDecide?: boolean
   canReturn?: boolean
-  onSaved: () => void
+  /** Đặt nút trên dòng tiêu đề thẻ (CardHead) thay vì một khối riêng. */
+  inHead?: boolean
+  /** Hàng trả về nguồn: nhận id phiếu nhận vừa mở để chuyển ngay sang bước giao việc kiểm nhận. */
+  onSaved: (receiptId?: number) => void
 }) {
   const [action, setAction] = useState(''),
     [product, setProduct] = useState(String(lines[0]?.productId ?? '')),
@@ -54,20 +58,32 @@ export default function CoordinationAction({
     setAdjustment('')
     setAction(next)
   }
+  const buttons = (
+    <>
+      {canDecide && lines.length > 0 && (
+        <button
+          type="button"
+          className={inHead ? 'mf-btn mf-btn--primary' : undefined}
+          onClick={() => open(replenishment ? 'purchase' : 'decision')}
+        >
+          {replenishment ? 'Chuyển phần thiếu sang mua' : 'Xử lý phần thiếu'}
+        </button>
+      )}
+      {!replenishment && canReturn && (returnLines ?? lines).length > 0 && (
+        <button
+          type="button"
+          className={inHead ? 'mf-btn mf-btn--primary' : undefined}
+          onClick={() => open('return')}
+        >
+          Ghi nhận hàng trả về nguồn
+        </button>
+      )}
+    </>
+  )
+  const Wrapper = inHead ? Fragment : NoteBlock
   return (
-    <div className="tf-note">
-      <div className="tf-filters">
-        {canDecide && lines.length > 0 && (
-          <button onClick={() => open(replenishment ? 'purchase' : 'decision')}>
-            {replenishment ? 'Chuyển phần thiếu sang mua' : 'Xử lý phần thiếu'}
-          </button>
-        )}
-        {!replenishment && canReturn && (returnLines ?? lines).length > 0 && (
-          <button onClick={() => open('return')}>
-            Ghi nhận hàng trả về nguồn
-          </button>
-        )}
-      </div>
+    <Wrapper>
+      {inHead ? buttons : <div className="tf-filters">{buttons}</div>}
       {action && (
         <TransferAction
           title={
@@ -102,9 +118,13 @@ export default function CoordinationAction({
                   }
           }
           onClose={() => setAction('')}
-          onSaved={() => {
+          onSaved={(saved) => {
             setAction('')
-            onSaved()
+            onSaved(
+              action === 'return'
+                ? (saved as { id?: number } | null)?.id
+                : undefined,
+            )
           }}
         >
           <label>
@@ -192,6 +212,10 @@ export default function CoordinationAction({
           )}
         </TransferAction>
       )}
-    </div>
+    </Wrapper>
   )
+}
+
+function NoteBlock({ children }: { children: ReactNode }) {
+  return <div className="tf-note">{children}</div>
 }

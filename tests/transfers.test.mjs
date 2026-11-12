@@ -49,6 +49,37 @@ test('planning excludes quantities already planned and assigned to purchasing', 
   assert.equal(unplannedQuantity({ ...demand, plannedQty: 12 }), 0)
 })
 
+test('the replenishment purchase URL renders through the app router without suspending', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, ws: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { default: AppRoutes } = await server.ssrLoadModule(
+      '/src/app/routes/AppRoutes.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ['/replenishment-requests/4?action=purchase'] },
+        createElement(
+          AuthContext.Provider,
+          { value: { user: { username: 'owner', role: 'OWNER' } } },
+          createElement(AppRoutes),
+        ),
+      ),
+    )
+    assert.match(html, /Yêu cầu bổ sung YBS-0004/)
+    assert.doesNotMatch(html, /Không mở được trang|Đang tải trang/)
+  } finally {
+    await server.close()
+  }
+})
+
 test('central managers default to coordination before any replenishments are loaded', async () => {
   const server = await createServer({
     configFile: false,

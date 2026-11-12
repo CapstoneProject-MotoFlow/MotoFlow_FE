@@ -4,8 +4,8 @@ import ExcessDispatchEditor from './ExcessDispatchEditor'
 import { uploadAttachment } from '../../shared/api/upload'
 import { receiptAcceptsResult } from './transferRules'
 import { dateTime } from '../inventory/presentation'
-import { useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useRef, useState, type ReactNode } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import {
   useInventoryData,
@@ -15,14 +15,19 @@ import {
 import { InventoryNotice } from '../inventory/components'
 import type { Assignment } from '../inventory/countAssignment'
 import TransferAction from './TransferAction'
+import CardHead, { HeadButton } from './CardHead'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
+
+const WORK_FORM = 'tf-work-form'
 export default function TransferWorkPage({
   mode = 'prepare',
 }: {
   mode?: 'prepare' | 'receipt' | 'extra'
 }) {
   const { id, receiptId } = useParams(),
+    location = useLocation(),
+    navigate = useNavigate(),
     scope = useInventoryScope(),
     [revision, setRevision] = useState(0),
     [success, setSuccess] = useState('')
@@ -48,6 +53,17 @@ export default function TransferWorkPage({
       revision,
       mode !== 'prepare',
     )
+  // Vừa bấm "Hàng đã đến" ở lệnh điều chuyển: mở ngay hộp giao việc kiểm nhận (như phiếu nhập từ nhà cung cấp).
+  const assignNow =
+    mode === 'receipt' &&
+    !!(location.state as { assignNow?: boolean } | null)?.assignNow
+  const clearAssignNow = () => {
+    if (assignNow)
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: null,
+      })
+  }
   const manager = scope.user?.role === 'BRANCH_MANAGER'
   const receiptStoreId =
     receipt.data?.receiptType === 'RETURN_TO_SOURCE'
@@ -68,6 +84,26 @@ export default function TransferWorkPage({
         managesReceipt &&
         receiptAcceptsResult(receipt.data?.status)),
   )
+  const assignmentControl = assignment.data?.canAssign ? (
+    <AssignmentControl
+      key={'a' + revision}
+      taskType={taskType}
+      documentId={documentId}
+      assigneeName={assignment.data.current?.assigneeName}
+      autoOpen={assignNow && !assignment.data.current}
+      onClose={clearAssignNow}
+      onSaved={(name) => {
+        clearAssignNow()
+        onWorkSaved(
+          (mode === 'prepare'
+            ? 'Đã giao việc soạn hàng cho '
+            : 'Đã giao việc kiểm nhận cho ') +
+            name +
+            '.',
+        )
+      }}
+    />
+  ) : null
   return (
     <main className="dashboard-content tf-page">
       <PageBackLink to={'/transfer-orders/' + id} />
@@ -85,6 +121,9 @@ export default function TransferWorkPage({
       <InventoryNotice
         loading={prep.loading || receipt.loading || order.loading}
         error={prep.error || receipt.error || order.error}
+        onRetry={() =>
+          [prep, receipt, order].forEach((source) => source.retry())
+        }
       />
       {success && (
         <p className="tf-success-notice" role="status">
@@ -95,6 +134,7 @@ export default function TransferWorkPage({
         <WorkEditor
           key={'p' + revision}
           preparation={prep.data}
+          headActions={assignmentControl}
           id={id!}
           mode={mode}
           onSaveStart={() => setSuccess('')}
@@ -105,6 +145,7 @@ export default function TransferWorkPage({
         <WorkEditor
           key={'r' + revision}
           receipt={receipt.data}
+          headActions={assignmentControl}
           order={order.data}
           assignment={assignment.data}
           id={id!}
@@ -120,44 +161,63 @@ export default function TransferWorkPage({
           onSaved={() => setRevision((n) => n + 1)}
         />
       )}{' '}
-      {assignment.data?.canAssign && (
-        <AssignmentPanel
-          key={'a' + revision}
-          taskType={taskType}
-          documentId={documentId}
-          onSaved={() => setRevision((n) => n + 1)}
-        />
-      )}
     </main>
   )
 }
-function AssignmentPanel({
+/** Chữ "Đang giao cho" + nút giao/đổi nhân viên, đặt trên dòng tiêu đề thẻ. */
+function AssignmentControl({
   taskType,
   documentId,
+  assigneeName,
+  autoOpen = false,
+  onClose,
   onSaved,
 }: {
   taskType: 'DISPATCH_PREPARATION' | 'INSPECTION'
   documentId: number
-  onSaved: () => void
+  assigneeName?: string
+  autoOpen?: boolean
+  onClose: () => void
+  onSaved: (name: string) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   return (
-    <section>
-      <h2>Giao việc cho nhân viên</h2>
-      <div className="tf-note">
-        <button className="tf-primary" onClick={() => setOpen(true)}>
-          Giao / đổi nhân viên
-        </button>
-      </div>
+    <>
+      <span className="tf-head-meta">
+        {assigneeName ? (
+          <>
+            Đang giao cho <strong>{assigneeName}</strong>
+          </>
+        ) : (
+          'Chưa giao nhân viên'
+        )}
+      </span>
+      <HeadButton
+        action={{
+          key: 'assign',
+          label: assigneeName ? 'Đổi nhân viên' : 'Giao nhân viên',
+          icon: 'users',
+          primary: !assigneeName,
+          onClick: () => setOpen(true),
+        }}
+      />
       {open && (
         <WarehouseAssignmentDialog
           taskType={taskType}
           documentId={documentId}
-          onClose={() => setOpen(false)}
+          title={
+            taskType === 'INSPECTION'
+              ? 'Giao việc kiểm nhận hàng chuyển'
+              : 'Giao việc soạn hàng'
+          }
+          onClose={() => {
+            setOpen(false)
+            onClose()
+          }}
           onSaved={onSaved}
         />
       )}
-    </section>
+    </>
   )
 }
 function WorkEditor({
@@ -169,7 +229,9 @@ function WorkEditor({
   mode,
   onSaveStart,
   onSaved,
+  headActions,
 }: {
+  headActions?: ReactNode
   preparation?: Preparation
   receipt?: Receipt
   order?: Transfer
@@ -223,6 +285,15 @@ function WorkEditor({
             receiptAcceptsResult(receipt?.status) &&
             (!bm || assignment?.current?.assigneeId === scope.user?.id)
           : bm && scope.user?.storeId === order?.sourceStoreId
+  // BM của kho nhận duyệt kết quả kiểm nhận (trước đây khối "Duyệt kết quả kiểm nhận" ở cuối trang).
+  const approver =
+    !!receipt &&
+    bm &&
+    scope.user?.storeId ===
+      (receipt.receiptType === 'RETURN_TO_SOURCE'
+        ? order?.sourceStoreId
+        : order?.destStoreId) &&
+    receipt.status === 'AWAITING_CONFIRMATION'
   const valid =
     lines.length > 0 &&
     lines.every((l) => {
@@ -308,14 +379,47 @@ function WorkEditor({
   return (
     <>
       <section>
-        <h2>
-          {receipt
-            ? 'Phiếu nhận #' +
-              receipt.id +
-              ' · ' +
-              (states[receipt.status] ?? receipt.status)
-            : 'Kết quả thực tế'}
-        </h2>
+        <CardHead
+          title={receipt ? 'Phiếu nhận #' + receipt.id : 'Kết quả thực tế'}
+          status={
+            receipt ? (states[receipt.status] ?? receipt.status) : undefined
+          }
+        >
+          {headActions}
+          {approver && (
+            <HeadButton
+              action={{
+                key: 'recount',
+                label: 'Yêu cầu kiểm lại',
+                icon: 'clipboard',
+                onClick: () => setAction('recount'),
+              }}
+            />
+          )}
+          {approver && receipt.recordedBy !== scope.user?.id && (
+            <HeadButton
+              action={{
+                key: 'confirm',
+                label: 'Xác nhận nhận hàng',
+                icon: 'check',
+                primary: true,
+                onClick: () => setAction('confirm'),
+              }}
+            />
+          )}
+          {canRecord && (
+            <HeadButton
+              action={{
+                key: 'submit',
+                label: resultSubmitted ? 'Cập nhật kết quả' : 'Gửi kết quả',
+                icon: 'check',
+                primary: true,
+                form: WORK_FORM,
+                disabled: busy || !valid,
+              }}
+            />
+          )}
+        </CardHead>
         {receipt?.recountReason && (
           <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
         )}
@@ -327,7 +431,8 @@ function WorkEditor({
                   Đã gửi kết quả soạn hàng, đang chờ BM xác nhận xuất.
                 </strong>
                 <p>
-                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi BM xác nhận xuất.
+                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi BM xác nhận
+                  xuất.
                 </p>
               </>
             ) : preparation.canRecord ? (
@@ -350,7 +455,7 @@ function WorkEditor({
                 </strong>
                 <p>
                   Chỉ người được giao mới được nhập và gửi kết quả. Quản lý có
-                  thể giao lại ở phần Giao việc nếu được phép; người xác nhận
+                  thể giao lại bằng nút Đổi nhân viên ở đầu thẻ; người xác nhận
                   xuất phải khác người soạn.
                 </p>
               </>
@@ -382,7 +487,7 @@ function WorkEditor({
                 </strong>
                 <p>
                   {bm
-                    ? 'Kiểm tra số đạt, số hỏng rồi chọn Xác nhận nhận hàng. Nếu số liệu chưa đúng, chọn Yêu cầu kiểm lại để nhân viên cập nhật.'
+                    ? 'Kiểm tra số đạt, số hỏng rồi chọn Xác nhận nhận hàng ở đầu thẻ. Nếu số liệu chưa đúng, chọn Yêu cầu kiểm lại để nhân viên cập nhật.'
                     : 'Bạn không cần gửi lại. Nếu cần sửa, BM phải chọn Yêu cầu kiểm lại trước.'}
                 </p>
               </>
@@ -443,6 +548,7 @@ function WorkEditor({
         )}
         <InventoryNotice error={error} />
         <form
+          id={WORK_FORM}
           className="tf-form"
           onSubmit={(e) => {
             e.preventDefault()
@@ -578,45 +684,9 @@ function WorkEditor({
                 />
               </label>
             )}
-            {canRecord && (
-              <button
-                className="tf-primary tf-submit-result"
-                disabled={busy || !valid}
-              >
-                {resultSubmitted ? 'Cập nhật kết quả' : 'Gửi kết quả'}
-              </button>
-            )}
           </fieldset>
         </form>
       </section>
-      {receipt &&
-        bm &&
-        scope.user?.storeId ===
-          (receipt.receiptType === 'RETURN_TO_SOURCE'
-            ? order?.sourceStoreId
-            : order?.destStoreId) &&
-        receipt.status === 'AWAITING_CONFIRMATION' && (
-          <div className="tf-receipt-actions">
-            <div>
-              <strong>Duyệt kết quả kiểm nhận</strong>
-              <p>Kiểm tra số đạt, số hỏng trước khi xác nhận nhập kho.</p>
-            </div>
-            <button
-              className="tf-recount-button"
-              onClick={() => setAction('recount')}
-            >
-              Yêu cầu kiểm lại
-            </button>
-            {receipt.recordedBy !== scope.user?.id && (
-              <button
-                className="tf-primary tf-confirm-receipt"
-                onClick={() => setAction('confirm')}
-              >
-                Xác nhận nhận hàng
-              </button>
-            )}
-          </div>
-        )}
       {action && (
         <TransferAction
           title={
