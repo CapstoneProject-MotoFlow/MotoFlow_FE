@@ -28,7 +28,7 @@ export const ownerNavigation: NavItem[] = [
     group: 'CÔNG NỢ',
   },
   {
-    label: 'Tạo phiếu nhập hàng',
+    label: 'Yêu cầu nhập hàng',
     href: '/purchase-orders',
     icon: 'clipboard',
     group: 'NHẬP HÀNG',
