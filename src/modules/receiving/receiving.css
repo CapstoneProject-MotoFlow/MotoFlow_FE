@@ -661,6 +661,225 @@
   margin: 0;
 }
 
+.receiving-staff-inspection {
+  padding-bottom: 6rem;
+}
+
+.receiving-staff-inspection > .receiving-panel:first-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.receiving-staff-inspection
+  > .receiving-panel:first-child
+  > .receiving-panel-head,
+.receiving-staff-receipt-info {
+  grid-column: 1 / -1;
+}
+
+.receiving-staff-receipt-info {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 1rem 1.25rem 0.25rem;
+}
+
+.receiving-staff-controls {
+  display: contents;
+}
+
+.receiving-staff-inspection .receiving-arrival-control {
+  padding: 0 1.25rem 1rem;
+}
+
+.receiving-staff-inspection .receiving-arrival-control label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.receiving-staff-inspection .receiving-arrival-control label > span {
+  white-space: nowrap;
+}
+
+.receiving-staff-inspection .receiving-arrival-control label b {
+  color: #d92d20;
+}
+
+.receiving-staff-inspection .receiving-arrival-control input {
+  min-height: 2.5rem;
+}
+
+.receiving-staff-files-block {
+  display: grid;
+  align-content: center;
+  gap: 0.4rem;
+  grid-column: 2;
+  padding: 0 1.25rem 1rem;
+  min-width: 0;
+}
+
+.receiving-panel .receiving-staff-files {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receiving-staff-no-file {
+  color: #6a7890;
+  font-size: 0.875rem;
+}
+
+.receiving-staff-files li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #dce2eb;
+  border-radius: 0.55rem;
+}
+
+.receiving-staff-files a {
+  overflow: hidden;
+  color: #17243a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receiving-staff-file-icon {
+  display: grid;
+  flex: 0 0 2rem;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  color: #4658f3;
+  background: #eef1ff;
+  border-radius: 0.4rem;
+}
+
+.receiving-staff-delivery-type {
+  padding: 0;
+}
+
+.receiving-staff-delivery-type .receiving-staff-type-options {
+  padding: 1rem 1.25rem;
+}
+
+.receiving-staff-type-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.receiving-staff-type-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #dce2eb;
+  border-radius: 0.55rem;
+}
+
+.receiving-staff-type-options label.is-selected {
+  border-color: #4658f3;
+  background: #eef1ff;
+}
+
+.receiving-staff-table-scroll table {
+  min-width: 48rem;
+  table-layout: fixed;
+}
+
+.receiving-staff-table-scroll th:first-child {
+  width: 44%;
+  text-align: left;
+}
+
+.receiving-staff-table-scroll th:nth-child(2) {
+  width: 20%;
+}
+
+.receiving-staff-table-scroll th:nth-child(3),
+.receiving-staff-table-scroll th:nth-child(4) {
+  width: 14%;
+}
+
+.receiving-staff-table-scroll th:nth-child(5) {
+  width: 8%;
+}
+
+.receiving-staff-table-scroll :is(th, td):not(:first-child) {
+  text-align: center;
+}
+
+.receiving-staff-table-scroll :is(th, td) {
+  padding-inline: 0.65rem;
+}
+
+.receiving-staff-table-scroll td input[type='number'] {
+  display: block;
+  width: min(100%, 6.25rem);
+  min-height: 2.5rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.receiving-staff-table-scroll td input[type='checkbox'] {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  min-width: 1rem;
+  min-height: 1rem;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  accent-color: #4658f3;
+}
+
+.receiving-staff-document-qty {
+  font-weight: 600;
+}
+
+.receiving-layout-actions.receiving-staff-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 -0.5rem 1.5rem rgb(23 36 58 / 8%);
+}
+
+.receiving-staff-attestation,
+.receiving-staff-summary {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.receiving-staff-summary {
+  color: #536078;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 700px) {
+  .receiving-staff-inspection > .receiving-panel:first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .receiving-staff-receipt-info,
+  .receiving-staff-files-block,
+  .receiving-staff-inspection
+    > .receiving-panel:first-child
+    > .receiving-panel-head {
+    grid-column: 1;
+  }
+
+  .receiving-staff-type-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .receiving-panel tr[hidden] {
   display: none;
 }

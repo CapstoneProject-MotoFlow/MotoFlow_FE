@@ -33,6 +33,7 @@ type Line = {
 
 type Receipt = {
   id: number
+  replacement: boolean
   purchaseOrderId: number
   deliveryDocumentNo: string
   arrivedAt: string
@@ -102,7 +103,11 @@ export default function LiveReceiptPage({
     <main className="dashboard-content receiving-page">
       <PageBackLink to={back} />
       <header className="receiving-heading">
-        <h1>Phiếu nhập hàng {id ? '#' + id : ''}</h1>
+        <h1>
+          {user?.role === 'STAFF' && receipt?.canRecord
+            ? `Ghi kết quả kiểm nhận YCN-${String(receipt.purchaseOrderId).padStart(4, '0')}`
+            : `Phiếu nhập hàng ${id ? '#' + id : ''}`}
+        </h1>
       </header>
       {!validId || error ? (
         <p role="alert">{error || 'Không tìm thấy phiếu.'}</p>
@@ -172,20 +177,45 @@ function ReceiptForm({
     )
   }
 
+  function passedValue(line: Line) {
+    return (
+      counts[line.id]?.deliveredQty ??
+      (receipt.recordedById != null ? String(line.passedQty) : '')
+    )
+  }
+
+  function documentValue(line: Line) {
+    return (
+      counts[line.id]?.documentQty ??
+      String(
+        receipt.recordedById != null
+          ? line.documentQty
+          : (line.expectedQty ?? line.documentQty),
+      )
+    )
+  }
+
+  function rowChecked(line: Line) {
+    const passed = passedValue(line)
+    const damaged = countValue(line, 'damagedQty')
+    const document = documentValue(line)
+    return (
+      document !== '' &&
+      Number.isInteger(Number(document)) &&
+      Number(document) >= 0 &&
+      passed !== '' &&
+      damaged !== '' &&
+      Number.isInteger(Number(passed)) &&
+      Number.isInteger(Number(damaged)) &&
+      Number(passed) >= 0 &&
+      Number(damaged) >= 0 &&
+      Number(passed) + Number(damaged) + line.wrongItemQty <= 1_000_000
+    )
+  }
+
   function checked(line: Line) {
     return (
-      countFields.every(([field]) => {
-        const value = countValue(line, field)
-        return (
-          value !== '' &&
-          Number.isInteger(Number(value)) &&
-          Number(value) >= 0 &&
-          Number(value) <= 1_000_000
-        )
-      }) &&
-      Number(countValue(line, 'wrongItemQty')) +
-        Number(countValue(line, 'damagedQty')) <=
-        Number(countValue(line, 'deliveredQty'))
+      rowChecked(line) && Number(countValue(line, 'wrongItemQty') || 0) === 0
     )
   }
 
@@ -208,30 +238,42 @@ function ReceiptForm({
       return
     }
     const reason = String(fields.get('reason') ?? '').trim()
-    const lines = receipt.lines.map((line) => ({
-      lineId: line.id,
-      ...Object.fromEntries(
-        countFields.map(([field]) => [
-          field,
-          Number(fields.get(field + line.id)),
-        ]),
-      ),
-      manufacturerLotNo:
-        String(fields.get('lot' + line.id) ?? '').trim() || null,
-      manufactureDate: fields.get('manufacture' + line.id) || null,
-      expiryDate: fields.get('expiry' + line.id) || null,
-    }))
+    const lines = receipt.lines.map((line) => {
+      const passed = Number(fields.get('passed' + line.id))
+      const damaged = Number(fields.get('damagedQty' + line.id))
+      const document = Number(documentValue(line))
+      const wrongItem = line.wrongItemQty
+      return {
+        lineId: line.id,
+        documentQty: document,
+        deliveredQty: passed + damaged + wrongItem,
+        wrongItemQty: wrongItem,
+        damagedQty: damaged,
+        manufacturerLotNo:
+          String(
+            fields.get('lot' + line.id) ?? line.manufacturerLotNo ?? '',
+          ).trim() || null,
+        manufactureDate:
+          fields.get('manufacture' + line.id) || line.manufactureDate || null,
+        expiryDate: fields.get('expiry' + line.id) || line.expiryDate || null,
+      }
+    })
     if (
       editing &&
       receipt.lines.some(
         (line) =>
-          !inspectionQuantitiesValid(
-            countFields.map(([field]) => Number(fields.get(field + line.id))),
-          ),
+          !inspectionQuantitiesValid([
+            Number(documentValue(line)),
+            Number(fields.get('passed' + line.id)) +
+              Number(fields.get('damagedQty' + line.id)) +
+              line.wrongItemQty,
+            line.wrongItemQty,
+            Number(fields.get('damagedQty' + line.id)),
+          ]),
       )
     ) {
       setError(
-        'Số giao sai và số hỏng cộng lại không được lớn hơn số thực giao.',
+        'Số đạt và số hỏng phải là số nguyên hợp lệ, không vượt giới hạn.',
       )
       return
     }
@@ -269,10 +311,17 @@ function ReceiptForm({
   }
 
   return (
-    <form className="receiving-stack" onSubmit={submit}>
+    <form
+      className={`receiving-stack${editing ? ' receiving-staff-inspection' : ''}`}
+      onSubmit={submit}
+    >
       <section className="receiving-panel">
         <header className="receiving-panel-head">
-          <h2>Chứng từ giao hàng · {receipt.deliveryDocumentNo}</h2>
+          <h2>
+            {editing
+              ? 'Chứng từ giao hàng'
+              : `Chứng từ giao hàng · ${receipt.deliveryDocumentNo}`}
+          </h2>
           {assignable && (
             <button
               type="button"
@@ -283,31 +332,46 @@ function ReceiptForm({
             </button>
           )}
         </header>
-        <dl className="receiving-info">
-          <div>
-            <dt>Đơn đặt hàng</dt>
-            <dd>YCN-{String(receipt.purchaseOrderId).padStart(4, '0')}</dd>
-          </div>
+        <dl
+          className={`receiving-info${editing ? ' receiving-staff-receipt-info' : ''}`}
+        >
+          {editing && (
+            <div>
+              <dt>Số chứng từ</dt>
+              <dd>{receipt.deliveryDocumentNo}</dd>
+            </div>
+          )}
           <div>
             <dt>Nhà cung cấp</dt>
             <dd>{receipt.supplierName}</dd>
           </div>
-          <div>
-            <dt>Kho nhận</dt>
-            <dd>{receipt.storeName}</dd>
-          </div>
-          <div>
-            <dt>Người kiểm nhận</dt>
-            <dd>{receipt.assignee?.fullName ?? '—'}</dd>
-          </div>
+          {!editing && (
+            <>
+              <div>
+                <dt>Đơn đặt hàng</dt>
+                <dd>YCN-{String(receipt.purchaseOrderId).padStart(4, '0')}</dd>
+              </div>
+              <div>
+                <dt>Kho nhận</dt>
+                <dd>{receipt.storeName}</dd>
+              </div>
+              <div>
+                <dt>Người kiểm nhận</dt>
+                <dd>{receipt.assignee?.fullName ?? '—'}</dd>
+              </div>
+            </>
+          )}
         </dl>
         {editing && (
           <div className="receiving-layout-fields receiving-staff-controls">
             <div className="receiving-arrival-control">
               <label>
-                Thời điểm hàng đến
+                <span>
+                  Thời điểm hàng đến <b aria-hidden="true">*</b>
+                </span>
                 <input
                   type="datetime-local"
+                  required={editing}
                   value={arrivedAt}
                   onChange={(event) => setArrivedAt(event.target.value)}
                 />
@@ -334,7 +398,40 @@ function ReceiptForm({
         {receipt.recountReason && (
           <p>Yêu cầu kiểm lại: {receipt.recountReason}</p>
         )}
-        {!!receipt.documents?.length && (
+        {editing ? (
+          <div className="receiving-staff-files-block">
+            <strong>Ảnh chứng từ</strong>
+            {!!receipt.documents?.length ? (
+              <ul className="receiving-document-list receiving-staff-files">
+                {receipt.documents.map((file) => (
+                  <li key={file.id}>
+                    <span
+                      className="receiving-staff-file-icon"
+                      aria-hidden="true"
+                    >
+                      ▧
+                    </span>
+                    {file.downloadUrl ? (
+                      <a
+                        href={file.downloadUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {file.fileName}
+                      </a>
+                    ) : (
+                      file.fileName
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="receiving-staff-no-file">
+                Chưa có ảnh chứng từ đính kèm.
+              </span>
+            )}
+          </div>
+        ) : !!receipt.documents?.length ? (
           <ul
             className="receiving-document-list"
             aria-label="Chứng từ đính kèm"
@@ -357,8 +454,28 @@ function ReceiptForm({
               </li>
             ))}
           </ul>
-        )}
+        ) : null}
       </section>
+      {editing && (
+        <section
+          className="receiving-panel receiving-staff-delivery-type"
+          aria-label="Loại lượt giao"
+        >
+          <header className="receiving-panel-head">
+            <h2>Loại lượt giao</h2>
+          </header>
+          <div className="receiving-staff-type-options">
+            <label className={!receipt.replacement ? 'is-selected' : ''}>
+              <input type="radio" checked={!receipt.replacement} readOnly />
+              Giao theo yêu cầu
+            </label>
+            <label className={receipt.replacement ? 'is-selected' : ''}>
+              <input type="radio" checked={receipt.replacement} readOnly />
+              Giao bù cho sai lệch
+            </label>
+          </div>
+        </section>
+      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>
@@ -384,24 +501,30 @@ function ReceiptForm({
           onlyUnchecked &&
           rows.every(checked) &&
           focusedLine === undefined && <p>Đã kiểm hết các dòng.</p>}
-        <div className="table-scroll">
+        <div
+          className={`table-scroll${editing ? ' receiving-staff-table-scroll' : ''}`}
+        >
           <table>
             <thead>
               <tr>
                 <th>Phụ tùng</th>
-                <th>Vị trí</th>
-                <th>Cần nhận</th>
-                {countFields.map(([field, label]) => (
-                  <th key={field}>{label}</th>
-                ))}
-                <th>Đạt</th>
-                <th>Thiếu</th>
-                <th>Thừa</th>
-                {editing && (
+                {editing ? (
                   <>
-                    <th>Số lô</th>
-                    <th>Ngày sản xuất</th>
-                    <th>Hạn dùng</th>
+                    <th>Số trên chứng từ</th>
+                    <th>Đạt</th>
+                    <th>Hư hỏng</th>
+                    <th>Đạt đủ</th>
+                  </>
+                ) : (
+                  <>
+                    <th>Vị trí</th>
+                    <th>Cần nhận</th>
+                    {countFields.map(([field, label]) => (
+                      <th key={field}>{label}</th>
+                    ))}
+                    <th>Đạt</th>
+                    <th>Thiếu</th>
+                    <th>Thừa</th>
                   </>
                 )}
                 {reviewing && <th>Quyết định</th>}
@@ -409,16 +532,6 @@ function ReceiptForm({
             </thead>
             <tbody>
               {rows.map((line) => {
-                const value = {
-                  documentQty: Number(countValue(line, 'documentQty')),
-                  deliveredQty: Number(countValue(line, 'deliveredQty')),
-                  wrongItemQty: Number(countValue(line, 'wrongItemQty')),
-                  damagedQty: Number(countValue(line, 'damagedQty')),
-                }
-                const passed = Math.max(
-                  0,
-                  value.deliveredQty - value.wrongItemQty - value.damagedQty,
-                )
                 return (
                   <tr
                     key={line.id}
@@ -449,79 +562,99 @@ function ReceiptForm({
                   >
                     <td>
                       {line.partName}
-                      <small>{line.sku}</small>
-                    </td>
-                    <td>{line.binLocation ?? '—'}</td>
-                    <td>{line.expectedQty ?? '—'}</td>
-                    {countFields.map(([field, label]) => (
-                      <td key={field}>
-                        {editing ? (
-                          <input
-                            type="number"
-                            name={field + line.id}
-                            min={0}
-                            max={1000000}
-                            required
-                            aria-label={label + ' ' + line.sku}
-                            value={countValue(line, field)}
-                            onChange={(event) => {
-                              const value = event.target.value
-                              setCounts((previous) => ({
-                                ...previous,
-                                [line.id]: {
-                                  ...previous[line.id],
-                                  [field]: value,
-                                },
-                              }))
-                            }}
-                          />
-                        ) : (
-                          line[field]
-                        )}
-                      </td>
-                    ))}
-                    <td>{editing ? passed : line.passedQty}</td>
-                    <td>
-                      {editing
-                        ? Math.max(0, value.documentQty - value.deliveredQty)
-                        : line.shortQty}
-                    </td>
-                    <td>
-                      {editing
-                        ? Math.max(
-                            0,
-                            passed - (line.expectedQty ?? value.documentQty),
-                          )
-                        : line.excessQty}
+                      <small>
+                        {line.sku}
+                        {editing && line.binLocation
+                          ? ` · kệ ${line.binLocation}`
+                          : ''}
+                      </small>
                     </td>
                     {editing && (
-                      <>
-                        <td>
-                          <input
-                            name={'lot' + line.id}
-                            aria-label={'Số lô ' + line.sku}
-                            defaultValue={line.manufacturerLotNo ?? ''}
-                            maxLength={50}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="date"
-                            name={'manufacture' + line.id}
-                            aria-label={'Ngày sản xuất ' + line.sku}
-                            defaultValue={line.manufactureDate ?? ''}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="date"
-                            name={'expiry' + line.id}
-                            aria-label={'Hạn dùng ' + line.sku}
-                            defaultValue={line.expiryDate ?? ''}
-                          />
-                        </td>
-                      </>
+                      <td className="receiving-staff-document-qty">
+                        <span aria-label={'Số trên chứng từ ' + line.sku}>
+                          {documentValue(line)}
+                        </span>
+                      </td>
                     )}
+                    {editing && (
+                      <td>
+                        <input
+                          type="number"
+                          name={'passed' + line.id}
+                          min={0}
+                          max={1000000}
+                          required
+                          aria-label={'Đạt ' + line.sku}
+                          value={passedValue(line)}
+                          onChange={(event) =>
+                            setCounts((previous) => ({
+                              ...previous,
+                              [line.id]: {
+                                ...previous[line.id],
+                                deliveredQty: event.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                    )}
+                    {editing && (
+                      <td>
+                        <input
+                          type="number"
+                          name={'damagedQty' + line.id}
+                          min={0}
+                          max={1000000}
+                          required
+                          aria-label={'Hư hỏng ' + line.sku}
+                          value={countValue(line, 'damagedQty')}
+                          onChange={(event) =>
+                            setCounts((previous) => ({
+                              ...previous,
+                              [line.id]: {
+                                ...previous[line.id],
+                                damagedQty: event.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                    )}
+                    {editing && (
+                      <td>
+                        <input
+                          aria-label={'Đạt đủ ' + line.sku}
+                          type="checkbox"
+                          checked={
+                            passedValue(line) !== '' &&
+                            Number(passedValue(line)) ===
+                              Number(documentValue(line)) &&
+                            Number(countValue(line, 'damagedQty') || 0) === 0
+                          }
+                          onChange={(event) =>
+                            setCounts((previous) => ({
+                              ...previous,
+                              [line.id]: {
+                                ...previous[line.id],
+                                deliveredQty: event.target.checked
+                                  ? documentValue(line)
+                                  : '',
+                                damagedQty: event.target.checked ? '0' : '',
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                    )}
+                    {!editing && <td>{line.binLocation ?? '—'}</td>}
+                    {!editing && <td>{line.expectedQty ?? '—'}</td>}
+                    {!editing &&
+                      countFields.map(([field]) => (
+                        <td key={field}>{line[field]}</td>
+                      ))}
+                    {!editing && <td>{line.passedQty}</td>}
+                    {!editing && <td>{line.shortQty}</td>}
+                    {!editing && <td>{line.excessQty}</td>}
                     {reviewing && (
                       <td>
                         <select
@@ -563,12 +696,60 @@ function ReceiptForm({
       )}
       {error && <p role="alert">{error}</p>}
       {(editing || recounting || reviewing || confirming) && (
-        <div className="receiving-layout-actions">
+        <div
+          className={`receiving-layout-actions${editing ? ' receiving-staff-footer' : ''}`}
+        >
           {editing && (
-            <label className="receiving-inline">
-              <input type="checkbox" required /> Tôi đã kiểm đếm thực tế và chịu
-              trách nhiệm về kết quả này
-            </label>
+            <>
+              <label className="receiving-inline receiving-staff-attestation">
+                <input type="checkbox" required /> Tôi đã kiểm đếm thực tế và
+                chịu trách nhiệm về kết quả này
+              </label>
+              <p className="receiving-staff-summary">
+                Đã kiểm{' '}
+                <b>
+                  {receipt.lines.filter(rowChecked).length}/
+                  {receipt.lines.length}
+                </b>{' '}
+                · thiếu{' '}
+                <b>
+                  {receipt.lines.reduce(
+                    (sum, line) =>
+                      sum +
+                      Math.max(
+                        0,
+                        Number(documentValue(line)) -
+                          (Number(passedValue(line) || 0) +
+                            Number(countValue(line, 'damagedQty') || 0)),
+                      ),
+                    0,
+                  )}
+                </b>{' '}
+                · thừa{' '}
+                <b>
+                  {receipt.lines.reduce(
+                    (sum, line) =>
+                      sum +
+                      Math.max(
+                        0,
+                        Number(passedValue(line) || 0) +
+                          Number(countValue(line, 'damagedQty') || 0) -
+                          Number(documentValue(line)),
+                      ),
+                    0,
+                  )}
+                </b>{' '}
+                · hư hỏng{' '}
+                <b>
+                  {receipt.lines.reduce(
+                    (sum, line) =>
+                      sum + Number(countValue(line, 'damagedQty') || 0),
+                    0,
+                  )}
+                </b>
+                . {arrivedAt ? '' : 'Chọn thời điểm hàng đến.'}
+              </p>
+            </>
           )}
           {recounting &&
             (showRecount ? (
@@ -613,7 +794,7 @@ function ReceiptForm({
               {saving
                 ? 'Đang lưu…'
                 : editing
-                  ? 'Gửi kết quả kiểm nhận'
+                  ? 'Gửi kết quả'
                   : reviewing
                     ? 'Lưu quyết định'
                     : 'Xác nhận phiếu nhập'}

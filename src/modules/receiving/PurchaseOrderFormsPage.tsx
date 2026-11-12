@@ -19,6 +19,9 @@ import { receiptDateLimits, receiptDatesInFuture } from './receivingRules'
 import { inventoryError } from '../inventory/api'
 import './receiving.css'
 
+const receiptDocumentUploadEnabled =
+  import.meta.env.VITE_RECEIPT_UPLOAD_ENABLED !== 'false'
+
 function Panel({
   title,
   children,
@@ -562,7 +565,8 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     } else if (input.validity.valueMissing) {
       if (input.name === 'documentNo') setError('Nhập số chứng từ.')
       if (input.name === 'documentDate') setError('Chọn ngày chứng từ.')
-      if (input.name === 'documents') setError('Chọn ít nhất một tệp chứng từ.')
+      if (input.name === 'documents' && receiptDocumentUploadEnabled)
+        setError('Chọn ít nhất một tệp chứng từ.')
     } else {
       setError('Kiểm tra lại thông tin chứng từ.')
     }
@@ -598,7 +602,10 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     const files = fields
       .getAll('documents')
       .filter((file): file is File => file instanceof File && file.size > 0)
-    if (!files.length || files.length > 10) {
+    if (
+      receiptDocumentUploadEnabled &&
+      (!files.length || files.length > 10)
+    ) {
       setError('Chọn từ 1 đến 10 tệp chứng từ.')
       return
     }
@@ -608,14 +615,16 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     }
     saveLock.current = true
     setError('')
-    setStage('uploading')
+    setStage(receiptDocumentUploadEnabled ? 'uploading' : 'creating')
     try {
       const documents = []
-      for (const file of files) {
-        const document =
-          uploads.current.get(file) ?? (await uploadReceiptDocument(file))
-        uploads.current.set(file, document)
-        documents.push(document)
+      if (receiptDocumentUploadEnabled) {
+        for (const file of files) {
+          const document =
+            uploads.current.get(file) ?? (await uploadReceiptDocument(file))
+          uploads.current.set(file, document)
+          documents.push(document)
+        }
       }
       setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
@@ -704,26 +713,32 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
           </label>
           <label className="receiving-layout-wide receiving-dropzone">
             <strong>Chứng từ giao hàng</strong>
-            <span>Chọn ảnh hoặc PDF chứng từ để đính kèm</span>
-            <input
-              name="documents"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              multiple
-              required
-              disabled={!order || saving}
-              onChange={(event) => {
-                const files = Array.from(event.currentTarget.files ?? [])
-                setImages(
-                  files
-                    .filter((file) => file.type.startsWith('image/'))
-                    .map((file) => ({
-                      src: URL.createObjectURL(file),
-                      name: file.name,
-                    })),
-                )
-              }}
-            />
+            {receiptDocumentUploadEnabled ? (
+              <>
+                <span>Chọn ảnh hoặc PDF chứng từ để đính kèm</span>
+                <input
+                  name="documents"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  multiple
+                  required
+                  disabled={!order || saving}
+                  onChange={(event) => {
+                    const files = Array.from(event.currentTarget.files ?? [])
+                    setImages(
+                      files
+                        .filter((file) => file.type.startsWith('image/'))
+                        .map((file) => ({
+                          src: URL.createObjectURL(file),
+                          name: file.name,
+                        })),
+                    )
+                  }}
+                />
+              </>
+            ) : (
+              <span>Tải tệp tạm thời được tắt trong môi trường dev.</span>
+            )}
           </label>
           {!!images.length && (
             <ul
