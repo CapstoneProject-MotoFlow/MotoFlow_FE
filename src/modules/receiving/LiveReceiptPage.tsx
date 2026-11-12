@@ -401,7 +401,7 @@ function ReceiptForm({
         {editing ? (
           <div className="receiving-staff-files-block">
             <strong>Ảnh chứng từ</strong>
-            {!!receipt.documents?.length ? (
+            {receipt.documents?.length ? (
               <ul className="receiving-document-list receiving-staff-files">
                 {receipt.documents.map((file) => (
                   <li key={file.id}>
@@ -431,7 +431,7 @@ function ReceiptForm({
               </span>
             )}
           </div>
-        ) : !!receipt.documents?.length ? (
+        ) : receipt.documents?.length ? (
           <ul
             className="receiving-document-list"
             aria-label="Chứng từ đính kèm"
