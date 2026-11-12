@@ -51,6 +51,10 @@
 .searchable-filter-menu li {
   cursor: pointer;
 }
+.searchable-filter-option-description {
+  display: block;
+  color: #667085;
+}
 .searchable-filter-menu li[aria-selected='true'] {
   background: #eef2ff;
 }

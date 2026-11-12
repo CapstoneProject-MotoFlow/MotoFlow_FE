@@ -12,6 +12,7 @@ import type { Supplier } from '../types'
 import { apiMessage } from '../supplierService'
 import '../suppliers.css'
 import '../supplier-redesign.css'
+import { formatDateTime } from '../../../shared/utils/format'
 type Detail = {
   supplier: Supplier
   purchaseOrderCount: number
@@ -278,9 +279,7 @@ export default function SupplierDetailPage() {
                         <td>{x.deliveryDocumentNo || '—'}</td>
                         <td>{date(x.arrivedAt)}</td>
                         <td>
-                          {x.confirmedAt
-                            ? new Date(x.confirmedAt).toLocaleString('vi-VN')
-                            : '—'}
+                          {x.confirmedAt ? formatDateTime(x.confirmedAt) : '—'}
                         </td>
                         <td>{labels[x.status] || x.status}</td>
                       </tr>

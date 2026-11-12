@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import './searchable-filter.css'
 
-type Option = { value: string; label: string }
+type Option = { value: string; label: string; description?: string }
 
 function searchText(text: string) {
   return text
@@ -135,6 +135,11 @@ export default function SearchableFilter({
                 onClick={() => choose(option)}
               >
                 {option.label}
+                {option.description && (
+                  <small className="searchable-filter-option-description">
+                    {option.description}
+                  </small>
+                )}
               </li>
             ))}
           </ul>

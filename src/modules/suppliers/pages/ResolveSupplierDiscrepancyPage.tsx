@@ -15,6 +15,7 @@ import {
   type HandlingDraft,
 } from '../../receiving/receivingRules'
 import '../supplier-discrepancy.css'
+import { formatDateTime } from '../../../shared/utils/format'
 
 type Case = HandlingCase & {
   id: number
@@ -99,7 +100,7 @@ function CaseAction({
         <ul>
           {row.events.map((event) => (
             <li key={event.id}>
-              {new Date(event.occurredAt).toLocaleString('vi-VN')} ·{' '}
+              {formatDateTime(event.occurredAt)} ·{' '}
               {event.recordedByName ?? 'Hệ thống'} ·{' '}
               {eventNames[event.type] ?? event.type} · {event.quantity}
               {event.reason ? ' · ' + event.reason : ''}
