@@ -139,3 +139,52 @@ test('transfer and replenishment notifications use the implemented role routes',
     undefined,
   )
 })
+test('staff receiving assignments open the receipt create screen, other transfer tasks keep the order link', () => {
+  assert.deepEqual(
+    noticeTarget(
+      {
+        type: 'TASK_ASSIGNED',
+        refType: 'PURCHASE_ORDER',
+        refId: 7,
+        message: 'Bạn được giao nhận hàng và lập phiếu nhập cho PO #7',
+      },
+      'STAFF',
+    ),
+    { path: '/purchase-orders/7/receipts/new' },
+  )
+  assert.deepEqual(
+    noticeTarget(
+      {
+        type: 'TASK_ASSIGNED',
+        refType: 'TRANSFER_ORDER',
+        refId: 3,
+        message: 'Bạn được giao nhận hàng điều chuyển cho lệnh #3',
+      },
+      'STAFF',
+    ),
+    { path: '/transfer-orders/3/receipts/new' },
+  )
+  assert.deepEqual(
+    noticeTarget(
+      {
+        type: 'TASK_ASSIGNED',
+        refType: 'TRANSFER_ORDER',
+        refId: 3,
+        message: 'Bạn được giao chuẩn bị hàng xuất cho phiếu chuyển kho #3',
+      },
+      'STAFF',
+    ),
+    { path: '/transfer-orders/3' },
+  )
+  assert.equal(
+    noticeTarget({ refType: 'PURCHASE_ORDER', refId: 7 }, 'STAFF'),
+    undefined,
+  )
+  assert.deepEqual(
+    noticeTarget(
+      { type: 'TASK_ASSIGNED', refType: 'PURCHASE_ORDER', refId: 7 },
+      'BRANCH_MANAGER',
+    ),
+    { path: '/purchase-orders/7' },
+  )
+})

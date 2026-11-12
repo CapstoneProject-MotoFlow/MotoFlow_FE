@@ -80,12 +80,12 @@ export type Transfer = Omit<
   dispatchedBy: { id: number; fullName: string } | null
   closedBy: { id: number; fullName: string } | null
   lines: PartLine[]
-  receipts: {
+  receipts: ({
     id: number
     receiptType: string
     status: string
     arrivedAt: string
-  }[]
+  } & ReceiptDocumentInfo)[]
   lots: {
     productId: number
     lotId: number
@@ -108,7 +108,25 @@ export type Transfer = Omit<
     }[]
   }[]
 }
-export type Receipt = {
+/**
+ * Chứng từ giao hàng của phiếu nhận điều chuyển (BE trả thêm khi Staff lập phiếu; phiếu cũ có thể không có).
+ * Người lập: createdBy hoặc createdByName tùy DTO.
+ */
+export type ReceiptDocumentInfo = {
+  deliveryDocumentNo?: string | null
+  deliveryDocumentDate?: string | null
+  delivererName?: string | null
+  vehiclePlateNo?: string | null
+  createdBy?: { id: number; fullName: string } | null
+  createdByName?: string | null
+  documents?: {
+    id: number
+    fileName: string
+    contentType?: string | null
+    downloadUrl: string | null
+  }[]
+}
+export type Receipt = ReceiptDocumentInfo & {
   id: number
   transferOrderId: number
   receiptType: string

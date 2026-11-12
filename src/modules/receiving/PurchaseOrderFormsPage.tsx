@@ -20,15 +20,16 @@ import { useAuth } from '../../shared/hooks/useAuth'
 import type { DashboardStore } from '../../shared/types/store'
 import type { Supplier } from '../suppliers/types'
 import { apiMessage } from '../suppliers/supplierService'
-import { uploadAttachment as uploadReceiptDocument } from '../../shared/api/upload'
+import { isAxiosError } from 'axios'
 import ProductPicker, { type ProductOption } from './ProductPicker'
-import ReceiptImage from './ReceiptImage'
-import { receiptDateLimits, receiptDatesInFuture } from './receivingRules'
+import DeliveryDocumentFields from './DeliveryDocumentFields'
+import {
+  receiptDocumentUploadEnabled,
+  useDeliveryDocuments,
+} from './useDeliveryDocuments'
 import { inventoryError } from '../inventory/api'
+import { refreshNotifications } from '../notifications/notificationService'
 import './receiving.css'
-
-const receiptDocumentUploadEnabled =
-  import.meta.env.VITE_RECEIPT_UPLOAD_ENABLED !== 'false'
 
 function Panel({
   title,
@@ -630,44 +631,56 @@ function OrderFormLayout({
     </form>
   )
 }
-type ReceiptOrder = {
+/** GET /purchase-orders/{id}/receiving-view: thông tin PO cho người nhận hàng, không có giá. */
+type ReceivingView = {
   supplierName: string
   storeName: string
+  expectedArrival?: string | null
   canCreateReceipt: boolean
   canCreateReplacement: boolean
+  lines?: {
+    productId?: number
+    sku: string
+    partName: string
+    baseUnit?: string | null
+    orderedQty: number
+    remainingQty?: number | null
+    outstandingQty?: number | null
+  }[]
   discrepancies: { id: number; partName: string; openReplacementQty: number }[]
 }
 
-const receiptFutureDateMessage =
-  'Ngày chứng từ và thời điểm hàng đến không được sau thời điểm hiện tại.'
-
 function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   const navigate = useNavigate()
-  const [order, setOrder] = useState<ReceiptOrder>()
+  const { user } = useAuth()
+  const [order, setOrder] = useState<ReceivingView>()
   const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
   const [stage, setStage] = useState<'uploading' | 'creating'>()
   const saving = stage !== undefined
   const saveLock = useRef(false)
-  const [dateLimits, setDateLimits] = useState(receiptDateLimits)
-  const [images, setImages] = useState<{ src: string; name: string }[]>([])
-  useEffect(
-    () => () => images.forEach(({ src }) => URL.revokeObjectURL(src)),
-    [images],
-  )
+  const docs = useDeliveryDocuments('Lập phiếu nhập')
   const [replacementChoice, setReplacement] = useState<boolean>()
   const replacement =
     replacementChoice ??
     (!!order?.canCreateReplacement && !order.canCreateReceipt)
-  const uploads = useRef(
-    new WeakMap<File, Awaited<ReturnType<typeof uploadReceiptDocument>>>(),
-  )
+  const manager = user?.role === 'BRANCH_MANAGER'
   useEffect(() => {
     if (!orderId || !/^[1-9]\d*$/.test(orderId)) return
     const controller = new AbortController()
     const signal = controller.signal
     void axiosClient
-      .get<ReceiptOrder>('/purchase-orders/' + orderId, { signal })
+      .get<ReceivingView>('/purchase-orders/' + orderId + '/receiving-view', {
+        signal,
+      })
+      .catch((error) => {
+        // BE cũ chưa có receiving-view: BM vẫn đọc được chi tiết PO (Staff thì không).
+        if (manager && isAxiosError(error) && error.response?.status === 404)
+          return axiosClient.get<ReceivingView>('/purchase-orders/' + orderId, {
+            signal,
+          })
+        throw error
+      })
       .then(({ data }) => {
         if (!signal.aborted) setOrder(data)
       })
@@ -675,39 +688,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         if (!signal.aborted) setLoadError(apiMessage(error))
       })
     return () => controller.abort()
-  }, [orderId])
-
-  function refreshDateLimits() {
-    setDateLimits(receiptDateLimits())
-  }
-
-  function reportInvalidField(event: FormEvent<HTMLFormElement>) {
-    const input = event.target
-    if (
-      !(input instanceof HTMLInputElement) ||
-      input !== event.currentTarget.querySelector('input:invalid')
-    )
-      return
-    if (input.validity.rangeOverflow) {
-      const future = receiptDatesInFuture(
-        input.name === 'documentDate' ? input.value : '',
-        input.name === 'arrivedAt' ? input.value : '',
-      )
-      refreshDateLimits()
-      setError(
-        future
-          ? receiptFutureDateMessage
-          : 'Giới hạn ngày giờ đã cập nhật. Bấm Lập phiếu nhập để tiếp tục.',
-      )
-    } else if (input.validity.valueMissing) {
-      if (input.name === 'documentNo') setError('Nhập số chứng từ.')
-      if (input.name === 'documentDate') setError('Chọn ngày chứng từ.')
-      if (input.name === 'documents' && receiptDocumentUploadEnabled)
-        setError('Chọn ít nhất một tệp chứng từ.')
-    } else {
-      setError('Kiểm tra lại thông tin chứng từ.')
-    }
-  }
+  }, [orderId, manager])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -717,35 +698,19 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       (replacement ? !order.canCreateReplacement : !order.canCreateReceipt)
     )
       return
-    const fields = new FormData(event.currentTarget)
-    const documentNo = String(fields.get('documentNo') ?? '').trim()
-    if (!documentNo) {
-      setError('Nhập số chứng từ.')
-      event.currentTarget
-        .querySelector<HTMLInputElement>('[name="documentNo"]')
-        ?.focus()
-      return
-    }
-    const documentDate = String(fields.get('documentDate') ?? '')
-    const arrivedAt = String(fields.get('arrivedAt') ?? '')
-    if (receiptDatesInFuture(documentDate, arrivedAt)) {
-      refreshDateLimits()
-      setError(receiptFutureDateMessage)
+    const form = event.currentTarget
+    const read = docs.read(form)
+    if ('error' in read) {
+      setError(read.error)
+      if (read.focus)
+        form
+          .querySelector<HTMLInputElement>('[name="' + read.focus + '"]')
+          ?.focus()
       return
     }
     const replacementForCaseIds = replacement
-      ? fields.getAll('case').map(Number)
+      ? new FormData(form).getAll('case').map(Number)
       : []
-    const files = fields
-      .getAll('documents')
-      .filter((file): file is File => file instanceof File && file.size > 0)
-    if (
-      receiptDocumentUploadEnabled &&
-      (!files.length || files.length > 10)
-    ) {
-      setError('Chọn từ 1 đến 10 tệp chứng từ.')
-      return
-    }
     if (replacement && !replacementForCaseIds.length) {
       setError('Chọn ít nhất một hồ sơ sai lệch cần giao bù.')
       return
@@ -754,33 +719,15 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     setError('')
     setStage(receiptDocumentUploadEnabled ? 'uploading' : 'creating')
     try {
-      const documents = []
-      if (receiptDocumentUploadEnabled) {
-        for (const file of files) {
-          const document =
-            uploads.current.get(file) ?? (await uploadReceiptDocument(file))
-          uploads.current.set(file, document)
-          documents.push(document)
-        }
-      }
+      const documents = await docs.upload(read.files)
       setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
         '/purchase-orders/' + orderId + '/goods-receipt-notes',
-        {
-          deliveryDocumentNo: documentNo,
-          deliveryDocumentDate: documentDate,
-          arrivedAt: arrivedAt || null,
-          delivererName:
-            String(fields.get('delivererName') ?? '').trim() || null,
-          vehiclePlateNo:
-            String(fields.get('vehiclePlateNo') ?? '').trim() || null,
-          replacementForCaseIds,
-          documents,
-        },
+        { ...read.body, replacementForCaseIds, documents },
       )
-      navigate('/goods-receipt-notes/' + data.id, {
-        state: { assignNow: true },
-      })
+      // BE đã giao việc kiểm nhận của phiếu cho chính người lập: mở thẳng màn ghi kết quả kiểm.
+      refreshNotifications()
+      navigate('/goods-receipt-notes/' + data.id)
     } catch (error) {
       setError(inventoryError(error))
     } finally {
@@ -789,17 +736,21 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     }
   }
 
+  const lines = order?.lines ?? []
   return (
     <form
       className="receiving-stack"
       onSubmit={submit}
-      onInvalid={reportInvalidField}
+      onInvalid={(event) => {
+        const message = docs.invalidMessage(event)
+        if (message) setError(message)
+      }}
     >
       <Panel title="Thông tin phiếu nhập">
         {loadError && <p role="alert">{loadError}</p>}
         <Hint>
-          Lập phiếu xong, màn hình mở ngay bước chọn nhân viên kiểm nhận để
-          giao việc.
+          Lập phiếu xong, màn hình mở ngay bước ghi kết quả kiểm nhận của phiếu
+          này cho người lập.
         </Hint>
         <dl className="receiving-info">
           <div>
@@ -814,88 +765,42 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
             <dt>Kho nhận</dt>
             <dd>{order?.storeName ?? '—'}</dd>
           </div>
+          {order?.expectedArrival && (
+            <div>
+              <dt>Ngày dự kiến</dt>
+              <dd>{formatDateTime(order.expectedArrival)}</dd>
+            </div>
+          )}
         </dl>
+        {lines.length > 0 && (
+          <div className="table-scroll">
+            <table aria-label="Hàng chờ nhận">
+              <thead>
+                <tr>
+                  <th>Phụ tùng</th>
+                  <th>Đơn vị</th>
+                  <th>Số đặt</th>
+                  <th>Còn chờ nhận</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((line, index) => (
+                  <tr key={line.productId ?? line.sku + index}>
+                    <td>
+                      <strong>{line.sku}</strong> {line.partName}
+                    </td>
+                    <td>{line.baseUnit ?? '—'}</td>
+                    <td>{line.orderedQty}</td>
+                    <td>{line.remainingQty ?? line.outstandingQty ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Panel>
       <Panel title="Chứng từ giao hàng">
-        <div className="receiving-layout-fields">
-          <label>
-            Số chứng từ{' '}
-            <input
-              name="documentNo"
-              required
-              maxLength={50}
-              placeholder="Nhập số chứng từ"
-            />
-          </label>
-          <label>
-            Ngày chứng từ
-            <input
-              name="documentDate"
-              type="date"
-              max={dateLimits.date}
-              onFocus={refreshDateLimits}
-              onChange={refreshDateLimits}
-              required
-            />
-          </label>
-          <label>
-            Thời điểm hàng đến
-            <input
-              name="arrivedAt"
-              type="datetime-local"
-              max={dateLimits.dateTime}
-              onFocus={refreshDateLimits}
-              onChange={refreshDateLimits}
-            />
-          </label>
-          <label>
-            Người giao hàng <input name="delivererName" maxLength={100} />
-          </label>
-          <label>
-            Biển số xe <input name="vehiclePlateNo" maxLength={20} />
-          </label>
-          <label className="receiving-layout-wide receiving-dropzone">
-            <strong>Chứng từ giao hàng</strong>
-            {receiptDocumentUploadEnabled ? (
-              <>
-                <span>Chọn ảnh hoặc PDF chứng từ để đính kèm</span>
-                <input
-                  name="documents"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  multiple
-                  required
-                  disabled={!order || saving}
-                  onChange={(event) => {
-                    const files = Array.from(event.currentTarget.files ?? [])
-                    setImages(
-                      files
-                        .filter((file) => file.type.startsWith('image/'))
-                        .map((file) => ({
-                          src: URL.createObjectURL(file),
-                          name: file.name,
-                        })),
-                    )
-                  }}
-                />
-              </>
-            ) : (
-              <span>Tải tệp tạm thời được tắt trong môi trường dev.</span>
-            )}
-          </label>
-          {!!images.length && (
-            <ul
-              className="receiving-layout-wide receiving-document-list"
-              aria-label="Ảnh chứng từ đã chọn"
-            >
-              {images.map(({ src, name }) => (
-                <li key={src}>
-                  <ReceiptImage src={src} name={name} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <DeliveryDocumentFields state={docs} disabled={!order || saving} />
       </Panel>
       <Panel title="Loại lượt giao">
         <div className="receiving-layout-fields">
@@ -1013,11 +918,19 @@ export function EditPurchaseOrderPage() {
 
 export function NewGoodsReceiptPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   const orderId = id && /^[1-9]\d*$/.test(id) ? id : null
   return (
     <FormShell
       title="Lập phiếu nhập"
-      backTo={orderId ? '/purchase-orders/' + orderId : undefined}
+      backTo={
+        // Staff không mở được chi tiết PO (có giá), quay về danh sách việc nhận hàng.
+        user?.role === 'STAFF'
+          ? '/purchase-orders'
+          : orderId
+            ? '/purchase-orders/' + orderId
+            : undefined
+      }
     >
       {orderId ? (
         <ReceiptFormLayout key={orderId} orderId={orderId} />

@@ -6,12 +6,14 @@ import { InventoryNotice, Pagination } from '../inventory/components'
 import type { Page } from '../inventory/types'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { states, type TransferRow } from './types'
+import ReceivingAssignment from '../operations/ReceivingAssignment'
 import './transfers.css'
 const code = (prefix: string, id: number) =>
   prefix + '-' + String(id).padStart(4, '0')
 export default function ManagerTransferListPage() {
   const scope = useInventoryScope(),
     [search, setSearch] = useState(''),
+    [success, setSuccess] = useState(''),
     page = Math.max(0, Number(scope.params.get('page')) || 0),
     status = scope.params.get('status') ?? 'OPEN',
     base = useInventoryData<Page<TransferRow>>(
@@ -138,6 +140,11 @@ export default function ManagerTransferListPage() {
           loading={r.loading}
           error={r.error || scope.storesError}
         />
+        {success && (
+          <p className="tf-success-notice" role="status">
+            {success}
+          </p>
+        )}
         <div className="tf-table">
           <table>
             <thead>
@@ -192,7 +199,19 @@ export default function ManagerTransferListPage() {
                   </td>
                   <td>
                     <div className="mf-row-actions">
-                      <RowAction row={row} coordinator={coordinator} />
+                      <RowAction
+                        row={row}
+                        coordinator={coordinator}
+                        onAssigned={(name) =>
+                          setSuccess(
+                            'Đã giao việc nhận hàng ' +
+                              code('DC', row.id) +
+                              ' cho ' +
+                              name +
+                              '.',
+                          )
+                        }
+                      />
                     </div>
                   </td>
                 </tr>
@@ -222,33 +241,51 @@ export default function ManagerTransferListPage() {
     </main>
   )
 }
-/** Cột Thao tác: việc của cửa hàng mình hiện nút chính, còn lại chỉ là nút xem. */
+/**
+ * Cột Thao tác: việc của cửa hàng mình hiện nút chính, còn lại chỉ là nút xem.
+ * Lệnh đang chuyển tới kho mình: "Nhận hàng" mở ngay hộp giao việc nhận hàng (TRANSFER_RECEIVING) cho nhân viên.
+ */
 function RowAction({
   row,
   coordinator,
+  onAssigned,
 }: {
   row: TransferRow
   coordinator: boolean
+  onAssigned: (name: string) => void
 }) {
   const { user } = useInventoryScope(),
     to = '/transfer-orders/' + row.id,
+    view = (
+      <Link className="mf-btn mf-btn--sm mf-btn--secondary" to={to}>
+        Xem chi tiết
+      </Link>
+    ),
     label =
       row.status === 'RECONCILING' && coordinator
         ? 'Xác nhận'
         : row.status === 'AWAITING_DISPATCH' &&
             user?.storeId === row.sourceStoreId
           ? 'Xuất hàng'
-          : row.status === 'IN_TRANSIT' && user?.storeId === row.destStoreId
-            ? 'Nhận hàng'
-            : ''
+          : ''
+  if (
+    row.status === 'IN_TRANSIT' &&
+    user?.role === 'BRANCH_MANAGER' &&
+    user.storeId === row.destStoreId
+  )
+    return (
+      <ReceivingAssignment
+        variant="row"
+        taskType="TRANSFER_RECEIVING"
+        documentId={row.id}
+        fallback={view}
+        onSaved={onAssigned}
+      />
+    )
+  if (!label) return view
   return (
-    <Link
-      className={
-        'mf-btn mf-btn--sm ' + (label ? 'mf-btn--primary' : 'mf-btn--secondary')
-      }
-      to={to}
-    >
-      {label || 'Xem chi tiết'}
+    <Link className="mf-btn mf-btn--sm mf-btn--primary" to={to}>
+      {label}
     </Link>
   )
 }

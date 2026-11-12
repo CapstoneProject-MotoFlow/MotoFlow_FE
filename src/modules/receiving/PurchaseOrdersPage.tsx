@@ -20,6 +20,9 @@ import {
   receiptStatusLabels,
   orderHistoryLabels,
 } from './receivingPresentation'
+import ReceivingAssignment from '../operations/ReceivingAssignment'
+import { useReceivingTasks } from '../operations/useReceivingTasks'
+import { receivingWork } from '../operations/receivingTaskModel'
 import './receiving.css'
 
 type Order = {
@@ -218,6 +221,8 @@ export default function PurchaseOrdersPage() {
     mode: 'assign' | 'confirm'
   } | null>(null)
   const [revision, setRevision] = useState(0)
+  const [assigned, setAssigned] = useState('')
+  const receivingTasks = useReceivingTasks(['SUPPLIER_RECEIVING'], staff)
   const [orders, setOrders] = useState<Page<Order>>()
   const [assignments, setAssignments] = useState<Page<Assignment>>()
   const [loading, setLoading] = useState(true)
@@ -400,6 +405,58 @@ export default function PurchaseOrdersPage() {
         breadcrumb={[{ label: 'Nhập hàng' }, { label: 'Yêu cầu nhập hàng' }]}
       />
       {owner && <PurchaseDraftNotice user={user} />}
+      {assigned && (
+        <p className="mf-success-notice" role="status">
+          {assigned}
+        </p>
+      )}
+      {staff && receivingTasks.tasks.length > 0 && (
+        <section className="receiving-panel">
+          <header className="receiving-panel-head">
+            <h2>Việc nhận hàng của tôi</h2>
+          </header>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Yêu cầu</th>
+                  <th>Nhà cung cấp</th>
+                  <th>Hàng cần nhận</th>
+                  <th>Giao lúc</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receivingTasks.tasks.map((task) => {
+                  const row = receivingWork(task)
+                  return (
+                    <tr key={row.key}>
+                      <td>{row.code}</td>
+                      <td>{task.partnerName ?? '—'}</td>
+                      <td>
+                        {task.lineCount != null ? task.lineCount + ' mã' : '—'}
+                      </td>
+                      <td>
+                        {task.assignedAt ? dateTime(task.assignedAt) : '—'}
+                      </td>
+                      <td>
+                        <div className="mf-row-actions">
+                          <Link
+                            className="mf-btn mf-btn--sm mf-btn--primary"
+                            to={row.href}
+                          >
+                            {row.action}
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>
@@ -722,6 +779,33 @@ export default function PurchaseOrdersPage() {
                                     >
                                       Giao việc
                                     </button>
+                                  ) : [
+                                      'AWAITING_DELIVERY',
+                                      'RECEIVING',
+                                    ].includes(row.status) ? (
+                                    // PO còn chờ giao: "Nhận hàng" mở hộp giao việc nhận hàng cho nhân viên.
+                                    <ReceivingAssignment
+                                      variant="row"
+                                      taskType="SUPPLIER_RECEIVING"
+                                      documentId={row.id}
+                                      fallback={
+                                        <Link
+                                          className="mf-btn mf-btn--sm mf-btn--secondary"
+                                          to={'/purchase-orders/' + row.id}
+                                        >
+                                          Xem chi tiết
+                                        </Link>
+                                      }
+                                      onSaved={(name) =>
+                                        setAssigned(
+                                          'Đã giao việc nhận hàng ' +
+                                            purchaseOrderCode(row.id) +
+                                            ' cho ' +
+                                            name +
+                                            '.',
+                                        )
+                                      }
+                                    />
                                   ) : (
                                     <Link
                                       className="mf-btn mf-btn--sm mf-btn--secondary"
@@ -804,6 +888,8 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const owner = user?.role === 'OWNER'
+  const manager = user?.role === 'BRANCH_MANAGER'
+  const [assigned, setAssigned] = useState('')
   const [detail, setDetail] = useState<Detail>()
   const [assignedNames, setAssignedNames] = useState<
     Record<number, string | null>
@@ -878,16 +964,24 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 Hủy yêu cầu
               </button>
             )}
-            {(detail.canCreateReceipt || detail.canCreateReplacement) && (
-              <Link
-                className="receiving-layout-primary"
-                to={'/purchase-orders/' + detail.id + '/receipts/new'}
-              >
-                Lập phiếu nhập
-              </Link>
-            )}
+            {manager &&
+              (detail.canCreateReceipt || detail.canCreateReplacement) && (
+                // BM không tự lập phiếu nữa: giao việc nhận hàng, người được giao lập phiếu nhập khi hàng tới.
+                <ReceivingAssignment
+                  taskType="SUPPLIER_RECEIVING"
+                  documentId={detail.id}
+                  onSaved={(name) =>
+                    setAssigned('Đã giao việc nhận hàng cho ' + name + '.')
+                  }
+                />
+              )}
           </div>
         )}
+      {assigned && (
+        <p className="mf-success-notice" role="status">
+          {assigned}
+        </p>
+      )}
       {detail?.canCancel && cancelOpen && (
         <form
           className="receiving-panel"

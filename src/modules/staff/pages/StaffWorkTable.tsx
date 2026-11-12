@@ -7,6 +7,8 @@ import { useCountList } from '../../inventory/useCountList'
 import { useOpenTransfers } from '../../transfers/useOpenTransfers'
 import type { SummaryDto } from '../../sales/salesApi'
 import { date, dateTime } from '../../inventory/presentation'
+import { useReceivingTasks } from '../../operations/useReceivingTasks'
+import { receivingWork } from '../../operations/receivingTaskModel'
 
 type AssignedReceipt = {
   goodsReceiptNoteId: number
@@ -45,8 +47,20 @@ export default function StaffWorkTable() {
     counts = useCountList({ status: 'OPEN', page, size: 20 }, 0, true, [
       'DRAFT',
       'COUNTING',
-    ])
+    ]),
+    // Việc nhận hàng (BM giao, Staff lập phiếu nhận) không phân trang: chỉ hiện ở trang đầu.
+    receiving = useReceivingTasks(undefined, page === 0)
+  const receivingTransfers = new Set(
+    receiving.tasks
+      .filter((task) => task.taskType === 'TRANSFER_RECEIVING')
+      .map((task) => task.documentId),
+  )
   const tasks: Task[] = [
+    ...receiving.tasks.map((task) => ({
+      ...receivingWork(task),
+      due: null,
+      submitted: false,
+    })),
     ...(sales.data?.items ?? [])
       .filter((s) => ['AWAITING_PICKING', 'PICKED'].includes(s.status))
       .map((s) => ({
@@ -85,7 +99,7 @@ export default function StaffWorkTable() {
       submitted: r.taskStatus === 'RESULT_SUBMITTED',
     })),
     ...(transfers.data?.items ?? [])
-      .filter((t) => t.status !== 'CLOSED')
+      .filter((t) => t.status !== 'CLOSED' && !receivingTransfers.has(t.id))
       .map((t) => {
         // Kho xuất đang chờ xuất: vào thẳng phiếu soạn hàng.
         const preparing =
@@ -121,7 +135,7 @@ export default function StaffWorkTable() {
   const active = tasks.filter((t) => !t.submitted),
     submitted = tasks.filter((t) => t.submitted),
     sources = [sales, receipts, transfers, counts],
-    loading = sources.some((s) => s.loading),
+    loading = sources.some((s) => s.loading) || receiving.loading,
     error = sources
       .map((s) => s.error)
       .filter(Boolean)

@@ -16,6 +16,7 @@ import { InventoryNotice } from '../inventory/components'
 import type { Assignment } from '../inventory/countAssignment'
 import TransferAction from './TransferAction'
 import CardHead, { HeadButton } from './CardHead'
+import ReceiptDocumentSummary from './ReceiptDocumentSummary'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
 
@@ -514,6 +515,7 @@ function WorkEditor({
             />
           </div>
         )}
+        {receipt && <ReceiptDocumentSummary receipt={receipt} />}
         {receipt && (
           <p className="tf-note">
             Đến: {dateTime(receipt.arrivedAt)}

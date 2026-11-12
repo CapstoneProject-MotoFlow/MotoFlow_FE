@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import './receiving.css'
 
 export default function ReceiptImage({
   src,
