@@ -1,10 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { PassThrough } from 'node:stream'
 import ts from 'typescript'
 import { createServer } from 'vite'
 import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToPipeableStream, renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 const { outputText } = ts.transpileModule(
   readFileSync(
@@ -49,7 +50,7 @@ test('planning excludes quantities already planned and assigned to purchasing', 
   assert.equal(unplannedQuantity({ ...demand, plannedQty: 12 }), 0)
 })
 
-test('the replenishment purchase URL renders through the app router without suspending', async () => {
+test('the replenishment purchase URL renders after the lazy route loads', async () => {
   const server = await createServer({
     configFile: false,
     server: { middlewareMode: true, ws: false, watch: null },
@@ -62,18 +63,30 @@ test('the replenishment purchase URL renders through the app router without susp
     const { AuthContext } = await server.ssrLoadModule(
       '/src/shared/hooks/useAuth.tsx',
     )
-    const html = renderToStaticMarkup(
+    const app = createElement(
+      MemoryRouter,
+      { initialEntries: ['/replenishment-requests/4?action=purchase'] },
       createElement(
-        MemoryRouter,
-        { initialEntries: ['/replenishment-requests/4?action=purchase'] },
-        createElement(
-          AuthContext.Provider,
-          { value: { user: { username: 'owner', role: 'OWNER' } } },
-          createElement(AppRoutes),
-        ),
+        AuthContext.Provider,
+        { value: { user: { username: 'owner', role: 'OWNER' } } },
+        createElement(AppRoutes),
       ),
     )
-    assert.match(html, /Yêu cầu bổ sung YBS-0004/)
+    const html = await new Promise((resolve, reject) => {
+      const output = new PassThrough()
+      let markup = ''
+      output.setEncoding('utf8')
+      output.on('data', (chunk) => {
+        markup += chunk
+      })
+      output.on('end', () => resolve(markup))
+      output.on('error', reject)
+      const stream = renderToPipeableStream(app, {
+        onAllReady: () => stream.pipe(output),
+        onError: reject,
+      })
+    })
+    assert.match(html.replaceAll('<!-- -->', ''), /Yêu cầu bổ sung YBS-0004/)
     assert.doesNotMatch(html, /Không mở được trang|Đang tải trang/)
   } finally {
     await server.close()
