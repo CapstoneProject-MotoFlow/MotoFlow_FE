@@ -91,6 +91,76 @@ test('the sales form shows chain prices before a warehouse is selected', async (
     assert.match(html, /Khách cần trả<\/dt><dd>90\.000/)
     assert.doesNotMatch(html, /pos-discount-row|Chiết khấu cho cả đơn/)
     assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Tạo đơn/)
+    assert.match(html, />Lưu nháp<\/button>/)
+    assert.doesNotMatch(html, /trên máy này|Xóa nháp/)
+  } finally {
+    await server.close()
+  }
+})
+test('a server draft reopens in the sales form with save, submit and delete', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderFormView } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesPages.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const draft = {
+      id: 5,
+      code: 'SO-5',
+      version: 1,
+      status: 'DRAFT',
+      storeId: 2,
+      storeName: 'Cửa hàng 2',
+      customerId: null,
+      customerName: 'Anh Nam',
+      customerPhone: '0900000000',
+      note: 'Khách hẹn chiều lấy',
+      priceType: 'RETAIL',
+      discount: 0,
+      createdAt: '2026-11-13T09:00:00',
+      assigneeName: null,
+      netPaid: 0,
+      credit: 0,
+      versions: [],
+      events: [],
+      lines: [
+        {
+          productId: 7,
+          sku: 'BUG-TEST',
+          partName: 'Bugi',
+          baseUnit: 'cái',
+          requested: 3,
+          picked: null,
+          delivered: null,
+          retailPrice: 45000,
+        },
+      ],
+    }
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ['/sales-drafts/5'] },
+        createElement(
+          AuthContext.Provider,
+          { value: { user: { id: 1, role: 'BRANCH_MANAGER', storeId: 2 } } },
+          createElement(SalesOrderFormView, { order: draft }),
+        ),
+      ),
+    )
+    assert.match(html, /Đơn nháp SO-5/)
+    assert.match(html, /Khách hẹn chiều lấy/)
+    assert.match(html, /value="Anh Nam"/)
+    assert.match(html, />Tạo đơn<\/button>/)
+    assert.match(html, />Lưu nháp<\/button>/)
+    assert.match(html, />Xóa nháp<\/button>/)
+    assert.match(html, />Quay lại danh sách nháp<\/button>/)
+    assert.doesNotMatch(html, /Lưu phiên bản mới|Xem chi tiết đơn/)
   } finally {
     await server.close()
   }
