@@ -1256,10 +1256,10 @@ export function UnmetDemandPage() {
   )
   return (
     <Shell
-      title="Khách hỏi mà hết hàng"
+      title="Đơn chưa đáp ứng đủ"
       breadcrumb={
         <>
-          <Link to="/sales-orders">Đơn bán</Link> › Khách hỏi mà hết hàng
+          <Link to="/sales-orders">Đơn bán</Link> › Đơn chưa đáp ứng đủ
         </>
       }
     >
@@ -1427,7 +1427,7 @@ export function UnmetDemandPage() {
                 {data.data && !data.data.items.length && (
                   <tr>
                     <td colSpan={scope.owner ? 8 : 7} className="stock-empty">
-                      Không có lượt khách hỏi mà hết hàng phù hợp.
+                      Không có đơn chưa đáp ứng đủ phù hợp.
                     </td>
                   </tr>
                 )}

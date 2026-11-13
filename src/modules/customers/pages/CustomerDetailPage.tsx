@@ -240,7 +240,7 @@ export default function CustomerDetailPage() {
           </section>
           <PaymentTable rows={data.payments} total={data.paymentCount} />
           <section className="cp-panel">
-            <h2>Khách hỏi mà hết hàng</h2>
+            <h2>Đơn chưa đáp ứng đủ</h2>
             {data.unmetDemand?.length ? (
               <div className="cp-table">
                 <table>
@@ -269,8 +269,8 @@ export default function CustomerDetailPage() {
             ) : (
               <p className="cp-empty">
                 {data.unmetDemand == null
-                  ? 'Chưa có dữ liệu khách hỏi mà hết hàng.'
-                  : 'Khách chưa hỏi phụ tùng nào lúc hết hàng.'}
+                  ? 'Chưa có dữ liệu đơn chưa đáp ứng đủ.'
+                  : 'Khách chưa có đơn nào chưa đáp ứng đủ.'}
               </p>
             )}
           </section>

@@ -1,6 +1,8 @@
 /**
  * File: modules/sales/SalesOrderForm.tsx
- * Loại: MÀN HÌNH — Tạo / sửa đơn bán (route /sales-orders/new, /sales-orders/:id/edit).
+ * Loại: MÀN HÌNH — Tạo / sửa đơn bán (route /sales-orders/new, /sales-orders/:id/edit) và mở lại đơn nháp
+ * (route /sales-drafts/:id). "Lưu nháp" lưu đơn trạng thái DRAFT lên server, mỗi lần lưu đơn mới là một nháp riêng;
+ * nháp không vào danh sách Đơn bán cho tới khi bấm "Tạo đơn".
  * Công dụng: Bố cục kiểu quầy bán hàng (POS) theo ảnh mẫu 12/11: bên trái ô tìm phụ tùng + bảng dòng hàng + ghi chú,
  * bên phải cửa hàng, khách hàng, loại giá, tổng tiền, chiết khấu, "Khách cần trả" và nút Tạo đơn / Hủy đơn.
  * Nghiệp vụ giữ nguyên: giá lấy từ API preview; chiết khấu một mức cho cả đơn, chỉ cho đơn bán buôn, dưới ngưỡng
@@ -46,16 +48,6 @@ type SalesCustomer = Pick<
   Customer,
   'id' | 'customerName' | 'phone' | 'creditStatus' | 'totalDebt'
 >
-type SalesDraft = {
-  warehouse: string
-  customer?: SalesCustomer
-  walkin: string
-  walkPhone: string
-  type: SalesOrder['priceType']
-  discount: string
-  lines: DraftLine[]
-  note?: string
-}
 type Preview = {
   key: string
   total: number
@@ -72,18 +64,6 @@ type Preview = {
     actualUnitPrice: number | null
     lineTotal: number | null
   }[]
-}
-
-function readSalesDraft(key: string) {
-  try {
-    const saved = localStorage.getItem(key)
-    if (!saved) return undefined
-    const draft = JSON.parse(saved) as SalesDraft | null
-    if (!draft || !Array.isArray(draft.lines)) return undefined
-    return { saved, draft }
-  } catch {
-    return undefined
-  }
 }
 
 const vnd = (value: number) => money.format(value)
@@ -104,31 +84,16 @@ export function SalesOrderFormView({
     scope = useInventoryScope(),
     saveLock = useRef(false),
     productInput = useRef<HTMLInputElement>(null)
-  const draftKey =
-    !order && scope.user
-      ? `motoflow:sales-draft:${JSON.stringify([
-          scope.user.id ?? scope.user.username,
-          scope.user.role,
-          scope.user.storeId,
-        ])}`
-      : undefined
-  const [restored] = useState(() =>
-    draftKey && !prefill.size ? readSalesDraft(draftKey) : undefined,
-  )
-  const draft = restored?.draft
-  const savedDraft = useRef(restored?.saved)
-  const [draftNotice, setDraftNotice] = useState(
-    restored ? 'Đã mở lại đơn nháp lưu trên máy này.' : '',
-  )
+  // Đơn nháp (DRAFT) mở lại từ /sales-drafts/:id; "editing" là đơn bán thật đang sửa phiên bản.
+  const draftOrder = order?.status === 'DRAFT' ? order : undefined
+  const editing = order && !draftOrder ? order : undefined
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [customerTouched, setCustomerTouched] = useState(false)
-  const [walkPhone, setWalkPhone] = useState(
-    draft?.walkPhone ?? order?.customerPhone ?? '',
-  )
+  const [walkPhone, setWalkPhone] = useState(order?.customerPhone ?? '')
   const [warehouse, setWarehouse] = useState(
     String(
-      draft?.warehouse ??
-        order?.storeId ??
+      order?.storeId ??
         (scope.owner ? prefill.get('storeId') : scope.user?.storeId) ??
         '',
     ),
@@ -140,23 +105,23 @@ export function SalesOrderFormView({
   const [customerQuery, setCustomerQuery] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
   const [customer, setCustomer] = useState<SalesCustomer | undefined>(
-    draft?.customer ?? initialCustomer,
+    initialCustomer,
   )
   const [quick, setQuick] = useState(false)
+  // orderFromDto ghi "Khách lẻ" khi đơn không có tên khách; không đưa chữ đó vào ô tên khách lẻ.
   const [walkin, setWalkin] = useState(
-    draft?.walkin ?? (order?.customerId ? '' : (order?.customerName ?? '')),
+    order && !order.customerId && order.customerName !== 'Khách lẻ'
+      ? order.customerName
+      : '',
   )
   const [query, setQuery] = useState('')
   const [productOpen, setProductOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
-  const [type, setType] = useState(draft?.type ?? order?.priceType ?? 'RETAIL')
-  const [discount, setDiscount] = useState(
-    draft?.discount ?? String(order?.discount ?? 0),
-  )
-  const [note, setNote] = useState(draft?.note ?? '')
+  const [type, setType] = useState(order?.priceType ?? 'RETAIL')
+  const [discount, setDiscount] = useState(String(order?.discount ?? 0))
+  const [note, setNote] = useState(order?.note ?? '')
   const [lines, setLines] = useState<DraftLine[]>(
     () =>
-      draft?.lines ??
       order?.lines.map((l) => ({
         product: {
           id: l.productId,
@@ -221,7 +186,7 @@ export function SalesOrderFormView({
       quantity: l.quantity,
     })),
   })
-  const needsStore = scope.owner && !order && !warehouse
+  const needsStore = scope.owner && !editing && !warehouse
   const previewEnabled =
     lines.length > 0 && !needsStore && validDiscount && !invalidQty
   useEffect(() => {
@@ -286,8 +251,8 @@ export function SalesOrderFormView({
     (sum, l) => sum + (Number.isFinite(l.quantity) ? l.quantity : 0),
     0,
   )
-  const storeName = order
-    ? order.storeName
+  const storeName = editing
+    ? editing.storeName
     : scope.owner
       ? scope.stores.find((s) => String(s.id) === warehouse)?.storeName
       : scope.user?.storeName
@@ -333,47 +298,31 @@ export function SalesOrderFormView({
       setProductOpen(false)
     }
   }
-  function saveDraft() {
-    if (!draftKey || saveLock.current) return
-    const data: SalesDraft = {
-      warehouse,
-      customer: customer && {
-        id: customer.id,
-        customerName: customer.customerName,
-        phone: customer.phone,
-        creditStatus: customer.creditStatus,
-        totalDebt: customer.totalDebt,
-      },
-      walkin,
-      walkPhone,
-      type,
-      discount,
-      lines,
-      note,
-    }
-    setError('')
-    try {
-      const saved = JSON.stringify(data)
-      localStorage.setItem(draftKey, saved)
-      savedDraft.current = saved
-      setDraftNotice('Đã lưu đơn nháp trên máy này.')
-    } catch {
-      setError('Không thể lưu đơn nháp trên máy này.')
-    }
-  }
   function discard() {
-    if (draftKey) {
-      try {
-        localStorage.removeItem(draftKey)
-      } catch {
-        // Bỏ qua: trình duyệt không cho dùng bộ nhớ.
-      }
-    }
-    navigate(order ? '/sales-orders/' + order.id : '/sales-orders')
+    navigate(
+      editing
+        ? '/sales-orders/' + editing.id
+        : draftOrder
+          ? '/sales-drafts'
+          : '/sales-orders',
+    )
   }
 
   const validation = useFormValidation()
   const unpriced = lines.find((l) => lineOf(l.product.id)?.retailPrice === null)
+  // Lưu nháp chỉ cần dữ liệu BE ghi được dòng hàng (mỗi phụ tùng phải có giá bán lẻ);
+  // ngưỡng chiết khấu được kiểm khi bấm "Tạo đơn".
+  const draftBlocker = needsStore
+    ? 'Chọn cửa hàng bán trước.'
+    : !lines.length
+      ? 'Chưa có phụ tùng nào trong đơn.'
+      : invalidQty
+        ? 'Số lượng mỗi dòng phải là số nguyên từ 1 đến 100.000.'
+        : !validDiscount
+          ? 'Nhập chiết khấu từ 0 đến 99,99%.'
+          : unpriced
+            ? `Phụ tùng ${unpriced.product.sku} chưa có giá bán lẻ đang áp dụng.`
+            : ''
   // Lý do nút Tạo đơn đang khóa (review L4: nút xám phải nói thiếu gì).
   const blocker = needsStore
     ? 'Chọn cửa hàng bán trước.'
@@ -395,39 +344,72 @@ export function SalesOrderFormView({
                     ? `Chiết khấu phải nhỏ hơn ngưỡng ${pricePreview.discountThreshold ?? 0}% đang áp dụng.`
                     : ''
 
-  async function submit() {
-    if (saveLock.current || blocker) {
-      if (blocker) setError(blocker)
-      return
-    }
+  /** Khóa nút trong lúc gọi API; lỗi BE hiện ngay trên form. */
+  async function run(action: () => Promise<void>) {
+    if (saveLock.current) return
     saveLock.current = true
     setBusy(true)
     setError('')
     try {
-      // "note" được gửi kèm để BE lưu khi có trường ghi chú; BE hiện tại bỏ qua trường này.
-      const body = { ...JSON.parse(previewBody), note: note.trim() || null }
-      const result = order
-        ? await axiosClient.put<OrderDto>('/sales-orders/' + order.id, {
-            ...body,
-            storeId: undefined,
-            version: order.version,
-          })
-        : await axiosClient.post<OrderDto>('/sales-orders', body)
-      if (draftKey && savedDraft.current) {
-        try {
-          if (localStorage.getItem(draftKey) === savedDraft.current)
-            localStorage.removeItem(draftKey)
-        } catch {
-          // Đơn đã tạo thành công dù không xóa được nháp.
-        }
-      }
-      navigate('/sales-orders/' + result.data.id)
+      await action()
     } catch (error) {
       setError(inventoryError(error))
     } finally {
       saveLock.current = false
       setBusy(false)
     }
+  }
+  function body() {
+    return { ...JSON.parse(previewBody), note: note.trim() || null }
+  }
+
+  function submit() {
+    if (blocker) {
+      setError(blocker)
+      return
+    }
+    return run(async () => {
+      const result = editing
+        ? await axiosClient.put<OrderDto>('/sales-orders/' + editing.id, {
+            ...body(),
+            storeId: undefined,
+            version: editing.version,
+          })
+        : draftOrder
+          ? // Chốt nháp: BE kiểm như tạo đơn mới, lấy giá đang áp dụng và chuyển sang Chờ lấy hàng.
+            await axiosClient.post<OrderDto>(
+              '/sales-orders/drafts/' + draftOrder.id + '/submit',
+              body(),
+            )
+          : await axiosClient.post<OrderDto>('/sales-orders', body())
+      navigate('/sales-orders/' + result.data.id)
+    })
+  }
+  function saveDraft() {
+    if (draftBlocker) {
+      setError(draftBlocker)
+      return
+    }
+    return run(async () => {
+      const result = draftOrder
+        ? await axiosClient.put<OrderDto>(
+            '/sales-orders/drafts/' + draftOrder.id,
+            body(),
+          )
+        : await axiosClient.post<OrderDto>('/sales-orders/drafts', body())
+      navigate('/sales-drafts', {
+        state: { notice: 'Đã lưu đơn nháp SO-' + result.data.id + '.' },
+      })
+    })
+  }
+  function deleteDraft() {
+    if (!draftOrder) return
+    return run(async () => {
+      await axiosClient.delete('/sales-orders/drafts/' + draftOrder.id)
+      navigate('/sales-drafts', {
+        state: { notice: 'Đã xóa đơn nháp ' + draftOrder.code + '.' },
+      })
+    })
   }
 
   const customerItems = [
@@ -444,14 +426,23 @@ export function SalesOrderFormView({
     <main className="inventory-workspace sales-workspace pos-page">
       <PageHeader
         title={
-          order
-            ? 'Sửa đơn ' + order.code + ' · phiên bản ' + order.version
-            : 'Tạo đơn bán'
+          editing
+            ? 'Sửa đơn ' + editing.code + ' · phiên bản ' + editing.version
+            : draftOrder
+              ? 'Đơn nháp ' + draftOrder.code
+              : 'Tạo đơn bán'
         }
-        breadcrumb={[
-          { label: 'Đơn bán', to: '/sales-orders' },
-          { label: order ? 'Chỉnh sửa' : 'Tạo mới' },
-        ]}
+        breadcrumb={
+          draftOrder
+            ? [
+                { label: 'Đơn nháp', to: '/sales-drafts' },
+                { label: draftOrder.code },
+              ]
+            : [
+                { label: 'Đơn bán', to: '/sales-orders' },
+                { label: editing ? 'Chỉnh sửa' : 'Tạo mới' },
+              ]
+        }
       />
       <form
         className="pos-layout"
@@ -683,7 +674,7 @@ export function SalesOrderFormView({
           aria-label="Thông tin thanh toán"
         >
           <div className="pos-summary-top">
-            {scope.owner && !order ? (
+            {scope.owner && !editing ? (
               <label className="pos-store-select">
                 <span className="sr-only">Cửa hàng bán</span>
                 <select
@@ -933,18 +924,13 @@ export function SalesOrderFormView({
                 {error}
               </p>
             )}
-            {draftNotice && (
-              <p className="pos-saved" role="status">
-                {draftNotice}
-              </p>
-            )}
             <button
               type="submit"
               className="mf-btn mf-btn--primary mf-btn--lg pos-submit"
               disabled={busy || !!blocker}
               title={blocker || undefined}
             >
-              {busy ? 'Đang lưu…' : order ? 'Lưu phiên bản mới' : 'Tạo đơn'}
+              {busy ? 'Đang lưu…' : editing ? 'Lưu phiên bản mới' : 'Tạo đơn'}
             </button>
             {blocker && blocker !== 'Đang tính giá…' && (
               <p className="pos-blocker" role="status">
@@ -958,22 +944,37 @@ export function SalesOrderFormView({
                 lines.length && !order ? setConfirmLeave(true) : discard()
               }
             >
-              {order ? 'Quay lại đơn' : 'Hủy đơn'}
+              {editing
+                ? 'Quay lại đơn'
+                : draftOrder
+                  ? 'Quay lại danh sách nháp'
+                  : 'Hủy đơn'}
             </button>
-            {draftKey && (
+            {!editing && (
               <button
                 type="button"
                 className="mf-btn mf-btn--link pos-draft"
-                onClick={saveDraft}
+                onClick={() => void saveDraft()}
                 disabled={busy}
+                title={draftBlocker || undefined}
               >
-                Lưu nháp trên máy này
+                Lưu nháp
               </button>
             )}
-            {order && (
+            {draftOrder && (
+              <button
+                type="button"
+                className="mf-btn mf-btn--link pos-draft"
+                onClick={() => setConfirmDelete(true)}
+                disabled={busy}
+              >
+                Xóa nháp
+              </button>
+            )}
+            {editing && (
               <Link
                 className="pos-muted pos-history"
-                to={'/sales-orders/' + order.id}
+                to={'/sales-orders/' + editing.id}
               >
                 Xem chi tiết đơn
               </Link>
@@ -994,12 +995,26 @@ export function SalesOrderFormView({
       {confirmLeave && (
         <ConfirmDialog
           title="Hủy đơn đang tạo?"
-          message="Các phụ tùng đã chọn và đơn nháp trên máy sẽ bị xóa."
+          message="Các phụ tùng đã chọn sẽ bị bỏ. Muốn giữ lại để làm tiếp, bấm Lưu nháp."
           confirmLabel="Hủy đơn"
           cancelLabel="Không hủy"
           danger
           onConfirm={async () => discard()}
           onCancel={() => setConfirmLeave(false)}
+        />
+      )}
+      {confirmDelete && draftOrder && (
+        <ConfirmDialog
+          title={'Xóa đơn nháp ' + draftOrder.code + '?'}
+          message="Đơn nháp bị xóa hẳn và không khôi phục được."
+          confirmLabel="Xóa nháp"
+          cancelLabel="Không xóa"
+          danger
+          onConfirm={async () => {
+            setConfirmDelete(false)
+            await deleteDraft()
+          }}
+          onCancel={() => setConfirmDelete(false)}
         />
       )}
     </main>

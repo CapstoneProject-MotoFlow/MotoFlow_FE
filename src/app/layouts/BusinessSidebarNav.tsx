@@ -14,7 +14,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
   {
     label: 'Bán hàng',
     icon: 'receipt',
-    labels: ['Đơn bán', 'Khách hỏi mà hết hàng', 'Khách hàng'],
+    labels: ['Đơn bán', 'Đơn nháp', 'Đơn chưa đáp ứng đủ', 'Khách hàng'],
   },
   {
     label: 'Điều chuyển',
