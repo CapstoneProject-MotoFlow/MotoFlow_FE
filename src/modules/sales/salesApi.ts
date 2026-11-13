@@ -14,12 +14,18 @@ export type OrderDto = {
   id: number
   version: number
   status:
-    'AWAITING_PICKING' | 'PICKED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+    | 'DRAFT'
+    | 'AWAITING_PICKING'
+    | 'PICKED'
+    | 'CONFIRMED'
+    | 'COMPLETED'
+    | 'CANCELLED'
   storeId: number
   storeName: string
   customerId: number | null
   customerName: string | null
   customerPhone: string | null
+  note?: string | null
   priceType: 'RETAIL' | 'WHOLESALE'
   discountThreshold?: number | null
   discountRate: number
@@ -85,6 +91,7 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     customerId: dto.customerId,
     customerName: dto.customerName ?? 'Khách lẻ',
     customerPhone: dto.customerPhone,
+    note: dto.note ?? null,
     priceType: dto.priceType,
     discount: Number(dto.discountRate ?? 0),
     discountThreshold: dto.discountThreshold,

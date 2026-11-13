@@ -47,6 +47,16 @@ const UnmetDemandPage = lazy(() =>
     default: m.UnmetDemandPage,
   })),
 )
+const SalesDraftListPage = lazy(() =>
+  import('../../modules/sales/SalesDraftPages').then((m) => ({
+    default: m.SalesDraftListPage,
+  })),
+)
+const SalesDraftFormPage = lazy(() =>
+  import('../../modules/sales/SalesDraftPages').then((m) => ({
+    default: m.SalesDraftFormPage,
+  })),
+)
 const LotsPage = lazy(() => import('../../modules/inventory/LotsPage'))
 const LotDetailPage = lazy(
   () => import('../../modules/inventory/LotDetailPage'),
@@ -496,6 +506,11 @@ export default function AppRoutes() {
               <Route
                 path="/sales-orders/:id/edit"
                 element={<SalesOrderFormPage />}
+              />
+              <Route path="/sales-drafts" element={<SalesDraftListPage />} />
+              <Route
+                path="/sales-drafts/:id"
+                element={<SalesDraftFormPage />}
               />
             </Route>
             <Route

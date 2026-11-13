@@ -7,6 +7,7 @@
 
 /** Đơn bán (SO). */
 export const salesOrderStatusLabels: Record<string, string> = {
+  DRAFT: 'Nháp',
   AWAITING_PICKING: 'Chờ lấy hàng',
   PICKED: 'Đã lấy, chờ xác nhận',
   CONFIRMED: 'Đã xác nhận, chờ thu tiền',
