@@ -29,6 +29,8 @@ import {
 } from './useDeliveryDocuments'
 import { inventoryError } from '../inventory/api'
 import { refreshNotifications } from '../notifications/notificationService'
+import { documentCode } from '../../shared/utils/documentCode'
+import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import './receiving.css'
 
 function Panel({
@@ -660,6 +662,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   const saving = stage !== undefined
   const saveLock = useRef(false)
   const docs = useDeliveryDocuments('Lập phiếu nhập')
+  const validation = useFormValidation()
   const [replacementChoice, setReplacement] = useState<boolean>()
   const replacement =
     replacementChoice ??
@@ -692,6 +695,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!validation.check(event.currentTarget)) return
     if (
       !order ||
       saveLock.current ||
@@ -740,6 +744,8 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   return (
     <form
       className="receiving-stack"
+      noValidate
+      onInput={validation.onInput}
       onSubmit={submit}
       onInvalid={(event) => {
         const message = docs.invalidMessage(event)
@@ -754,8 +760,8 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         </Hint>
         <dl className="receiving-info">
           <div>
-            <dt>Đơn đặt hàng</dt>
-            <dd>{orderId ? 'YCN-' + orderId.padStart(4, '0') : '—'}</dd>
+            <dt>Yêu cầu nhập hàng</dt>
+            <dd>{orderId ? documentCode('YCN', orderId) : '—'}</dd>
           </div>
           <div>
             <dt>Nhà cung cấp</dt>
@@ -800,9 +806,13 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         )}
       </Panel>
       <Panel title="Chứng từ giao hàng">
-        <DeliveryDocumentFields state={docs} disabled={!order || saving} />
+        <DeliveryDocumentFields
+          state={docs}
+          disabled={!order || saving}
+          errors={validation.errors}
+        />
       </Panel>
-      <Panel title="Loại lượt giao">
+      <Panel title="Loại phiếu nhập">
         <div className="receiving-layout-fields">
           <label className="receiving-inline">
             <input

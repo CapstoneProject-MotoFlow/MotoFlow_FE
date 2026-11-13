@@ -12,6 +12,7 @@ import { MovementTable } from './MovementTable'
 import { movementNames } from './presentation'
 import type { Movement, Page } from './types'
 
+import { documentCode } from '../../shared/utils/documentCode'
 import './inventory-screens.css'
 
 type Product = { id: number; sku: string; partName: string }
@@ -138,12 +139,12 @@ export default function InventoryMovementsPage() {
                   (row) => String(row.lotId) === p.get('lotId'),
                 ) && (
                   <option value={p.get('lotId')!}>
-                    L-{String(p.get('lotId')).padStart(4, '0')}
+                    {documentCode('L', p.get('lotId'))}
                   </option>
                 )}
               {lotOptions.map((row) => (
                 <option key={row.lotId} value={row.lotId}>
-                  L-{String(row.lotId).padStart(4, '0')} · {row.sku}
+                  {documentCode('L', row.lotId)} · {row.sku}
                 </option>
               ))}
             </select>

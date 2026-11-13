@@ -12,6 +12,7 @@ import {
 import { ExpiryWarningDialog } from './SettingsDialogs'
 import { date, lotLink, money, sourceNames } from './presentation'
 import type { LotDetail, LotList, Page } from './types'
+import { documentCode } from '../../shared/utils/documentCode'
 import './inventory-screens.css'
 const pageSize = 10
 
@@ -83,7 +84,7 @@ export default function LotsPage() {
   for (const row of lotSuggestions.data?.page.items ?? []) {
     const id = String(row.lotId)
     if (!lotOptions.has(id))
-      lotOptions.set(id, 'L-' + id.padStart(4, '0') + ' · ' + row.partName)
+      lotOptions.set(id, documentCode('L', id) + ' · ' + row.partName)
   }
   const suppliers = useInventoryData<
     Page<{ id: number; supplierName: string }>
@@ -107,10 +108,9 @@ export default function LotsPage() {
       <InventoryHeader title="Lô hàng" />
       {/* Góp ý cô Hoài: nói rõ lô chỉ phục vụ tính giá vốn. */}
       <Hint>
-        Lô hàng chỉ dùng để tính <strong>giá vốn</strong>: mỗi lần nhập tạo một
-        lô giữ giá nhập của lần đó, hệ thống dùng các giá này tính giá vốn bình
-        quân. Khi xuất hàng, hệ thống trừ lô cũ trước (lô có hạn dùng thì trừ lô
-        gần hết hạn trước). Giá bán cho khách lấy từ Bảng giá, không theo lô.
+        Lô dùng để tính giá vốn và theo dõi hạn dùng. Khi xuất, hệ thống trừ lô
+        gần hết hạn trước, rồi tới lô cũ nhất. Hệ thống không quản lý vị trí kệ
+        theo lô.
       </Hint>
       <InventoryPanel
         title={'Lô hàng · ' + scope.warehouse}
@@ -263,7 +263,7 @@ export default function LotsPage() {
                 <tr key={row.lotId + '-' + row.storeId}>
                   <td>
                     <Link to={lotLink(row.lotId, row.storeId)}>
-                      L-{String(row.lotId).padStart(4, '0')}
+                      {documentCode('L', row.lotId)}
                     </Link>
                   </td>
                   <td>

@@ -14,6 +14,7 @@ import type {
 import { Link } from 'react-router-dom'
 import { recentAccounts } from '../utils/recentAccounts'
 import { roleNames } from '../../../shared/utils/roles'
+import { managerPermissionLabel } from '../../owner/managerPermissions'
 
 /** AdminDashboardOverview: Khối tổng quan Admin: chỉ số tài khoản/cửa hàng, lịch sử và đăng nhập gần đây. */
 export default function AdminDashboardOverview({
@@ -136,7 +137,7 @@ function RecentPermissionPanel({
                       <strong>
                         {account?.fullName ||
                           account?.username ||
-                          `Tài khoản #${change.accountId}`}
+                          '(không rõ tên)'}
                       </strong>
                       <small>{account?.username}</small>
                     </td>
@@ -173,18 +174,18 @@ function ChangeType({ change }: { change: PermissionHistoryItem }) {
     ROLE_CHANGED: {
       label: 'Đổi vai trò',
       tone: 'blue',
-      description: `${change.oldValue || '—'} thành ${change.newValue || '—'}`,
+      description: `${roleNames[change.oldValue || ''] || change.oldValue || '—'} thành ${roleNames[change.newValue || ''] || change.newValue || '—'}`,
     },
     STORE_CHANGED: { label: 'Đổi cửa hàng', tone: 'cyan', description: '' },
     PERMISSION_GRANTED: {
       label: 'Cấp quyền',
       tone: 'green',
-      description: change.permissionCode || '',
+      description: managerPermissionLabel(change.permissionCode),
     },
     PERMISSION_REVOKED: {
       label: 'Thu hồi quyền',
       tone: 'red',
-      description: change.permissionCode || '',
+      description: managerPermissionLabel(change.permissionCode),
     },
   }
   const detail = changeTypes[change.changeType] || {
@@ -287,8 +288,7 @@ function RecentLoginPanel({
         <p className="empty-state">Chưa có thông tin đăng nhập gần đây.</p>
       )}
       <p className="session-data-note">
-        Hiện hiển thị lần đăng nhập gần nhất của từng tài khoản. Hệ thống chưa
-        cung cấp IP, thiết bị và trạng thái phiên.
+        Hiện hiển thị lần đăng nhập gần nhất của từng tài khoản.
       </p>
     </section>
   )

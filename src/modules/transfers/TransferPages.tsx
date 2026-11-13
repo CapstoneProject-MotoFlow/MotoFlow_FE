@@ -17,6 +17,8 @@ import {
   unplannedQuantity,
 } from './transferRules'
 
+import { documentCode } from '../../shared/utils/documentCode'
+import { purchaseOrderStatusLabels } from '../../shared/labels/status'
 export function ReplenishmentDetailPage() {
   const [revision, setRevision] = useState(0)
   const [purchase, setPurchase] = useState(false)
@@ -56,7 +58,7 @@ export function ReplenishmentDetailPage() {
     <main className="dashboard-content tf-page tf-replenishment-detail">
       <PageBackLink to="/replenishment-requests" />
       <header>
-        <h1>Yêu cầu bổ sung YBS-{String(id).padStart(4, '0')}</h1>
+        <h1>Yêu cầu bổ sung {documentCode('YBS', id)}</h1>
       </header>
       {created && (
         <Hint>{created} Danh sách phụ tùng đã yêu cầu ở bảng bên dưới.</Hint>
@@ -81,7 +83,7 @@ export function ReplenishmentDetailPage() {
                 action={{
                   key: 'handoff',
                   label: hasUnplanned
-                    ? 'Báo Owner phần còn thiếu'
+                    ? 'Báo chủ cửa hàng phần còn thiếu'
                     : 'Sửa số lượng đề nghị mua',
                   icon: 'alert',
                   primary: !hasUnplanned,
@@ -93,7 +95,7 @@ export function ReplenishmentDetailPage() {
               <HeadButton
                 action={{
                   key: 'purchase',
-                  label: 'Lập phiếu nhập hàng',
+                  label: 'Lập yêu cầu nhập hàng',
                   icon: 'receipt',
                   primary: !(open && canCoordinate && hasUnplanned),
                   onClick: () => setPurchase(true),
@@ -226,7 +228,7 @@ function PurchaseHandoff({
   )
   return (
     <TransferAction
-      title="Báo Owner phần còn thiếu"
+      title="Báo chủ cửa hàng phần còn thiếu"
       path={`/replenishment-requests/${request.id}/to-purchase`}
       method="put"
       disabled={!isValid || !changed.length}
@@ -261,12 +263,7 @@ function PurchaseHandoff({
   )
 }
 
-const purchaseStatuses: Record<string, string> = {
-  AWAITING_DELIVERY: 'Chờ giao hàng',
-  RECEIVING: 'Đang nhận hàng',
-  FULLY_RECEIVED: 'Đã nhận đủ',
-  CANCELLED: 'Đã hủy',
-}
+const purchaseStatuses = purchaseOrderStatusLabels
 
 function RelatedDocuments({
   request,
@@ -285,7 +282,7 @@ function RelatedDocuments({
         {request.transferOrders.map((order) => (
           <p className="tf-note" key={order.id}>
             <Link to={'/transfer-orders/' + order.id}>
-              DC-{String(order.id).padStart(4, '0')}
+              {documentCode('DC', order.id)}
             </Link>
             {' · '}
             {order.sourceStoreName} · {states[order.status] ?? order.status}
@@ -295,10 +292,10 @@ function RelatedDocuments({
           <p className="tf-note" key={order.id}>
             {canViewPurchases ? (
               <Link to={'/purchase-orders/' + order.id}>
-                Đơn mua #{order.id}
+                Yêu cầu nhập hàng {documentCode('YCN', order.id)}
               </Link>
             ) : (
-              <span>Đơn mua #{order.id}</span>
+              <span>Yêu cầu nhập hàng {documentCode('YCN', order.id)}</span>
             )}
             {' · '}
             {order.supplierName} ·{' '}

@@ -12,7 +12,7 @@ export const branchManagerNavigation: NavItem[] = [
     icon: 'bell',
   },
   { label: 'Đơn bán', href: '/sales-orders', icon: 'receipt' },
-  { label: 'Nhu cầu chưa đáp ứng', href: '/unmet-demand', icon: 'clipboard' },
+  { label: 'Khách hỏi mà hết hàng', href: '/unmet-demand', icon: 'clipboard' },
   { label: 'Khách hàng', href: '/branch-manager/customers', icon: 'users' },
   { label: 'Công nợ', href: '/receivables', icon: 'wallet' },
   {
@@ -38,7 +38,7 @@ export const branchManagerNavigation: NavItem[] = [
   },
   { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
-    label: 'Tra cứu tồn',
+    label: 'Tồn kho theo ngày',
     href: '/inventory/past-date-stock',
     icon: 'calendar',
   },

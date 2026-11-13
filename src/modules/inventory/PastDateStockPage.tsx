@@ -72,9 +72,9 @@ export default function PastDateStockPage() {
   return (
     <main className="dashboard-content tf-page past-stock-page">
       <header>
-        <h1>Tra cứu tồn</h1>
+        <h1>Tồn kho theo ngày</h1>
         <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Kho hàng › Tra cứu tồn
+          <Link to="/dashboard">Trang chủ</Link> › Kho hàng › Tồn kho theo ngày
         </nav>
       </header>
       <section>

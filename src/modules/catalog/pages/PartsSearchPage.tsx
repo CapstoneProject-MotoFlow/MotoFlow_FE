@@ -248,7 +248,7 @@ export default function PartsSearchPage() {
                       <th>Nhóm</th>
                       <th>Nhà sản xuất</th>
                       <th>Giá lẻ chuẩn</th>
-                      <th>Vị trí</th>
+                      <th>Vị trí (khu – kệ)</th>
                       {canCreate && <th>Thao tác</th>}
                     </tr>
                   </thead>

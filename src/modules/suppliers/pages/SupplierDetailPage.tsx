@@ -13,6 +13,12 @@ import { apiMessage } from '../supplierService'
 import '../suppliers.css'
 import '../supplier-redesign.css'
 import { formatDateTime } from '../../../shared/utils/format'
+import { documentCode } from '../../../shared/utils/documentCode'
+import {
+  goodsReceiptStatusLabels,
+  purchaseOrderStatusLabels,
+  supplierDiscrepancyStatusLabels,
+} from '../../../shared/labels/status'
 type Detail = {
   supplier: Supplier
   purchaseOrderCount: number
@@ -52,16 +58,8 @@ type Detail = {
   }[]
 }
 const labels: Record<string, string> = {
-  AWAITING_DELIVERY: 'Chờ giao hàng',
-  RECEIVING: 'Đang nhận hàng',
-  FULLY_RECEIVED: 'Đã nhận đủ',
-  CANCELLED: 'Đã hủy',
-  AWAITING_INSPECTION: 'Chờ kiểm nhận',
-  AWAITING_CONFIRMATION: 'Chờ xác nhận',
-  AWAITING_RECOUNT: 'Chờ kiểm đếm lại',
-  CONFIRMED: 'Đã xác nhận',
-  OPEN: 'Chưa đóng',
-  CLOSED: 'Đã đóng',
+  ...purchaseOrderStatusLabels,
+  ...goodsReceiptStatusLabels,
 }
 const date = (value: string | null) =>
   value ? new Date(value).toLocaleDateString('vi-VN') : '—'
@@ -163,17 +161,14 @@ export default function SupplierDetailPage() {
                 </div>
               ))}
             </dl>
-            <small className="supplier-data-note">
-              Các chỉ số “—” chưa được hệ thống cung cấp.
-            </small>
           </section>
           <section className="suppliers-panel supplier-transactions">
             <header>
               <h2>Giao dịch với nhà cung cấp</h2>
               <div className="supplier-tabs">
                 {[
-                  ['orders', 'Phiếu nhập hàng'],
-                  ['deliveries', 'Các lần giao hàng'],
+                  ['orders', 'Yêu cầu nhập hàng'],
+                  ['deliveries', 'Phiếu nhập'],
                   [
                     'discrepancies',
                     `Hàng giao sai lệch (${data.openDiscrepancyCount})`,
@@ -193,7 +188,7 @@ export default function SupplierDetailPage() {
               <>
                 <div className="supplier-filter">
                   <select
-                    aria-label="Lọc phiếu"
+                    aria-label="Lọc yêu cầu nhập hàng"
                     value={orderStatus}
                     onChange={(e) => setOrderStatus(e.target.value)}
                   >
@@ -207,7 +202,7 @@ export default function SupplierDetailPage() {
                   <table className="suppliers-table">
                     <thead>
                       <tr>
-                        <th>Phiếu</th>
+                        <th>Mã</th>
                         <th>Số dòng</th>
                         <th>Kho nhận</th>
                         <th>Ngày lập</th>
@@ -230,7 +225,7 @@ export default function SupplierDetailPage() {
                         )
                         .map((x) => (
                           <tr key={x.id}>
-                            <td>#{x.id}</td>
+                            <td>{documentCode('YCN', x.id)}</td>
                             <td>{x.lineCount}</td>
                             <td>{x.storeName}</td>
                             <td>{date(x.createdAt)}</td>
@@ -253,8 +248,8 @@ export default function SupplierDetailPage() {
                   </table>
                 </div>
                 <p className="supplier-data-note">
-                  Hiển thị các phiếu gần nhất API trả về; tổng cộng{' '}
-                  {data.purchaseOrderCount} phiếu.
+                  Các yêu cầu nhập hàng gần nhất ({data.purchaseOrderCount} yêu
+                  cầu)
                 </p>
               </>
             )}
@@ -263,8 +258,8 @@ export default function SupplierDetailPage() {
                 <table className="suppliers-table">
                   <thead>
                     <tr>
-                      <th>Lượt nhận</th>
-                      <th>Phiếu nhập hàng</th>
+                      <th>Phiếu nhập</th>
+                      <th>Yêu cầu nhập hàng</th>
                       <th>Chứng từ giao</th>
                       <th>Hàng đến</th>
                       <th>Xác nhận lúc</th>
@@ -274,8 +269,8 @@ export default function SupplierDetailPage() {
                   <tbody>
                     {data.deliveries.map((x) => (
                       <tr key={x.id}>
-                        <td>#{x.id}</td>
-                        <td>#{x.purchaseOrderId}</td>
+                        <td>{documentCode('PN', x.id)}</td>
+                        <td>{documentCode('YCN', x.purchaseOrderId)}</td>
                         <td>{x.deliveryDocumentNo || '—'}</td>
                         <td>{date(x.arrivedAt)}</td>
                         <td>
@@ -287,7 +282,7 @@ export default function SupplierDetailPage() {
                   </tbody>
                 </table>
                 <p className="supplier-data-note">
-                  Tổng cộng {data.deliveryCount} lượt nhận.
+                  Tổng cộng {data.deliveryCount} phiếu nhập.
                 </p>
               </div>
             )}
@@ -297,7 +292,7 @@ export default function SupplierDetailPage() {
                   <thead>
                     <tr>
                       <th>Phụ tùng</th>
-                      <th>Lượt nhận</th>
+                      <th>Phiếu nhập</th>
                       <th>Thiếu</th>
                       <th>Sai</th>
                       <th>Hỏng</th>
@@ -319,7 +314,7 @@ export default function SupplierDetailPage() {
                           <Link
                             to={`/supplier-discrepancies?receipt=${x.deliveryId}`}
                           >
-                            #{x.deliveryId}
+                            {documentCode('PN', x.deliveryId)}
                           </Link>
                         </td>
                         <td>{x.shortQty}</td>
@@ -334,7 +329,10 @@ export default function SupplierDetailPage() {
                               : 'Chưa đóng'}
                           </small>
                         </td>
-                        <td>{labels[x.status] || x.status}</td>
+                        <td>
+                          {supplierDiscrepancyStatusLabels[x.status] ||
+                            x.status}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

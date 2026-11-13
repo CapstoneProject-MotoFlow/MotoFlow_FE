@@ -8,6 +8,7 @@ import type { CountRequest, CountDto } from './countApi'
 import type { Page } from './types'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
+import { documentCode } from '../../shared/utils/documentCode'
 import './stock-count.css'
 type Product = { id: number; sku: string; partName: string }
 function monthEnd() {
@@ -188,7 +189,8 @@ export function StockCountFormDialog({
           )}
           {source && (
             <p>
-              Yêu cầu #{source.id} · {source.storeName} · {source.reason}
+              Yêu cầu {documentCode('YCKK', source.id)} · {source.storeName} ·{' '}
+              {source.reason}
             </p>
           )}
           <label>

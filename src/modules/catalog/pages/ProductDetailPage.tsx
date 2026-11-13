@@ -49,17 +49,17 @@ type Product = {
 type Store = { id: number; storeName: string; central: boolean }
 const stockStates = [
   ['awaitingInspectionQty', 'Chờ kiểm nhận'],
-  ['wrongItemQty', 'Sai hàng'],
-  ['damagedQty', 'Hàng hỏng'],
+  ['wrongItemQty', 'Giao sai'],
+  ['damagedQty', 'Hư hỏng'],
   ['awaitingSupplierReturnQty', 'Chờ trả nhà cung cấp'],
-  ['inTransitQty', 'Đang điều chuyển'],
+  ['inTransitQty', 'Đang chuyển'],
 ] as const
 
 /** StockBreakdown: Hiển thị chi tiết số lượng tồn không khả dụng theo từng trạng thái kho. */
 function StockBreakdown({ stock, unit }: { stock: Stock; unit: string }) {
   return (
     <details className="product-stock-breakdown">
-      <summary>Chi tiết không khả dụng</summary>
+      <summary>Chi tiết chưa bán được</summary>
       <dl>
         {stockStates.map(([key, label]) => (
           <div key={key}>
@@ -181,7 +181,7 @@ export default function ProductDetailPage() {
                 <h2>Tồn tại {user?.storeName || 'chi nhánh của bạn'}</h2>
                 {data.stock ? (
                   <div className="branch-product-stock-body">
-                    <small>Khả dụng</small>
+                    <small>Có thể bán</small>
                     <div className="branch-stock-quantity">
                       <strong>
                         {data.stock.availableQty.toLocaleString('vi-VN')}
@@ -205,11 +205,13 @@ export default function ProductDetailPage() {
                     </div>
                     <dl>
                       <div>
-                        <dt>Không khả dụng</dt>
+                        <dt title="Gồm hàng hỏng, giao sai, chờ kiểm, chờ trả nhà cung cấp">
+                          Chưa bán được ⓘ
+                        </dt>
                         <dd>{unavailable(data.stock)}</dd>
                       </div>
                       <div>
-                        <dt>Vị trí</dt>
+                        <dt>Vị trí (khu – kệ)</dt>
                         <dd>
                           {[data.stock.storageArea, data.stock.binLocation]
                             .filter(Boolean)
@@ -223,13 +225,13 @@ export default function ProductDetailPage() {
                     </dl>
                     <StockBreakdown stock={data.stock} unit={data.baseUnit} />
                     <div className="branch-stock-tools">
-                      <button disabled title="Chưa có API lịch sử xuất nhập">
+                      <button disabled title="Chức năng đang được hoàn thiện">
                         Lịch sử xuất nhập
                       </button>
-                      <button disabled title="Chưa có API cập nhật vị trí">
+                      <button disabled title="Chức năng đang được hoàn thiện">
                         Đổi vị trí
                       </button>
-                      <button disabled title="Chưa có API cập nhật ngưỡng">
+                      <button disabled title="Chức năng đang được hoàn thiện">
                         Đặt ngưỡng
                       </button>
                     </div>
@@ -328,7 +330,7 @@ export default function ProductDetailPage() {
                   />
                   {owner && !stockError && stocks.length > 0 && (
                     <span>
-                      Tổng khả dụng toàn chuỗi:{' '}
+                      Tổng có thể bán toàn chuỗi:{' '}
                       {stocks
                         .reduce(
                           (sum, row) => sum + (row.stock?.availableQty ?? 0),
@@ -347,9 +349,11 @@ export default function ProductDetailPage() {
                       <thead>
                         <tr>
                           <th>Kho</th>
-                          <th>Khả dụng</th>
-                          <th>Không khả dụng</th>
-                          <th>Vị trí</th>
+                          <th>Có thể bán</th>
+                          <th title="Gồm hàng hỏng, giao sai, chờ kiểm, chờ trả nhà cung cấp">
+                            Chưa bán được ⓘ
+                          </th>
+                          <th>Vị trí (khu – kệ)</th>
                         </tr>
                       </thead>
                       <tbody>

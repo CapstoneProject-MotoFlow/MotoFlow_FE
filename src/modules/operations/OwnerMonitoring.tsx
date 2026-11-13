@@ -20,6 +20,7 @@ import {
   useOwnerDebtTotals,
   useOwnerSalesPeriod,
 } from './ownerMetrics'
+import { documentCode } from '../../shared/utils/documentCode'
 import './operations.css'
 type Store = { id: number; storeName: string; status: string }
 type Pending = {
@@ -110,7 +111,7 @@ export default function OwnerMonitoring() {
   const work = [
     ...(counts.data?.counts.items ?? []).map((r) => ({
       key: 'k' + r.id,
-      code: 'KK-' + String(r.id).padStart(4, '0'),
+      code: documentCode('KK', r.id),
       at: r.createdAt,
       store: r.storeName,
       task: 'Duyệt chênh lệch kiểm kê',
@@ -118,7 +119,7 @@ export default function OwnerMonitoring() {
     })),
     ...(excess.data?.items ?? []).map((r) => ({
       key: 'g' + r.id,
-      code: 'PN-' + String(r.id).padStart(4, '0'),
+      code: documentCode('PN', r.id),
       at: r.arrivedAt ?? '',
       store: r.storeName,
       task: 'Quyết định hàng thừa',
@@ -126,7 +127,7 @@ export default function OwnerMonitoring() {
     })),
     ...(replenishments.data?.items ?? []).map((r) => ({
       key: 'y' + r.id,
-      code: 'YBS-' + String(r.id).padStart(4, '0'),
+      code: documentCode('YBS', r.id),
       at: r.createdAt ?? '',
       store: r.storeName,
       task: 'Điều phối bổ sung hàng',
@@ -301,7 +302,7 @@ export default function OwnerMonitoring() {
               title="Đếm theo từng cửa hàng: một phụ tùng dưới ngưỡng ở hai cửa hàng tính là hai."
             >
               <span>Dưới ngưỡng tồn</span>
-              <strong>{count(summary.data?.lowStock, 'sản phẩm')}</strong>
+              <strong>{count(summary.data?.lowStock, 'phụ tùng')}</strong>
             </Link>
             <Link to="/inventory/lots?tab=NEAR_EXPIRY">
               <span>Lô sắp hết hạn</span>
@@ -385,7 +386,7 @@ function StoreLine({
           'Đang tải…'
         ) : (
           <Link to={'/inventory?view=lowStock&storeId=' + store.id}>
-            {count(stock.data?.lowStock, 'sản phẩm')}
+            {count(stock.data?.lowStock, 'phụ tùng')}
           </Link>
         )}
       </td>

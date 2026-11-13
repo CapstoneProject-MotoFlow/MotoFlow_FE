@@ -65,7 +65,7 @@ export default function DashboardLayout() {
         )}
         {!collapsed && (
           <div className="sidebar-scope">
-            <span>Phạm vi:</span>
+            <span>Đang xem:</span>
             <strong>
               {role === 'OWNER'
                 ? 'Toàn chuỗi'

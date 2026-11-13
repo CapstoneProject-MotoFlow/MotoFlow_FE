@@ -10,6 +10,15 @@ export type Manager = {
   catalogEdit: boolean
   retailPriceEdit: boolean
 }
+/** Nhãn hiển thị của quyền cấp thêm cho quản lý cửa hàng; dùng chung cho mọi màn. */
+export const managerPermissionLabels: Record<ManagerPermission, string> = {
+  CATALOG_EDIT: 'Sửa danh mục',
+  RETAIL_PRICE_EDIT: 'Sửa giá bán lẻ',
+}
+export function managerPermissionLabel(code: string | null | undefined) {
+  if (!code) return ''
+  return managerPermissionLabels[code as ManagerPermission] || code
+}
 export const managerPermissionCodes: ManagerPermission[] = [
   'CATALOG_EDIT',
   'RETAIL_PRICE_EDIT',
@@ -51,7 +60,7 @@ export function readManagers(value: unknown): Manager[] {
     )
   )
     throw new Error(
-      'Không đọc được dữ liệu quyền Branch Manager. Vui lòng thử lại.',
+      'Không đọc được dữ liệu quyền của quản lý cửa hàng. Vui lòng thử lại.',
     )
   return value
 }

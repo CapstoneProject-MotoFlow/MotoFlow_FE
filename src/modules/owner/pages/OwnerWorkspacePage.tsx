@@ -253,7 +253,7 @@ export default function OwnerWorkspacePage({
                     <th>Nhóm</th>
                     <th>Nhà sản xuất</th>
                     <th>Giá lẻ chuẩn</th>
-                    {inventory && <th>Khả dụng</th>}
+                    {inventory && <th>Có thể bán</th>}
                     <th>Trạng thái</th>
                     {!inventory && <th>Thao tác</th>}
                   </tr>

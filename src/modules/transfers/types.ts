@@ -168,29 +168,7 @@ export type Preparation = {
     pickFirst: PickLot[]
   }[]
 }
-export const states: Record<string, string> = {
-  AWAITING_COORDINATION: 'Chờ điều phối',
-  IN_PROGRESS: 'Đang đáp ứng',
-  AWAITING_DISPATCH: 'Chờ xuất',
-  IN_TRANSIT: 'Đang chuyển',
-  RECONCILING: 'Đang đối soát',
-  CLOSED: 'Đã đóng',
-  DRAFT: 'Nháp',
-  AWAITING_INSPECTION: 'Chờ kiểm nhận',
-  AWAITING_CONFIRMATION: 'Chờ xác nhận',
-  AWAITING_RECOUNT: 'Chờ kiểm lại',
-  INSPECTING: 'Đang kiểm nhận',
-  RESULT_SUBMITTED: 'Đã gửi kết quả',
-  CONFIRMED: 'Đã xác nhận',
-  OPEN: 'Đang xử lý',
-  RESOLVED: 'Đã xử lý',
-}
-export const resolutionNames: Record<string, string> = {
-  MOVED_TO_AWAITING_RETURN: 'Chuyển chờ trả',
-  RETURNED_TO_SUPPLIER: 'Đã trả nhà cung cấp',
-  REPLACEMENT_RECEIVED: 'Đã nhận hàng thay thế',
-  LATE_DELIVERY_RECEIVED: 'Nhận hàng đến muộn',
-  RECEIVED_BACK_AT_SOURCE: 'Trả về kho nguồn',
-  APPROVED_LOSS: 'Mất/hỏng',
-  CLOSED_BY_AGREEMENT: 'Đóng theo thỏa thuận',
-}
+export {
+  transferStatusLabels as states,
+  transferResolutionLabels as resolutionNames,
+} from '../../shared/labels/status'

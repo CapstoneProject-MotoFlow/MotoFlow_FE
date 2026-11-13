@@ -15,13 +15,10 @@ import CustomerForm from '../components/CustomerForm'
 import type { Customer } from '../types'
 import { apiMessage } from '../../suppliers/supplierService'
 import { CreditDialog } from '../../receivables/DebtDialog'
+import { creditStatusLabels } from '../../../shared/labels/status'
 import '../customer-list.css'
 type Row = Customer & { totalDebt: number; debtAtOwnStore: number | null }
-const credit: Record<string, string> = {
-  NOT_GRANTED: 'Không mua chịu',
-  ELIGIBLE: 'Được mua chịu',
-  REVOKED: 'Đã thu hồi',
-}
+const credit = creditStatusLabels
 /** CustomerListPage: Danh sách khách; tìm kiếm, lọc mua chịu/đang nợ, phân trang API, mở tạo/sửa. scope quyết định nhãn và cột công nợ theo toàn chuỗi hay cửa hàng. */
 export default function CustomerListPage({
   scope,
@@ -166,7 +163,6 @@ export default function CustomerListPage({
                     <tr key={row.id}>
                       <td>
                         <Link to={`${base}/${row.id}`}>{row.customerName}</Link>
-                        <small>#{row.id}</small>
                       </td>
                       <td className="mf-nowrap">{row.phone || '—'}</td>
                       <td>
@@ -253,9 +249,6 @@ export default function CustomerListPage({
             )}
           </>
         )}
-        <p className="branch-customer-note">
-          Ngày mua gần nhất và số nợ quá hạn chưa được API cung cấp.
-        </p>
       </section>
       {creditCustomer && (
         <CreditDialog

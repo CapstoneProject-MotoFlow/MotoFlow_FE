@@ -11,12 +11,16 @@ import {
 import { StockCountFormDialog } from './StockCountFormDialog'
 import { countScope, type CountList, type CountRequest } from './countApi'
 import { money } from './presentation'
-import { countStateNames, countTypeNames } from './stockCountModel'
+import {
+  stockCountStatusLabels as countStateNames,
+  stockCountTypeLabels as countTypeNames,
+} from '../../shared/labels/status'
 import axiosClient from '../../shared/api/axiosClient'
 import { date, dateTime } from './presentation'
 import './stock-count.css'
 import { useCountList } from './useCountList'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
+import { documentCode } from '../../shared/utils/documentCode'
 const countTabs = [
   ['OPEN', 'Đang mở'],
   ['COMPLETED', 'Hoàn tất'],
@@ -225,7 +229,7 @@ export default function StockCountListPage() {
                 <tr key={c.id}>
                   <td>
                     <Link to={`/stock-counts/${c.id}`}>
-                      KK-{String(c.id).padStart(4, '0')}
+                      {documentCode('KK', c.id)}
                     </Link>
                     <small>{countTypeNames[c.countType]}</small>
                   </td>
@@ -292,7 +296,9 @@ export default function StockCountListPage() {
       {!staff && (
         <InventoryPanel
           title={
-            scope.owner ? 'Yêu cầu kiểm kê đã gửi' : 'Yêu cầu kiểm kê của Owner'
+            scope.owner
+              ? 'Yêu cầu kiểm kê đã gửi'
+              : 'Yêu cầu kiểm kê của chủ cửa hàng'
           }
         >
           <InventoryNotice
@@ -315,7 +321,7 @@ export default function StockCountListPage() {
                 {requests.data?.map((q) => (
                   <tr key={q.id}>
                     <td>
-                      YCKK-{String(q.id).padStart(4, '0')}
+                      {documentCode('YCKK', q.id)}
                       <small>{dateTime(q.requestedAt)}</small>
                     </td>
                     {scope.owner && <td>{q.storeName}</td>}

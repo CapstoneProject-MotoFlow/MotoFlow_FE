@@ -1,21 +1,15 @@
 import { formatDateTime } from '../../shared/utils/format'
-export const stockStatuses: Record<string, string> = {
-  AVAILABLE: 'Khả dụng',
-  AWAITING_INSPECTION: 'Chờ kiểm nhận',
-  WRONG_ITEM: 'Giao sai',
-  DAMAGED: 'Hư hỏng',
-  AWAITING_SUPPLIER_RETURN: 'Chờ trả NCC',
-  IN_TRANSIT: 'Đang điều chuyển',
-}
+import { documentCode } from '../../shared/utils/documentCode'
+export { stockStatusLabels as stockStatuses } from '../../shared/labels/status'
 export const movementNames: Record<string, string> = {
   SALE_ISSUE: 'Xuất bán',
   RECEIPT_CONFIRMED: 'Nhập hàng',
   EXCESS_ACCEPTED: 'Nhận hàng thừa',
   EXCESS_REJECTED: 'Từ chối hàng thừa',
-  RETURN_HOLD: 'Chuyển chờ trả NCC',
-  SUPPLIER_RETURN: 'Trả NCC',
+  RETURN_HOLD: 'Chuyển chờ trả nhà cung cấp',
+  SUPPLIER_RETURN: 'Trả nhà cung cấp',
   TRANSFER_DISPATCH: 'Xuất điều chuyển',
-  TRANSFER_EXTRA_DISPATCH: 'Xuất bổ sung',
+  TRANSFER_EXTRA_DISPATCH: 'Hàng gửi dư',
   TRANSFER_RECEIPT: 'Nhận điều chuyển',
   ADJUSTMENT: 'Điều chỉnh',
   COUNT_ADJUSTMENT: 'Điều chỉnh kiểm kê',
@@ -34,10 +28,25 @@ export const sourceNames: Record<string, string> = {
   COUNT_SURPLUS: 'Thừa kiểm kê',
   GOODS_RECEIPT_NOTE: 'Phiếu nhập',
   SALES_ORDER: 'Đơn bán',
-  TRANSFER_ORDER: 'Điều chuyển',
+  TRANSFER_ORDER: 'Lệnh điều chuyển',
   DISCREPANCY_RESOLUTION_EVENT: 'Xử lý sai lệch',
   ADJUSTMENT_REQUEST: 'Điều chỉnh',
   STOCK_COUNT: 'Kiểm kê',
+}
+/** Tiền tố mã chứng từ theo sourceType; loại không có mã riêng chỉ hiện tên. */
+const sourcePrefixes = {
+  GOODS_RECEIPT_NOTE: 'PN',
+  TRANSFER_ORDER: 'DC',
+  STOCK_COUNT: 'KK',
+  SALES_ORDER: 'SO',
+} as const
+/** Nhãn chứng từ nguồn: "Phiếu nhập PN-0006", "Lệnh điều chuyển DC-0002"; phiếu nhận điều chuyển (BE lưu chung bảng phiếu nhập) chỉ hiện tên. */
+export function sourceLabel(type: string, id: number, movementType?: string) {
+  if (type === 'GOODS_RECEIPT_NOTE' && movementType === 'TRANSFER_RECEIPT')
+    return 'Phiếu nhận điều chuyển'
+  const name = sourceNames[type] ?? type
+  const prefix = sourcePrefixes[type as keyof typeof sourcePrefixes]
+  return prefix ? name + ' ' + documentCode(prefix, id) : name
 }
 export const money = new Intl.NumberFormat('vi-VN', {
   style: 'currency',

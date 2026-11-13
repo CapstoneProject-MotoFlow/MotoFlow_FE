@@ -232,6 +232,17 @@ a.bm-summary-card:hover {
   display: inline-block;
   margin-top: 14px;
 }
+/* Cả thẻ "Theo dõi" là link tới màn chi tiết, link nằm trong thẻ thay vì đứng riêng. */
+.bm-monitor a.bm-monitor-card {
+  display: block;
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.bm-monitor-card .bm-monitor-more {
+  color: #4f56ff;
+  font-size: 13px;
+}
 .bm-work-empty {
   padding: 35px 20px;
   text-align: center;

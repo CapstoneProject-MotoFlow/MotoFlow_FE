@@ -22,6 +22,7 @@ import {
 } from '../services/accountService'
 import { formatDate } from '../../../shared/utils/format'
 import { roleNames } from '../../../shared/utils/roles'
+import { managerPermissionLabel } from '../../owner/managerPermissions'
 
 type ChangeFilter =
   | ''
@@ -89,7 +90,7 @@ export default function AdminPermissionHistoryPage() {
         setError(
           typeof message === 'string'
             ? message
-            : 'Không tải được lịch sử phân quyền. Hãy kiểm tra kết nối backend và quyền Admin.',
+            : 'Không tải được dữ liệu. Vui lòng thử lại sau hoặc báo quản trị viên.',
         )
       } finally {
         if (active) setLoading(false)
@@ -152,7 +153,7 @@ export default function AdminPermissionHistoryPage() {
         const actor = accountById.get(item.changedBy)
         return [
           formatDate(item.changedAt),
-          account?.fullName || `Tài khoản #${item.accountId}`,
+          account?.fullName || account?.username || '(không rõ tên)',
           account?.username || '',
           changeNames[item.changeType] || item.changeType,
           detail.before,
@@ -307,7 +308,8 @@ export default function AdminPermissionHistoryPage() {
                         <td>
                           <strong>
                             {account?.fullName ||
-                              `Tài khoản #${item.accountId}`}
+                              account?.username ||
+                              '(không rõ tên)'}
                           </strong>
                           <small>
                             {account?.username ||
@@ -389,18 +391,13 @@ function changeDetail(
     )
       return roleNames[value] || value
     if (item.changeType === 'STORE_CHANGED')
-      return stores.get(value) || `Cửa hàng #${value}`
+      return stores.get(value) || '(không rõ tên)'
     return value
   }
   return {
     before: format(item.oldValue),
     after: format(item.newValue),
-    permission:
-      item.permissionCode === 'CATALOG_EDIT'
-        ? 'Sửa danh mục'
-        : item.permissionCode === 'RETAIL_PRICE_EDIT'
-          ? 'Sửa giá bán lẻ'
-          : '',
+    permission: managerPermissionLabel(item.permissionCode),
   }
 }
 

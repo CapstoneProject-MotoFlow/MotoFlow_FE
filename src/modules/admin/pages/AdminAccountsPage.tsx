@@ -31,6 +31,7 @@ import {
   updatePermissions,
 } from '../services/accountService'
 
+import { roleNames } from '../../../shared/utils/roles'
 type CreatedAccount = {
   account: Account
   temporaryPassword: string
@@ -56,12 +57,7 @@ type AccountConfirmation = {
 type Tab = 'ALL' | 'ACTIVE' | 'LOCKED'
 
 // Review T5: vai trò hiện tiếng Việt, cùng chữ với góc phải header.
-const roleLabels: Record<AccountRole, string> = {
-  ADMIN: 'Quản trị hệ thống',
-  OWNER: 'Chủ cửa hàng',
-  BRANCH_MANAGER: 'Quản lý cửa hàng',
-  STAFF: 'Nhân viên',
-}
+const roleLabels = roleNames as Record<AccountRole, string>
 const emptyForm: AccountForm = {
   fullName: '',
   username: '',
@@ -125,7 +121,7 @@ export default function AccountsPage() {
       setError(
         typeof message === 'string'
           ? message
-          : 'Không tải được tài khoản. Vui lòng kiểm tra backend và quyền Admin.',
+          : 'Không tải được dữ liệu. Vui lòng thử lại sau hoặc báo quản trị viên.',
       )
     } finally {
       setLoading(false)
@@ -560,7 +556,7 @@ export default function AccountsPage() {
                       </td>
                       <td>
                         {account.role === 'BRANCH_MANAGER' ? (
-                          <span title="Owner cấp ở màn Quyền Branch Manager">
+                          <span title="Chủ cửa hàng cấp ở màn Quyền danh mục và giá">
                             {account.permissions.includes('CATALOG_EDIT')
                               ? 'Đã cấp'
                               : 'Chưa cấp'}
@@ -826,9 +822,7 @@ export default function AccountsPage() {
                         </label>
                       ))}
                     </div>
-                    {!stores.length && (
-                      <small>Chưa có cửa hàng khả dụng.</small>
-                    )}
+                    {!stores.length && <small>Chưa có cửa hàng để chọn.</small>}
                   </fieldset>
                 )}
                 <div className="temporary-password-note">
@@ -999,7 +993,11 @@ export default function AccountsPage() {
                   </div>
                   {!['STAFF', 'BRANCH_MANAGER'].includes(
                     permissionForm.role,
-                  ) && <small>Admin và Owner không được gán cửa hàng.</small>}
+                  ) && (
+                    <small>
+                      Quản trị viên và chủ cửa hàng không được gán cửa hàng.
+                    </small>
+                  )}
                 </fieldset>
                 <div className="permission-readonly">
                   <DashboardIcon name="lock" />
@@ -1008,7 +1006,7 @@ export default function AccountsPage() {
                     {editingPermission.permissions.includes('CATALOG_EDIT')
                       ? 'Đã cấp'
                       : 'Chưa cấp'}
-                    . Owner cấp ở màn Quyền Branch Manager.
+                    . Chủ cửa hàng cấp ở màn Quyền danh mục và giá.
                   </span>
                 </div>
                 <div className="permission-readonly">
@@ -1016,8 +1014,8 @@ export default function AccountsPage() {
                   <span>
                     Quyền sửa giá bán lẻ:{' '}
                     {editingPermission.permissions.includes('RETAIL_PRICE_EDIT')
-                      ? 'Đã được Owner cấp'
-                      : 'Chưa có (do Owner cấp)'}
+                      ? 'Đã được chủ cửa hàng cấp'
+                      : 'Chưa có (do chủ cửa hàng cấp)'}
                   </span>
                 </div>
                 <label className="permission-reason">
@@ -1124,9 +1122,9 @@ export default function AccountsPage() {
                   chức năng khác.
                 </>
               ) : confirmation.action === 'lock' ? (
-                'Người dùng không đăng nhập được cho tới khi Admin mở khóa. Tài khoản không bị xóa và chứng từ đã lập vẫn giữ tên người lập.'
+                'Người dùng không đăng nhập được cho tới khi quản trị viên mở khóa. Tài khoản không bị xóa và chứng từ đã lập vẫn giữ tên người lập.'
               ) : (
-                'Người dùng có thể đăng nhập lại sau khi Admin mở khóa tài khoản.'
+                'Người dùng có thể đăng nhập lại sau khi quản trị viên mở khóa tài khoản.'
               )}
             </p>
             <div className="account-modal-actions">

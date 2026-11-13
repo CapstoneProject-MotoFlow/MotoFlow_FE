@@ -17,6 +17,8 @@ import {
 import '../supplier-discrepancy.css'
 import { formatDateTime } from '../../../shared/utils/format'
 
+import { documentCode } from '../../../shared/utils/documentCode'
+import { supplierResolutionLabels } from '../../../shared/labels/status'
 type Case = HandlingCase & {
   id: number
   goodsReceiptNoteId: number
@@ -46,19 +48,7 @@ function errorMessage(error: unknown) {
   return code ? code + ' · ' + apiMessage(error) : apiMessage(error)
 }
 
-const eventNames: Record<string, string> = {
-  MOVED_TO_AWAITING_RETURN: 'Chuyển sang chờ trả NCC',
-  RETURNED_TO_SUPPLIER: 'Đã trả nhà cung cấp',
-  LATE_DELIVERY_RECEIVED: 'Nhận hàng giao muộn',
-  RECEIVED_BACK_AT_SOURCE: 'Đã nhận lại tại kho nguồn',
-  APPROVED_LOSS: 'Đã duyệt hao hụt',
-  CLOSED_BY_AGREEMENT: 'Đóng theo thỏa thuận',
-  RETURN_TO_SUPPLIER: 'Đã trả nhà cung cấp',
-  SUPPLIER_RETURN: 'Đã trả nhà cung cấp',
-  REPLACEMENT_RECEIVED: 'Nhận hàng giao bù',
-  REPLACEMENT_WAIVED: 'Miễn giao bù',
-  WRITE_OFF: 'Xử lý hàng hỏng',
-}
+const eventNames = supplierResolutionLabels
 
 function CaseAction({
   selected,
@@ -139,8 +129,9 @@ function CaseAction({
   return (
     <FormDialog
       title={
-        (returning ? 'Ghi nhận đã trả NCC · ' : 'Miễn giao bù · ') +
-        selected.sku
+        (returning
+          ? 'Ghi nhận đã trả nhà cung cấp · '
+          : 'Không cần nhà cung cấp giao bù · ') + selected.sku
       }
       formId="case-action"
       submitLabel="Lưu"
@@ -189,7 +180,10 @@ function CaseAction({
               }
             } else {
               const reason = String(fields.get('reason') ?? '').trim()
-              if (!reason) throw new Error('Vui lòng nhập lý do miễn giao bù.')
+              if (!reason)
+                throw new Error(
+                  'Vui lòng nhập lý do không cần nhà cung cấp giao bù.',
+                )
               payload = { quantity, reason }
             }
             const { data } = await axiosClient.post<Case>(
@@ -224,7 +218,7 @@ function CaseAction({
               />
             </label>
             <label className="receiving-layout-wide">
-              {returning ? 'Ghi chú' : 'Lý do miễn giao bù'}
+              {returning ? 'Ghi chú' : 'Lý do không cần giao bù'}
               <textarea
                 name={returning ? 'note' : 'reason'}
                 required={!returning}
@@ -406,7 +400,7 @@ function DiscrepancyForm({
             </label>
           )}
           <label>
-            Mã đơn mua
+            Mã yêu cầu nhập hàng
             <input
               type="text"
               inputMode="numeric"
@@ -438,7 +432,7 @@ function DiscrepancyForm({
         }}
       >
         <label>
-          Mã phiếu nhập hàng{' '}
+          Mã phiếu nhập{' '}
           <input
             name="receipt"
             defaultValue={receiptId}
@@ -455,7 +449,7 @@ function DiscrepancyForm({
           </button>
         )}
       </form>
-      {!valid && <p role="alert">Mã phiếu nhập hàng không hợp lệ.</p>}
+      {!valid && <p role="alert">Mã phiếu nhập không hợp lệ.</p>}
       {loading && <p role="status">Đang tải sai lệch…</p>}
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -520,7 +514,8 @@ function DiscrepancyForm({
                                 row.goodsReceiptNoteId
                               }
                             >
-                              Phiếu nhập #{row.goodsReceiptNoteId}
+                              Phiếu nhập{' '}
+                              {documentCode('PN', row.goodsReceiptNoteId)}
                             </Link>
                           </small>
                         </th>
@@ -619,7 +614,7 @@ function DiscrepancyForm({
                                   setAction({ row, mode: 'waive' })
                                 }
                               >
-                                Miễn giao bù
+                                Không cần giao bù
                               </button>
                             )}
                             <button

@@ -64,12 +64,12 @@ export default function ExcessDispatchEditor({
   }
   return (
     <section>
-      <CardHead title="Xác nhận phần xuất thừa còn chờ">
+      <CardHead title="Hàng gửi dư còn chờ xác nhận">
         {allowed && (
           <HeadButton
             action={{
               key: 'confirm',
-              label: 'Xem và xác nhận xuất thừa',
+              label: 'Xem và xác nhận hàng gửi dư',
               icon: 'check',
               primary: true,
               disabled: !valid || busy,
@@ -80,7 +80,7 @@ export default function ExcessDispatchEditor({
       </CardHead>
       {!allowed && (
         <p className="tf-note">
-          Phiếu hiện không có phần xuất thừa chờ bạn xác nhận.
+          Lệnh hiện không có hàng gửi dư chờ bạn xác nhận.
         </p>
       )}
       <div className="tf-table">
@@ -108,7 +108,7 @@ export default function ExcessDispatchEditor({
                 <td>{pendingExcess(l)}</td>
                 <td>
                   <input
-                    aria-label={'Xuất thừa ' + l.sku}
+                    aria-label={'Hàng gửi dư ' + l.sku}
                     type="number"
                     min={0}
                     max={pendingExcess(l)}
@@ -154,9 +154,9 @@ export default function ExcessDispatchEditor({
       )}
       {confirm && (
         <FormDialog
-          title="Xác nhận xuất thừa"
+          title="Xác nhận hàng gửi dư"
           formId="confirm-excess-dispatch"
-          submitLabel="Xác nhận xuất thừa"
+          submitLabel="Xác nhận hàng gửi dư"
           busy={busy}
           submitDisabled={!valid}
           onClose={() => {
@@ -173,7 +173,7 @@ export default function ExcessDispatchEditor({
             }}
           >
             {error && <p role="alert">{error}</p>}
-            <p>Số lượng dưới đây được cộng vào số đã xác nhận xuất thừa.</p>
+            <p>Số lượng dưới đây được cộng vào số hàng gửi dư đã xác nhận.</p>
             <ul>
               {lines.map((l) => (
                 <li key={l.productId}>

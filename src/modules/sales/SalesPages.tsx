@@ -14,7 +14,6 @@ import PageBackLink from '../../shared/ui/PageBackLink'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 
 import {
-  salesStates,
   salesTotal,
   discountedPrice,
   mayCancel,
@@ -30,6 +29,8 @@ import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
 import DemandReplenishment from './DemandReplenishment'
 import { SalesOrderFormView, type SalesProduct } from './SalesOrderForm'
+import { documentCode } from '../../shared/utils/documentCode'
+import { salesOrderStatusLabels as salesStates } from '../../shared/labels/status'
 export { SalesOrderFormView }
 import './sales.css'
 function Header({
@@ -110,7 +111,7 @@ export function SalesOrderListPage({
           (o) =>
             ({
               id: o.id,
-              code: 'SO-' + o.id,
+              code: documentCode('SO', o.id),
               status: o.status,
               storeName: o.storeName,
               customerName: o.customerName ?? 'Khách lẻ',
@@ -487,7 +488,7 @@ export function SalesOrderDetailView({
     CONFIRMED: 'Xác nhận đơn',
     PAYMENT_REJECTED: 'Từ chối thanh toán',
     COMPLETED: 'Hoàn tất đơn',
-    CANCELLED: 'Hủy đơn',
+    CANCELLED: 'Đã hủy',
   }
   return (
     <Shell
@@ -544,10 +545,21 @@ export function SalesOrderDetailView({
                         </button>
                         <button
                           disabled={!order.actions?.canRecordCredit}
+                          title={
+                            !order.actions?.canRecordCredit && !order.customerId
+                              ? 'Khách lẻ không được mua chịu'
+                              : undefined
+                          }
                           onClick={() => setAction('credit')}
                         >
                           Ghi nhận bán chịu
                         </button>
+                        {!order.actions?.canRecordCredit &&
+                          !order.customerId && (
+                            <small className="sales-action-reason">
+                              Khách lẻ không được mua chịu
+                            </small>
+                          )}
                       </>
                     )}
                     {(order.actions?.canCancel ?? mayCancel(order)) && (
@@ -915,7 +927,7 @@ export function RecordPickedView({
           children={null}
         />
         <InventoryPanel
-          title="Lấy từng mặt hàng"
+          title="Lấy từng phụ tùng"
           action={
             <label className="sales-pick-filter">
               <input
@@ -1244,10 +1256,10 @@ export function UnmetDemandPage() {
   )
   return (
     <Shell
-      title="Nhu cầu chưa đáp ứng"
+      title="Khách hỏi mà hết hàng"
       breadcrumb={
         <>
-          <Link to="/sales-orders">Đơn bán</Link> › Nhu cầu chưa đáp ứng
+          <Link to="/sales-orders">Đơn bán</Link> › Khách hỏi mà hết hàng
         </>
       }
     >
@@ -1415,7 +1427,7 @@ export function UnmetDemandPage() {
                 {data.data && !data.data.items.length && (
                   <tr>
                     <td colSpan={scope.owner ? 8 : 7} className="stock-empty">
-                      Không có nhu cầu chưa đáp ứng phù hợp.
+                      Không có lượt khách hỏi mà hết hàng phù hợp.
                     </td>
                   </tr>
                 )}

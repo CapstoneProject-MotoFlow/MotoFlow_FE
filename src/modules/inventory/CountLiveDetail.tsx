@@ -5,12 +5,16 @@ import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
 import { countFromDto, canCancelCount, type CountDto } from './countApi'
 import type { Assignment } from './countAssignment'
-import { countStateNames, countTypeNames } from './stockCountModel'
+import {
+  stockCountStatusLabels as countStateNames,
+  stockCountTypeLabels as countTypeNames,
+} from '../../shared/labels/status'
 import { date, dateTime, money, today } from './presentation'
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
+import { documentCode } from '../../shared/utils/documentCode'
 import './stock-count.css'
 export default function CountLiveDetail() {
   const { id } = useParams(),
@@ -154,7 +158,8 @@ export default function CountLiveDetail() {
             </dl>
             {d.request && (
               <p className="stock-notice">
-                Yêu cầu #{d.request.id} · {d.request.reason}
+                Yêu cầu {documentCode('YCKK', d.request.id)} ·{' '}
+                {d.request.reason}
               </p>
             )}
             {c.recountReason && (
@@ -235,7 +240,7 @@ export default function CountLiveDetail() {
                 <thead>
                   <tr>
                     <th>Phụ tùng / Lô</th>
-                    <th>Vị trí</th>
+                    <th>Vị trí (khu – kệ)</th>
                     {!staff && <th>Sổ sách</th>}
                     <th>Số đếm</th>
                     {!staff && <th>Chênh lệch / Lý do</th>}

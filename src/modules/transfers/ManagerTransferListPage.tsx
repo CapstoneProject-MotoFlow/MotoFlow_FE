@@ -7,9 +7,8 @@ import type { Page } from '../inventory/types'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { states, type TransferRow } from './types'
 import ReceivingAssignment from '../operations/ReceivingAssignment'
+import { documentCode as code } from '../../shared/utils/documentCode'
 import './transfers.css'
-const code = (prefix: string, id: number) =>
-  prefix + '-' + String(id).padStart(4, '0')
 export default function ManagerTransferListPage() {
   const scope = useInventoryScope(),
     [search, setSearch] = useState(''),
@@ -190,7 +189,7 @@ export default function ManagerTransferListPage() {
                     {row.createdAt.slice(0, 10).split('-').reverse().join('/')}
                   </td>
                   <td>
-                    {row.lineCount} mã · {row.totalPlannedQty} sản phẩm
+                    {row.lineCount} mã · {row.totalPlannedQty} phụ tùng
                   </td>
                   <td>
                     <span className={'tf-badge tf-status-' + row.status}>

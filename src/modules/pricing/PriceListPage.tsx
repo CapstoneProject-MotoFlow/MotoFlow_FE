@@ -86,7 +86,7 @@ export default function PriceListPage() {
                 Ngưỡng chiết khấu
               </button>
               <button onClick={() => setLimit('MINIMUM_MARGIN')}>
-                Biên lợi nhuận
+                Lãi (%)
               </button>
             </div>
           )}

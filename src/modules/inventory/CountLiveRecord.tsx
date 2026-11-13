@@ -11,6 +11,7 @@ import { mapCountSheet, readCountFile } from './countImport'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
+import { documentCode } from '../../shared/utils/documentCode'
 import './stock-count.css'
 export default function CountLiveRecord() {
   const { id } = useParams(),
@@ -136,7 +137,7 @@ function Editor({
   }
   return (
     <InventoryPanel
-      title={'KK-' + String(data.id).padStart(4, '0') + ' · ' + data.storeName}
+      title={documentCode('KK', data.id) + ' · ' + data.storeName}
     >
       <InventoryNotice
         loading={assignment.loading}
@@ -218,7 +219,7 @@ function Editor({
           <thead>
             <tr>
               <th>Phụ tùng / Lô</th>
-              <th>Vị trí</th>
+              <th>Vị trí (khu – kệ)</th>
               <th>Số đếm thực tế</th>
             </tr>
           </thead>
@@ -228,7 +229,8 @@ function Editor({
                 <td>
                   {l.partName}
                   <small>
-                    {l.sku} · {l.lotId == null ? 'Không lô' : '#' + l.lotId}
+                    {l.sku} ·{' '}
+                    {l.lotId == null ? 'Không lô' : documentCode('L', l.lotId)}
                   </small>
                   {l.recountReason && <small>Đếm lại: {l.recountReason}</small>}
                 </td>

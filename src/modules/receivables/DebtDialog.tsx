@@ -68,7 +68,7 @@ export function CreditDialog({
         )}
         <p className="rv-dialog-explanation">
           {grant
-            ? 'Quyền có hiệu lực tới khi thu hồi. Branch Manager quyết định ghi nợ cho từng đơn.'
+            ? 'Quyền có hiệu lực tới khi thu hồi. Quản lý cửa hàng quyết định ghi nợ cho từng đơn.'
             : 'Khách không được ghi nợ mới. Các khoản nợ hiện có vẫn được theo dõi và thu như cũ.'}
         </p>
         <div className="rv-recap">

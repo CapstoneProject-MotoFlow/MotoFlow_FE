@@ -30,6 +30,8 @@ import {
 } from './salesModel'
 import type { OrderDto } from './salesApi'
 
+import { useFormValidation } from '../../shared/hooks/useFormValidation'
+import FieldError from '../../shared/ui/FieldError'
 export type SalesProduct = {
   id: number
   sku: string
@@ -370,12 +372,13 @@ export function SalesOrderFormView({
     navigate(order ? '/sales-orders/' + order.id : '/sales-orders')
   }
 
+  const validation = useFormValidation()
   const unpriced = lines.find((l) => lineOf(l.product.id)?.retailPrice === null)
   // Lý do nút Tạo đơn đang khóa (review L4: nút xám phải nói thiếu gì).
   const blocker = needsStore
     ? 'Chọn cửa hàng bán trước.'
     : !lines.length
-      ? 'Thêm ít nhất một phụ tùng vào đơn.'
+      ? 'Chưa có phụ tùng nào trong đơn.'
       : invalidQty
         ? 'Số lượng mỗi dòng phải là số nguyên từ 1 đến 100.000.'
         : !validDiscount
@@ -452,8 +455,11 @@ export function SalesOrderFormView({
       />
       <form
         className="pos-layout"
+        noValidate
+        onInput={validation.onInput}
         onSubmit={(event) => {
           event.preventDefault()
+          if (!validation.check(event.currentTarget)) return
           void submit()
         }}
       >
@@ -511,7 +517,7 @@ export function SalesOrderFormView({
                         <small>
                           {product.sku}
                           {product.availableQty != null &&
-                            ` · tồn khả dụng ${number.format(product.availableQty)} ${product.baseUnit}`}
+                            ` · có thể bán ${number.format(product.availableQty)} ${product.baseUnit}`}
                         </small>
                       </span>
                       <span className="pos-result-price">
@@ -571,11 +577,11 @@ export function SalesOrderFormView({
                           <small className="pos-line-meta">
                             <code>{product.sku}</code>
                             {sellable != null &&
-                              ` · tồn khả dụng ${number.format(sellable)} ${product.baseUnit}`}
+                              ` · có thể bán ${number.format(sellable)} ${product.baseUnit}`}
                           </small>
                           {over && (
                             <small className="pos-line-warn">
-                              Vượt tồn khả dụng, vẫn tạo được đơn
+                              Vượt số có thể bán, vẫn tạo được đơn
                             </small>
                           )}
                         </td>
@@ -597,6 +603,11 @@ export function SalesOrderFormView({
                                     : l,
                                 ),
                               )
+                            }
+                          />
+                          <FieldError
+                            message={
+                              validation.errors['Số lượng ' + product.sku]
                             }
                           />
                         </td>
@@ -688,6 +699,7 @@ export function SalesOrderFormView({
                     </option>
                   ))}
                 </select>
+                <FieldError message={validation.errors['Cửa hàng bán']} />
               </label>
             ) : (
               <strong className="pos-store">{storeName ?? 'Cửa hàng'}</strong>
@@ -897,6 +909,9 @@ export function SalesOrderFormView({
                     />
                     <span>%</span>
                   </span>
+                  <FieldError
+                    message={validation.errors['Chiết khấu cho cả đơn (%)']}
+                  />
                 </dd>
               </div>
             )}
@@ -913,16 +928,6 @@ export function SalesOrderFormView({
           </dl>
 
           <div className="pos-actions">
-            {blocker && lines.length > 0 && blocker !== 'Đang tính giá…' && (
-              <p className="pos-blocker" role="status">
-                {blocker}
-              </p>
-            )}
-            {!lines.length && needsStore && (
-              <p className="pos-blocker" role="status">
-                {blocker}
-              </p>
-            )}
             {error && error !== blocker && (
               <p className="pos-warn" role="alert">
                 {error}
@@ -941,6 +946,11 @@ export function SalesOrderFormView({
             >
               {busy ? 'Đang lưu…' : order ? 'Lưu phiên bản mới' : 'Tạo đơn'}
             </button>
+            {blocker && blocker !== 'Đang tính giá…' && (
+              <p className="pos-blocker" role="status">
+                {blocker}
+              </p>
+            )}
             <button
               type="button"
               className="mf-btn mf-btn--secondary mf-btn--lg"
@@ -986,6 +996,7 @@ export function SalesOrderFormView({
           title="Hủy đơn đang tạo?"
           message="Các phụ tùng đã chọn và đơn nháp trên máy sẽ bị xóa."
           confirmLabel="Hủy đơn"
+          cancelLabel="Không hủy"
           danger
           onConfirm={async () => discard()}
           onCancel={() => setConfirmLeave(false)}

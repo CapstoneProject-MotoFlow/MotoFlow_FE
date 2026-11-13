@@ -548,13 +548,13 @@ export default function InventoryPage() {
             />
             Hiện cả mã tồn bằng 0
           </label>
-          <fieldset className="stock-range" aria-label="Khoảng tồn khả dụng">
-            <legend>Tồn khả dụng</legend>
+          <fieldset className="stock-range" aria-label="Khoảng tồn có thể bán">
+            <legend>Tồn có thể bán</legend>
             <input
               type="number"
               min={0}
               inputMode="numeric"
-              aria-label="Tồn khả dụng từ"
+              aria-label="Tồn có thể bán từ"
               placeholder="Từ"
               value={p.get('minQty') ?? ''}
               onChange={(e) => scope.filter({ minQty: e.target.value }, true)}
@@ -564,7 +564,7 @@ export default function InventoryPage() {
               type="number"
               min={0}
               inputMode="numeric"
-              aria-label="Tồn khả dụng đến"
+              aria-label="Tồn có thể bán đến"
               placeholder="Đến"
               value={p.get('maxQty') ?? ''}
               onChange={(e) => scope.filter({ maxQty: e.target.value }, true)}
@@ -590,12 +590,7 @@ export default function InventoryPage() {
             )}
           </fieldset>
         </div>
-        {grouped && (
-          <Hint>
-            Đang xem toàn chuỗi, khoảng tồn tính trên tổng khả dụng của các kho.
-            Chọn một kho để tích chọn phụ tùng và tạo nhanh yêu cầu.
-          </Hint>
-        )}
+        {grouped && <Hint>Chọn một kho để tạo nhanh yêu cầu nhập.</Hint>}
         {selectable && pickedRows.length > 0 && (
           <div
             className="stock-pick-bar"
@@ -647,6 +642,11 @@ export default function InventoryPage() {
             Thử lại
           </button>
         )}
+        <Hint>
+          Có thể bán: hàng bán ngay được. Chưa bán được: hàng hỏng, giao sai,
+          chờ kiểm, chờ trả nhà cung cấp. Tồn thực tế = có thể bán + chưa bán
+          được, không tính hàng đang chuyển.
+        </Hint>
         <div className="stock-table-scroll">
           <table className="stock-table stock-overview-table">
             <colgroup>
@@ -671,24 +671,24 @@ export default function InventoryPage() {
                   </th>
                 )}
                 <th>Phụ tùng</th>
-                {!grouped && <th>Ô kệ</th>}
-                <th className="stock-numeric">Khả dụng</th>
+                {!grouped && <th>Vị trí (khu – kệ)</th>}
+                <th className="stock-numeric">Có thể bán</th>
                 <th
                   className="stock-numeric"
-                  title="Chờ kiểm, giao sai, hư hỏng, chờ trả nhà cung cấp"
+                  title="Gồm hàng hỏng, giao sai, chờ kiểm, chờ trả nhà cung cấp"
                 >
-                  Không
+                  Chưa
                   <br />
-                  khả dụng ⓘ
+                  bán được ⓘ
                 </th>
                 <th className="stock-numeric">
                   Đang
                   <br />
-                  điều chuyển
+                  chuyển
                 </th>
                 <th
                   className="stock-numeric"
-                  title="Khả dụng cộng không khả dụng; không tính hàng đang điều chuyển"
+                  title="Có thể bán cộng chưa bán được; không tính hàng đang chuyển"
                 >
                   Tồn
                   <br />

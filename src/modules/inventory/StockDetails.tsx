@@ -12,6 +12,7 @@ import {
 } from './presentation'
 import type { StockDetail, StockRow } from './types'
 
+import { documentCode } from '../../shared/utils/documentCode'
 export function StockLots({ row, owner }: { row: StockRow; owner: boolean }) {
   const detail = useInventoryData<StockDetail>(
     '/inventory/stock/' + row.storeId + '/' + row.productId,
@@ -52,7 +53,7 @@ export function StockLots({ row, owner }: { row: StockRow; owner: boolean }) {
                   <tr key={lot.lotId + lot.stockStatus}>
                     <td>
                       <Link to={lotLink(lot.lotId, row.storeId)}>
-                        L-{String(lot.lotId).padStart(4, '0')}
+                        {documentCode('L', lot.lotId)}
                       </Link>
                       <small>{lot.manufacturerLotNo}</small>
                     </td>

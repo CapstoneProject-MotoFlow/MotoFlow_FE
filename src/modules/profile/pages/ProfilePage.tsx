@@ -10,12 +10,9 @@ import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import type { AuthUser } from '../../../shared/types/auth'
 import { roleNames } from '../../../shared/utils/roles'
+import { managerPermissionLabel } from '../../owner/managerPermissions'
 import '../profile.css'
 
-const permissionNames: Record<string, string> = {
-  CATALOG_EDIT: 'Chỉnh sửa danh mục',
-  RETAIL_PRICE_EDIT: 'Chỉnh sửa giá bán lẻ',
-}
 /** ProfilePage: Đọc thông tin tài khoản hiện tại, vai trò/quyền, tên cửa hàng; mở đổi mật khẩu. */
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -89,7 +86,7 @@ export default function ProfilePage() {
                 {profile.storeName ||
                   user?.storeName ||
                   (profile.storeId != null
-                    ? 'Cửa hàng #' + profile.storeId
+                    ? '(không rõ tên)'
                     : profile.role === 'OWNER' || profile.role === 'ADMIN'
                       ? 'Toàn chuỗi'
                       : 'Chưa được phân công cửa hàng')}
@@ -104,7 +101,7 @@ export default function ProfilePage() {
                   <ul>
                     {profile.permissions.map((permission) => (
                       <li key={permission}>
-                        {permissionNames[permission] || permission}
+                        {managerPermissionLabel(permission)}
                       </li>
                     ))}
                   </ul>

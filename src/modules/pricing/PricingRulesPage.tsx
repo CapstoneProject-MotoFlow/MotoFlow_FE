@@ -58,7 +58,7 @@ export default function PricingRulesPage() {
             setNotice('')
           }}
         >
-          Ngưỡng và biên lợi nhuận
+          Ngưỡng chiết khấu và lãi tối thiểu
         </button>
         <button
           role="tab"
@@ -106,7 +106,7 @@ export default function PricingRulesPage() {
             onSaved={saved}
           />
           <SalesLimitCard
-            title="Biên lợi nhuận tối thiểu"
+            title="Lãi tối thiểu (%)"
             type="MINIMUM_MARGIN"
             limit={limits.data.minimumMargin}
             onSaved={saved}
@@ -141,7 +141,7 @@ export function LimitEditor({
       title={
         type === 'DISCOUNT_THRESHOLD'
           ? 'Đặt chiết khấu tối đa'
-          : 'Đặt biên lợi nhuận tối thiểu'
+          : 'Đặt lãi tối thiểu'
       }
       formId="sales-limit"
       submitLabel="Lưu ngưỡng"

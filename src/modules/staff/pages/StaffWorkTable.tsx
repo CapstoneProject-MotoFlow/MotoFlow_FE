@@ -10,6 +10,7 @@ import { date, dateTime } from '../../inventory/presentation'
 import { useReceivingTasks } from '../../operations/useReceivingTasks'
 import { receivingWork } from '../../operations/receivingTaskModel'
 
+import { documentCode } from '../../../shared/utils/documentCode'
 type AssignedReceipt = {
   goodsReceiptNoteId: number
   supplierName: string
@@ -66,7 +67,7 @@ export default function StaffWorkTable() {
       .map((s) => ({
         key: 's' + s.id,
         task: 'Lấy hàng đơn bán',
-        code: 'DB-' + String(s.id).padStart(4, '0'),
+        code: documentCode('DB', s.id),
         description: s.customerName ?? 'Khách lẻ',
         assignedAt: null,
         due: null,
@@ -79,7 +80,7 @@ export default function StaffWorkTable() {
     ...(receipts.data?.items ?? []).map((r) => ({
       key: 'r' + r.goodsReceiptNoteId,
       task: 'Kiểm nhận hàng nhập',
-      code: 'PN-' + String(r.goodsReceiptNoteId).padStart(4, '0'),
+      code: documentCode('PN', r.goodsReceiptNoteId),
       description: r.supplierName + ' · ' + r.lineCount + ' dòng',
       assignedAt: r.assignedAt ?? null,
       due: null,
@@ -107,7 +108,7 @@ export default function StaffWorkTable() {
         return {
           key: 't' + t.id,
           task: preparing ? 'Soạn hàng điều chuyển' : 'Điều chuyển được giao',
-          code: 'DC-' + String(t.id).padStart(4, '0'),
+          code: documentCode('DC', t.id),
           description: t.sourceStoreName + ' đến ' + t.destStoreName,
           assignedAt: null,
           due: null,
@@ -122,7 +123,7 @@ export default function StaffWorkTable() {
       .map((c) => ({
         key: 'c' + c.id,
         task: 'Đếm kiểm kê',
-        code: 'KK-' + String(c.id).padStart(4, '0'),
+        code: documentCode('KK', c.id),
         description: c.storeName,
         assignedAt: null,
         due: 'Ngày đếm ' + date(c.countDate),
@@ -224,16 +225,12 @@ export default function StaffWorkTable() {
       {submitted.length > 0 && (
         <details className="staff-submitted-work">
           <summary>
-            {submitted.length} việc đã gửi, chờ Branch Manager xác nhận
+            {submitted.length} việc đã gửi, chờ quản lý cửa hàng xác nhận
           </summary>
           {table(submitted)}
         </details>
       )}
       <footer>
-        <p>
-          Công việc trong trang {page + 1}, tối đa 20 chứng từ mỗi loại. Mở
-          phiếu để xem đầy đủ phân công và kết quả.
-        </p>
         <nav className="staff-work-pages" aria-label="Trang công việc">
           <button
             disabled={page === 0 || loading}
@@ -249,10 +246,6 @@ export default function StaffWorkTable() {
             ›
           </button>
         </nav>
-        <p>
-          Thời điểm giao và hạn chỉ hiện khi có dữ liệu. Kiểm kê và điều chuyển
-          cần mở phiếu để xác định trạng thái việc mới nhất.
-        </p>
       </footer>
     </section>
   )

@@ -1176,3 +1176,13 @@ input::placeholder {
 .admin-dashboard .mf-row-menu-toggle.mf-row-menu-toggle[aria-expanded='true'] {
   color: var(--mf-primary, #4b5eff);
 }
+
+/* Lỗi kiểm tra form bằng tiếng Việt, hiện ngay dưới ô (FieldError + useFormValidation). */
+.mf-field-error {
+  display: block;
+  margin-top: 4px;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}

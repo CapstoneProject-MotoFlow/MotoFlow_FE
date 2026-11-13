@@ -5,6 +5,10 @@ import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import { today, money } from '../inventory/presentation'
 import { discountedPrice, salesTotal, type SalesOrder } from './salesModel'
+import { paymentMethodLabels } from '../../shared/labels/status'
+import { formatDateTime } from '../../shared/utils/format'
+import { useFormValidation } from '../../shared/hooks/useFormValidation'
+import FieldError from '../../shared/ui/FieldError'
 function refreshSales(message = 'Đã lưu thay đổi.') {
   window.dispatchEvent(new CustomEvent('sales-changed', { detail: message }))
 }
@@ -48,6 +52,7 @@ export default function SalesSettlementDialog({
       order.lines.map((l) => [l.productId, String(l.picked ?? 0)]),
     ),
   )
+  const validation = useFormValidation()
   const lock = useRef(false),
     [paymentId, setPaymentId] = useState<number>()
   const titles: Record<string, string> = {
@@ -107,6 +112,7 @@ export default function SalesSettlementDialog({
       }
       title={titles[action] + ' · ' + order.code}
       formId="sales-transaction"
+      closeLabel={action === 'cancel' ? 'Không hủy' : undefined}
       busy={busy}
       submitDisabled={
         !allowed ||
@@ -138,8 +144,11 @@ export default function SalesSettlementDialog({
       <form
         id="sales-transaction"
         className="sales-form"
+        noValidate
+        onInput={validation.onInput}
         onSubmit={async (e) => {
           e.preventDefault()
+          if (!validation.check(e.currentTarget)) return
           if (lock.current || !allowed) return
           const form = new FormData(e.currentTarget),
             text = (key: string) => String(form.get(key) ?? '').trim()
@@ -327,6 +336,9 @@ export default function SalesSettlementDialog({
                             })
                           }
                         />
+                        <FieldError
+                          message={validation.errors['Số giao ' + l.sku]}
+                        />
                       </td>
                       <td>
                         {l.retailPrice == null ||
@@ -356,13 +368,15 @@ export default function SalesSettlementDialog({
                       order.discountThreshold +
                       '%'}
                 </p>
-                <p>○ Giá và biên lợi nhuận được BE kiểm tra khi xác nhận</p>
+                <p>
+                  ○ Hệ thống sẽ kiểm tra giá và lãi tối thiểu khi bạn xác nhận
+                </p>
                 <p>
                   {stockKnown
                     ? stockEnough
                       ? '✓ Tồn vừa tải đủ số giao'
                       : '! Số giao vượt tồn vừa tải'
-                    : '○ Tồn khả dụng được kiểm tra khi xác nhận'}
+                    : '○ Số có thể bán được kiểm tra khi xác nhận'}
                 </p>
               </div>
               <dl>
@@ -408,8 +422,8 @@ export default function SalesSettlementDialog({
                       l.requested,
                   )
                   .join('; ')}
-                . Số giao ít hơn yêu cầu sẽ tạo phiên bản mới. Nhu cầu còn thiếu
-                được BE tổng hợp khi đơn hoàn tất.
+                . Số giao ít hơn yêu cầu sẽ tạo phiên bản mới. Phần khách còn
+                thiếu sẽ được hệ thống ghi lại khi đơn hoàn tất.
               </p>
             )}
             <label className="sales-confirm-agreement">
@@ -492,6 +506,15 @@ export default function SalesSettlementDialog({
                 />
                 <span>đ</span>
               </div>
+              <FieldError
+                message={
+                  validation.errors[
+                    method === 'CASH'
+                      ? 'Số tiền khách đưa'
+                      : 'Số tiền chuyển khoản'
+                  ]
+                }
+              />
             </label>
             <dl className="sales-payment-change">
               <div>
@@ -516,6 +539,13 @@ export default function SalesSettlementDialog({
             Số tiền hoàn (đ)
             <input
               required
+              name="refundAmount"
+              data-label="Số tiền hoàn"
+              data-max-message={
+                'Không hoàn quá số đã thu (' +
+                money.format(order.refundable ?? 0) +
+                ')'
+              }
               type="number"
               min="1"
               max={order.refundable ?? 0}
@@ -523,6 +553,7 @@ export default function SalesSettlementDialog({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
+            <FieldError message={validation.errors.refundAmount} />
           </label>
         )}
         {(action === 'payment' ||
@@ -545,6 +576,7 @@ export default function SalesSettlementDialog({
               <label>
                 Mã giao dịch
                 <input required name="reference" maxLength={100} />
+                <FieldError message={validation.errors.reference} />
               </label>
             )}
             <label>
@@ -565,6 +597,7 @@ export default function SalesSettlementDialog({
             <label>
               Hạn trả
               <input required name="dueDate" type="date" min={today()} />
+              <FieldError message={validation.errors.dueDate} />
             </label>
             <label>
               <input
@@ -581,6 +614,7 @@ export default function SalesSettlementDialog({
             Khoản tiền chờ xác minh
             <select
               required
+              name="paymentId"
               value={paymentId ?? ''}
               onChange={(e) => setPaymentId(Number(e.target.value))}
             >
@@ -589,15 +623,19 @@ export default function SalesSettlementDialog({
                 ?.filter((p) => p.status === 'UNVERIFIED')
                 .map((p) => (
                   <option key={p.id} value={p.id}>
-                    #{p.id} · {money.format(p.amount)}
+                    {paymentMethodLabels[p.method] || p.method}{' '}
+                    {money.format(p.amount)} lúc{' '}
+                    {formatDateTime(p.recordedAt).slice(-5)}
                   </option>
                 ))}
             </select>
+            <FieldError message={validation.errors.paymentId} />
           </label>
         )}
         {(action === 'cancel' || action === 'reject') && (
           <label>
             Lý do *<textarea name="reason" required maxLength={255} />
+            <FieldError message={validation.errors.reason} />
           </label>
         )}
         {action === 'cancel' && order.netPaid > 0 && (

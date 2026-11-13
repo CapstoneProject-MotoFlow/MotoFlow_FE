@@ -14,7 +14,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
   {
     label: 'Bán hàng',
     icon: 'receipt',
-    labels: ['Đơn bán', 'Nhu cầu chưa đáp ứng', 'Khách hàng'],
+    labels: ['Đơn bán', 'Khách hỏi mà hết hàng', 'Khách hàng'],
   },
   {
     label: 'Điều chuyển',
@@ -28,7 +28,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
       'Tồn kho',
       'Lịch sử xuất nhập',
       'Lô hàng',
-      'Tra cứu tồn',
+      'Tồn kho theo ngày',
       'Kỳ kho',
       'Kiểm kê',
     ],
@@ -189,7 +189,9 @@ export default function BusinessSidebarNav({
   return (
     <nav
       className="sidebar-nav owner-accordion"
-      aria-label={owner ? 'Điều hướng Owner' : 'Điều hướng Branch Manager'}
+      aria-label={
+        owner ? 'Điều hướng chủ cửa hàng' : 'Điều hướng quản lý cửa hàng'
+      }
     >
       {link({ label: 'Tổng quan', href: '/dashboard', icon: 'grid' })}
       {link(find('Thông báo'))}

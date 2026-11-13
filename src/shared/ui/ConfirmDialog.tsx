@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom'
 /** ConfirmDialog: Popup xác nhận hành động; trạng thái đang xử lý, focus, Escape, Tab và khôi phục focus sau đóng. */
 export default function ConfirmDialog({
   confirmLabel = 'Xác nhận',
+  cancelLabel = 'Hủy',
   danger = false,
   title,
   message,
@@ -15,6 +16,7 @@ export default function ConfirmDialog({
   onCancel,
 }: {
   confirmLabel?: string
+  cancelLabel?: string
   danger?: boolean
   title: string
   message: ReactNode
@@ -87,7 +89,7 @@ export default function ConfirmDialog({
             disabled={busy}
             onClick={onCancel}
           >
-            Hủy
+            {cancelLabel}
           </button>
           <button
             type="button"

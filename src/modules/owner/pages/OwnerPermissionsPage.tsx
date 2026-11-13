@@ -2,6 +2,7 @@ import {
   hasManagerPermission,
   managerPermissionChange,
   managerPermissionCodes,
+  managerPermissionLabels,
   readManagers,
   type Manager,
   type ManagerPermission,
@@ -126,7 +127,7 @@ export default function OwnerPermissionsPage() {
         <p role="status">Đang tải…</p>
       ) : !error ? (
         <section className="owner-permissions-panel">
-          <h2>Branch Manager</h2>
+          <h2>Quản lý cửa hàng</h2>
           <div className="owner-permissions-table">
             <table>
               <thead>
@@ -173,9 +174,7 @@ export default function OwnerPermissionsPage() {
                             aria-label={
                               row.username +
                               ': ' +
-                              (permission === 'CATALOG_EDIT'
-                                ? 'Sửa danh mục'
-                                : 'Sửa giá bán lẻ')
+                              managerPermissionLabels[permission]
                             }
                             checked={hasManagerPermission(row, permission)}
                             onChange={() => {
@@ -237,8 +236,7 @@ export default function OwnerPermissionsPage() {
           </p>
         )}
         <p className="permission-history-note">
-          Hiển thị thay đổi trong phiên này. Lịch sử trước đó chưa được hệ thống
-          cung cấp cho Owner.
+          Hiển thị thay đổi trong phiên này.
         </p>
       </section>
       {pending && (
@@ -278,7 +276,7 @@ export default function OwnerPermissionsPage() {
                     permission: pending.permission,
                     reason,
                     at: new Date().toISOString(),
-                    actor: user?.fullName || user?.username || 'Owner',
+                    actor: user?.fullName || user?.username || 'Chủ cửa hàng',
                   },
                   ...previous,
                 ])

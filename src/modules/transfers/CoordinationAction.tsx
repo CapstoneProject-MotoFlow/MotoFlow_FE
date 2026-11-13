@@ -192,6 +192,7 @@ export default function CoordinationAction({
                     value={adjustment}
                     onChange={(e) => setAdjustment(e.target.value)}
                   />
+                  <small>Nhập mã yêu cầu điều chỉnh do quản lý lập</small>
                 </label>
               )}
               <label>

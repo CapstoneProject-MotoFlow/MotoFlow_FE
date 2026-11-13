@@ -3,11 +3,16 @@ import { useInventoryData, type Query } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import type { Page, StockSummary } from '../inventory/types'
 import { dateTime } from '../inventory/presentation'
-import { states as transferStates } from '../transfers/types'
-import { salesStates } from '../sales/salesModel'
-import { countStateNames } from '../inventory/stockCountModel'
+import {
+  purchaseOrderStatusLabels,
+  goodsReceiptStatusLabels,
+  salesOrderStatusLabels,
+  stockCountStatusLabels,
+  transferStatusLabels,
+} from '../../shared/labels/status'
 import { useReceivingTasks } from './useReceivingTasks'
 import { receivingWork } from './receivingTaskModel'
+import { documentCode } from '../../shared/utils/documentCode'
 import './operations.css'
 type Row = {
   id: number
@@ -23,18 +28,13 @@ type Row = {
   assigneeName?: string
 }
 type AssignedReceiptRow = Omit<Row, 'id'> & { goodsReceiptNoteId: number }
-const states: Record<string, string> = {
-  ...transferStates,
-  ...salesStates,
-  ...countStateNames,
-  AWAITING_INSPECTION: 'Chờ kiểm nhận',
-  AWAITING_CONFIRMATION: 'Chờ xác nhận',
-  AWAITING_RECOUNT: 'Chờ kiểm lại',
-  CONFIRMED: 'Đã xác nhận',
-  AWAITING_DELIVERY: 'Chờ giao hàng',
-  RECEIVING: 'Đang nhận',
-  FULLY_RECEIVED: 'Đã nhận đủ',
-  CANCELLED: 'Đã hủy',
+/** Nhãn trạng thái theo loại chứng từ của từng hàng đợi (CONFIRMED của đơn bán khác của phiếu nhập). */
+function statesFor(path: string, counts?: boolean): Record<string, string> {
+  if (counts || path.startsWith('/stock-counts')) return stockCountStatusLabels
+  if (path.startsWith('/goods-receipt-notes')) return goodsReceiptStatusLabels
+  if (path.startsWith('/purchase-orders')) return purchaseOrderStatusLabels
+  if (path.startsWith('/transfer-orders')) return transferStatusLabels
+  return salesOrderStatusLabels
 }
 function Queue({
   title,
@@ -95,7 +95,18 @@ function Queue({
                             id
                           }
                         >
-                          #{id}
+                          {documentCode(
+                            counts || path.startsWith('/stock-counts')
+                              ? 'KK'
+                              : path.startsWith('/goods-receipt-notes')
+                                ? 'PN'
+                                : path.startsWith('/purchase-orders')
+                                  ? 'YCN'
+                                  : path.startsWith('/transfer-orders')
+                                    ? 'DC'
+                                    : 'SO',
+                            id,
+                          )}
                         </Link>
                       </td>
                       <td>
@@ -114,7 +125,9 @@ function Queue({
                           )}
                         </small>
                       </td>
-                      <td>{states[row.status] ?? row.status}</td>
+                      <td>
+                        {statesFor(path, counts)[row.status] ?? row.status}
+                      </td>
                     </tr>
                   )
                 })}
@@ -210,7 +223,7 @@ export function InventoryAttention() {
           Dòng tồn dưới ngưỡng <strong>{summary.data?.lowStock ?? '—'}</strong>
         </Link>
         <Link to="/inventory?view=unavailable">
-          Dòng tồn chưa khả dụng{' '}
+          Dòng tồn chưa bán được{' '}
           <strong>{summary.data?.unavailable ?? '—'}</strong>
         </Link>
         <Link to="/inventory/lots?tab=NEAR_EXPIRY">
@@ -230,13 +243,13 @@ export default function DashboardWork({
       {role === 'OWNER' ? (
         <>
           <Queue
-            title="Đơn mua đang mở"
+            title="Yêu cầu nhập hàng đang mở"
             path="/purchase-orders"
             href="/purchase-orders"
             params={{ view: 'OPEN' }}
           />
           <Queue
-            title="Lượt nhận hàng gần đây"
+            title="Phiếu nhập gần đây"
             path="/goods-receipt-notes"
             href="/purchase-orders"
           />

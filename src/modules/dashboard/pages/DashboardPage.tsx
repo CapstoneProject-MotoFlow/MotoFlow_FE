@@ -35,7 +35,7 @@ export default function DashboardPage() {
       .catch(() => {
         if (mounted)
           setError(
-            'Không tải được dữ liệu. Hãy kiểm tra kết nối backend và quyền truy cập của tài khoản.',
+            'Không tải được dữ liệu. Vui lòng thử lại sau hoặc báo quản trị viên.',
           )
       })
       .finally(() => {

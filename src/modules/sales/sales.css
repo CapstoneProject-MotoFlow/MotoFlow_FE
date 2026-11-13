@@ -1887,3 +1887,9 @@
   border-color: #f04452;
   background: #fff8f8;
 }
+/* Lý do nút "Ghi nhận bán chịu" đang mờ. */
+.sales-action-reason {
+  align-self: center;
+  color: #667085;
+  font-size: 13px;
+}
