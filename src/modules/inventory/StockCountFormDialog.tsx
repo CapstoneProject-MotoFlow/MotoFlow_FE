@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FormDialog from '../../shared/ui/FormDialog'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, inventoryError } from './api'
 import { InventoryNotice } from './components'
 import type { CountRequest, CountDto } from './countApi'
@@ -38,7 +39,7 @@ export function StockCountFormDialog({
     [reason, setReason] = useState(''),
     [countType, setType] = useState('CYCLE'),
     [date, setDate] = useState(today()),
-    [query, setQuery] = useState(''),
+    [query, setQuery] = useState<string | null>(null),
     [picked, setPicked] = useState<Product[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('')
@@ -70,10 +71,12 @@ export function StockCountFormDialog({
     ),
     products = useInventoryData<Page<Product>>(
       '/products',
-      { q: query, status: 'ACTIVE', size: 20 },
+      { q: query?.trim(), status: 'ACTIVE', size: 20 },
       0,
-      actualScope === 'PRODUCTS' && !source,
+      actualScope === 'PRODUCTS' && !source && query !== null,
     )
+  const productOptions =
+    products.data?.items.filter((p) => !actualProducts.includes(p.id)) ?? []
   const valid =
     !!actualStore &&
     (!requestId || !!source) &&
@@ -229,42 +232,40 @@ export function StockCountFormDialog({
               </ul>
             ) : (
               <>
-                <label>
-                  Tìm phụ tùng
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                <div className="count-product-picker">
+                  <span>Tìm phụ tùng</span>
+                  <SearchableFilter
+                    label="Tìm phụ tùng"
+                    searchPlaceholder="Tìm theo tên hoặc SKU…"
+                    value=""
+                    options={productOptions.map((p) => ({
+                      value: String(p.id),
+                      label: p.sku + ' · ' + p.partName,
+                    }))}
+                    onSearch={setQuery}
+                    loading={products.loading}
+                    error={products.error}
+                    disabled={busy}
+                    onChange={(value) => {
+                      const product = productOptions.find(
+                        (p) => String(p.id) === value,
+                      )
+                      if (product)
+                        setPicked((v) =>
+                          v.some((p) => p.id === product.id)
+                            ? v
+                            : [...v, product],
+                        )
+                    }}
                   />
-                </label>
-                <InventoryNotice
-                  loading={products.loading}
-                  error={products.error}
-                />
-                <select
-                  aria-label="Thêm phụ tùng"
-                  value=""
-                  onChange={(e) => {
-                    const product = products.data?.items.find(
-                      (p) => p.id === Number(e.target.value),
-                    )
-                    if (product) setPicked((v) => [...v, product])
-                  }}
-                >
-                  <option value="">Chọn để thêm</option>
-                  {products.data?.items
-                    .filter((p) => !actualProducts.includes(p.id))
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.sku} · {p.partName}
-                      </option>
-                    ))}
-                </select>
+                </div>
                 <ul className="count-chips">
                   {picked.map((p) => (
                     <li key={p.id}>
                       {p.sku}
                       <button
                         type="button"
+                        aria-label={'Bỏ ' + p.sku}
                         onClick={() =>
                           setPicked((v) => v.filter((x) => x.id !== p.id))
                         }
