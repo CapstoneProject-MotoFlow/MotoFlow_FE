@@ -7,6 +7,8 @@ import { useInventoryScope, inventoryError } from '../inventory/api'
 import { useChoicePages } from '../sales/useSalesList'
 import { money, today } from '../inventory/presentation'
 import type { Customer } from '../customers/types'
+import { useFormValidation } from '../../shared/hooks/useFormValidation'
+import FieldError from '../../shared/ui/FieldError'
 export default function OpeningDebtPicker({
   onClose,
   onSaved,
@@ -34,6 +36,7 @@ export default function OpeningDebtPicker({
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false)
   const [showChoices, setShowChoices] = useState(false)
+  const validation = useFormValidation()
   const choices = useChoicePages<Customer>('/customers', query),
     lock = useRef(false)
   const warehouse = scope.storeId
@@ -82,8 +85,11 @@ export default function OpeningDebtPicker({
       <form
         id="opening-debt"
         className="rv-opening-form"
+        noValidate
+        onInput={validation.onInput}
         onSubmit={(e) => {
           e.preventDefault()
+          if (!validation.check(e.currentTarget)) return
           void save()
         }}
       >
@@ -96,6 +102,8 @@ export default function OpeningDebtPicker({
           <label className="rv-full">
             Khách hàng <span>*</span>
             <input
+              name="customer"
+              data-required-message="Vui lòng chọn khách hàng"
               role="combobox"
               aria-expanded={showChoices && !customer}
               aria-controls="opening-customers"
@@ -145,11 +153,14 @@ export default function OpeningDebtPicker({
                 )}
               </div>
             )}
+            <FieldError message={validation.errors.customer} />
           </label>
           <label>
             Số tiền nợ <span>*</span>
             <div className="rv-money-input">
               <input
+                name="amount"
+                data-label="Số tiền nợ"
                 inputMode="numeric"
                 value={amount ? Number(amount).toLocaleString('vi-VN') : ''}
                 onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
@@ -157,15 +168,18 @@ export default function OpeningDebtPicker({
               />
               <span>đ</span>
             </div>
+            <FieldError message={validation.errors.amount} />
           </label>
           <label>
             Hạn trả <span>*</span>
             <input
+              name="dueDate"
               type="date"
               required
               value={due}
               onChange={(e) => setDue(e.target.value)}
             />
+            <FieldError message={validation.errors.dueDate} />
             {late && (
               <small className="rv-warning">
                 Đã quá hạn: khoản nợ sẽ hiện là quá hạn.

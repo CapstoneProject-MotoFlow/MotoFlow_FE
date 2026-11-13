@@ -2,6 +2,7 @@ import { unplannedQuantity } from './transferRules'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
+import { documentCode } from '../../shared/utils/documentCode'
 import {
   useInventoryData,
   useInventoryScope,
@@ -195,7 +196,7 @@ export default function TransferOrderCreatePage() {
                   {requestId ? (
                     <>
                       <Link to={'/replenishment-requests/' + requestId}>
-                        Yêu cầu YBS-{requestId?.padStart(4, '0')}
+                        Yêu cầu {documentCode('YBS', requestId)}
                       </Link>
                       <p>Kho nhận và nhu cầu còn lại lấy từ yêu cầu bổ sung.</p>
                       <button

@@ -7,9 +7,8 @@ import { InventoryNotice, Pagination } from '../inventory/components'
 import { date } from '../inventory/presentation'
 import type { Page } from '../inventory/types'
 import { states, type Replenishment, type ReplenishmentRow } from './types'
+import { documentCode as code } from '../../shared/utils/documentCode'
 import './transfers.css'
-const code = (prefix: string, id: number) =>
-  prefix + '-' + String(id).padStart(4, '0')
 export default function ReplenishmentListPage() {
   const scope = useInventoryScope(),
     search = scope.params.get('q') ?? '',
@@ -173,14 +172,12 @@ function ReplenishmentRow({
       <td className="tf-requested-parts">
         <RequestedParts id={row.id} />
         <small>
-          {row.totalRequestedQty} sản phẩm · {row.lineCount} mã
+          {row.totalRequestedQty} phụ tùng · {row.lineCount} mã
         </small>
       </td>
       <td>
         <span className={'tf-badge tf-status-' + row.status}>
-          {states[row.status] === 'Đang đáp ứng'
-            ? 'Đang thực hiện'
-            : (states[row.status] ?? row.status)}
+          {states[row.status] ?? row.status}
         </span>
       </td>
       <td>
@@ -189,6 +186,7 @@ function ReplenishmentRow({
             <Link
               className="mf-btn mf-btn--sm mf-btn--primary"
               to={'/replenishment-requests/' + row.id + '/coordinate'}
+              title="Chọn kho gửi hàng cho yêu cầu bổ sung"
             >
               Điều phối
             </Link>

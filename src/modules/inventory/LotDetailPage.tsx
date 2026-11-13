@@ -19,6 +19,7 @@ import {
   stockStatuses,
 } from './presentation'
 import type { LotDetail } from './types'
+import { documentCode } from '../../shared/utils/documentCode'
 import './inventory-screens.css'
 
 export default function LotDetailPage() {
@@ -39,7 +40,7 @@ export default function LotDetailPage() {
   const item = lot.data
   return (
     <main className="inventory-workspace inventory-screen">
-      <InventoryHeader title={'Chi tiết lô L-' + String(id).padStart(4, '0')}>
+      <InventoryHeader title={'Chi tiết lô ' + documentCode('L', id)}>
         <Link
           to={
             '/inventory/lots' +
@@ -278,6 +279,7 @@ export default function LotDetailPage() {
                             <SourceDocument
                               type={row.sourceType}
                               id={row.sourceId}
+                              movementType={row.movementType}
                             />
                             <small>{row.performedByName ?? '—'}</small>
                           </td>
@@ -300,7 +302,7 @@ export default function LotDetailPage() {
               <InventoryPanel title="Thứ tự xuất lô · FEFO / FIFO">
                 <p className="stock-notice">
                   Ưu tiên hạn dùng sớm; lô không theo dõi hạn dùng theo ngày
-                  nhập. Bỏ qua lô hết hạn hoặc không có tồn khả dụng.
+                  nhập. Bỏ qua lô hết hạn hoặc không còn hàng có thể bán.
                 </p>
                 <ol className="lot-picking-list">
                   {item.issueOrder
@@ -326,7 +328,7 @@ export default function LotDetailPage() {
                                 .filter((lot) => !lot.skipped).length}
                           .{' '}
                           <Link to={lotLink(row.lotId, item.viewStoreId)}>
-                            L-{String(row.lotId).padStart(4, '0')}
+                            {documentCode('L', row.lotId)}
                           </Link>
                         </strong>
                         <span className="stock-badge">
@@ -341,7 +343,7 @@ export default function LotDetailPage() {
                           {date(row.receivedDate)}
                         </small>
                         <span>
-                          Khả dụng: {row.availableQty} {item.baseUnit}
+                          Có thể bán: {row.availableQty} {item.baseUnit}
                         </span>
                       </li>
                     ))}

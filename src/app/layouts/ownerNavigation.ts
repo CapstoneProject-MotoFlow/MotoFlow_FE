@@ -19,7 +19,7 @@ export const ownerNavigation: NavItem[] = [
     icon: 'receipt',
     group: 'BÁN HÀNG',
   },
-  { label: 'Nhu cầu chưa đáp ứng', href: '/unmet-demand', icon: 'clipboard' },
+  { label: 'Khách hỏi mà hết hàng', href: '/unmet-demand', icon: 'clipboard' },
   { label: 'Khách hàng', href: '/owner/customers', icon: 'users' },
   {
     label: 'Công nợ',
@@ -57,7 +57,7 @@ export const ownerNavigation: NavItem[] = [
   },
   { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
-    label: 'Tra cứu tồn',
+    label: 'Tồn kho theo ngày',
     href: '/inventory/past-date-stock',
     icon: 'calendar',
   },

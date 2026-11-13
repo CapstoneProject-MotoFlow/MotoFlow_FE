@@ -9,6 +9,8 @@ import {
   receiptDocumentUploadEnabled,
   type DeliveryDocuments,
 } from './useDeliveryDocuments'
+import FieldError from '../../shared/ui/FieldError'
+import type { FieldErrors } from '../../shared/hooks/useFormValidation'
 import './receiving.css'
 
 /** Các ô nhập chứng từ giao hàng; đặt trong form có onInvalid dùng invalidMessage. */
@@ -16,11 +18,14 @@ export default function DeliveryDocumentFields({
   state,
   disabled,
   defaultDocumentNo,
+  errors,
 }: {
   state: DeliveryDocuments
   disabled?: boolean
   /** Số chứng từ điền sẵn, ví dụ mã lệnh điều chuyển; người lập sửa được. */
   defaultDocumentNo?: string
+  /** Lỗi tiếng Việt theo tên ô (từ useFormValidation) để hiện ngay dưới ô. */
+  errors?: FieldErrors
 }) {
   const { dateLimits, refreshDateLimits, images, setImages } = state
   return (
@@ -34,6 +39,7 @@ export default function DeliveryDocumentFields({
           defaultValue={defaultDocumentNo}
           placeholder="Nhập số chứng từ"
         />
+        <FieldError message={errors?.documentNo} />
       </label>
       <label>
         Ngày chứng từ
@@ -45,6 +51,7 @@ export default function DeliveryDocumentFields({
           onChange={refreshDateLimits}
           required
         />
+        <FieldError message={errors?.documentDate} />
       </label>
       <label>
         Thời điểm hàng đến
@@ -55,6 +62,7 @@ export default function DeliveryDocumentFields({
           onFocus={refreshDateLimits}
           onChange={refreshDateLimits}
         />
+        <FieldError message={errors?.arrivedAt} />
       </label>
       <label>
         Người giao hàng <input name="delivererName" maxLength={100} />
@@ -69,6 +77,7 @@ export default function DeliveryDocumentFields({
             <span>Chọn ảnh hoặc PDF chứng từ để đính kèm</span>
             <input
               name="documents"
+              data-label="Chứng từ giao hàng"
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               multiple
@@ -86,6 +95,7 @@ export default function DeliveryDocumentFields({
                 )
               }}
             />
+            <FieldError message={errors?.documents} />
           </>
         ) : (
           <span>Tải tệp tạm thời được tắt trong môi trường dev.</span>

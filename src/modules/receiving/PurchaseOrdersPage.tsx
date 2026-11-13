@@ -23,6 +23,7 @@ import {
 import ReceivingAssignment from '../operations/ReceivingAssignment'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingWork } from '../operations/receivingTaskModel'
+import { documentCode } from '../../shared/utils/documentCode'
 import './receiving.css'
 
 type Order = {
@@ -1103,9 +1104,9 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
             </section>
 
             <section className="receiving-panel">
-              <h2>Lượt nhận hàng</h2>
+              <h2>Phiếu nhập</h2>
               {!detail.receipts.length ? (
-                <p>Chưa có phiếu nhập hàng.</p>
+                <p>Chưa có phiếu nhập.</p>
               ) : (
                 <ul className="receiving-receipt-cards">
                   {detail.receipts.map((receipt) => {
@@ -1118,7 +1119,10 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                           to={'/goods-receipt-notes/' + receipt.id}
                         >
                           <div className="receiving-receipt-card-info">
-                            <strong>{detail.supplierName}</strong>
+                            <strong>
+                              {documentCode('PN', receipt.id)} ·{' '}
+                              {detail.supplierName}
+                            </strong>
                             {inspector && (
                               <span>Người kiểm nhận: {inspector}</span>
                             )}

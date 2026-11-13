@@ -8,6 +8,7 @@ import ReceiptActionDialog from './ReceiptActionDialog'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { inspectionQuantitiesValid } from './receivingRules'
 import ReceiptImage from './ReceiptImage'
+import { documentCode } from '../../shared/utils/documentCode'
 import './receiving.css'
 
 type Line = {
@@ -105,8 +106,8 @@ export default function LiveReceiptPage({
       <header className="receiving-heading">
         <h1>
           {user?.role === 'STAFF' && receipt?.canRecord
-            ? `Ghi kết quả kiểm nhận YCN-${String(receipt.purchaseOrderId).padStart(4, '0')}`
-            : `Phiếu nhập hàng ${id ? '#' + id : ''}`}
+            ? `Kiểm nhận phiếu ${documentCode('PN', id)} (của ${documentCode('YCN', receipt.purchaseOrderId)})`
+            : `Phiếu nhập ${id ? documentCode('PN', id) : ''}`}
         </h1>
       </header>
       {!validId || error ? (
@@ -364,8 +365,8 @@ function ReceiptForm({
           {!editing && (
             <>
               <div>
-                <dt>Đơn đặt hàng</dt>
-                <dd>YCN-{String(receipt.purchaseOrderId).padStart(4, '0')}</dd>
+                <dt>Yêu cầu nhập hàng</dt>
+                <dd>{documentCode('YCN', receipt.purchaseOrderId)}</dd>
               </div>
               <div>
                 <dt>Kho nhận</dt>
@@ -475,10 +476,10 @@ function ReceiptForm({
       {editing && (
         <section
           className="receiving-panel receiving-staff-delivery-type"
-          aria-label="Loại lượt giao"
+          aria-label="Loại phiếu nhập"
         >
           <header className="receiving-panel-head">
-            <h2>Loại lượt giao</h2>
+            <h2>Loại phiếu nhập</h2>
           </header>
           <div className="receiving-staff-type-options">
             <label className={!receipt.replacement ? 'is-selected' : ''}>
@@ -498,7 +499,7 @@ function ReceiptForm({
             {screen === 'excess'
               ? 'Các dòng hàng nhận thừa'
               : editing
-                ? 'Kiểm từng mặt hàng'
+                ? 'Kiểm từng phụ tùng'
                 : 'Kết quả kiểm nhận theo phụ tùng'}
           </h2>
           {editing && (
@@ -508,7 +509,7 @@ function ReceiptForm({
                 checked={onlyUnchecked}
                 onChange={(event) => setOnlyUnchecked(event.target.checked)}
               />{' '}
-              Chỉ mặt hàng chưa kiểm
+              Chỉ phụ tùng chưa kiểm
             </label>
           )}
         </header>
@@ -533,7 +534,7 @@ function ReceiptForm({
                   </>
                 ) : (
                   <>
-                    <th>Vị trí</th>
+                    <th>Vị trí (khu – kệ)</th>
                     <th>Cần nhận</th>
                     {countFields.map(([field, label]) => (
                       <th key={field}>{label}</th>
@@ -832,8 +833,8 @@ function ReceiptForm({
       )}
       {confirmOpen && (
         <ConfirmDialog
-          title="Xác nhận phiếu nhập hàng?"
-          message="Hàng đạt sẽ được ghi nhận vào tồn kho. Phần hàng thừa chờ Owner quyết định."
+          title="Xác nhận phiếu nhập?"
+          message="Hàng đạt sẽ được ghi nhận vào tồn kho. Phần hàng thừa chờ chủ cửa hàng quyết định."
           onCancel={() => setConfirmOpen(false)}
           onConfirm={async () => {
             if (saving) return

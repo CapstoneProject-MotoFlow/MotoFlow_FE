@@ -177,7 +177,7 @@ export default function ReplenishmentCreatePage() {
           <section>
             <CardHead title="Phụ tùng cần bổ sung">
               <span className="tf-head-meta">
-                {selectedRows.length} mã · {totalQuantity} sản phẩm
+                {selectedRows.length} mã · {totalQuantity} phụ tùng
               </span>
               <HeadButton
                 action={{

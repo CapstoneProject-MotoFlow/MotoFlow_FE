@@ -18,6 +18,7 @@ import {
   setStoreOwnerManager,
 } from '../services/storeService'
 import { useAuth } from '../../../shared/hooks/useAuth'
+import { roleNames } from '../../../shared/utils/roles'
 import '../stores.css'
 
 type StoreEmployee = {
@@ -430,7 +431,7 @@ export default function StoresPage() {
                               <div key={manager.id}>
                                 {manager.fullName}
                                 {manager.role === 'OWNER' && (
-                                  <small> · Chủ doanh nghiệp</small>
+                                  <small> · {roleNames.OWNER}</small>
                                 )}
                               </div>
                             ))
@@ -563,14 +564,7 @@ export default function StoresPage() {
                   <article className="store-personnel-card" key={employee.id}>
                     <strong>{employee.fullName}</strong>
                     <span>
-                      {(
-                        {
-                          OWNER: 'Chủ doanh nghiệp',
-                          ADMIN: 'Quản trị viên',
-                          BRANCH_MANAGER: 'Quản lý chi nhánh',
-                          STAFF: 'Nhân viên',
-                        } as Record<string, string>
-                      )[employee.role] || 'Chưa xác định vai trò'}
+                      {roleNames[employee.role] || 'Chưa xác định vai trò'}
                     </span>
                     <span>Điện thoại: {employee.phone || '—'}</span>
                     <span>
@@ -803,7 +797,7 @@ export default function StoresPage() {
 
               {editingStore && (
                 <div className="store-copy-note">
-                  <strong>Chủ doanh nghiệp quản lý</strong>
+                  <strong>Chủ cửa hàng quản lý</strong>
                   <p>
                     {editingStore.managers
                       ?.filter((manager) => manager.role === 'OWNER')

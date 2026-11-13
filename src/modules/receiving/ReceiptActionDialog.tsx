@@ -117,7 +117,7 @@ function ExistingReceiptActionDialog({
   return (
     <FormDialog
       title={
-        (assign ? 'Giao việc kiểm nhận · ' : 'Xác nhận lượt nhận · ') +
+        (assign ? 'Giao việc kiểm nhận · ' : 'Xác nhận phiếu nhập · ') +
         documentNo
       }
       formId="receiving-row-action"
@@ -195,7 +195,7 @@ function ExistingReceiptActionDialog({
             </div>
             <p>
               {receipt.canConfirm
-                ? 'Xác nhận sẽ ghi nhận hàng đạt vào tồn kho. Phần hàng thừa chờ Owner quyết định.'
+                ? 'Xác nhận sẽ ghi nhận hàng đạt vào tồn kho. Phần hàng thừa chờ chủ cửa hàng quyết định.'
                 : 'Phiếu này hiện chưa thể xác nhận.'}
             </p>
           </>

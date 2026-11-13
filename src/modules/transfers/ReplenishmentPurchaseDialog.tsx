@@ -9,6 +9,7 @@ import { date, money } from '../inventory/presentation'
 import { purchaseOrderCode } from '../receiving/receivingPresentation'
 import type { Replenishment } from './types'
 import { hasExistingPurchase, unplannedQuantity } from './transferRules'
+import { documentCode } from '../../shared/utils/documentCode'
 type SupplierChoice = {
   id: number
   supplierName: string
@@ -125,12 +126,10 @@ export default function ReplenishmentPurchaseDialog({
 
   return (
     <FormDialog
-      title={
-        'Lập phiếu nhập hàng cho YBS-' + String(request.id).padStart(4, '0')
-      }
+      title={'Lập yêu cầu nhập hàng cho ' + documentCode('YBS', request.id)}
       formId="replenishment-purchase"
       className="tf-purchase-dialog"
-      submitLabel={created ? 'Đã tạo phiếu' : 'Tạo phiếu nhập hàng'}
+      submitLabel={created ? 'Đã tạo yêu cầu' : 'Tạo yêu cầu nhập hàng'}
       submitDisabled={!valid || !Number.isSafeInteger(total)}
       hideSubmit={!!created}
       closeLabel={created ? 'Đóng' : 'Để sau'}
@@ -170,8 +169,8 @@ export default function ReplenishmentPurchaseDialog({
                 includeUnallocated: !edited,
                 expectedArrival: arrival || undefined,
                 note:
-                  'Phần chuyển mua từ yêu cầu YBS-' +
-                  String(request.id).padStart(4, '0'),
+                  'Phần chuyển mua từ yêu cầu ' +
+                  documentCode('YBS', request.id),
                 lines: orderedLines.map((l) => ({
                   productId: l.productId,
                   quantity: Number(l.quantity),
@@ -181,7 +180,7 @@ export default function ReplenishmentPurchaseDialog({
             )
             setCopyText(
               [
-                'Đơn đặt hàng ' + purchaseOrderCode(r.data.id),
+                'Yêu cầu nhập hàng ' + purchaseOrderCode(r.data.id),
                 'Nhà cung cấp: ' + supplier.supplierName,
                 'Kho nhận: ' + request.storeName,
                 ...(arrival ? ['Ngày giao dự kiến: ' + date(arrival)] : []),
@@ -216,8 +215,8 @@ export default function ReplenishmentPurchaseDialog({
         )}
         {hasExistingPurchase(request.purchaseOrders) && (
           <p role="alert">
-            Yêu cầu đã có phiếu nhập hàng. Vui lòng kiểm tra phiếu liên quan để
-            tránh lập trùng.
+            Yêu cầu bổ sung này đã có yêu cầu nhập hàng. Vui lòng kiểm tra yêu
+            cầu liên quan để tránh lập trùng.
           </p>
         )}
         {created ? (
@@ -225,7 +224,7 @@ export default function ReplenishmentPurchaseDialog({
             <p role="status">
               Đã tạo{' '}
               <Link to={'/purchase-orders/' + created}>
-                phiếu nhập hàng {purchaseOrderCode(created)}
+                yêu cầu nhập hàng {purchaseOrderCode(created)}
               </Link>
             </p>
             <label>
@@ -267,7 +266,7 @@ export default function ReplenishmentPurchaseDialog({
         ) : (
           <fieldset disabled={busy}>
             <p role="status" className="tf-shortage">
-              Còn thiếu <strong>{shortage} sản phẩm</strong> thuộc{' '}
+              Còn thiếu <strong>{shortage} phụ tùng</strong> thuộc{' '}
               {lines.length} mã phụ tùng.
             </p>
             <div className="tf-purchase-fields">

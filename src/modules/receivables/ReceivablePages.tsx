@@ -18,13 +18,20 @@ import Icon from '../../shared/ui/Icon'
 import EmptyState from '../../shared/ui/EmptyState'
 import { formatMoney } from '../../shared/utils/format'
 import { useOwnerDebtTotals } from '../operations/ownerMetrics'
+import { documentCode } from '../../shared/utils/documentCode'
+import {
+  creditStatusLabels,
+  debtStatusLabels,
+} from '../../shared/labels/status'
 import './receivables.css'
-const credit: Record<string, string> = {
-  ELIGIBLE: 'Được mua chịu',
-  NOT_GRANTED: 'Chưa cấp mua chịu',
-  REVOKED: 'Đã thu hồi mua chịu',
-}
+const credit = creditStatusLabels
 const day = (s: string | null) => (s ? s.split('-').reverse().join('/') : '—')
+/** Nguồn của khoản nợ được trừ: "SO-11" hoặc "Nợ đầu kỳ", không hiện mã khoản nợ. */
+const debtSource = (debts: DebtDetail['debts'], receivableId: number) => {
+  const debt = debts.find((x) => x.id === receivableId)
+  if (debt?.salesOrderId) return documentCode('SO', debt.salesOrderId)
+  return debt?.originType === 'OPENING_BALANCE' ? 'Nợ đầu kỳ' : 'Khoản nợ'
+}
 export function ReceivableListPage() {
   const [opening, setOpening] = useState(false),
     [revision, setRevision] = useState(0)
@@ -395,7 +402,7 @@ export function ReceivableDetailPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Khoản nợ</th>
+                    <th>Cửa hàng</th>
                     <th>Nguồn</th>
                     <th>Ngày ghi nợ</th>
                     <th>Hạn trả</th>
@@ -408,14 +415,11 @@ export function ReceivableDetailPage() {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id}>
-                      <td>
-                        #{r.id}
-                        <small>{r.storeName}</small>
-                      </td>
+                      <td>{r.storeName}</td>
                       <td>
                         {r.salesOrderId ? (
                           <Link to={'/sales-orders/' + r.salesOrderId}>
-                            Đơn #{r.salesOrderId}
+                            Đơn bán {documentCode('SO', r.salesOrderId)}
                           </Link>
                         ) : (
                           'Nợ đầu kỳ'
@@ -460,16 +464,10 @@ export function ReceivableDetailPage() {
                       <td>{money.format(r.remainingAmount)}</td>
                       <td>
                         <span className={'rv-badge rv-debt-' + r.status}>
-                          {(
-                            {
-                              OUTSTANDING: 'Chưa thu',
-                              PARTIALLY_PAID: 'Đã thu một phần',
-                              SETTLED: 'Đã tất toán',
-                            } as Record<string, string>
-                          )[r.status] ?? r.status}
+                          {debtStatusLabels[r.status] ?? r.status}
                         </span>
                         {r.settledAt && (
-                          <small>Tất toán {dateTime(r.settledAt)}</small>
+                          <small>Trả hết lúc {dateTime(r.settledAt)}</small>
                         )}
                       </td>
                     </tr>
@@ -538,7 +536,7 @@ export function ReceivableDetailPage() {
                         <td>
                           {p.allocations.map((a) => (
                             <small key={a.receivableId}>
-                              #{a.receivableId}:{' '}
+                              {debtSource(d.debts, a.receivableId)}:{' '}
                               {money.format(a.allocatedAmount)}
                               <span className="rv-balance-note">
                                 Còn nợ hiện tại:{' '}

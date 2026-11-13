@@ -16,7 +16,10 @@ export default function AdminSidebarNav({ collapsed }: { collapsed: boolean }) {
     { label: 'Lịch sử phân quyền', href: '/permission-history' },
   ]
   return (
-    <nav className="sidebar-nav owner-accordion" aria-label="Điều hướng Admin">
+    <nav
+      className="sidebar-nav owner-accordion"
+      aria-label="Điều hướng quản trị viên"
+    >
       <Link
         to="/dashboard"
         className={

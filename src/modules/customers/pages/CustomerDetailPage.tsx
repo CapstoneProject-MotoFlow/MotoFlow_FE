@@ -14,6 +14,13 @@ import axiosClient from '../../../shared/api/axiosClient'
 import CustomerForm from '../components/CustomerForm'
 import type { Customer } from '../types'
 import { apiMessage } from '../../suppliers/supplierService'
+import { documentCode } from '../../../shared/utils/documentCode'
+import {
+  creditStatusLabels,
+  paymentMethodLabels,
+  paymentStatusLabels,
+  salesOrderStatusLabels,
+} from '../../../shared/labels/status'
 import './customer-profile.css'
 type Debt = {
   id: number
@@ -66,22 +73,11 @@ type Data = {
 }
 const money = (n: number) => n.toLocaleString('vi-VN') + ' ₫'
 const date = (value: string) => new Date(value).toLocaleDateString('vi-VN')
-const credit: Record<string, string> = {
-  NOT_GRANTED: 'Không mua chịu',
-  ELIGIBLE: 'Được mua chịu',
-  REVOKED: 'Đã thu hồi',
-}
+const credit = creditStatusLabels
 const status: Record<string, string> = {
-  AWAITING_PICKING: 'Chờ lấy hàng',
-  PICKED: 'Đã lấy hàng',
-  REJECTED: 'Bị từ chối',
-  CONFIRMED: 'Đã xác nhận',
-  COMPLETED: 'Hoàn tất',
-  CANCELLED: 'Đã hủy',
-  VERIFIED: 'Đã xác minh',
-  UNVERIFIED: 'Chờ xác minh',
-  CASH: 'Tiền mặt',
-  BANK_TRANSFER: 'Chuyển khoản',
+  ...salesOrderStatusLabels,
+  ...paymentStatusLabels,
+  ...paymentMethodLabels,
   ORDER_PAYMENT: 'Thanh toán đơn bán',
   DEBT_PAYMENT: 'Thu nợ',
   REFUND: 'Hoàn tiền',
@@ -161,9 +157,7 @@ export default function CustomerDetailPage() {
         <div className="cp-main">
           <section className="cp-panel cp-summary">
             <header>
-              <h2>
-                {c.customerName} <small>#{c.id}</small>
-              </h2>
+              <h2>{c.customerName}</h2>
               <div className="cp-actions">
                 <button className="cp-button" onClick={() => setEditing(true)}>
                   ✎ Sửa
@@ -217,7 +211,7 @@ export default function CustomerDetailPage() {
                 <tbody>
                   {data.orders.map((o) => (
                     <tr key={o.id}>
-                      <td>#{o.id}</td>
+                      <td>{documentCode('SO', o.id)}</td>
                       <td>{date(o.createdAt)}</td>
                       <td>{o.storeName}</td>
                       <td>{money(o.total)}</td>
@@ -246,7 +240,7 @@ export default function CustomerDetailPage() {
           </section>
           <PaymentTable rows={data.payments} total={data.paymentCount} />
           <section className="cp-panel">
-            <h2>Nhu cầu chưa đáp ứng</h2>
+            <h2>Khách hỏi mà hết hàng</h2>
             {data.unmetDemand?.length ? (
               <div className="cp-table">
                 <table>
@@ -265,7 +259,7 @@ export default function CustomerDetailPage() {
                         <td>{row.sku}</td>
                         <td>{row.partName}</td>
                         <td>{row.missingQty}</td>
-                        <td>#{row.salesOrderId}</td>
+                        <td>{documentCode('SO', row.salesOrderId)}</td>
                         <td>{row.storeName}</td>
                       </tr>
                     ))}
@@ -275,8 +269,8 @@ export default function CustomerDetailPage() {
             ) : (
               <p className="cp-empty">
                 {data.unmetDemand == null
-                  ? 'Chưa có dữ liệu nhu cầu chưa đáp ứng từ hệ thống.'
-                  : 'Không có nhu cầu chưa đáp ứng.'}
+                  ? 'Chưa có dữ liệu khách hỏi mà hết hàng.'
+                  : 'Khách chưa hỏi phụ tùng nào lúc hết hàng.'}
               </p>
             )}
           </section>
@@ -396,11 +390,13 @@ function PaymentTable({
                     <td>{money(p.amount)}</td>
                     <td>
                       {p.salesOrderId != null && (
-                        <small>Đơn #{p.salesOrderId}</small>
+                        <small>
+                          Đơn bán {documentCode('SO', p.salesOrderId)}
+                        </small>
                       )}
-                      {p.receivableIds.map((debtId) => (
-                        <small key={debtId}>Khoản nợ #{debtId}</small>
-                      ))}
+                      {p.salesOrderId == null && p.receivableIds.length > 0 && (
+                        <small>Trả {p.receivableIds.length} khoản nợ</small>
+                      )}
                       {p.salesOrderId == null && !p.receivableIds.length && '—'}
                     </td>
                     <td>{status[p.status] || p.status}</td>

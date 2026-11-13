@@ -114,7 +114,7 @@ export default function TransferWorkPage({
             {mode === 'prepare'
               ? 'Ghi số đã soạn'
               : mode === 'extra'
-                ? 'Xác nhận xuất thừa'
+                ? 'Xác nhận hàng gửi dư'
                 : 'Kiểm nhận hàng chuyển'}
           </h1>
         </div>
@@ -387,7 +387,7 @@ function WorkEditor({
     <>
       <section>
         <CardHead
-          title={receipt ? 'Phiếu nhận #' + receipt.id : 'Kết quả thực tế'}
+          title={receipt ? 'Phiếu nhận điều chuyển' : 'Kết quả thực tế'}
           status={
             receipt ? (states[receipt.status] ?? receipt.status) : undefined
           }
@@ -435,11 +435,12 @@ function WorkEditor({
             {resultSubmitted ? (
               <>
                 <strong>
-                  Đã gửi kết quả soạn hàng, đang chờ BM xác nhận xuất.
+                  Đã gửi kết quả soạn hàng, đang chờ quản lý cửa hàng xác nhận
+                  xuất.
                 </strong>
                 <p>
-                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi BM xác nhận
-                  xuất.
+                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi quản lý cửa hàng
+                  xác nhận xuất.
                 </p>
               </>
             ) : preparation.canRecord ? (
@@ -469,7 +470,7 @@ function WorkEditor({
         {preparation?.canRecord && !valid && (
           <p className="tf-validation-hint">
             Số đã soạn phải là số nguyên, từ 0 đến mức thấp hơn giữa kế hoạch và
-            tồn khả dụng. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
+            số có thể bán. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
           </p>
         )}
         {receipt && !receiptAcceptsResult(receipt.status) && (
@@ -479,12 +480,12 @@ function WorkEditor({
                 <strong>
                   {bm
                     ? 'Kết quả kiểm nhận đang chờ bạn duyệt.'
-                    : 'Kết quả đã gửi, đang chờ BM kho nhận xác nhận.'}
+                    : 'Kết quả đã gửi, đang chờ quản lý cửa hàng nhận xác nhận.'}
                 </strong>
                 <p>
                   {bm
                     ? 'Kiểm tra số đạt, số hỏng rồi chọn Xác nhận nhận hàng ở đầu thẻ. Nếu số liệu chưa đúng, chọn Yêu cầu kiểm lại để nhân viên cập nhật.'
-                    : 'Bạn không cần gửi lại. Nếu cần sửa, BM phải chọn Yêu cầu kiểm lại trước.'}
+                    : 'Bạn không cần gửi lại. Nếu cần sửa, quản lý cửa hàng phải chọn Yêu cầu kiểm lại trước.'}
                 </p>
               </>
             ) : (
@@ -577,7 +578,7 @@ function WorkEditor({
                         <small>{l.partName}</small>
                         {preparation && 'storageArea' in l && (
                           <small>
-                            {l.storageArea} / {l.binLocation} · Tồn khả dụng{' '}
+                            {l.storageArea} / {l.binLocation} · Có thể bán{' '}
                             {l.sellableQty}
                             {l.barcodes?.length
                               ? ' · Mã vạch: ' + l.barcodes.join(', ')

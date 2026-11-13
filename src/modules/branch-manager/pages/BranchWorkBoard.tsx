@@ -73,28 +73,37 @@ export default function BranchWorkBoard({
           <small>Chưa có số liệu tổng hợp</small>
         </section>
         <section>
-          <p>Tồn dưới ngưỡng · {storeName}</p>
           <InventoryNotice
             loading={data.summary.loading}
             error={data.summary.error}
             onRetry={data.summary.retry}
           />
-          <strong>
-            {data.summary.data ? data.summary.data.lowStock + ' dòng' : '—'}
-          </strong>
-          <Link to="/inventory?view=lowStock">Mở tồn kho</Link>
+          <Link className="bm-monitor-card" to="/inventory?view=lowStock">
+            <p>Tồn dưới ngưỡng · {storeName}</p>
+            <strong>
+              {data.summary.data
+                ? data.summary.data.lowStock + ' phụ tùng'
+                : '—'}
+            </strong>
+            <span className="bm-monitor-more">Xem tồn kho ›</span>
+          </Link>
         </section>
         <section>
-          <p>Lô sắp hết hạn</p>
           <InventoryNotice
             loading={data.lots.loading}
             error={data.lots.error}
             onRetry={data.lots.retry}
           />
-          <strong>
-            {data.lots.data ? data.lots.data.page.totalItems + ' lô' : '—'}
-          </strong>
-          <Link to="/inventory/lots?tab=NEAR_EXPIRY">Mở danh sách lô</Link>
+          <Link
+            className="bm-monitor-card"
+            to="/inventory/lots?tab=NEAR_EXPIRY"
+          >
+            <p>Lô sắp hết hạn</p>
+            <strong>
+              {data.lots.data ? data.lots.data.page.totalItems + ' lô' : '—'}
+            </strong>
+            <span className="bm-monitor-more">Xem danh sách lô ›</span>
+          </Link>
         </section>
       </aside>
     </div>

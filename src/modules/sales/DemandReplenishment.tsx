@@ -3,6 +3,7 @@ import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import type { UnmetRow } from './salesApi'
+import { documentCode } from '../../shared/utils/documentCode'
 export default function DemandReplenishment({
   row,
   onClose,
@@ -112,8 +113,8 @@ export default function DemandReplenishment({
         {error && <p role="alert">{error}</p>}
         {saved != null && (
           <p role="status">
-            Đã tạo yêu cầu bổ sung #{saved}. Nhu cầu gốc vẫn được tính theo đơn
-            bán.
+            Đã tạo yêu cầu bổ sung {documentCode('YBS', saved)}. Nhu cầu gốc vẫn
+            được tính theo đơn bán.
           </p>
         )}
       </form>

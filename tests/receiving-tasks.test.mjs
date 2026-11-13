@@ -58,7 +58,7 @@ test('staff opens the receipt create screen of the assigned document', () => {
     documentId: 12,
     documentCode: 'YCN-0012',
   })
-  assert.equal(po.task, 'Nhận hàng nhập từ NCC')
+  assert.equal(po.task, 'Nhận hàng nhập từ nhà cung cấp')
   assert.equal(po.code, 'YCN-0012')
   assert.equal(po.href, '/purchase-orders/12/receipts/new')
 })

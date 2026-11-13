@@ -121,6 +121,9 @@ export default function WarehouseAssignmentDialog({
                   </option>
                 ))}
               </select>
+              {r.data.canAssign &&
+                r.data.eligibleAssignees.length > 0 &&
+                !choice && <small role="status">Chưa chọn nhân viên</small>}
             </label>
             <h3>Lịch sử giao việc</h3>
             {!r.data.eligibleAssignees.length && (

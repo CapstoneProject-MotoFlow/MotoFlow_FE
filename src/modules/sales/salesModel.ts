@@ -55,13 +55,6 @@ export type SalesOrder = {
   versions: { version: number; at: string; by: string }[]
   events: { at: string; by: string; text: string }[]
 }
-export const salesStates: Record<SalesStatus, string> = {
-  AWAITING_PICKING: 'Chờ lấy hàng',
-  PICKED: 'Đã lấy, chờ xác nhận',
-  CONFIRMED: 'Chờ thanh toán',
-  COMPLETED: 'Hoàn tất',
-  CANCELLED: 'Đã hủy',
-}
 export function validQuantity(value: number) {
   return Number.isSafeInteger(value) && value >= 0 && value <= 100000
 }

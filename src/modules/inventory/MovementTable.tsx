@@ -11,10 +11,11 @@ import {
   lotLink,
   movementNames,
   number,
-  sourceNames,
+  sourceLabel,
   stockStatuses,
 } from './presentation'
 import type { Movement } from './types'
+import { documentCode } from '../../shared/utils/documentCode'
 
 type Receipt = {
   id: number
@@ -37,15 +38,25 @@ type Receipt = {
     damagedQty: number
   }[]
 }
-export function SourceDocument({ type, id }: { type: string; id: number }) {
+export function SourceDocument({
+  type,
+  id,
+  movementType,
+}: {
+  type: string
+  id: number
+  movementType?: string
+}) {
   const [open, setOpen] = useState(false)
-  const label = (sourceNames[type] ?? type) + ' #' + id
+  const label = sourceLabel(type, id, movementType)
   return type === 'GOODS_RECEIPT_NOTE' ? (
     <>
       <button className="stock-text" onClick={() => setOpen(true)}>
         {label}
       </button>
-      {open && <ReceiptDialog id={id} onClose={() => setOpen(false)} />}
+      {open && (
+        <ReceiptDialog id={id} title={label} onClose={() => setOpen(false)} />
+      )}
     </>
   ) : type === 'STOCK_COUNT' ? (
     <Link to={'/stock-counts/' + id}>{label}</Link>
@@ -59,15 +70,17 @@ export function SourceDocument({ type, id }: { type: string; id: number }) {
 }
 export function ReceiptDialog({
   id,
+  title,
   onClose,
 }: {
   id: number
+  title?: string
   onClose: () => void
 }) {
   const receipt = useInventoryData<Receipt>('/goods-receipt-notes/' + id)
   return (
     <FormDialog
-      title={'Phiếu nhập #' + id}
+      title={title ?? 'Phiếu nhập ' + documentCode('PN', id)}
       formId="stock-source"
       submitLabel="Đóng"
       onClose={onClose}
@@ -83,10 +96,12 @@ export function ReceiptDialog({
         {receipt.data && (
           <>
             <dl className="stock-facts">
-              <div>
-                <dt>Nhà cung cấp</dt>
-                <dd>{receipt.data.supplierName}</dd>
-              </div>
+              {receipt.data.supplierName && (
+                <div>
+                  <dt>Nhà cung cấp</dt>
+                  <dd>{receipt.data.supplierName}</dd>
+                </div>
+              )}
               <div>
                 <dt>Kho nhận</dt>
                 <dd>{receipt.data.storeName}</dd>
@@ -168,7 +183,7 @@ export function MovementTable({
             <th>Giờ</th>
             <th>Phụ tùng</th>
             <th>Loại biến động</th>
-            <th title="Xuất điều chuyển trừ khả dụng và cộng đang điều chuyển; đây là hai trạng thái của cùng lượt chuyển.">
+            <th title="Xuất điều chuyển trừ hàng có thể bán và cộng hàng đang chuyển; đây là hai trạng thái của cùng lượt chuyển.">
               Trạng thái tồn ⓘ
             </th>
             <th>Thay đổi</th>
@@ -287,14 +302,18 @@ function MovementRows({
         <td>
           {row.lotId ? (
             <Link to={lotLink(row.lotId, row.storeId)}>
-              L-{String(row.lotId).padStart(4, '0')}
+              {documentCode('L', row.lotId)}
             </Link>
           ) : (
             '—'
           )}
         </td>
         <td>
-          <SourceDocument type={row.sourceType} id={row.sourceId} />
+          <SourceDocument
+            type={row.sourceType}
+            id={row.sourceId}
+            movementType={row.movementType}
+          />
           <small>{row.performedByName ?? '—'}</small>
         </td>
       </tr>

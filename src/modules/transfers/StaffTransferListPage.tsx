@@ -6,6 +6,7 @@ import type { Page } from '../inventory/types'
 import { states, type Transfer, type TransferRow } from './types'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingCreatePath } from '../operations/receivingTaskModel'
+import { documentCode } from '../../shared/utils/documentCode'
 import './transfers.css'
 export default function StaffTransferListPage() {
   const scope = useInventoryScope(),
@@ -115,13 +116,13 @@ function StaffRow({
     <tr>
       <td>
         <Link to={'/transfer-orders/' + row.id}>
-          DC-{String(row.id).padStart(4, '0')}
+          {documentCode('DC', row.id)}
         </Link>
       </td>
       <td>{row.sourceStoreName}</td>
       <td>{row.destStoreName}</td>
       <td>
-        {row.lineCount} mã · {row.totalPlannedQty} sản phẩm
+        {row.lineCount} mã · {row.totalPlannedQty} phụ tùng
       </td>
       <td>
         <span className="tf-badge">{states[row.status] ?? row.status}</span>

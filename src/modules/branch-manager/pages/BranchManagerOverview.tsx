@@ -156,7 +156,7 @@ export default function BranchManagerOverview() {
             <article
               className="bm-summary-card is-unavailable"
               key={card.label}
-              title="Chức năng điều chỉnh kho chưa có API"
+              title="Chức năng đang được hoàn thiện"
             >
               {content}
             </article>

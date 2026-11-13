@@ -28,7 +28,7 @@ export default function BusinessOverview({
         aria-label="Tổng quan công việc"
       >
         <MetricCard
-          title="Sản phẩm trong danh mục"
+          title="Phụ tùng trong danh mục"
           value={data.productCount}
           icon="box"
           color="blue"
@@ -69,7 +69,7 @@ function ProductPanel({ products }: { products: DashboardProduct[] }) {
   return (
     <section className="dashboard-panel product-panel" id="products">
       <div className="panel-heading">
-        <h2>Sản phẩm gần đây</h2>
+        <h2>Phụ tùng gần đây</h2>
         <span className="panel-subtitle">
           Dữ liệu theo phạm vi cửa hàng của bạn
         </span>
@@ -79,10 +79,10 @@ function ProductPanel({ products }: { products: DashboardProduct[] }) {
           <table>
             <thead>
               <tr>
-                <th>Sản phẩm</th>
+                <th>Phụ tùng</th>
                 <th>Mã SKU</th>
-                <th>Tồn khả dụng</th>
-                <th>Vị trí</th>
+                <th>Có thể bán</th>
+                <th>Vị trí (khu – kệ)</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +108,7 @@ function ProductPanel({ products }: { products: DashboardProduct[] }) {
           </table>
         </div>
       ) : (
-        <p className="empty-state">Chưa có sản phẩm phù hợp.</p>
+        <p className="empty-state">Chưa có phụ tùng phù hợp.</p>
       )}
     </section>
   )

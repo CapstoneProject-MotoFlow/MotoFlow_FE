@@ -5,6 +5,7 @@ import type { CountList } from '../../inventory/countApi'
 import type { SummaryDto } from '../../sales/salesApi'
 import type { TransferRow, ReplenishmentRow } from '../../transfers/types'
 
+import { documentCode } from '../../../shared/utils/documentCode'
 type ReceiptRow = {
   id: number
   supplierName: string
@@ -84,7 +85,7 @@ export function useBranchWork(coordinator: boolean) {
       .filter((s) => s.nextAction)
       .map((s) => ({
         key: 's' + s.id,
-        code: 'DB-' + String(s.id).padStart(4, '0'),
+        code: documentCode('DB', s.id),
         kind: 'Đơn bán',
         title: saleActions[s.nextAction!].title,
         action: saleActions[s.nextAction!].action,
@@ -94,8 +95,8 @@ export function useBranchWork(coordinator: boolean) {
       })),
     ...(receipts.data?.items ?? []).map((r) => ({
       key: 'r' + r.id,
-      code: 'PN-' + String(r.id).padStart(4, '0'),
-      kind: 'Phiếu nhận hàng',
+      code: documentCode('PN', r.id),
+      kind: 'Phiếu nhập',
       title: 'Kết quả kiểm nhận chờ xác nhận',
       description: r.supplierName,
       at: r.submittedAt ?? r.arrivedAt,
@@ -104,8 +105,8 @@ export function useBranchWork(coordinator: boolean) {
     })),
     ...(unassigned.data?.items ?? []).map((r) => ({
       key: 'r' + r.id,
-      code: 'PN-' + String(r.id).padStart(4, '0'),
-      kind: 'Phiếu nhận hàng',
+      code: documentCode('PN', r.id),
+      kind: 'Phiếu nhập',
       title: 'Chưa giao việc kiểm nhận',
       description: r.supplierName,
       at: r.arrivedAt,
@@ -114,7 +115,7 @@ export function useBranchWork(coordinator: boolean) {
     })),
     ...(transfers.data?.items ?? []).map((t) => ({
       key: 't' + t.id,
-      code: 'DC-' + String(t.id).padStart(4, '0'),
+      code: documentCode('DC', t.id),
       kind: 'Điều chuyển',
       title: 'Chuẩn bị hàng, chờ xuất',
       description: t.sourceStoreName + ' đến ' + t.destStoreName,
@@ -124,9 +125,9 @@ export function useBranchWork(coordinator: boolean) {
     })),
     ...(drafts.data?.pendingRequests ?? []).map((r) => ({
       key: 'q' + r.id,
-      code: 'YKK-' + String(r.id).padStart(4, '0'),
+      code: documentCode('YCKK', r.id),
       kind: 'Yêu cầu kiểm kê',
-      title: 'Owner yêu cầu kiểm kê',
+      title: 'Chủ cửa hàng yêu cầu kiểm kê',
       description: r.storeName + ' · ' + r.reason,
       at: r.requestedAt,
       href: '/stock-counts?action=create&requestId=' + r.id,
@@ -137,7 +138,7 @@ export function useBranchWork(coordinator: boolean) {
       ...(counts.data?.counts.items ?? []),
     ].map((c) => ({
       key: 'c' + c.id,
-      code: 'KK-' + String(c.id).padStart(4, '0'),
+      code: documentCode('KK', c.id),
       kind: 'Kiểm kê',
       title:
         c.status === 'DRAFT'
@@ -150,7 +151,7 @@ export function useBranchWork(coordinator: boolean) {
     })),
     ...(replenishments.data?.items ?? []).map((r) => ({
       key: 'b' + r.id,
-      code: 'YBS-' + String(r.id).padStart(4, '0'),
+      code: documentCode('YBS', r.id),
       kind: 'Yêu cầu bổ sung',
       title: 'Bổ sung hàng chờ điều phối',
       description: r.storeName,

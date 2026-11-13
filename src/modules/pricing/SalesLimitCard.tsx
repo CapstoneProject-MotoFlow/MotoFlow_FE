@@ -28,8 +28,8 @@ export default function SalesLimitCard({
         {margin && (
           <span
             className="pricing-help"
-            title="Biên lợi nhuận tối thiểu so với giá vốn bình quân."
-            aria-label="Biên lợi nhuận tối thiểu so với giá vốn bình quân."
+            title="Lãi tối thiểu (%) so với giá vốn bình quân."
+            aria-label="Lãi tối thiểu (%) so với giá vốn bình quân."
           >
             ⓘ
           </span>
@@ -75,10 +75,10 @@ export default function SalesLimitCard({
         >
           <div className="pricing-limit-inputs">
             <label>
-              {margin ? 'Biên lợi nhuận mới' : 'Ngưỡng mới'} <span>*</span>
+              {margin ? 'Lãi tối thiểu mới (%)' : 'Ngưỡng mới'} <span>*</span>
               <div className="pricing-percent-input">
                 <input
-                  aria-label={margin ? 'Biên lợi nhuận mới' : 'Ngưỡng mới'}
+                  aria-label={margin ? 'Lãi tối thiểu mới (%)' : 'Ngưỡng mới'}
                   required
                   type="number"
                   min="0"
@@ -119,7 +119,7 @@ export default function SalesLimitCard({
               </p>
             )}
           <button className="pricing-primary" disabled={!valid || busy}>
-            {busy ? 'Đang lưu…' : margin ? 'Lưu biên lợi nhuận' : 'Lưu ngưỡng'}
+            {busy ? 'Đang lưu…' : margin ? 'Lưu lãi tối thiểu' : 'Lưu ngưỡng'}
           </button>
         </form>
       </div>

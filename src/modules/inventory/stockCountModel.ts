@@ -42,18 +42,6 @@ export type StockCount = {
   lines: CountLine[]
   events: { id: number; at: string; by: string; text: string }[]
 }
-export const countTypeNames = {
-  CYCLE: 'Định kỳ',
-  YEAR_END: 'Cuối năm',
-  OPENING: 'Đầu kỳ',
-}
-export const countStateNames = {
-  DRAFT: 'Chưa bắt đầu',
-  COUNTING: 'Đang đếm',
-  AWAITING_APPROVAL: 'Chờ Owner duyệt',
-  COMPLETED: 'Hoàn tất',
-  CANCELLED: 'Đã hủy',
-}
 export function countDifference(
   line: Pick<CountLine, 'countedQty' | 'bookQty'>,
 ) {

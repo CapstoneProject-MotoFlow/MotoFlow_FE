@@ -9,6 +9,7 @@ import SearchableFilter from '../../shared/ui/SearchableFilter'
 import type { Replenishment } from './types'
 import './transfers.css'
 import CardHead, { HeadButton } from './CardHead'
+import { documentCode } from '../../shared/utils/documentCode'
 type Stock = {
   productId: number
   storeId: number
@@ -42,7 +43,8 @@ export default function ReplenishmentCoordinatePage() {
     <main className="dashboard-content tf-page tf-coordinate">
       <PageBackLink to={detailPath} />
       <header>
-        <h1>Điều phối YBS-{String(id).padStart(4, '0')}</h1>
+        <h1>Điều phối {documentCode('YBS', id)}</h1>
+        <p className="tf-note">Chọn kho gửi hàng cho yêu cầu bổ sung</p>
       </header>
       <InventoryNotice
         loading={r.loading || stock.loading}
@@ -216,7 +218,7 @@ function AllocationEditor({
             {groups.size} lệnh điều chuyển
             {groups.size > 0 &&
               ' (' + [...groups.keys()].map(storeName).join(', ') + ')'}{' '}
-            · còn thiếu {remaining} sản phẩm
+            · còn thiếu {remaining} phụ tùng
           </span>
           <HeadButton
             action={{
@@ -328,7 +330,7 @@ function AllocationEditor({
                                         value: String(s.storeId),
                                         label:
                                           s.storeName +
-                                          ' · khả dụng ' +
+                                          ' · có thể bán ' +
                                           s.sellableQty,
                                       })),
                                   ]}
@@ -373,7 +375,7 @@ function AllocationEditor({
                                 )}
                               </div>
                             ) : (
-                              <small>Chưa có kho khả dụng</small>
+                              <small>Chưa có kho còn hàng có thể bán</small>
                             )}
                             {index === allocations.length - 1 &&
                               left > 0 &&

@@ -19,6 +19,7 @@ import {
 } from '../receiving/useDeliveryDocuments'
 import CardHead, { HeadButton } from './CardHead'
 import { states, type Transfer } from './types'
+import { documentCode } from '../../shared/utils/documentCode'
 import './transfers.css'
 
 const FORM_ID = 'transfer-receipt-create'
@@ -27,7 +28,7 @@ const SUBMIT_LABEL = 'Lập phiếu nhận'
 export default function TransferReceiptCreatePage() {
   const { id } = useParams(),
     valid = !!id && /^[1-9]\d*$/.test(id),
-    code = 'DC-' + String(id).padStart(4, '0'),
+    code = documentCode('DC', id),
     navigate = useNavigate()
   const order = useInventoryData<Transfer>(
     '/transfer-orders/' + id,
@@ -92,7 +93,7 @@ export default function TransferReceiptCreatePage() {
       <PageBackLink to={'/transfer-orders/' + (valid ? id : '')} />
       <header>
         <div>
-          <h1>Lập phiếu nhận hàng điều chuyển</h1>
+          <h1>Lập phiếu nhận điều chuyển</h1>
         </div>
       </header>
       <InventoryNotice
@@ -169,7 +170,7 @@ export default function TransferReceiptCreatePage() {
                       n + ((counted ? l.unresolvedQty : l.dispatchedQty) ?? 0),
                     0,
                   )}{' '}
-                  sản phẩm
+                  phụ tùng
                 </strong>
               </div>
             </div>

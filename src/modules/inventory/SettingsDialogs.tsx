@@ -88,7 +88,7 @@ export function StockSettingsDialog({
         <p>
           <strong>{row.partName}</strong>
           <br />
-          {row.sku} · {row.storeName} · Khả dụng: {row.availableQty}{' '}
+          {row.sku} · {row.storeName} · Có thể bán: {row.availableQty}{' '}
           {row.baseUnit}
         </p>
         {mode === 'location' ? (
@@ -123,7 +123,7 @@ export function StockSettingsDialog({
         ) : (
           <div className="stock-fields">
             <p>
-              Khả dụng hiện tại: {row.availableQty} {row.baseUnit}
+              Có thể bán hiện tại: {row.availableQty} {row.baseUnit}
             </p>
             <label>
               Ngưỡng tồn tối thiểu{' '}

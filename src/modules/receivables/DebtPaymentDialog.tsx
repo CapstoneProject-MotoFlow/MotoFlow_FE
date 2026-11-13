@@ -6,6 +6,7 @@ import { inventoryError } from '../inventory/api'
 import { money } from '../inventory/presentation'
 import { confirmedAllocations } from './debtRules'
 import type { DebtDetail, Preview } from './types'
+import { documentCode } from '../../shared/utils/documentCode'
 export default function DebtPaymentDialog({
   data,
   owner,
@@ -316,11 +317,11 @@ export default function DebtPaymentDialog({
                         </td>
                       )}
                       <td>
-                        #{d.id}
                         <small>
                           {d.originType === 'OPENING_BALANCE'
                             ? 'Nợ đầu kỳ'
-                            : 'Đơn #' + d.salesOrderId}{' '}
+                            : 'Đơn bán ' +
+                              documentCode('SO', d.salesOrderId)}{' '}
                           · ghi nợ{' '}
                           {d.recognizedAt
                             .slice(0, 10)

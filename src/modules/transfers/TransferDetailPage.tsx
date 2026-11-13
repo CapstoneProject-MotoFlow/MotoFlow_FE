@@ -19,6 +19,7 @@ import ReceivingAssignment from '../operations/ReceivingAssignment'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingCreatePath } from '../operations/receivingTaskModel'
 import ReceiptDocumentSummary from './ReceiptDocumentSummary'
+import { documentCode } from '../../shared/utils/documentCode'
 type Dispatch = {
   canConfirm: boolean
   lines: {
@@ -172,7 +173,7 @@ export default function TransferDetailPage() {
     if (dest && moving && pendingReceipt)
       actions.push({
         key: 'receipt',
-        label: 'Tiếp tục phiếu nhận #' + pendingReceipt.id,
+        label: 'Tiếp tục phiếu nhận điều chuyển',
         icon: 'receipt',
         to: base + '/receipts/' + pendingReceipt.id,
         primary: true,
@@ -180,7 +181,7 @@ export default function TransferDetailPage() {
     if (source && canConfirmExcess(d.status, d.lines))
       actions.push({
         key: 'extra',
-        label: 'Xác nhận xuất thừa',
+        label: 'Xác nhận hàng gửi dư',
         icon: 'layers',
         to: base + '/extra',
       })
@@ -204,7 +205,7 @@ export default function TransferDetailPage() {
       <PageBackLink to="/transfer-orders" />
       <header>
         <div>
-          <h1>Lệnh điều chuyển DC-{String(id).padStart(4, '0')}</h1>
+          <h1>Lệnh điều chuyển {documentCode('DC', id)}</h1>
         </div>
       </header>
       <InventoryNotice loading={r.loading} error={r.error} />
@@ -270,11 +271,11 @@ export default function TransferDetailPage() {
                   <Link
                     to={'/replenishment-requests/' + d.replenishmentRequestId}
                   >
-                    YBS-{String(d.replenishmentRequestId).padStart(4, '0')}
+                    {documentCode('YBS', d.replenishmentRequestId)}
                   </Link>
                 ) : d.replenishmentRequestId ? (
                   <strong>
-                    YBS-{String(d.replenishmentRequestId).padStart(4, '0')}
+                    {documentCode('YBS', d.replenishmentRequestId)}
                   </strong>
                 ) : (
                   <strong>Lập trực tiếp</strong>
@@ -352,7 +353,7 @@ export default function TransferDetailPage() {
                   const content = (
                     <>
                       <span className="tf-receipt-card-title">
-                        Phiếu nhận #{receipt.id}
+                        Phiếu nhận điều chuyển
                       </span>
                       <span className="tf-receipt-status">
                         {states[receipt.status] ?? receipt.status}
@@ -384,7 +385,7 @@ export default function TransferDetailPage() {
               <p className="tf-empty">
                 {d.status === 'AWAITING_DISPATCH'
                   ? 'Phiếu chưa xuất kho nên chưa có lần nhận hàng.'
-                  : 'Chưa có phiếu nhận. Nhân viên được BM kho nhận giao việc nhận hàng sẽ lập phiếu khi hàng tới.'}
+                  : 'Chưa có phiếu nhận. Nhân viên được quản lý cửa hàng nhận giao việc nhận hàng sẽ lập phiếu khi hàng tới.'}
               </p>
             )}
           </section>
@@ -393,7 +394,7 @@ export default function TransferDetailPage() {
             <DebtEvidence files={d.attachments} />
             {d.extraDispatchConfirmedAt && (
               <p className="tf-note">
-                Xác nhận xuất thừa: {d.extraDispatchConfirmedBy?.fullName} ·{' '}
+                Xác nhận hàng gửi dư: {d.extraDispatchConfirmedBy?.fullName} ·{' '}
                 {dateTime(d.extraDispatchConfirmedAt)}
               </p>
             )}
@@ -412,7 +413,9 @@ export default function TransferDetailPage() {
                   <tbody>
                     {d.lots.map((l, i) => (
                       <tr key={i}>
-                        <td>{l.manufacturerLotNo || '#' + l.lotId}</td>
+                        <td>
+                          {l.manufacturerLotNo || documentCode('L', l.lotId)}
+                        </td>
                         <td>
                           {
                             d.lines.find((p) => p.productId === l.productId)
@@ -460,7 +463,7 @@ export default function TransferDetailPage() {
               )}
               {d.receipts.map((receipt) => (
                 <li key={receipt.id}>
-                  <strong>Hàng đến · Phiếu nhận #{receipt.id}</strong>
+                  <strong>Hàng đến · Phiếu nhận điều chuyển</strong>
                   <span>
                     {dateTime(receipt.arrivedAt)} ·{' '}
                     {states[receipt.status] ?? receipt.status}
@@ -486,7 +489,6 @@ export default function TransferDetailPage() {
               />
               {d.discrepancies.map((c) => (
                 <div className="tf-note" key={c.id}>
-                  #{c.id} ·{' '}
                   {d.lines.find((l) => l.productId === c.productId)?.sku} ·
                   Thiếu {c.shortQty} · {states[c.status] ?? c.status}
                   {c.events.map((e) => (
@@ -504,7 +506,7 @@ export default function TransferDetailPage() {
               title={
                 action === 'dispatch'
                   ? 'Xác nhận xuất kho'
-                  : 'Đóng phiếu điều chuyển'
+                  : 'Đóng lệnh điều chuyển'
               }
               path={
                 '/transfer-orders/' +
@@ -556,7 +558,7 @@ export default function TransferDetailPage() {
                 ))}
               {action === 'dispatch' && dispatchStockShort && (
                 <p role="alert" className="stock-error">
-                  Tồn khả dụng của kho nguồn thấp hơn số đã soạn. Hãy kiểm tra
+                  Số có thể bán của kho nguồn thấp hơn số đã soạn. Hãy kiểm tra
                   lại tồn và cập nhật kết quả soạn hàng trước khi xác nhận xuất.
                 </p>
               )}

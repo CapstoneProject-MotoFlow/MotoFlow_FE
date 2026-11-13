@@ -57,7 +57,7 @@ export function receivingWork(task: ReceivingTask) {
   const supplier = task.taskType === 'SUPPLIER_RECEIVING'
   return {
     key: 'nh' + task.taskType + task.documentId,
-    task: supplier ? 'Nhận hàng nhập từ NCC' : 'Nhận hàng điều chuyển',
+    task: supplier ? 'Nhận hàng nhập từ nhà cung cấp' : 'Nhận hàng điều chuyển',
     code: task.documentCode || receivingCode(task.taskType, task.documentId),
     description: [
       task.partnerName,
