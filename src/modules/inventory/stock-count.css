@@ -17,11 +17,20 @@
   display: grid;
   gap: 24px;
 }
-.count-form label {
+.count-form label,
+.count-product-picker {
   display: grid;
   gap: 8px;
   color: #344054;
   font-size: 14px;
+}
+.count-product-picker .searchable-filter-caret {
+  top: 21px;
+}
+.count-product-picker .searchable-filter-menu {
+  position: relative;
+  inset: auto;
+  margin-top: 4px;
 }
 .count-form label > span {
   color: #d92d20;
