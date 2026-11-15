@@ -1,4 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import ExcessDispatchEditor from './ExcessDispatchEditor'
 import { uploadAttachment } from '../../shared/api/upload'
@@ -248,7 +249,12 @@ function WorkEditor({
       receipt?.lines ??
       order!.lines.filter((l) => (l.extraReceivedQty ?? 0) > 0),
     [values, setValues] = useState<
-      Record<number, { qty: number; damaged: number; reason: string }>
+      Record<number, {
+        qty: number
+        damaged: number
+        wrong: number
+        reason: string
+      }>
     >(() =>
       Object.fromEntries(
         lines.map((l) => [
@@ -263,6 +269,7 @@ function WorkEditor({
                     ? l.passedQty
                     : 0,
             damaged: 'damagedQty' in l ? l.damagedQty : 0,
+            wrong: 'wrongItemQty' in l ? l.wrongItemQty : 0,
             reason: 'shortReason' in l ? (l.shortReason ?? '') : '',
           },
         ]),
@@ -315,6 +322,12 @@ function WorkEditor({
         Number.isInteger(v.damaged) &&
         v.damaged >= 0 &&
         v.damaged <= 100000 &&
+        Number.isInteger(v.wrong) &&
+        v.wrong >= 0 &&
+        v.wrong <= 100000 &&
+        (mode !== 'receipt' ||
+          !('documentQty' in l) ||
+          v.qty + v.wrong + v.damaged <= l.documentQty) &&
         (mode !== 'prepare' ||
           !('plannedQty' in l) ||
           v.qty >= l.plannedQty ||
@@ -347,6 +360,7 @@ function WorkEditor({
                   productId: l.productId,
                   passedQty: values[l.productId].qty,
                   damagedQty: values[l.productId].damaged,
+                  wrongItemQty: values[l.productId].wrong,
                 })),
               }
             : {
@@ -435,11 +449,11 @@ function WorkEditor({
             {resultSubmitted ? (
               <>
                 <strong>
-                  Đã gửi kết quả soạn hàng, đang chờ quản lý cửa hàng xác nhận
+                  Đã gửi kết quả soạn hàng, đang chờ quản lý kho nguồn xác nhận
                   xuất.
                 </strong>
                 <p>
-                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi quản lý cửa hàng
+                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi quản lý kho nguồn
                   xác nhận xuất.
                 </p>
               </>
@@ -470,7 +484,7 @@ function WorkEditor({
         {preparation?.canRecord && !valid && (
           <p className="tf-validation-hint">
             Số đã soạn phải là số nguyên, từ 0 đến mức thấp hơn giữa kế hoạch và
-            số có thể bán. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
+            tồn kho. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
           </p>
         )}
         {receipt && !receiptAcceptsResult(receipt.status) && (
@@ -480,12 +494,12 @@ function WorkEditor({
                 <strong>
                   {bm
                     ? 'Kết quả kiểm nhận đang chờ bạn duyệt.'
-                    : 'Kết quả đã gửi, đang chờ quản lý cửa hàng nhận xác nhận.'}
+                    : 'Kết quả đã gửi, đang chờ quản lý kho nhận xác nhận.'}
                 </strong>
                 <p>
                   {bm
                     ? 'Kiểm tra số đạt, số hỏng rồi chọn Xác nhận nhận hàng ở đầu thẻ. Nếu số liệu chưa đúng, chọn Yêu cầu kiểm lại để nhân viên cập nhật.'
-                    : 'Bạn không cần gửi lại. Nếu cần sửa, quản lý cửa hàng phải chọn Yêu cầu kiểm lại trước.'}
+                    : 'Bạn không cần gửi lại. Nếu cần sửa, quản lý kho nhận phải chọn Yêu cầu kiểm lại trước.'}
                 </p>
               </>
             ) : (
@@ -499,8 +513,7 @@ function WorkEditor({
               Nhập số thực tế xác nhận xuất thêm; số này không lấy từ số đã
               soạn.
             </p>
-            <input
-              type="file"
+            <LocalizedFileInput
               multiple
               accept="image/jpeg,image/png,image/webp,application/pdf"
               disabled={busy || !canRecord}
@@ -567,7 +580,8 @@ function WorkEditor({
                           ? 'Xuất thêm'
                           : 'Đã soạn'}
                     </th>
-                    <th>{mode === 'receipt' ? 'Số hỏng' : 'Lý do thiếu'}</th>
+                    <th>{mode === 'receipt' ? 'Giao sai' : 'Lý do thiếu'}</th>
+                    {mode === 'receipt' && <th>Hư hỏng</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -578,7 +592,7 @@ function WorkEditor({
                         <small>{l.partName}</small>
                         {preparation && 'storageArea' in l && (
                           <small>
-                            {l.storageArea} / {l.binLocation} · Có thể bán{' '}
+                            {l.storageArea} / {l.binLocation} · Tồn kho{' '}
                             {l.sellableQty}
                             {l.barcodes?.length
                               ? ' · Mã vạch: ' + l.barcodes.join(', ')
@@ -620,7 +634,9 @@ function WorkEditor({
                           type="number"
                           min={0}
                           max={
-                            'sellableQty' in l
+                            'documentQty' in l
+                              ? l.documentQty
+                              : 'sellableQty' in l
                               ? Math.min(l.plannedQty, l.sellableQty)
                               : 2147483647
                           }
@@ -643,18 +659,18 @@ function WorkEditor({
                       <td>
                         {mode === 'receipt' ? (
                           <input
-                            aria-label={'Số hỏng ' + l.sku}
+                            aria-label={'Giao sai ' + l.sku}
                             type="number"
                             required
                             min={0}
                             max={100000}
-                            value={values[l.productId].damaged}
+                            value={values[l.productId].wrong}
                             onChange={(e) =>
                               setValues({
                                 ...values,
                                 [l.productId]: {
                                   ...values[l.productId],
-                                  damaged: Number(e.target.value),
+                                  wrong: Number(e.target.value),
                                 },
                               })
                             }
@@ -676,6 +692,36 @@ function WorkEditor({
                           />
                         )}
                       </td>
+                      {mode === 'receipt' && (
+                        <td>
+                          <input
+                            aria-label={'Hư hỏng ' + l.sku}
+                            type="number"
+                            required
+                            min={0}
+                            max={100000}
+                            value={values[l.productId].damaged}
+                            onChange={(e) =>
+                              setValues({
+                                ...values,
+                                [l.productId]: {
+                                  ...values[l.productId],
+                                  damaged: Number(e.target.value),
+                                },
+                              })
+                            }
+                          />
+                          {'documentQty' in l &&
+                            values[l.productId].qty +
+                              values[l.productId].wrong +
+                              values[l.productId].damaged >
+                              l.documentQty && (
+                              <small className="tf-validation-hint">
+                                Đạt, giao sai và hư hỏng không được vượt số trên phiếu.
+                              </small>
+                            )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

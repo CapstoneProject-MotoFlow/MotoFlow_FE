@@ -148,7 +148,9 @@ export default function TransferOrderCreatePage() {
               <h2>Thông tin lệnh</h2>
               <div className="tf-general-grid">
                 <label>
-                  Từ kho <span>*</span>
+                  <span className="tf-field-label">
+                    Từ kho <b aria-hidden="true">*</b>
+                  </span>
                   <select
                     required
                     value={source}
@@ -169,7 +171,9 @@ export default function TransferOrderCreatePage() {
                   </select>
                 </label>
                 <label>
-                  Tới kho <span>*</span>
+                  <span className="tf-field-label">
+                    Tới kho <b aria-hidden="true">*</b>
+                  </span>
                   <select
                     required
                     disabled={!!requestId}
@@ -234,7 +238,7 @@ export default function TransferOrderCreatePage() {
               <h2>Tóm tắt</h2>
               <dl>
                 <div>
-                  <dt>Số dòng</dt>
+                  <dt>Số phụ tùng</dt>
                   <dd>{rows.filter((r) => r.productId > 0).length}</dd>
                 </div>
                 <div>
@@ -425,7 +429,7 @@ export default function TransferOrderCreatePage() {
                   ])
                 }
               >
-                ＋ Thêm dòng
+                ＋ Thêm phụ tùng
               </button>
             </div>
           </section>

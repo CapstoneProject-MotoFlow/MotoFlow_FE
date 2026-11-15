@@ -71,7 +71,10 @@ export function SalesDraftListPage() {
       <InventoryPanel
         title="Đơn nháp của tôi"
         action={
-          <Link className="mf-btn mf-btn--primary" to="/sales-orders/new">
+          <Link
+            className="mf-btn mf-btn--primary sales-draft-create-order"
+            to="/sales-orders/new"
+          >
             Tạo đơn bán
           </Link>
         }

@@ -1,6 +1,7 @@
 import { uploadAttachment } from '../../shared/api/upload'
 import { useEffect, useRef, useState } from 'react'
 import FormDialog from '../../shared/ui/FormDialog'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import { money } from '../inventory/presentation'
@@ -350,9 +351,8 @@ export default function DebtPaymentDialog({
           </div>
           <div className="rv-full rv-payment-evidence">
             <label htmlFor="debt-payment-files">Chứng từ (tùy chọn)</label>
-            <input
+            <LocalizedFileInput
               id="debt-payment-files"
-              type="file"
               multiple
               accept="image/jpeg,image/png,image/webp,application/pdf"
               onChange={(e) => {

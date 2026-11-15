@@ -643,6 +643,11 @@ export function SalesOrderDetailView({
                 </dd>
               </div>
             </dl>
+            {order?.note && (
+              <p className="sales-order-note">
+                <strong>Ghi chú đơn:</strong> {order.note}
+              </p>
+            )}
           </section>
           <section className="sales-detail-products">
             <div className="stock-table-scroll">
@@ -924,7 +929,13 @@ export function RecordPickedView({
             ' · ' +
             (order?.customerName ?? 'Khách lẻ')
           }
-          children={null}
+          children={
+            order?.note ? (
+              <p className="sales-order-note">
+                <strong>Ghi chú đơn:</strong> {order.note}
+              </p>
+            ) : null
+          }
         />
         <InventoryPanel
           title="Lấy từng phụ tùng"

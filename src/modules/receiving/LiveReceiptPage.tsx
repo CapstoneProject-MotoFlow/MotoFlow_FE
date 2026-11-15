@@ -6,8 +6,12 @@ import { useAuth } from '../../shared/hooks/useAuth'
 import { apiMessage } from '../suppliers/supplierService'
 import ReceiptActionDialog from './ReceiptActionDialog'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
-import { inspectionQuantitiesValid } from './receivingRules'
-import ReceiptImage from './ReceiptImage'
+import {
+  inspectionCountFields,
+  inspectionResult,
+  inspectionResultFields,
+} from './receivingRules'
+import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 import { documentCode } from '../../shared/utils/documentCode'
 import './receiving.css'
 
@@ -49,22 +53,10 @@ type Receipt = {
   canDecideExcess: boolean
   assignee: { fullName: string } | null
   lines: Line[]
-  documents: {
-    id: number
-    fileName: string
-    contentType: string
-    downloadUrl: string | null
-  }[]
+  documents: ReceiptDocument[]
 }
 
-const countFields = [
-  ['documentQty', 'Chứng từ'],
-  ['deliveredQty', 'Thực giao'],
-  ['wrongItemQty', 'Giao sai'],
-  ['damagedQty', 'Hỏng'],
-] as const
-
-type CountField = (typeof countFields)[number][0]
+type CountField = (typeof inspectionCountFields)[number][0]
 type Counts = Record<number, Partial<Record<CountField, string>>>
 type Screen = 'inspection' | 'confirmation' | 'excess'
 
@@ -106,7 +98,7 @@ export default function LiveReceiptPage({
       <header className="receiving-heading">
         <h1>
           {user?.role === 'STAFF' && receipt?.canRecord
-            ? `Kiểm nhận phiếu ${documentCode('PN', id)} (của ${documentCode('YCN', receipt.purchaseOrderId)})`
+            ? `Kiểm nhận phiếu ${documentCode('PN', id)} (của ${documentCode('DNH', receipt.purchaseOrderId)})`
             : `Phiếu nhập ${id ? documentCode('PN', id) : ''}`}
         </h1>
       </header>
@@ -165,6 +157,19 @@ function ReceiptForm({
       })
   }
   const [counts, setCounts] = useState<Counts>({})
+  const [lotDates, setLotDates] = useState<
+    Record<number, { manufactureDate: string; expiryDate: string }>
+  >(() =>
+    Object.fromEntries(
+      receipt.lines.map((line) => [
+        line.id,
+        {
+          manufactureDate: line.manufactureDate ?? '',
+          expiryDate: line.expiryDate ?? '',
+        },
+      ]),
+    ),
+  )
   const [arrivedAt, setArrivedAt] = useState(
     receipt.arrivedAt?.slice(0, 16) ?? '',
   )
@@ -188,53 +193,48 @@ function ReceiptForm({
     : receipt.lines
 
   function countValue(line: Line, field: CountField) {
+    if (field === 'documentQty')
+      return String(line.documentQty)
     return (
       counts[line.id]?.[field] ??
-      (receipt.recordedById != null ? String(line[field]) : '')
+      (receipt.recordedById != null
+        ? String(line[field])
+        : field === 'wrongItemQty' || field === 'damagedQty'
+          ? '0'
+          : '')
     )
   }
 
-  function passedValue(line: Line) {
-    return (
-      counts[line.id]?.deliveredQty ??
-      (receipt.recordedById != null ? String(line.passedQty) : '')
+  function resultFor(line: Line) {
+    return inspectionResult(
+      inspectionCountFields.map(([field]) => countValue(line, field)),
+      line.expectedQty ?? 0,
+    )
+  }
+  function hasInvalidLotDates(line: Line) {
+    const dates = lotDates[line.id]
+    return !!(
+      dates?.manufactureDate &&
+      dates.expiryDate &&
+      dates.expiryDate < dates.manufactureDate
     )
   }
 
-  function documentValue(line: Line) {
-    return (
-      counts[line.id]?.documentQty ??
-      String(
-        receipt.recordedById != null
-          ? line.documentQty
-          : (line.expectedQty ?? line.documentQty),
+  const inspectionTotals = editing
+    ? rows.reduce(
+        (totals, line) => {
+          const result = resultFor(line)
+          if (result) {
+            totals.checked++
+            totals.short += result.shortQty
+            totals.excess += result.excessQty
+            totals.damaged += result.damagedQty
+          }
+          return totals
+        },
+        { checked: 0, short: 0, excess: 0, damaged: 0 },
       )
-    )
-  }
-
-  function rowChecked(line: Line) {
-    const passed = passedValue(line)
-    const damaged = countValue(line, 'damagedQty')
-    const document = documentValue(line)
-    return (
-      document !== '' &&
-      Number.isInteger(Number(document)) &&
-      Number(document) >= 0 &&
-      passed !== '' &&
-      damaged !== '' &&
-      Number.isInteger(Number(passed)) &&
-      Number.isInteger(Number(damaged)) &&
-      Number(passed) >= 0 &&
-      Number(damaged) >= 0 &&
-      Number(passed) + Number(damaged) + line.wrongItemQty <= 1_000_000
-    )
-  }
-
-  function checked(line: Line) {
-    return (
-      rowChecked(line) && Number(countValue(line, 'wrongItemQty') || 0) === 0
-    )
-  }
+    : null
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     if (event.target !== event.currentTarget) return
@@ -255,43 +255,14 @@ function ReceiptForm({
       return
     }
     const reason = String(fields.get('reason') ?? '').trim()
-    const lines = receipt.lines.map((line) => {
-      const passed = Number(fields.get('passed' + line.id))
-      const damaged = Number(fields.get('damagedQty' + line.id))
-      const document = Number(documentValue(line))
-      const wrongItem = line.wrongItemQty
-      return {
-        lineId: line.id,
-        documentQty: document,
-        deliveredQty: passed + damaged + wrongItem,
-        wrongItemQty: wrongItem,
-        damagedQty: damaged,
-        manufacturerLotNo:
-          String(
-            fields.get('lot' + line.id) ?? line.manufacturerLotNo ?? '',
-          ).trim() || null,
-        manufactureDate:
-          fields.get('manufacture' + line.id) || line.manufactureDate || null,
-        expiryDate: fields.get('expiry' + line.id) || line.expiryDate || null,
-      }
-    })
-    if (
-      editing &&
-      receipt.lines.some(
-        (line) =>
-          !inspectionQuantitiesValid([
-            Number(documentValue(line)),
-            Number(fields.get('passed' + line.id)) +
-              Number(fields.get('damagedQty' + line.id)) +
-              line.wrongItemQty,
-            line.wrongItemQty,
-            Number(fields.get('damagedQty' + line.id)),
-          ]),
-      )
-    ) {
+    if (inspectionTotals && inspectionTotals.checked !== receipt.lines.length) {
       setError(
-        'Số đạt và số hỏng phải là số nguyên hợp lệ, không vượt giới hạn.',
+        'Nhập đủ số lượng cho từng phụ tùng. Tổng giao sai và hư hỏng không được vượt số thực giao.',
       )
+      return
+    }
+    if (editing && receipt.lines.some(hasInvalidLotDates)) {
+      setError('Hạn dùng không được trước ngày sản xuất. Hãy sửa ngày ở dòng báo lỗi.')
       return
     }
     if (recount && !reason) {
@@ -304,7 +275,20 @@ function ReceiptForm({
       const path = '/goods-receipt-notes/' + receipt.id
       if (editing) {
         await axiosClient.post(path + '/result', {
-          lines,
+          lines: receipt.lines.map((line) => ({
+            lineId: line.id,
+            ...Object.fromEntries(
+              inspectionCountFields
+                .filter(([field]) => field !== 'documentQty')
+                .map(([field]) => [
+                  field,
+                  Number(countValue(line, field)),
+                ]),
+            ),
+            manufacturerLotNo: line.manufacturerLotNo,
+            manufactureDate: lotDates[line.id]?.manufactureDate || null,
+            expiryDate: lotDates[line.id]?.expiryDate || null,
+          })),
           arrivedAt: arrivedAt || null,
         })
       } else if (reviewing) {
@@ -365,8 +349,8 @@ function ReceiptForm({
           {!editing && (
             <>
               <div>
-                <dt>Yêu cầu nhập hàng</dt>
-                <dd>{documentCode('YCN', receipt.purchaseOrderId)}</dd>
+                <dt>Mã đơn nhập hàng</dt>
+                <dd>{documentCode('DNH', receipt.purchaseOrderId)}</dd>
               </div>
               <div>
                 <dt>Kho nhận</dt>
@@ -448,30 +432,12 @@ function ReceiptForm({
               </span>
             )}
           </div>
-        ) : receipt.documents?.length ? (
-          <ul
-            className="receiving-document-list"
-            aria-label="Chứng từ đính kèm"
-          >
-            {receipt.documents.map((file) => (
-              <li key={file.id}>
-                {file.downloadUrl && file.contentType?.startsWith('image/') ? (
-                  <ReceiptImage
-                    key={file.downloadUrl}
-                    src={file.downloadUrl}
-                    name={file.fileName}
-                  />
-                ) : file.downloadUrl ? (
-                  <a href={file.downloadUrl} target="_blank" rel="noreferrer">
-                    {file.fileName}
-                  </a>
-                ) : (
-                  file.fileName
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        ) : (
+          <ReceiptDocuments
+            receiptId={receipt.id}
+            documents={receipt.documents}
+          />
+        )}
       </section>
       {editing && (
         <section
@@ -484,7 +450,7 @@ function ReceiptForm({
           <div className="receiving-staff-type-options">
             <label className={!receipt.replacement ? 'is-selected' : ''}>
               <input type="radio" checked={!receipt.replacement} readOnly />
-              Giao theo yêu cầu
+              Giao theo đơn nhập hàng
             </label>
             <label className={receipt.replacement ? 'is-selected' : ''}>
               <input type="radio" checked={receipt.replacement} readOnly />
@@ -516,7 +482,7 @@ function ReceiptForm({
         {!rows.length && <p>Phiếu này chưa có dòng phụ tùng để xử lý.</p>}
         {editing &&
           onlyUnchecked &&
-          rows.every(checked) &&
+          inspectionTotals?.checked === rows.length &&
           focusedLine === undefined && <p>Đã kiểm hết các dòng.</p>}
         <div
           className={`table-scroll${editing ? ' receiving-staff-table-scroll' : ''}`}
@@ -525,37 +491,29 @@ function ReceiptForm({
             <thead>
               <tr>
                 <th>Phụ tùng</th>
-                {editing ? (
-                  <>
-                    <th>Số trên chứng từ</th>
-                    <th>Đạt</th>
-                    <th>Hư hỏng</th>
-                    <th>Đạt đủ</th>
-                  </>
-                ) : (
-                  <>
-                    <th>Vị trí (khu – kệ)</th>
-                    <th>Cần nhận</th>
-                    {countFields.map(([field, label]) => (
-                      <th key={field}>{label}</th>
-                    ))}
-                    <th>Đạt</th>
-                    <th>Thiếu</th>
-                    <th>Thừa</th>
-                  </>
+                <th>Cần nhập</th>
+                <th>Ngày sản xuất</th>
+                <th>Hạn dùng</th>
+                {[...inspectionCountFields, ...inspectionResultFields].map(
+                  ([field, label]) => <th key={field}>{label}</th>,
                 )}
+                {editing && <th>Đạt đủ</th>}
                 {reviewing && <th>Quyết định</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((line) => {
+                const result = editing ? resultFor(line) : line
+                const document = countValue(line, 'documentQty')
+                const canFill =
+                  editing && inspectionResult([document, document, '0', '0'], 0)
                 return (
                   <tr
                     key={line.id}
                     hidden={
                       editing &&
                       onlyUnchecked &&
-                      checked(line) &&
+                      result !== null &&
                       focusedLine !== line.id
                     }
                     className={
@@ -586,92 +544,92 @@ function ReceiptForm({
                           : ''}
                       </small>
                     </td>
-                    {editing && (
-                      <td className="receiving-staff-document-qty">
-                        <span aria-label={'Số trên chứng từ ' + line.sku}>
-                          {documentValue(line)}
-                        </span>
+                    <td>{line.expectedQty ?? '—'}</td>
+                    {(['manufactureDate', 'expiryDate'] as const).map((field) => (
+                      <td key={field}>
+                        {editing ? (
+                          <>
+                            <input
+                              type="date"
+                              aria-label={`${field === 'manufactureDate' ? 'Ngày sản xuất' : 'Hạn dùng'} ${line.sku}`}
+                              value={lotDates[line.id]?.[field] ?? ''}
+                              onChange={(event) =>
+                                setLotDates((previous) => ({
+                                  ...previous,
+                                  [line.id]: {
+                                    ...previous[line.id],
+                                    [field]: event.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                            {field === 'expiryDate' && hasInvalidLotDates(line) && (
+                              <small className="receiving-field-error" role="alert">
+                                Hạn dùng không được trước ngày sản xuất.
+                              </small>
+                            )}
+                          </>
+                        ) : (
+                          line[field] ?? '—'
+                        )}
                       </td>
-                    )}
-                    {editing && (
-                      <td>
-                        <input
-                          type="number"
-                          name={'passed' + line.id}
-                          min={0}
-                          max={1000000}
-                          required
-                          aria-label={'Đạt ' + line.sku}
-                          value={passedValue(line)}
-                          onChange={(event) =>
-                            setCounts((previous) => ({
-                              ...previous,
-                              [line.id]: {
-                                ...previous[line.id],
-                                deliveredQty: event.target.value,
-                              },
-                            }))
-                          }
-                        />
+                    ))}
+                    {inspectionCountFields.map(([field, label]) => (
+                      <td key={field}>
+                        {editing && field !== 'documentQty' ? (
+                          <input
+                            type="number"
+                            min={0}
+                            max={1_000_000}
+                            required
+                            aria-label={`${label} ${line.sku}`}
+                            value={countValue(line, field)}
+                            onChange={(event) => {
+                              const value = event.target.value
+                              setCounts((previous) => ({
+                                ...previous,
+                                [line.id]: {
+                                  ...previous[line.id],
+                                  [field]: value,
+                                },
+                              }))
+                            }}
+                          />
+                        ) : (
+                          line[field]
+                        )}
                       </td>
-                    )}
-                    {editing && (
-                      <td>
-                        <input
-                          type="number"
-                          name={'damagedQty' + line.id}
-                          min={0}
-                          max={1000000}
-                          required
-                          aria-label={'Hư hỏng ' + line.sku}
-                          value={countValue(line, 'damagedQty')}
-                          onChange={(event) =>
-                            setCounts((previous) => ({
-                              ...previous,
-                              [line.id]: {
-                                ...previous[line.id],
-                                damagedQty: event.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      </td>
-                    )}
+                    ))}
+                    {inspectionResultFields.map(([field]) => (
+                      <td key={field}>{result?.[field] ?? '—'}</td>
+                    ))}
                     {editing && (
                       <td>
                         <input
                           aria-label={'Đạt đủ ' + line.sku}
                           type="checkbox"
+                          disabled={!canFill}
                           checked={
-                            passedValue(line) !== '' &&
-                            Number(passedValue(line)) ===
-                              Number(documentValue(line)) &&
-                            Number(countValue(line, 'damagedQty') || 0) === 0
+                            result !== null &&
+                            result.documentQty === result.deliveredQty &&
+                            result.wrongItemQty === 0 &&
+                            result.damagedQty === 0
                           }
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            const full = event.target.checked
                             setCounts((previous) => ({
                               ...previous,
                               [line.id]: {
                                 ...previous[line.id],
-                                deliveredQty: event.target.checked
-                                  ? documentValue(line)
-                                  : '',
-                                damagedQty: event.target.checked ? '0' : '',
+                                deliveredQty: full ? document : '',
+                                wrongItemQty: '0',
+                                damagedQty: '0',
                               },
                             }))
-                          }
+                          }}
                         />
                       </td>
                     )}
-                    {!editing && <td>{line.binLocation ?? '—'}</td>}
-                    {!editing && <td>{line.expectedQty ?? '—'}</td>}
-                    {!editing &&
-                      countFields.map(([field]) => (
-                        <td key={field}>{line[field]}</td>
-                      ))}
-                    {!editing && <td>{line.passedQty}</td>}
-                    {!editing && <td>{line.shortQty}</td>}
-                    {!editing && <td>{line.excessQty}</td>}
                     {reviewing && (
                       <td>
                         <select
@@ -716,7 +674,7 @@ function ReceiptForm({
         <div
           className={`receiving-layout-actions${editing ? ' receiving-staff-footer' : ''}`}
         >
-          {editing && (
+          {inspectionTotals && (
             <>
               <label className="receiving-inline receiving-staff-attestation">
                 <input type="checkbox" required /> Tôi đã kiểm đếm thực tế và
@@ -724,46 +682,10 @@ function ReceiptForm({
               </label>
               <p className="receiving-staff-summary">
                 Đã kiểm{' '}
-                <b>
-                  {receipt.lines.filter(rowChecked).length}/
-                  {receipt.lines.length}
-                </b>{' '}
-                · thiếu{' '}
-                <b>
-                  {receipt.lines.reduce(
-                    (sum, line) =>
-                      sum +
-                      Math.max(
-                        0,
-                        Number(documentValue(line)) -
-                          (Number(passedValue(line) || 0) +
-                            Number(countValue(line, 'damagedQty') || 0)),
-                      ),
-                    0,
-                  )}
-                </b>{' '}
-                · thừa{' '}
-                <b>
-                  {receipt.lines.reduce(
-                    (sum, line) =>
-                      sum +
-                      Math.max(
-                        0,
-                        Number(passedValue(line) || 0) +
-                          Number(countValue(line, 'damagedQty') || 0) -
-                          Number(documentValue(line)),
-                      ),
-                    0,
-                  )}
-                </b>{' '}
-                · hư hỏng{' '}
-                <b>
-                  {receipt.lines.reduce(
-                    (sum, line) =>
-                      sum + Number(countValue(line, 'damagedQty') || 0),
-                    0,
-                  )}
-                </b>
+                <b>{inspectionTotals.checked}/{receipt.lines.length}</b>{' '}
+                · thiếu <b>{inspectionTotals.short}</b>{' '}
+                · thừa <b>{inspectionTotals.excess}</b>{' '}
+                · hư hỏng <b>{inspectionTotals.damaged}</b>
                 . {arrivedAt ? '' : 'Chọn thời điểm hàng đến.'}
               </p>
             </>

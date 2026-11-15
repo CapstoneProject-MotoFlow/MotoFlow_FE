@@ -1,5 +1,6 @@
 import BranchWorkBoard from './BranchWorkBoard'
 import { useBranchWork } from './useBranchWork'
+import TodayCollections from '../../operations/TodayCollections'
 /**
  * File: modules/branch-manager/pages/BranchManagerOverview.tsx
  * Loại: MÀN HÌNH — Tổng quan quản lý chi nhánh.
@@ -105,10 +106,15 @@ export default function BranchManagerOverview() {
       !keys.some((key) => data.shortcuts.some((item) => item.key === key))
     )
       return '—'
-    return data.shortcuts
+    const shortcutTotal = data.shortcuts
       .filter((item) => keys.includes(item.key))
       .reduce((sum, item) => sum + item.count, 0)
-      .toLocaleString('vi-VN')
+    if (keys.includes('RECEIPTS_TO_ASSIGN')) {
+      return work.receivingAssignmentTotal === undefined
+        ? '—'
+        : (shortcutTotal + work.receivingAssignmentTotal).toLocaleString('vi-VN')
+    }
+    return shortcutTotal.toLocaleString('vi-VN')
   }
   return (
     <main className="dashboard-content bm-overview">
@@ -163,6 +169,7 @@ export default function BranchManagerOverview() {
           )
         })}
       </section>
+      <TodayCollections />
       <BranchWorkBoard
         data={work}
         storeName={data?.storeName ?? 'Kho của bạn'}

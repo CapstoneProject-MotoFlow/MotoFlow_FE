@@ -208,6 +208,7 @@
   color: #24334b;
   background: transparent;
   font-size: 1rem;
+  text-overflow: ellipsis;
 }
 .account-search input::placeholder {
   color: #7a879b;
@@ -796,4 +797,19 @@
   color: #364bd8;
   background: #fff;
   cursor: pointer;
+}
+.access-denied-card {
+  margin: 1rem 0;
+  padding: 1.25rem;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #fff;
+}
+.access-denied-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.access-denied-card p {
+  margin: 0.5rem 0 1rem;
+  color: #475467;
 }

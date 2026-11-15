@@ -17,6 +17,7 @@ const {
   replacementValue,
   receiptWork,
   inspectionQuantitiesValid,
+  inspectionResult,
   receiptDateLimits,
   receiptDatesInFuture,
 } = await import(
@@ -67,6 +68,20 @@ test('quantity validation rejects nonintegers, negatives and defects exceeding d
   ]) {
     assert.equal(inspectionQuantitiesValid(values), false)
   }
+})
+test('supplier inspection separates document shortages from excess against outstanding quantity', () => {
+  assert.deepEqual(inspectionResult(['12', '10', '1', '2'], 5), {
+    documentQty: 12,
+    deliveredQty: 10,
+    wrongItemQty: 1,
+    damagedQty: 2,
+    passedQty: 7,
+    shortQty: 2,
+    excessQty: 2,
+  })
+  assert.equal(inspectionResult(['', '0', '0', '0'], 5), null)
+  assert.equal(inspectionResult(['12', '2', '1', '2'], 5), null)
+  assert.equal(inspectionResult(['0', '0', '0', '0'], 5).shortQty, 0)
 })
 test('receipt dates use the local day and reject a future date or arrival', () => {
   const now = new Date(2026, 10, 11, 0, 5, 30)

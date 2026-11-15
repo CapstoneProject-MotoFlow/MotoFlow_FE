@@ -17,6 +17,7 @@ import ReceiptActionDialog from './ReceiptActionDialog'
 import { receiptWork, type WorkReceipt } from './receivingRules'
 import {
   purchaseOrderCode,
+  purchaseOrderSearch,
   receiptStatusLabels,
   orderHistoryLabels,
 } from './receivingPresentation'
@@ -321,7 +322,7 @@ export default function PurchaseOrdersPage() {
                 page,
                 size: pageSize,
                 view,
-                q: query.trim().replace(/^YCN-0*/i, '') || undefined,
+                q: purchaseOrderSearch(query) || undefined,
                 supplierId: supplierId || undefined,
                 storeId: owner ? storeId || undefined : undefined,
                 createdFrom:
@@ -402,8 +403,8 @@ export default function PurchaseOrdersPage() {
       }
     >
       <PageHeader
-        title="Yêu cầu nhập hàng"
-        breadcrumb={[{ label: 'Nhập hàng' }, { label: 'Yêu cầu nhập hàng' }]}
+        title="Đơn nhập hàng"
+        breadcrumb={[{ label: 'Nhập hàng' }, { label: 'Đơn nhập hàng' }]}
       />
       {owner && <PurchaseDraftNotice user={user} />}
       {assigned && (
@@ -417,10 +418,10 @@ export default function PurchaseOrdersPage() {
             <h2>Việc nhận hàng của tôi</h2>
           </header>
           <div className="table-scroll">
-            <table>
+            <table className="receiving-task-table">
               <thead>
                 <tr>
-                  <th>Yêu cầu</th>
+                  <th>Mã đơn nhập hàng</th>
                   <th>Nhà cung cấp</th>
                   <th>Hàng cần nhận</th>
                   <th>Giao lúc</th>
@@ -464,10 +465,10 @@ export default function PurchaseOrdersPage() {
             {staff
               ? 'Việc kiểm nhận của tôi'
               : owner
-                ? 'Yêu cầu nhập hàng toàn chuỗi'
+                ? 'Đơn nhập hàng toàn chuỗi'
                 : user?.storeName
-                  ? 'Yêu cầu nhập hàng · ' + user.storeName
-                  : 'Yêu cầu nhập hàng của cửa hàng'}
+                  ? 'Đơn nhập hàng · ' + user.storeName
+                  : 'Đơn nhập hàng của cửa hàng'}
           </h2>
           {owner && (
             <div className="receiving-filter-row">
@@ -488,7 +489,7 @@ export default function PurchaseOrdersPage() {
                 className="receiving-layout-primary"
                 to="/purchase-orders/new"
               >
-                ＋ Tạo yêu cầu nhập hàng
+                ＋ Tạo đơn nhập hàng
               </Link>
             </div>
           )}
@@ -541,8 +542,8 @@ export default function PurchaseOrdersPage() {
               <div className="receiving-list-search">
                 <Icon name="search" />
                 <input
-                  aria-label="Tìm mã yêu cầu hoặc nhà cung cấp"
-                  placeholder="Tìm mã yêu cầu, nhà cung cấp"
+                  aria-label="Tìm mã đơn nhập hàng hoặc nhà cung cấp"
+                  placeholder="Tìm mã đơn nhập hàng, nhà cung cấp"
                   value={query}
                   onChange={(event) => {
                     setQuery(event.target.value)
@@ -626,7 +627,7 @@ export default function PurchaseOrdersPage() {
                   <thead>
                     <tr>
                       <th>Phiếu nhập</th>
-                      <th>Yêu cầu</th>
+                      <th>Mã đơn nhập hàng</th>
                       <th>Nhà cung cấp</th>
                       <th>Ngày nhận</th>
                       <th>Hàng cần nhận</th>
@@ -690,7 +691,7 @@ export default function PurchaseOrdersPage() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Yêu cầu</th>
+                      <th>Mã đơn nhập hàng</th>
                       <th>Nhà cung cấp</th>
                       {owner && <th>Kho nhận</th>}
                       <th>Ngày lập</th>
@@ -784,7 +785,7 @@ export default function PurchaseOrdersPage() {
                                       'AWAITING_DELIVERY',
                                       'RECEIVING',
                                     ].includes(row.status) ? (
-                                    // PO còn chờ giao: "Nhận hàng" mở hộp giao việc nhận hàng cho nhân viên.
+                                    // PO còn chờ giao: "Giao việc" mở hộp giao nhân viên nhận hàng.
                                     <ReceivingAssignment
                                       variant="row"
                                       taskType="SUPPLIER_RECEIVING"
@@ -826,7 +827,7 @@ export default function PurchaseOrdersPage() {
                     {!total && (
                       <tr>
                         <td colSpan={8} className="receiving-empty-cell">
-                          Chưa có yêu cầu nhập hàng để hiển thị.
+                          Chưa có đơn nhập hàng để hiển thị.
                         </td>
                       </tr>
                     )}
@@ -935,7 +936,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
     <main className="dashboard-content receiving-page">
       <PageBackLink to="/purchase-orders" />
       <header className="receiving-heading">
-        <h1>Yêu cầu nhập hàng {purchaseOrderCode(id ?? '')}</h1>
+        <h1>Đơn nhập hàng {purchaseOrderCode(id ?? '')}</h1>
         {detail && <Status value={detail.status} />}
       </header>
       {detail &&
@@ -952,7 +953,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                   navigate('/purchase-orders/' + detail.id + '/edit')
                 }
               >
-                Sửa yêu cầu
+                Sửa đơn nhập hàng
               </button>
             )}
             {detail.canCancel && (
@@ -962,7 +963,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 disabled={cancelling}
                 onClick={() => setCancelOpen((value) => !value)}
               >
-                Hủy yêu cầu
+                Hủy đơn nhập hàng
               </button>
             )}
             {manager &&
@@ -1012,7 +1013,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
             }
           }}
         >
-          <h2>Hủy yêu cầu nhập hàng</h2>
+          <h2>Hủy đơn nhập hàng</h2>
           <div className="receiving-layout-fields">
             <label>
               Lý do hủy <textarea name="reason" required maxLength={255} />
@@ -1177,7 +1178,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                   <li key={index}>
                     <strong>
                       {orderHistoryLabels[entry.action] ??
-                        'Đã cập nhật yêu cầu'}
+                        'Đã cập nhật đơn nhập hàng'}
                     </strong>
                     <small>
                       {dateTime(entry.at)}
@@ -1235,7 +1236,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
   )
 }
 
-/** Nhắc Owner còn bản nháp yêu cầu nhập hàng lưu trên máy này. */
+/** Nhắc Owner còn bản nháp đơn nhập hàng lưu trên máy này. */
 function PurchaseDraftNotice({
   user,
 }: {
@@ -1247,7 +1248,7 @@ function PurchaseDraftNotice({
   if (!saved) return null
   return (
     <Hint>
-      Bạn có một bản nháp yêu cầu nhập hàng ({saved.data.lines.length} dòng) lưu
+      Bạn có một bản nháp đơn nhập hàng ({saved.data.lines.length} dòng) lưu
       lúc {formatDateTime(saved.savedAt)}.{' '}
       <Link to="/purchase-orders/new">Mở bản nháp</Link>
     </Hint>

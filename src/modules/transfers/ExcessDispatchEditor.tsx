@@ -3,6 +3,7 @@ import { useAuth } from '../../shared/hooks/useAuth'
 import axiosClient from '../../shared/api/axiosClient'
 import { uploadAttachment } from '../../shared/api/upload'
 import FormDialog from '../../shared/ui/FormDialog'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import { inventoryError } from '../inventory/api'
 import type { Transfer } from './types'
 import CardHead, { HeadButton } from './CardHead'
@@ -140,16 +141,15 @@ export default function ExcessDispatchEditor({
               onChange={(e) => setReason(e.target.value)}
             />
           </label>
-          <label>
-            Chứng từ bàn giao
-            <input
-              type="file"
+          <div>
+            <span>Chứng từ bàn giao</span>
+            <LocalizedFileInput
               multiple
               accept="image/jpeg,image/png,image/webp,application/pdf"
               disabled={busy || confirm}
               onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
             />
-          </label>
+          </div>
         </div>
       )}
       {confirm && (

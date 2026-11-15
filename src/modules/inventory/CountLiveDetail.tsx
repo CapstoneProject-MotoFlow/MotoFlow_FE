@@ -243,6 +243,7 @@ export default function CountLiveDetail() {
                     <th>Vị trí (khu – kệ)</th>
                     {!staff && <th>Sổ sách</th>}
                     <th>Số đếm</th>
+                    <th>Hư hỏng</th>
                     {!staff && <th>Chênh lệch / Lý do</th>}
                     {scope.owner && <th>Giá trị chênh lệch</th>}
                   </tr>
@@ -260,6 +261,7 @@ export default function CountLiveDetail() {
                       <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
                       {!staff && <td>{l.bookQty ?? '—'}</td>}
                       <td>{l.countedQty ?? 'Chưa đếm'}</td>
+                      <td>{l.damagedQty ?? 0}</td>
                       {!staff && (
                         <td>
                           {l.difference ?? '—'}

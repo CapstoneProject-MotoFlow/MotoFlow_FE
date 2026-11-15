@@ -6,6 +6,12 @@ import type { SummaryDto } from '../../sales/salesApi'
 import type { TransferRow, ReplenishmentRow } from '../../transfers/types'
 
 import { documentCode } from '../../../shared/utils/documentCode'
+import { purchaseOrderCode } from '../../receiving/receivingPresentation'
+type PurchaseOrderRow = {
+  id: number
+  supplierName: string
+  createdAt: string
+}
 type ReceiptRow = {
   id: number
   supplierName: string
@@ -31,6 +37,10 @@ export function useBranchWork(coordinator: boolean) {
       page: 0,
       size: 5,
     }),
+    purchaseOrders = useInventoryData<Page<PurchaseOrderRow>>(
+      '/purchase-orders',
+      { view: 'AWAITING_RECEIVING_ASSIGNMENT', page: 0, size: 5 },
+    ),
     receipts = useInventoryData<Page<ReceiptRow>>('/goods-receipt-notes', {
       status: 'AWAITING_CONFIRMATION',
       page: 0,
@@ -93,6 +103,16 @@ export function useBranchWork(coordinator: boolean) {
         at: s.createdAt,
         href: '/sales-orders/' + s.id,
       })),
+    ...(purchaseOrders.data?.items ?? []).map((order) => ({
+      key: 'po' + order.id,
+      code: purchaseOrderCode(order.id),
+      kind: 'Đơn nhập hàng',
+      title: 'Chưa giao việc nhận hàng',
+      description: order.supplierName,
+      at: order.createdAt,
+      href: '/purchase-orders/' + order.id,
+      action: 'Xem đơn',
+    })),
     ...(receipts.data?.items ?? []).map((r) => ({
       key: 'r' + r.id,
       code: documentCode('PN', r.id),
@@ -161,10 +181,11 @@ export function useBranchWork(coordinator: boolean) {
     })),
   ]
   const rows = [...new Map(work.map((w) => [w.key, w])).values()].sort(
-    (a, b) => a.at.localeCompare(b.at) || a.key.localeCompare(b.key),
+    (a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key),
   )
   const sources = [
     sales,
+    purchaseOrders,
     receipts,
     unassigned,
     transfers,
@@ -179,6 +200,7 @@ export function useBranchWork(coordinator: boolean) {
     retry: () => sources.forEach((source) => source.retry()),
     summary,
     lots,
+    receivingAssignmentTotal: purchaseOrders.data?.totalItems,
     countTotal:
       drafts.data && counts.data
         ? drafts.data.counts.totalItems +

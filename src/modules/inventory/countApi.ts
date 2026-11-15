@@ -62,6 +62,7 @@ export type CountDto = CountRow & {
     binLocation: string | null
     bookQty: number | null
     countedQty: number | null
+    damagedQty?: number
     difference: number | null
     differenceValue: number | null
     reason: string | null

@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { isAxiosError } from 'axios'
 import { uploadProductImage } from '../../../shared/api/upload'
+import LocalizedFileInput from '../../../shared/ui/LocalizedFileInput'
 
 export default function ProductImageUrls({
   values,
@@ -61,8 +62,8 @@ export default function ProductImageUrls({
       <p>
         Thêm tối đa 3 ảnh từ máy hoặc bằng URL HTTPS. Ảnh đầu tiên là ảnh chính.
       </p>
-      <input
-        type="file"
+      <LocalizedFileInput
+        buttonText="Chọn ảnh"
         aria-label="Chọn tệp ảnh phụ tùng"
         accept="image/jpeg,image/png,image/webp"
         disabled={uploading || fileUploadUnavailable || values.length >= 3}

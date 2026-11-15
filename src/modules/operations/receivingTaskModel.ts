@@ -38,7 +38,7 @@ export function readReceivingTasks(data: unknown): ReceivingTask[] {
 }
 export function receivingCode(type: ReceivingTaskType, id: number) {
   return (
-    (type === 'SUPPLIER_RECEIVING' ? 'YCN-' : 'DC-') +
+    (type === 'SUPPLIER_RECEIVING' ? 'DNH-' : 'DC-') +
     String(id).padStart(4, '0')
   )
 }
@@ -58,7 +58,9 @@ export function receivingWork(task: ReceivingTask) {
   return {
     key: 'nh' + task.taskType + task.documentId,
     task: supplier ? 'Nhận hàng nhập từ nhà cung cấp' : 'Nhận hàng điều chuyển',
-    code: task.documentCode || receivingCode(task.taskType, task.documentId),
+    code: supplier
+      ? receivingCode(task.taskType, task.documentId)
+      : task.documentCode || receivingCode(task.taskType, task.documentId),
     description: [
       task.partnerName,
       task.lineCount != null ? task.lineCount + ' dòng' : null,

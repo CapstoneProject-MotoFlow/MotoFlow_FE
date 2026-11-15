@@ -1,4 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import { useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { useParams } from 'react-router-dom'
@@ -57,6 +58,9 @@ function Editor({
         ]),
       ),
     ),
+    [damagedValues, setDamagedValues] = useState<Record<number, string>>(() =>
+      Object.fromEntries(rows.map((line) => [line.id, String(line.damagedQty ?? 0)])),
+    ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
@@ -91,7 +95,16 @@ function Editor({
       !blocked,
     valid =
       rows.length > 0 &&
-      rows.every((l) => values[l.id] === '' || validCountQuantity(values[l.id]))
+      rows.every((l) => {
+        const counted = values[l.id]
+        const damaged = damagedValues[l.id] ?? '0'
+        return (
+          (counted === '' || validCountQuantity(counted)) &&
+          /^\d+$/.test(damaged) &&
+          Number.isSafeInteger(Number(damaged)) &&
+          Number(damaged) <= (counted === '' ? 0 : Number(counted))
+        )
+      })
   async function act(action: 'start' | 'lines' | 'submit') {
     if (
       lock.current ||
@@ -109,6 +122,7 @@ function Editor({
         lines: rows.map((l) => ({
           lineId: l.id,
           countedQty: values[l.id] === '' ? null : Number(values[l.id]),
+          damagedQty: Number(damagedValues[l.id] ?? 0),
         })),
       }
       if (action === 'lines')
@@ -175,10 +189,10 @@ function Editor({
         </div>
       )}
       {editable && (
-        <label className="stock-notice">
+        <div className="stock-notice">
           Nhập số đếm từ Excel (.xlsx): cột SKU, Mã lô (ví dụ #12), Số đếm
-          <input
-            type="file"
+          <LocalizedFileInput
+            buttonText="Chọn tệp Excel"
             accept=".xlsx"
             disabled={busy || importing}
             onChange={async (e) => {
@@ -212,7 +226,7 @@ function Editor({
               }
             }}
           />
-        </label>
+        </div>
       )}
       <div className="stock-table-scroll">
         <table className="stock-table">
@@ -221,6 +235,7 @@ function Editor({
               <th>Phụ tùng / Lô</th>
               <th>Vị trí (khu – kệ)</th>
               <th>Số đếm thực tế</th>
+              <th>Hư hỏng</th>
             </tr>
           </thead>
           <tbody>
@@ -251,6 +266,27 @@ function Editor({
                       setConfirmed(false)
                     }}
                   />
+                </td>
+                <td>
+                  <input
+                    aria-label={'Số hư hỏng ' + l.sku + ' lô ' + (l.lotId ?? 'không lô')}
+                    type="number"
+                    min={0}
+                    max={values[l.id] === '' ? 0 : Number(values[l.id]) || 0}
+                    step={1}
+                    value={damagedValues[l.id] ?? '0'}
+                    disabled={!editable || busy || importing}
+                    onChange={(e) => {
+                      setDamagedValues((v) => ({ ...v, [l.id]: e.target.value }))
+                      setConfirmed(false)
+                    }}
+                  />
+                  {Number(damagedValues[l.id] ?? 0) >
+                    (values[l.id] === '' ? 0 : Number(values[l.id])) && (
+                      <small className="count-validation-error" role="alert">
+                        Hư hỏng không được lớn hơn số đếm.
+                      </small>
+                    )}
                 </td>
               </tr>
             ))}

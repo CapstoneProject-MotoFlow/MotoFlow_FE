@@ -107,7 +107,10 @@ export default function WarehouseAssignmentDialog({
             )}
             {r.data.noticeMessage && <p>{r.data.noticeMessage}</p>}
             <label>
-              Người thực hiện
+              {taskType === 'SUPPLIER_RECEIVING' ||
+              taskType === 'TRANSFER_RECEIVING'
+                ? 'Nhân viên được giao'
+                : 'Người thực hiện'}
               <select
                 disabled={!r.data.canAssign || busy}
                 value={choice}
@@ -117,7 +120,7 @@ export default function WarehouseAssignmentDialog({
                 {r.data.eligibleAssignees.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.fullName}
-                    {p.self ? ' (Tôi)' : ''} · {p.openTasks} việc
+                    {p.self ? ' (Tôi)' : ''}
                   </option>
                 ))}
               </select>

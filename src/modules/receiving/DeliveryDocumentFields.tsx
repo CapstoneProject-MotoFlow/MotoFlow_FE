@@ -10,6 +10,7 @@ import {
   type DeliveryDocuments,
 } from './useDeliveryDocuments'
 import FieldError from '../../shared/ui/FieldError'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import type { FieldErrors } from '../../shared/hooks/useFormValidation'
 import './receiving.css'
 
@@ -70,15 +71,14 @@ export default function DeliveryDocumentFields({
       <label>
         Biển số xe <input name="vehiclePlateNo" maxLength={20} />
       </label>
-      <label className="receiving-layout-wide receiving-dropzone">
+      <div className="receiving-layout-wide receiving-dropzone">
         <strong>Chứng từ giao hàng</strong>
         {receiptDocumentUploadEnabled ? (
           <>
             <span>Chọn ảnh hoặc PDF chứng từ để đính kèm</span>
-            <input
+            <LocalizedFileInput
               name="documents"
               data-label="Chứng từ giao hàng"
-              type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               multiple
               required
@@ -100,7 +100,7 @@ export default function DeliveryDocumentFields({
         ) : (
           <span>Tải tệp tạm thời được tắt trong môi trường dev.</span>
         )}
-      </label>
+      </div>
       {!!images.length && (
         <ul
           className="receiving-layout-wide receiving-document-list"

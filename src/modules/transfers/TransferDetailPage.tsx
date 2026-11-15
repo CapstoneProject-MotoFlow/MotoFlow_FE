@@ -385,7 +385,7 @@ export default function TransferDetailPage() {
               <p className="tf-empty">
                 {d.status === 'AWAITING_DISPATCH'
                   ? 'Phiếu chưa xuất kho nên chưa có lần nhận hàng.'
-                  : 'Chưa có phiếu nhận. Nhân viên được quản lý cửa hàng nhận giao việc nhận hàng sẽ lập phiếu khi hàng tới.'}
+                  : 'Chưa có phiếu nhận. Nhân viên được quản lý kho nhận giao việc nhận hàng sẽ lập phiếu khi hàng tới.'}
               </p>
             )}
           </section>
@@ -558,7 +558,7 @@ export default function TransferDetailPage() {
                 ))}
               {action === 'dispatch' && dispatchStockShort && (
                 <p role="alert" className="stock-error">
-                  Số có thể bán của kho nguồn thấp hơn số đã soạn. Hãy kiểm tra
+                  Tồn kho của kho nguồn thấp hơn số đã soạn. Hãy kiểm tra
                   lại tồn và cập nhật kết quả soạn hàng trước khi xác nhận xuất.
                 </p>
               )}

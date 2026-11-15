@@ -17,7 +17,7 @@ export const branchManagerNavigation: NavItem[] = [
   { label: 'Khách hàng', href: '/branch-manager/customers', icon: 'users' },
   { label: 'Công nợ', href: '/receivables', icon: 'wallet' },
   {
-    label: 'Yêu cầu nhập hàng',
+    label: 'Đơn nhập hàng',
     href: '/purchase-orders',
     icon: 'clipboard',
   },

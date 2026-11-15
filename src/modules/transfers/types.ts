@@ -145,6 +145,7 @@ export type Receipt = ReceiptDocumentInfo & {
     deliveredQty: number
     passedQty: number
     damagedQty: number
+    wrongItemQty: number
     excessQty: number
   }[]
 }

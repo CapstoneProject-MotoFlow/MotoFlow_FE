@@ -1,4 +1,5 @@
 import './receivables.css'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import { useRef, useState } from 'react'
 import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
@@ -204,9 +205,8 @@ export default function OpeningDebtPicker({
                 </button>
               </div>
             ))}
-            <input
+            <LocalizedFileInput
               id="opening-files"
-              type="file"
               multiple
               accept="image/jpeg,image/png,image/webp,application/pdf"
               onChange={(e) => {

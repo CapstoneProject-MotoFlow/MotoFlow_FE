@@ -4,6 +4,8 @@ import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import { apiMessage } from '../suppliers/supplierService'
 import { formatDateTime } from '../../shared/utils/format'
+import { inspectionCountFields, inspectionResultFields } from './receivingRules'
+import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 
 type Assignment = {
   canAssign: boolean
@@ -20,23 +22,24 @@ type Assignment = {
   eligibleAssignees: {
     id: number
     fullName: string
-    openTasks: number
     self: boolean
   }[]
 }
 
 type Receipt = {
   canConfirm: boolean
-  lines: {
+  documents: ReceiptDocument[]
+  lines: ({
     id: number
     partName: string
-    passedQty: number
-    shortQty: number
-    wrongItemQty: number
-    damagedQty: number
-    excessQty: number
-  }[]
+    expectedQty: number | null
+    manufactureDate: string | null
+    expiryDate: string | null
+  } &
+    Record<(typeof inspectionColumns)[number][0], number>)[]
 }
+
+const inspectionColumns = [...inspectionCountFields, ...inspectionResultFields]
 
 function ExistingReceiptActionDialog({
   receiptId,
@@ -116,6 +119,7 @@ function ExistingReceiptActionDialog({
 
   return (
     <FormDialog
+      className={!assign ? 'receiving-confirm-dialog' : ''}
       title={
         (assign ? 'Giao việc kiểm nhận · ' : 'Xác nhận phiếu nhập · ') +
         documentNo
@@ -153,8 +157,8 @@ function ExistingReceiptActionDialog({
                 <option value="">Chọn người kiểm nhận</option>
                 {assignment.eligibleAssignees.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.fullName} · {item.openTasks} việc đang mở
-                    {item.self ? ' · Tự nhận' : ''}
+                    {item.fullName}
+                    {item.self ? ' (Tôi)' : ''}
                   </option>
                 ))}
               </select>
@@ -167,27 +171,33 @@ function ExistingReceiptActionDialog({
           ))}
         {receipt && (
           <>
+            <ReceiptDocuments
+              receiptId={receiptId}
+              documents={receipt.documents}
+            />
             <div className="table-scroll">
               <table className="receiving-confirm-table">
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th>Đạt</th>
-                    <th>Thiếu</th>
-                    <th>Giao sai</th>
-                    <th>Hỏng</th>
-                    <th>Thừa</th>
+                    <th>Cần nhập</th>
+                    {inspectionColumns.map(([field, label]) => (
+                      <th key={field}>{label}</th>
+                    ))}
+                    <th>Ngày sản xuất</th>
+                    <th>Hạn dùng</th>
                   </tr>
                 </thead>
                 <tbody>
                   {receipt.lines.map((line) => (
                     <tr key={line.id}>
                       <td>{line.partName}</td>
-                      <td>{line.passedQty}</td>
-                      <td>{line.shortQty}</td>
-                      <td>{line.wrongItemQty}</td>
-                      <td>{line.damagedQty}</td>
-                      <td>{line.excessQty}</td>
+                      <td>{line.expectedQty ?? '—'}</td>
+                      {inspectionColumns.map(([field]) => (
+                        <td key={field}>{line[field]}</td>
+                      ))}
+                      <td>{line.manufactureDate ?? '—'}</td>
+                      <td>{line.expiryDate ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>

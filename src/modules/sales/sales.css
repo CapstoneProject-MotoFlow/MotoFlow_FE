@@ -2,6 +2,11 @@
   display: grid;
   gap: 24px;
 }
+.sales-draft-create-order,
+.sales-draft-create-order:visited,
+.sales-draft-create-order:hover {
+  color: #fff;
+}
 .sales-workspace small {
   display: block;
   color: #667085;
@@ -1886,6 +1891,16 @@
 .sales-workspace .sales-pick-note input[aria-invalid='true'] {
   border-color: #f04452;
   background: #fff8f8;
+}
+.sales-order-note {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f5f7ff;
+  color: #344054;
+}
+.sales-order-note strong {
+  color: #101828;
 }
 /* Lý do nút "Ghi nhận bán chịu" đang mờ. */
 .sales-action-reason {
