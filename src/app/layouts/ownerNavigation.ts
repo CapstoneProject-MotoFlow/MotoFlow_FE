@@ -29,7 +29,7 @@ export const ownerNavigation: NavItem[] = [
     group: 'CÔNG NỢ',
   },
   {
-    label: 'Yêu cầu nhập hàng',
+    label: 'Đơn nhập hàng',
     href: '/purchase-orders',
     icon: 'clipboard',
     group: 'NHẬP HÀNG',

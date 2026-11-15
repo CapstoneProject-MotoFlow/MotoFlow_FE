@@ -1,7 +1,7 @@
 /**
  * File: modules/owner/pages/OwnerOverview.tsx
  * Loại: THÀNH PHẦN MÀN HÌNH — Tổng quan của Owner (route /dashboard).
- * Công dụng: Tiêu đề + nút tạo nhanh (Owner tạo yêu cầu nhập hàng, đơn bán), dải việc chờ duyệt gọn một hàng
+ * Công dụng: Tiêu đề + nút tạo nhanh (Owner tạo đơn nhập hàng, đơn bán), dải việc chờ duyệt gọn một hàng
  * (thay cho 2 thẻ to), rồi số liệu bán hàng, công nợ, kho và so sánh cửa hàng.
  */
 import { useEffect, useState } from 'react'
@@ -79,7 +79,7 @@ export default function OwnerOverview() {
           <>
             <Link className="mf-btn mf-btn--primary" to="/purchase-orders/new">
               <Icon name="plus" />
-              Tạo yêu cầu nhập hàng
+              Tạo đơn nhập hàng
             </Link>
             <Link className="mf-btn mf-btn--secondary" to="/sales-orders/new">
               <Icon name="plus" />

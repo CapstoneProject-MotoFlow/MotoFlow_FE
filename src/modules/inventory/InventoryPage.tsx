@@ -91,13 +91,6 @@ export default function InventoryPage() {
     grouped && remoteFilter,
     dataScope,
   )
-  // BE chưa có tham số lọc theo khoảng tồn: khi có khoảng, đọc đủ tồn của kho rồi lọc trên máy.
-  const ranged = useCompleteStock(
-    { ...filters, storeId: scope.storeId },
-    revision,
-    !grouped && rangeActive,
-    dataScope,
-  )
   const categories = useInventoryData<Category[]>('/part-categories')
   const paged = useInventoryData<Page<StockRow>>(
     '/inventory/stock',
@@ -110,9 +103,11 @@ export default function InventoryPage() {
       lowStockOnly: view === 'lowStock',
       unavailableOnly: view === 'unavailable',
       expiryAlertOnly: view === 'expiryAlert',
+      minQty: !grouped ? minQty : undefined,
+      maxQty: !grouped ? maxQty : undefined,
     },
     revision,
-    !grouped && !rangeActive,
+    !grouped,
   )
   const summary = useInventoryData<StockSummary>(
     '/inventory/stock/summary',
@@ -150,46 +145,27 @@ export default function InventoryPage() {
     (row) => row.stockValue,
     sort,
   )
-  const rangedFlat = sortStock(
-    (ranged.data ?? []).filter(
-      (row) =>
-        (!scope.storeId || String(row.storeId) === scope.storeId) &&
-        (includeZero || row.onHandQty + row.inTransitQty > 0) &&
-        matchesStockView(row, view) &&
-        inRange(row.availableQty),
-    ),
-    (row) => row,
-    (row) => row.stockValue,
-    'name',
-  )
-  const clientPaged = !grouped && rangeActive
-  const loading = base.loading || filtered.loading || ranged.loading
+  const clientPaged = grouped
+  const loading = base.loading || filtered.loading
   const error =
-    ranged.error ??
     base.error ??
     filtered.error ??
     summary.error ??
     areaResource.error ??
     scope.storesError ??
     categories.error
-  const ready = clientPaged
-    ? !!ranged.data
-    : !!base.data && (!grouped || !remoteFilter || !!filtered.data)
+  const ready = !!base.data && (!grouped || !remoteFilter || !!filtered.data)
   const total = grouped
     ? groups.length
-    : clientPaged
-      ? rangedFlat.length
-      : (paged.data?.totalItems ?? 0)
+    : (paged.data?.totalItems ?? 0)
   const boundedPage = Math.min(
     Math.max(0, Math.floor(requestedPage)),
     Math.max(0, Math.ceil(total / 20) - 1),
   )
-  const page = grouped || clientPaged ? boundedPage : requestedPage
+  const page = grouped ? boundedPage : requestedPage
   const flat = grouped
     ? sortedFlat
-    : clientPaged
-      ? rangedFlat.slice(page * 20, (page + 1) * 20)
-      : (paged.data?.items ?? [])
+    : (paged.data?.items ?? [])
   // Góp ý cô Hoài: tích chọn phụ tùng sắp hết (kể cả chưa chạm ngưỡng) rồi tạo nhanh yêu cầu.
   // Chỉ chọn khi đang xem một kho, vì yêu cầu bổ sung / nhập hàng luôn gắn với một cửa hàng.
   const selectable = !grouped
@@ -590,7 +566,7 @@ export default function InventoryPage() {
             )}
           </fieldset>
         </div>
-        {grouped && <Hint>Chọn một kho để tạo nhanh yêu cầu nhập.</Hint>}
+        {grouped && <Hint>Chọn một kho để tạo nhanh đơn nhập hàng.</Hint>}
         {selectable && pickedRows.length > 0 && (
           <div
             className="stock-pick-bar"
@@ -625,7 +601,7 @@ export default function InventoryPage() {
                 className="mf-btn mf-btn--primary"
                 onClick={() => createFromPicked('purchase')}
               >
-                Tạo yêu cầu nhập hàng
+                Tạo đơn nhập hàng
               </button>
             )}
           </div>

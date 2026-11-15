@@ -220,6 +220,9 @@ function AllocationEditor({
               ' (' + [...groups.keys()].map(storeName).join(', ') + ')'}{' '}
             · còn thiếu {remaining} phụ tùng
           </span>
+          <span className="tf-head-meta tf-coord-manager-note">
+            Quản lý kho nguồn điều phối hàng cho kho nhận {request.storeName}
+          </span>
           <HeadButton
             action={{
               key: 'split',
@@ -330,7 +333,7 @@ function AllocationEditor({
                                         value: String(s.storeId),
                                         label:
                                           s.storeName +
-                                          ' · có thể bán ' +
+                                          ' · Tồn kho ' +
                                           s.sellableQty,
                                       })),
                                   ]}
@@ -370,15 +373,20 @@ function AllocationEditor({
                                       }))
                                     }
                                   >
-                                    ×
+                                    <svg
+                                      aria-hidden="true"
+                                      viewBox="0 0 16 16"
+                                      focusable="false"
+                                    >
+                                      <path d="m4 4 8 8m0-8-8 8" />
+                                    </svg>
                                   </button>
                                 )}
                               </div>
                             ) : (
-                              <small>Chưa có kho còn hàng có thể bán</small>
+                              <small>Chưa có kho nguồn còn tồn kho</small>
                             )}
                             {index === allocations.length - 1 &&
-                              left > 0 &&
                               unused.length > 0 && (
                                 <button
                                   type="button"
@@ -390,16 +398,13 @@ function AllocationEditor({
                                         ...old[l.productId],
                                         {
                                           storeId: unused[0].storeId,
-                                          qty: Math.min(
-                                            left,
-                                            unused[0].sellableQty,
-                                          ),
+                                          qty: Math.min(Math.max(left, 0), unused[0].sellableQty),
                                         },
                                       ],
                                     }))
                                   }
                                 >
-                                  ＋ Lấy thêm từ {storeName(unused[0].storeId)}
+                                  ＋ Thêm kho nguồn: {storeName(unused[0].storeId)}
                                 </button>
                               )}
                           </td>

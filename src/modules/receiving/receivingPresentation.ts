@@ -5,20 +5,24 @@ import {
 } from '../../shared/labels/status'
 
 export function purchaseOrderCode(id: number | string) {
-  return documentCode('YCN', id)
+  return documentCode('DNH', id)
 }
 
-/** Nhãn chung của yêu cầu nhập hàng và phiếu nhập (lấy từ file nhãn dùng chung). */
+export function purchaseOrderSearch(query: string) {
+  return query.trim().replace(/^(?:DNH|YCN)-0*(?=\d+$)/i, '')
+}
+
+/** Nhãn chung của đơn nhập hàng và phiếu nhập (lấy từ file nhãn dùng chung). */
 export const receiptStatusLabels: Record<string, string> = {
   ...purchaseOrderStatusLabels,
   ...goodsReceiptStatusLabels,
 }
 
 export const orderHistoryLabels: Record<string, string> = {
-  CREATED: 'Đã tạo yêu cầu',
-  UPDATED: 'Đã sửa yêu cầu',
-  CANCELLED: 'Đã hủy yêu cầu',
-  PURCHASE_ORDER_CREATED: 'Đã tạo yêu cầu',
-  PURCHASE_ORDER_UPDATED: 'Đã sửa yêu cầu',
-  PURCHASE_ORDER_CANCELLED: 'Đã hủy yêu cầu',
+  CREATED: 'Đã tạo đơn nhập hàng',
+  UPDATED: 'Đã sửa đơn nhập hàng',
+  CANCELLED: 'Đã hủy đơn nhập hàng',
+  PURCHASE_ORDER_CREATED: 'Đã tạo đơn nhập hàng',
+  PURCHASE_ORDER_UPDATED: 'Đã sửa đơn nhập hàng',
+  PURCHASE_ORDER_CANCELLED: 'Đã hủy đơn nhập hàng',
 }

@@ -101,7 +101,7 @@ function Queue({
                               : path.startsWith('/goods-receipt-notes')
                                 ? 'PN'
                                 : path.startsWith('/purchase-orders')
-                                  ? 'YCN'
+                                  ? 'DNH'
                                   : path.startsWith('/transfer-orders')
                                     ? 'DC'
                                     : 'SO',
@@ -243,7 +243,7 @@ export default function DashboardWork({
       {role === 'OWNER' ? (
         <>
           <Queue
-            title="Yêu cầu nhập hàng đang mở"
+            title="Đơn nhập hàng đang mở"
             path="/purchase-orders"
             href="/purchase-orders"
             params={{ view: 'OPEN' }}

@@ -1,6 +1,7 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Hint from '../../shared/ui/Hint'
+import FieldError from '../../shared/ui/FieldError'
 import { formatDateTime } from '../../shared/utils/format'
 import {
   clearDraft,
@@ -97,7 +98,7 @@ function EditOrder({ id }: { id: string }) {
     return () => controller.abort()
   }, [id])
   if (error) return <p role="alert">{error}</p>
-  if (!order) return <p role="status">Đang tải phiếu…</p>
+  if (!order) return <p role="status">Đang tải đơn nhập hàng…</p>
   return order.canUpdate ? (
     <OrderFormLayout editing order={order} />
   ) : (
@@ -120,12 +121,12 @@ async function loadActiveOptions<T>(path: string, signal: AbortSignal) {
   }
 }
 
-/** Điền sẵn từ màn Tồn kho: Owner tích các phụ tùng sắp hết rồi bấm "Tạo yêu cầu nhập hàng". */
+/** Điền sẵn từ màn Tồn kho: Owner tích các phụ tùng sắp hết rồi bấm "Tạo đơn nhập hàng". */
 export type PurchasePrefill = {
   storeId?: number
   lines: { productId: number; sku: string; partName: string; qty: number }[]
 }
-/** Bản nháp lưu trên trình duyệt (BE chưa có trạng thái DRAFT cho yêu cầu nhập hàng). */
+/** Bản nháp lưu trên trình duyệt (BE chưa có trạng thái DRAFT cho đơn nhập hàng). */
 type PurchaseDraft = {
   supplierId: string
   storeId: string
@@ -277,7 +278,7 @@ function OrderFormLayout({
       saved
         ? 'Đã lưu nháp lúc ' +
             formatDateTime(saved.savedAt) +
-            ' trên máy này. Mở lại "Tạo yêu cầu nhập hàng" để làm tiếp.'
+            ' trên máy này. Mở lại "Tạo đơn nhập hàng" để làm tiếp.'
         : 'Không lưu được nháp trên máy này.',
     )
   }
@@ -466,7 +467,7 @@ function OrderFormLayout({
           <h2>Tóm tắt</h2>
           <dl>
             <div>
-              <dt>Số dòng</dt>
+              <dt>Sản phẩm</dt>
               <dd>{draft.lines.length}</dd>
             </div>
             <div>
@@ -493,8 +494,8 @@ function OrderFormLayout({
             {editing
               ? 'Lưu thay đổi'
               : saving
-                ? 'Đang tạo phiếu…'
-                : 'Tạo yêu cầu'}
+                ? 'Đang tạo đơn…'
+                : 'Tạo đơn nhập hàng'}
           </button>
           {!editing && (
             <button
@@ -601,7 +602,7 @@ function OrderFormLayout({
               {!draft.lines.length && (
                 <tr>
                   <td className="receiving-empty-cell" colSpan={6}>
-                    Chưa có phụ tùng trong phiếu.
+                    Chưa có phụ tùng trong đơn.
                   </td>
                 </tr>
               )}
@@ -626,7 +627,7 @@ function OrderFormLayout({
               }))
             }
           >
-            ＋ Thêm dòng
+            ＋ Thêm sản phẩm
           </button>
         </div>
       </Panel>
@@ -634,6 +635,13 @@ function OrderFormLayout({
   )
 }
 /** GET /purchase-orders/{id}/receiving-view: thông tin PO cho người nhận hàng, không có giá. */
+type ReplacementCase = {
+  productId: number
+  sku: string
+  partName: string
+  openReplacementQty: number
+}
+
 type ReceivingView = {
   supplierName: string
   storeName: string
@@ -641,7 +649,7 @@ type ReceivingView = {
   canCreateReceipt: boolean
   canCreateReplacement: boolean
   lines?: {
-    productId?: number
+    productId: number
     sku: string
     partName: string
     baseUnit?: string | null
@@ -649,7 +657,8 @@ type ReceivingView = {
     remainingQty?: number | null
     outstandingQty?: number | null
   }[]
-  discrepancies: { id: number; partName: string; openReplacementQty: number }[]
+  openCases?: (ReplacementCase & { caseId: number })[]
+  discrepancies?: (ReplacementCase & { id: number })[]
 }
 
 function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
@@ -664,10 +673,25 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   const docs = useDeliveryDocuments('Lập phiếu nhập')
   const validation = useFormValidation()
   const [replacementChoice, setReplacement] = useState<boolean>()
+  const [selectedCases, setSelectedCases] = useState<number[]>([])
   const replacement =
     replacementChoice ??
     (!!order?.canCreateReplacement && !order.canCreateReceipt)
   const manager = user?.role === 'BRANCH_MANAGER'
+  const lines = order?.lines ?? []
+  const replacementCases = (
+    order?.openCases?.map((item) => ({ ...item, id: item.caseId })) ??
+    order?.discrepancies ?? []
+  ).filter((item) => item.openReplacementQty > 0)
+  const documentProducts = replacement
+    ? Array.from(
+        new Map(
+          replacementCases
+            .filter((item) => selectedCases.includes(item.id))
+            .map((item) => [item.productId, item] as const),
+        ).values(),
+      )
+    : lines.filter((line) => (line.outstandingQty ?? line.remainingQty ?? 0) > 0)
   useEffect(() => {
     if (!orderId || !/^[1-9]\d*$/.test(orderId)) return
     const controller = new AbortController()
@@ -712,13 +736,20 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
           ?.focus()
       return
     }
-    const replacementForCaseIds = replacement
-      ? new FormData(form).getAll('case').map(Number)
-      : []
+    const replacementForCaseIds = replacement ? selectedCases : []
     if (replacement && !replacementForCaseIds.length) {
       setError('Chọn ít nhất một hồ sơ sai lệch cần giao bù.')
       return
     }
+    if (!documentProducts.length) {
+      setError('Phiếu này chưa có phụ tùng chờ nhận.')
+      return
+    }
+    const fields = new FormData(form)
+    const documentLines = documentProducts.map(({ productId }) => ({
+      productId,
+      documentQty: Number(fields.get(`documentQty-${productId}`)),
+    }))
     saveLock.current = true
     setError('')
     setStage(receiptDocumentUploadEnabled ? 'uploading' : 'creating')
@@ -727,7 +758,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
         '/purchase-orders/' + orderId + '/goods-receipt-notes',
-        { ...read.body, replacementForCaseIds, documents },
+        { ...read.body, replacementForCaseIds, documents, documentLines },
       )
       // BE đã giao việc kiểm nhận của phiếu cho chính người lập: mở thẳng màn ghi kết quả kiểm.
       refreshNotifications()
@@ -740,7 +771,6 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
     }
   }
 
-  const lines = order?.lines ?? []
   return (
     <form
       className="receiving-stack"
@@ -760,8 +790,8 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         </Hint>
         <dl className="receiving-info">
           <div>
-            <dt>Yêu cầu nhập hàng</dt>
-            <dd>{orderId ? documentCode('YCN', orderId) : '—'}</dd>
+            <dt>Mã đơn nhập hàng</dt>
+            <dd>{orderId ? documentCode('DNH', orderId) : '—'}</dd>
           </div>
           <div>
             <dt>Nhà cung cấp</dt>
@@ -835,19 +865,66 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
             Giao bù cho sai lệch
           </label>
         </div>
-        {replacement && order ? (
+        {replacement && (
           <div className="receiving-layout-fields">
-            {order.discrepancies
-              .filter((item) => item.openReplacementQty > 0)
-              .map((item) => (
-                <label key={item.id} className="receiving-inline">
-                  <input type="checkbox" name="case" value={item.id} />{' '}
-                  {item.partName} · Còn {item.openReplacementQty}
-                </label>
-              ))}
+            {replacementCases.map((item) => (
+              <label key={item.id} className="receiving-inline">
+                <input
+                  type="checkbox"
+                  checked={selectedCases.includes(item.id)}
+                  disabled={saving}
+                  onChange={(event) => {
+                    const checked = event.target.checked
+                    setSelectedCases((previous) =>
+                      checked
+                        ? [...previous, item.id]
+                        : previous.filter((id) => id !== item.id),
+                    )
+                  }}
+                />{' '}
+                {item.partName} · Còn {item.openReplacementQty}
+              </label>
+            ))}
           </div>
-        ) : null}
+        )}
       </Panel>
+      {documentProducts.length > 0 && (
+        <Panel title="Số lượng trên chứng từ">
+          <Hint>Nhập 0 nếu phụ tùng không có trên chứng từ giao hàng.</Hint>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Phụ tùng</th>
+                  <th scope="col">Số lượng trên chứng từ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documentProducts.map(({ productId, sku, partName }) => (
+                  <tr key={`${replacement}-${productId}`}>
+                    <td>
+                      <strong>{sku}</strong> {partName}
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`documentQty-${productId}`}
+                        aria-label={`Số lượng trên chứng từ ${sku}`}
+                        data-label={`Số lượng trên chứng từ của ${sku}`}
+                        min={0}
+                        max={1_000_000}
+                        required
+                        disabled={saving}
+                      />
+                      <FieldError message={validation.errors[`documentQty-${productId}`]} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
       <ActionBar>
         {error && (
           <p className="receiving-receipt-submit-error" role="alert">
@@ -895,7 +972,7 @@ function FormShell({
         <nav className="receiving-breadcrumb" aria-label="Đường dẫn">
           <Link to="/dashboard">Trang chủ</Link>
           <span aria-hidden="true">›</span>
-          <Link to="/purchase-orders">Yêu cầu nhập hàng</Link>
+          <Link to="/purchase-orders">Đơn nhập hàng</Link>
           <span aria-hidden="true">›</span>
           <span aria-current="page">{title}</span>
         </nav>
@@ -907,7 +984,7 @@ function FormShell({
 
 export function NewPurchaseOrderPage() {
   return (
-    <FormShell title="Tạo yêu cầu nhập hàng">
+    <FormShell title="Tạo đơn nhập hàng">
       <OrderFormLayout editing={false} />
     </FormShell>
   )
@@ -916,7 +993,7 @@ export function NewPurchaseOrderPage() {
 export function EditPurchaseOrderPage() {
   const { id } = useParams()
   return (
-    <FormShell title="Sửa yêu cầu nhập hàng">
+    <FormShell title="Sửa đơn nhập hàng">
       {id && /^[1-9]\d*$/.test(id) ? (
         <EditOrder key={id} id={id} />
       ) : (

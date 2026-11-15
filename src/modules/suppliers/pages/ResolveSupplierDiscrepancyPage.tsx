@@ -17,6 +17,7 @@ import {
 import '../supplier-discrepancy.css'
 import { formatDateTime } from '../../../shared/utils/format'
 
+import { purchaseOrderSearch } from '../../receiving/receivingPresentation'
 import { documentCode } from '../../../shared/utils/documentCode'
 import { supplierResolutionLabels } from '../../../shared/labels/status'
 type Case = HandlingCase & {
@@ -269,9 +270,11 @@ function DiscrepancyForm({
 }) {
   const scope = useInventoryScope()
   const [status, setStatus] = useState('OPEN'),
-    [purchaseOrderId, setPurchaseOrderId] = useState('')
+    [purchaseOrderQuery, setPurchaseOrderQuery] = useState('')
   const [rows, setRows] = useState<Case[]>([])
   const [drafts, setDrafts] = useState<Record<number, HandlingDraft>>({})
+  const purchaseOrderId = purchaseOrderSearch(purchaseOrderQuery)
+  const invalidOrder = !!purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)
   const valid = !receiptId || /^[1-9]\d*$/.test(receiptId)
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
@@ -298,8 +301,7 @@ function DiscrepancyForm({
   })
 
   useEffect(() => {
-    if (!valid || (purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)))
-      return
+    if (!valid || invalidOrder) return
     const controller = new AbortController()
     async function load() {
       setLoading(true)
@@ -356,7 +358,7 @@ function DiscrepancyForm({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [receiptId, valid, page, status, scope.storeId, purchaseOrderId])
+  }, [receiptId, valid, page, status, scope.storeId, purchaseOrderId, invalidOrder])
 
   return (
     <main className="dashboard-content supplier-discrepancy-page">
@@ -400,22 +402,18 @@ function DiscrepancyForm({
             </label>
           )}
           <label>
-            Mã yêu cầu nhập hàng
+            Mã đơn nhập hàng
             <input
               type="text"
-              inputMode="numeric"
-              pattern="[1-9][0-9]*"
-              value={purchaseOrderId}
+              placeholder="Ví dụ: DNH-0001"
+              value={purchaseOrderQuery}
+              aria-invalid={invalidOrder}
               onChange={(e) => {
-                if (
-                  e.target.value === '' ||
-                  /^[1-9]\d*$/.test(e.target.value)
-                ) {
-                  setPurchaseOrderId(e.target.value)
-                  setPage(0)
-                }
+                setPurchaseOrderQuery(e.target.value)
+                setPage(0)
               }}
             />
+            {invalidOrder && <small>Nhập mã đơn nhập hàng hợp lệ.</small>}
           </label>
           {scope.storesError && <p role="alert">{scope.storesError}</p>}
         </div>

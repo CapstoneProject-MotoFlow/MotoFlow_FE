@@ -95,7 +95,7 @@ export function ReplenishmentDetailPage() {
               <HeadButton
                 action={{
                   key: 'purchase',
-                  label: 'Lập yêu cầu nhập hàng',
+                  label: 'Lập đơn nhập hàng',
                   icon: 'receipt',
                   primary: !(open && canCoordinate && hasUnplanned),
                   onClick: () => setPurchase(true),
@@ -292,10 +292,10 @@ function RelatedDocuments({
           <p className="tf-note" key={order.id}>
             {canViewPurchases ? (
               <Link to={'/purchase-orders/' + order.id}>
-                Yêu cầu nhập hàng {documentCode('YCN', order.id)}
+                Đơn nhập hàng {documentCode('DNH', order.id)}
               </Link>
             ) : (
-              <span>Yêu cầu nhập hàng {documentCode('YCN', order.id)}</span>
+              <span>Đơn nhập hàng {documentCode('DNH', order.id)}</span>
             )}
             {' · '}
             {order.supplierName} ·{' '}

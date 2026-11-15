@@ -384,6 +384,14 @@
   color: #465574;
 }
 
+.receiving-panel > .receiving-receipt-documents {
+  padding: 0 1.25rem 1rem;
+}
+
+.receiving-receipt-documents .receiving-document-list {
+  margin-top: 0.75rem;
+}
+
 .receiving-document-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
@@ -487,6 +495,10 @@
 .receiving-order-cancel a {
   width: 100%;
   min-height: 2.5rem;
+}
+
+.receiving-order-summary > .receiving-order-draft {
+  margin-block-start: 0.5rem;
 }
 
 .receiving-order-cancel {
@@ -793,30 +805,20 @@
 }
 
 .receiving-staff-table-scroll table {
-  min-width: 48rem;
-  table-layout: fixed;
+  min-width: 62rem;
 }
 
 .receiving-staff-table-scroll th:first-child {
-  width: 44%;
+  min-width: 12rem;
   text-align: left;
-}
-
-.receiving-staff-table-scroll th:nth-child(2) {
-  width: 20%;
-}
-
-.receiving-staff-table-scroll th:nth-child(3),
-.receiving-staff-table-scroll th:nth-child(4) {
-  width: 14%;
-}
-
-.receiving-staff-table-scroll th:nth-child(5) {
-  width: 8%;
 }
 
 .receiving-staff-table-scroll :is(th, td):not(:first-child) {
   text-align: center;
+}
+
+.receiving-staff-table-scroll th:not(:first-child) {
+  white-space: nowrap;
 }
 
 .receiving-staff-table-scroll :is(th, td) {
@@ -841,10 +843,6 @@
   padding: 0;
   box-sizing: border-box;
   accent-color: #4658f3;
-}
-
-.receiving-staff-document-qty {
-  font-weight: 600;
 }
 
 .receiving-layout-actions.receiving-staff-footer {

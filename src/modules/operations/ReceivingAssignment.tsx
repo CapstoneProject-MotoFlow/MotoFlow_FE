@@ -78,11 +78,7 @@ export default function ReceivingAssignment({
         <WarehouseAssignmentDialog
           taskType={taskType}
           documentId={documentId}
-          title={
-            taskType === 'SUPPLIER_RECEIVING'
-              ? 'Giao việc nhận hàng nhập'
-              : 'Giao việc nhận hàng điều chuyển'
-          }
+          title="Giao nhân viên nhận hàng"
           onClose={() => setOpen(false)}
           onSaved={(name) => {
             setRevision((n) => n + 1)

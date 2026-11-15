@@ -79,6 +79,37 @@ export function inspectionQuantitiesValid(values: number[]) {
   )
 }
 
+export const inspectionCountFields = [
+  ['documentQty', 'Số lượng trên chứng từ'],
+  ['deliveredQty', 'Thực giao'],
+  ['wrongItemQty', 'Giao sai'],
+  ['damagedQty', 'Hư hỏng'],
+] as const
+
+export const inspectionResultFields = [
+  ['passedQty', 'Đạt'],
+  ['shortQty', 'Thiếu'],
+  ['excessQty', 'Thừa'],
+] as const
+
+export function inspectionResult(values: string[], expectedQty: number) {
+  if (values.some((value) => value.trim() === '')) return null
+  const quantities = values.map(Number)
+  if (!inspectionQuantitiesValid(quantities)) return null
+  const [documentQty, deliveredQty, wrongItemQty, damagedQty] = quantities
+  const passedQty = deliveredQty - wrongItemQty - damagedQty
+  return {
+    documentQty,
+    deliveredQty,
+    wrongItemQty,
+    damagedQty,
+    passedQty,
+    shortQty: Math.max(documentQty - deliveredQty, 0),
+    // BR-67: the order or replacement case determines how much passed stock is still needed.
+    excessQty: Math.max(passedQty - expectedQty, 0),
+  }
+}
+
 export function receiptDateLimits(now = new Date()) {
   const pad = (value: number) => String(value).padStart(2, '0')
   const date = [

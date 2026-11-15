@@ -140,7 +140,7 @@ export default function StockCountListPage() {
                 setDialog(true)
               }}
             >
-              {scope.owner ? 'Yêu cầu kiểm kê' : 'Tạo phiếu kiểm kê'}
+              Tạo phiếu kiểm kê
             </button>
           )
         }

@@ -2,7 +2,7 @@
  * File: shared/utils/localDraft.ts
  * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
  * Công dụng: Lưu nháp (DRAFT) phiếu đang soạn trên trình duyệt của máy đang dùng, theo từng tài khoản.
- * BE chưa có trạng thái DRAFT cho yêu cầu nhập hàng / yêu cầu bổ sung nên nháp chỉ nằm trên máy này;
+ * BE chưa có trạng thái DRAFT cho đơn nhập hàng / yêu cầu bổ sung nên nháp chỉ nằm trên máy này;
  * gửi phiếu thành công thì nháp tự xóa.
  */
 import type { AuthUser } from '../types/auth'
