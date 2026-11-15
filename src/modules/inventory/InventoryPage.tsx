@@ -145,7 +145,6 @@ export default function InventoryPage() {
     (row) => row.stockValue,
     sort,
   )
-  const clientPaged = grouped
   const loading = base.loading || filtered.loading
   const error =
     base.error ??
@@ -248,7 +247,6 @@ export default function InventoryPage() {
       rows.map((item) => (stockKey(item) === stockKey(row) ? row : item))
     complete.updateData(replace)
     filtered.updateData(replace)
-    ranged.updateData(replace)
     paged.updateData((data) => ({ ...data, items: replace(data.items) }))
     setSettings(undefined)
     if (lotRow && stockKey(lotRow) === stockKey(row)) setLotRow(row)
