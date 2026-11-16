@@ -12,6 +12,7 @@ import {
   inspectionResultFields,
 } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
+import InspectionNoteField from './InspectionNoteField'
 import { documentCode } from '../../shared/utils/documentCode'
 import { formatDate } from '../../shared/utils/format'
 import './receiving.css'
@@ -48,6 +49,7 @@ type Receipt = {
   storeName: string
   status: string
   recountReason: string | null
+  inspectionNote?: string | null
   canRecord: boolean
   canConfirm: boolean
   canReturnForRecount: boolean
@@ -158,6 +160,7 @@ function ReceiptForm({
       })
   }
   const [counts, setCounts] = useState<Counts>({})
+  const [inspectionNote, setInspectionNote] = useState(receipt.inspectionNote ?? '')
   const [lotDates, setLotDates] = useState<
     Record<number, { manufactureDate: string; expiryDate: string }>
   >(() =>
@@ -236,6 +239,15 @@ function ReceiptForm({
         { checked: 0, short: 0, excess: 0, damaged: 0 },
       )
     : null
+  const noteRequired = editing && rows.some((row) => {
+    const result = resultFor(row)
+    return !!result && (
+      result.deliveredQty !== result.documentQty ||
+      result.excessQty > 0 ||
+      result.wrongItemQty > 0 ||
+      result.damagedQty > 0
+    )
+  })
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     if (event.target !== event.currentTarget) return
@@ -266,6 +278,10 @@ function ReceiptForm({
       setError('Hạn dùng không được trước ngày sản xuất. Hãy sửa ngày ở dòng báo lỗi.')
       return
     }
+    if (noteRequired && !inspectionNote.trim()) {
+      setError('Nhập ghi chú kiểm hàng trước khi gửi kết quả.')
+      return
+    }
     if (recount && !reason) {
       setError('Nhập lý do trả về kiểm lại.')
       return
@@ -276,6 +292,7 @@ function ReceiptForm({
       const path = '/goods-receipt-notes/' + receipt.id
       if (editing) {
         await axiosClient.post(path + '/result', {
+          inspectionNote: inspectionNote.trim() || null,
           lines: receipt.lines.map((line) => ({
             lineId: line.id,
             ...Object.fromEntries(
@@ -652,6 +669,20 @@ function ReceiptForm({
           </table>
         </div>
       </section>
+      {editing ? (
+        <section className="receiving-panel">
+          <div className="receiving-layout-fields">
+            <InspectionNoteField
+              value={inspectionNote}
+              onChange={setInspectionNote}
+              required={noteRequired}
+              disabled={saving}
+            />
+          </div>
+        </section>
+      ) : receipt.inspectionNote && (
+        <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+      )}
       {showRecount && (
         <section className="receiving-panel">
           <h2>Trả về kiểm lại</h2>

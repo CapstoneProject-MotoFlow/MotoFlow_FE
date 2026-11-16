@@ -16,7 +16,7 @@ export default function TransferAction({
   title: string
   path: string
   method?: 'post' | 'put'
-  payload: () => unknown
+  payload: (form: HTMLFormElement) => unknown
   children: ReactNode
   disabled?: boolean
   hideSubmit?: boolean
@@ -47,7 +47,8 @@ export default function TransferAction({
           setBusy(true)
           setError('')
           try {
-            const r = await axiosClient[method](path, payload())
+            const body = await payload(e.currentTarget)
+            const r = await axiosClient[method](path, body)
             onSaved(r.data)
           } catch (err) {
             setError(inventoryError(err))

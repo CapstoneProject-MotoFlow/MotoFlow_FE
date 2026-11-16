@@ -2,7 +2,7 @@
  * File: modules/transfers/TransferReceiptCreatePage.tsx
  * Loại: MÀN HÌNH — route /transfer-orders/:id/receipts/new (STAFF, BRANCH_MANAGER).
  * Công dụng: Người được BM kho nhận giao việc nhận hàng điều chuyển (TRANSFER_RECEIVING) lập phiếu nhận khi hàng tới,
- * nhập chứng từ giao hàng như phiếu nhập từ PO. Lập xong BE giao việc kiểm nhận cho chính người lập, màn chuyển sang ghi kết quả.
+ * xem thông tin bàn giao từ lần xuất và có thể đính kèm ảnh lúc nhận.
  */
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -12,7 +12,8 @@ import { inventoryError, useInventoryData } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
 import { refreshNotifications } from '../notifications/notificationService'
-import DeliveryDocumentFields from '../receiving/DeliveryDocumentFields'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
+import { receiptDatesInFuture } from '../receiving/receivingRules'
 import {
   receiptDocumentUploadEnabled,
   useDeliveryDocuments,
@@ -58,25 +59,29 @@ export default function TransferReceiptCreatePage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (lock.current || !open) return
-    const form = event.currentTarget
-    const read = docs.read(form)
-    if ('error' in read) {
-      setError(read.error)
-      if (read.focus)
-        form
-          .querySelector<HTMLInputElement>('[name="' + read.focus + '"]')
-          ?.focus()
+    const form = new FormData(event.currentTarget)
+    const arrivedAt = String(form.get('arrivedAt') ?? '')
+    if (receiptDatesInFuture('', arrivedAt)) {
+      setError('Thời điểm hàng đến không được sau thời điểm hiện tại.')
+      docs.refreshDateLimits()
+      return
+    }
+    const files = form.getAll('photos').filter(
+      (file): file is File => file instanceof File && file.size > 0,
+    )
+    if (files.length > 10) {
+      setError('Chọn tối đa 10 ảnh nhận hàng.')
       return
     }
     lock.current = true
     setError('')
-    setStage(receiptDocumentUploadEnabled ? 'uploading' : 'creating')
+    setStage(files.length ? 'uploading' : 'creating')
     try {
-      const documents = await docs.upload(read.files)
+      const photos = await docs.upload(files)
       setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
         '/transfer-orders/' + id + '/receipts',
-        { ...read.body, documents },
+        { arrivedAt: arrivedAt || null, photos },
       )
       refreshNotifications()
       navigate('/transfer-orders/' + id + '/receipts/' + data.id)
@@ -119,7 +124,7 @@ export default function TransferReceiptCreatePage() {
               {stage && (
                 <span className="tf-head-meta" role="status">
                   {stage === 'uploading'
-                    ? 'Đang tải chứng từ…'
+                    ? 'Đang tải ảnh nhận hàng…'
                     : 'Đang lập phiếu nhận…'}
                 </span>
               )}
@@ -160,6 +165,14 @@ export default function TransferReceiptCreatePage() {
                 <span>Xuất kho</span>
                 <strong>{d.dispatchedBy?.fullName ?? '—'}</strong>
                 {d.dispatchedAt && <small>{dateTime(d.dispatchedAt)}</small>}
+              </div>
+              <div>
+                <span>Người giao</span>
+                <strong>{d.delivererName || '—'}</strong>
+              </div>
+              <div>
+                <span>Biển số xe</span>
+                <strong>{d.vehiclePlateNo || '—'}</strong>
               </div>
               <div>
                 <span>{counted ? 'Hàng chờ nhận' : 'Hàng đã xuất'}</span>
@@ -203,12 +216,31 @@ export default function TransferReceiptCreatePage() {
             </div>
           </section>
           <section>
-            <h2>Chứng từ giao hàng</h2>
-            <DeliveryDocumentFields
-              state={docs}
-              disabled={saving || !open}
-              defaultDocumentNo={code}
-            />
+            <h2>Thông tin nhận hàng</h2>
+            <div className="tf-detail-meta">
+              <label>
+                Thời điểm hàng đến
+                <input
+                  name="arrivedAt"
+                  type="datetime-local"
+                  max={docs.dateLimits.dateTime}
+                  onFocus={docs.refreshDateLimits}
+                  disabled={saving || !open}
+                />
+              </label>
+              {receiptDocumentUploadEnabled && (
+                <div>
+                  <span>Ảnh nhận hàng (không bắt buộc)</span>
+                  <LocalizedFileInput
+                    name="photos"
+                    aria-label="Ảnh nhận hàng"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    disabled={saving || !open}
+                  />
+                </div>
+              )}
+            </div>
           </section>
         </form>
       )}

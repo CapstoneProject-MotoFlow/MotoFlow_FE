@@ -1,4 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
+import { uploadAttachment } from '../../shared/api/upload'
 import CardHead, { HeadButton, type HeadAction } from './CardHead'
 import DebtEvidence from '../receivables/DebtEvidence'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
@@ -521,16 +523,25 @@ export default function TransferDetailPage() {
                     : false
               }
               hideSubmit={action === 'close' && !closing.data?.canClose}
-              payload={() =>
-                action === 'dispatch'
-                  ? {
-                      lines: dispatch.data!.lines.map((l) => ({
-                        productId: l.productId,
-                        dispatchedQty: l.preparedQty,
-                      })),
-                    }
-                  : undefined
-              }
+              payload={async (form) => {
+                if (action !== 'dispatch') return undefined
+                const fields = new FormData(form)
+                const files = fields.getAll('dispatchEvidence').filter(
+                  (file): file is File => file instanceof File && file.size > 0,
+                )
+                if (files.length > 10) throw new Error('Chọn tối đa 10 ảnh bàn giao.')
+                const evidence = []
+                for (const file of files) evidence.push(await uploadAttachment(file))
+                return {
+                  lines: dispatch.data!.lines.map((l) => ({
+                    productId: l.productId,
+                    dispatchedQty: l.preparedQty,
+                  })),
+                  delivererName: String(fields.get('delivererName') ?? '').trim() || null,
+                  vehiclePlateNo: String(fields.get('vehiclePlateNo') ?? '').trim() || null,
+                  evidence,
+                }
+              }}
               onClose={() => setAction('')}
               onSaved={() => {
                 setAction('')
@@ -556,6 +567,27 @@ export default function TransferDetailPage() {
                     ))}
                   </p>
                 ))}
+              {action === 'dispatch' && (
+                <div className="tf-detail-meta">
+                  <label>
+                    Người giao (không bắt buộc)
+                    <input name="delivererName" maxLength={100} />
+                  </label>
+                  <label>
+                    Biển số xe (không bắt buộc)
+                    <input name="vehiclePlateNo" maxLength={20} />
+                  </label>
+                  <div>
+                    <span>Ảnh bàn giao (không bắt buộc)</span>
+                    <LocalizedFileInput
+                      name="dispatchEvidence"
+                      aria-label="Ảnh bàn giao"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                    />
+                  </div>
+                </div>
+              )}
               {action === 'dispatch' && dispatchStockShort && (
                 <p role="alert" className="stock-error">
                   Tồn kho của kho nguồn thấp hơn số đã soạn. Hãy kiểm tra

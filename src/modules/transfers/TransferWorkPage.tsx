@@ -8,6 +8,7 @@ import { dateTime } from '../inventory/presentation'
 import { useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
+import InspectionNoteField from '../receiving/InspectionNoteField'
 import {
   useInventoryData,
   useInventoryScope,
@@ -269,13 +270,14 @@ function WorkEditor({
                     ? l.passedQty
                     : 0,
             damaged: 'damagedQty' in l ? l.damagedQty : 0,
-            wrong: 'wrongItemQty' in l ? l.wrongItemQty : 0,
+            wrong: 'wrongItemQty' in l ? (l.wrongItemQty ?? 0) : 0,
             reason: 'shortReason' in l ? (l.shortReason ?? '') : '',
           },
         ]),
       ),
     ),
     [files, setFiles] = useState<File[]>([]),
+    [inspectionNote, setInspectionNote] = useState(receipt?.inspectionNote ?? ''),
     [reason, setReason] = useState(''),
     [action, setAction] = useState(''),
     [busy, setBusy] = useState(false),
@@ -313,6 +315,11 @@ function WorkEditor({
     const { qty, wrong, damaged } = values[productId]
     return qty + wrong + damaged
   }
+  const noteRequired = receipt?.lines.some((line) =>
+    receivedQty(line.productId) !== line.documentQty ||
+    values[line.productId].wrong > 0 ||
+    values[line.productId].damaged > 0,
+  ) ?? false
   const valid =
     lines.length > 0 &&
     lines.every((l) => {
@@ -341,6 +348,10 @@ function WorkEditor({
     })
   async function save() {
     if (lock.current || !valid || !canRecord) return
+    if (mode === 'receipt' && noteRequired && !inspectionNote.trim()) {
+      setError('Nhập ghi chú kiểm hàng trước khi gửi kết quả.')
+      return
+    }
     lock.current = true
     setBusy(true)
     setError('')
@@ -361,6 +372,7 @@ function WorkEditor({
             }
           : mode === 'receipt'
             ? {
+                inspectionNote: inspectionNote.trim() || null,
                 lines: lines.map((l) => ({
                   productId: l.productId,
                   passedQty: values[l.productId].qty,
@@ -563,6 +575,9 @@ function WorkEditor({
           </p>
         )}
         <InventoryNotice error={error} />
+        {receipt?.inspectionNote && !canRecord && (
+          <p className="tf-note"><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+        )}
         <form
           id={WORK_FORM}
           className="tf-form"
@@ -740,6 +755,16 @@ function WorkEditor({
                 </tbody>
               </table>
             </div>
+            {receipt && canRecord && (
+              <div className="tf-note">
+                <InspectionNoteField
+                  value={inspectionNote}
+                  onChange={setInspectionNote}
+                  required={noteRequired}
+                  disabled={busy}
+                />
+              </div>
+            )}
             {mode === 'extra' && (
               <label className="tf-note">
                 Lý do (bắt buộc nếu xác nhận 0)
@@ -771,6 +796,9 @@ function WorkEditor({
             )
           }}
         >
+          {action === 'confirm' && receipt?.inspectionNote && (
+            <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+          )}
           {action === 'recount' ? (
             <label>
               Lý do

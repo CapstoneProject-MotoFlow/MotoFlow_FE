@@ -28,6 +28,7 @@ type Assignment = {
 
 type Receipt = {
   canConfirm: boolean
+  inspectionNote?: string | null
   documents: ReceiptDocument[]
   lines: ({
     id: number
@@ -175,6 +176,9 @@ function ExistingReceiptActionDialog({
               receiptId={receiptId}
               documents={receipt.documents}
             />
+            {receipt.inspectionNote && (
+              <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+            )}
             <div className="table-scroll">
               <table className="receiving-confirm-table">
                 <thead>
