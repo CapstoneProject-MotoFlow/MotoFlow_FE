@@ -519,7 +519,7 @@
 .rv-opening-form .rv-full {
   grid-column: 1/-1;
 }
-.rv-opening-form label {
+.rv-opening-form label:not(.localized-file-input-label) {
   display: block;
   font-size: 14px;
   font-weight: 500;
@@ -530,7 +530,7 @@
 .rv-evidence > label > span {
   color: #f04438;
 }
-.rv-opening-form input,
+.rv-opening-form input:not(.localized-file-input-native),
 .rv-opening-form select,
 .rv-opening-form textarea {
   display: block;
@@ -628,7 +628,7 @@
 .rv-opening-choices button:hover {
   background: #ecf3ff;
 }
-.rv-opening-form input:focus,
+.rv-opening-form input:not(.localized-file-input-native):focus,
 .rv-opening-form select:focus,
 .rv-opening-form textarea:focus {
   outline: 3px solid #465fff25;

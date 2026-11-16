@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import { apiMessage } from '../suppliers/supplierService'
-import { formatDateTime } from '../../shared/utils/format'
+import { formatDate, formatDateTime } from '../../shared/utils/format'
 import { inspectionCountFields, inspectionResultFields } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 
@@ -28,8 +28,15 @@ type Assignment = {
 
 type Receipt = {
   canConfirm: boolean
+  inspectionNote?: string | null
   documents: ReceiptDocument[]
-  lines: ({ id: number; partName: string } &
+  lines: ({
+    id: number
+    partName: string
+    expectedQty: number | null
+    manufactureDate: string | null
+    expiryDate: string | null
+  } &
     Record<(typeof inspectionColumns)[number][0], number>)[]
 }
 
@@ -113,6 +120,7 @@ function ExistingReceiptActionDialog({
 
   return (
     <FormDialog
+      className={!assign ? 'receiving-confirm-dialog' : ''}
       title={
         (assign ? 'Giao việc kiểm nhận · ' : 'Xác nhận phiếu nhập · ') +
         documentNo
@@ -168,23 +176,32 @@ function ExistingReceiptActionDialog({
               receiptId={receiptId}
               documents={receipt.documents}
             />
+            {receipt.inspectionNote && (
+              <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+            )}
             <div className="table-scroll">
               <table className="receiving-confirm-table">
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
+                    <th>Còn chờ nhận</th>
                     {inspectionColumns.map(([field, label]) => (
                       <th key={field}>{label}</th>
                     ))}
+                    <th>Ngày sản xuất</th>
+                    <th>Hạn dùng</th>
                   </tr>
                 </thead>
                 <tbody>
                   {receipt.lines.map((line) => (
                     <tr key={line.id}>
                       <td>{line.partName}</td>
+                      <td>{line.expectedQty ?? '—'}</td>
                       {inspectionColumns.map(([field]) => (
                         <td key={field}>{line[field]}</td>
                       ))}
+                      <td>{formatDate(line.manufactureDate)}</td>
+                      <td>{formatDate(line.expiryDate)}</td>
                     </tr>
                   ))}
                 </tbody>

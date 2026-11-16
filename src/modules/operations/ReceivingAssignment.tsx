@@ -9,7 +9,7 @@ import { receivingCreatePath } from './receivingTaskModel'
 import WarehouseAssignmentDialog from './WarehouseAssignmentDialog'
 
 /**
- * Nút "Nhận hàng" của BM: mở ngay hộp giao việc nhận hàng (SUPPLIER_RECEIVING cho PO, TRANSFER_RECEIVING cho lệnh
+ * Nút giao nhận hàng của BM mở hộp giao việc (SUPPLIER_RECEIVING cho PO, TRANSFER_RECEIVING cho lệnh
  * điều chuyển). Đã giao thì hiện người đang được giao và nút đổi người. BM tự nhận việc thì có thêm nút lập phiếu.
  * variant "row": nút nhỏ trong cột Thao tác; "head": nút ở đầu thẻ (CardHead) hoặc thanh thao tác của trang.
  * Khi không còn gì để giao (BE báo không giao được, hoặc chưa hỗ trợ loại việc này) thì hiện fallback.
@@ -43,6 +43,7 @@ export default function ReceivingAssignment({
     ) : null
   if (!r.data || (!r.data.canAssign && !current)) return <>{fallback}</>
   const row = variant === 'row'
+  const assignLabel = taskType === 'SUPPLIER_RECEIVING' ? 'Giao việc' : 'Nhận hàng'
   const button =
     'mf-btn ' +
     (row ? 'mf-btn--sm ' : '') +
@@ -71,7 +72,7 @@ export default function ReceivingAssignment({
       {r.data.canAssign && (
         <button type="button" className={button} onClick={() => setOpen(true)}>
           {!row && <Icon name={current ? 'users' : 'box'} />}
-          {current ? 'Đổi người nhận' : 'Nhận hàng'}
+          {current ? 'Đổi người nhận' : assignLabel}
         </button>
       )}
       {open && (

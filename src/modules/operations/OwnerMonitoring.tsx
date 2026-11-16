@@ -13,6 +13,7 @@ import type { CountList } from '../inventory/countApi'
 import type { ReplenishmentRow } from '../transfers/types'
 import { dateTime, number, today } from '../inventory/presentation'
 import { formatMoney } from '../../shared/utils/format'
+import TodayCollections from './TodayCollections'
 import Icon, { type IconName } from '../../shared/ui/Icon'
 import EmptyState from '../../shared/ui/EmptyState'
 import {
@@ -217,6 +218,8 @@ export default function OwnerMonitoring() {
           />
         </div>
       </section>
+
+      <TodayCollections />
 
       <div className="owner-two-columns">
         <section className="owner-card">

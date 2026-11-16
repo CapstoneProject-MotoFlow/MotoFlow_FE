@@ -5,7 +5,7 @@ import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, inventoryError } from './api'
 import { InventoryNotice } from './components'
 import type { CountRequest, CountDto } from './countApi'
-import type { Page } from './types'
+import type { Page, StockRow } from './types'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { documentCode } from '../../shared/utils/documentCode'
@@ -99,25 +99,35 @@ export function StockCountFormDialog({
     setGroupError('')
     void (async () => {
       try {
-        const params = { categoryId: groupId, status: 'ACTIVE', size: 100 }
-        const first = await axiosClient.get<Page<Product>>('/products', {
+        const params = {
+          categoryId: groupId,
+          storeId: owner ? actualStore : undefined,
+          includeZero: true,
+          size: 100,
+        }
+        const first = await axiosClient.get<Page<StockRow>>('/inventory/stock', {
           params: { ...params, page: 0 },
           signal: controller.signal,
         })
         const pages = Math.ceil(first.data.totalItems / 100)
         const remaining = await Promise.all(
           Array.from({ length: Math.max(0, pages - 1) }, (_, index) =>
-            axiosClient.get<Page<Product>>('/products', {
+            axiosClient.get<Page<StockRow>>('/inventory/stock', {
               params: { ...params, page: index + 1 },
               signal: controller.signal,
             }),
           ),
         )
         if (!controller.signal.aborted)
-          setGroupProducts([
-            ...first.data.items,
-            ...remaining.flatMap((response) => response.data.items),
-          ])
+          setGroupProducts(
+            [...first.data.items, ...remaining.flatMap((response) => response.data.items)]
+              .filter((row) => row.onHandQty > 0)
+              .map((row) => ({
+                id: row.productId,
+                sku: row.sku,
+                partName: row.partName,
+              })),
+          )
       } catch (e) {
         if (!controller.signal.aborted) setGroupError(inventoryError(e))
       } finally {
@@ -125,7 +135,7 @@ export function StockCountFormDialog({
       }
     })()
     return () => controller.abort()
-  }, [scope, groupId])
+  }, [scope, groupId, owner, actualStore])
   const valid =
     !!actualStore &&
     (!requestId || !!source) &&
@@ -341,21 +351,21 @@ export function StockCountFormDialog({
               </>
             ))}
           {scope === 'GROUP' && !source && (
-            <label>
-              Nhóm phụ tùng
-              <select
-                required
+            <div className="count-product-picker">
+              <span>Nhóm phụ tùng</span>
+              <SearchableFilter
+                label="Chọn nhóm phụ tùng"
+                searchPlaceholder="Tìm nhóm phụ tùng…"
                 value={groupId}
                 disabled={busy || categories.loading}
-                onChange={(e) => setGroupId(e.target.value)}
-              >
-                <option value="">Chọn nhóm phụ tùng</option>
-                {categoryOptions(categories.data ?? []).map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
+                options={categoryOptions(categories.data ?? []).map(
+                  (category) => ({
+                    value: String(category.id),
+                    label: category.label ?? category.categoryName,
+                  }),
+                )}
+                onChange={setGroupId}
+              />
               {(groupLoading || groupError || categories.error) && (
                 <small role={groupError || categories.error ? 'alert' : 'status'}>
                   {groupError || categories.error || 'Đang tải phụ tùng trong nhóm…'}
@@ -367,7 +377,7 @@ export function StockCountFormDialog({
               {!groupLoading && groupId && !groupError && groupProducts.length === 0 && (
                 <small role="alert">Nhóm này chưa có phụ tùng đang kinh doanh.</small>
               )}
-            </label>
+            </div>
           )}
           {owner && (
             <label>

@@ -10,6 +10,7 @@ export type CountLine = {
   expiryDate: string | null
   bookQty: number | null
   countedQty: number | null
+  damagedQty?: number
   note: string | null
   reason: string | null
   recount: boolean

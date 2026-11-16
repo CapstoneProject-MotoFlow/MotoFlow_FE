@@ -389,6 +389,7 @@
 .count-workspace .stock-filters > label {
   display: grid;
   gap: 8px;
+  font-size: 14px;
 }
 .count-workspace .stock-filters input:not([type='checkbox']),
 .count-workspace .stock-filters select {

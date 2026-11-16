@@ -959,6 +959,10 @@ p.tf-validation-hint {
   width: 72%;
   min-width: 0;
 }
+.tf-replenishment-form .tf-table :is(th, td):nth-child(2),
+.tf-replenishment-form .tf-table td:nth-child(2) > input {
+  text-align: center;
+}
 .tf-replenishment-form form section,
 .tf-replenishment-form .tf-table {
   overflow: visible;

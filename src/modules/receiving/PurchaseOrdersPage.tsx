@@ -418,7 +418,7 @@ export default function PurchaseOrdersPage() {
             <h2>Việc nhận hàng của tôi</h2>
           </header>
           <div className="table-scroll">
-            <table>
+            <table className="receiving-task-table">
               <thead>
                 <tr>
                   <th>Mã đơn nhập hàng</th>
@@ -785,7 +785,7 @@ export default function PurchaseOrdersPage() {
                                       'AWAITING_DELIVERY',
                                       'RECEIVING',
                                     ].includes(row.status) ? (
-                                    // PO còn chờ giao: "Nhận hàng" mở hộp giao việc nhận hàng cho nhân viên.
+                                    // PO còn chờ giao: "Giao việc" mở hộp giao nhân viên nhận hàng.
                                     <ReceivingAssignment
                                       variant="row"
                                       taskType="SUPPLIER_RECEIVING"

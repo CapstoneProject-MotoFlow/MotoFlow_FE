@@ -78,6 +78,8 @@ export type Transfer = Omit<
   extraDispatchConfirmedAt: string | null
   createdBy: { id: number; fullName: string } | null
   dispatchedBy: { id: number; fullName: string } | null
+  delivererName?: string | null
+  vehiclePlateNo?: string | null
   closedBy: { id: number; fullName: string } | null
   lines: PartLine[]
   receipts: ({
@@ -137,6 +139,7 @@ export type Receipt = ReceiptDocumentInfo & {
   confirmedBy: number | null
   arrivedAt: string
   recountReason: string | null
+  inspectionNote?: string | null
   lines: {
     productId: number
     sku: string
@@ -145,6 +148,7 @@ export type Receipt = ReceiptDocumentInfo & {
     deliveredQty: number
     passedQty: number
     damagedQty: number
+    wrongItemQty: number
     excessQty: number
   }[]
 }

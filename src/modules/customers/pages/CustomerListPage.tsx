@@ -127,6 +127,7 @@ export default function CustomerListPage({
               type="checkbox"
               checked={debt}
               onChange={(e) => {
+                setLoading(true)
                 setDebt(e.target.checked)
                 setPage(0)
               }}

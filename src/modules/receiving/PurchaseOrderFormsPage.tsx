@@ -467,7 +467,7 @@ function OrderFormLayout({
           <h2>Tóm tắt</h2>
           <dl>
             <div>
-              <dt>Sản phẩm</dt>
+              <dt>Số phụ tùng</dt>
               <dd>{draft.lines.length}</dd>
             </div>
             <div>
@@ -627,7 +627,7 @@ function OrderFormLayout({
               }))
             }
           >
-            ＋ Thêm sản phẩm
+            ＋ Thêm phụ tùng
           </button>
         </div>
       </Panel>

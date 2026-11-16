@@ -498,3 +498,6 @@
 .supplier-redesign .supplier-list-table th:last-child {
   text-align: center;
 }
+.supplier-redesign .supplier-list-table td:last-child .mf-row-actions {
+  justify-content: center;
+}

@@ -61,12 +61,8 @@ export default function ReplenishmentCoordinatePage() {
     </main>
   )
 }
-type Allocation = { storeId: number; qty: number }
-/**
- * AllocationEditor: chia phần chưa điều phối của từng phụ tùng cho một hoặc nhiều kho nguồn.
- * Góp ý cô Hoài 12/11: cho tạo nhanh điều phối từ nhiều cửa hàng. Mỗi kho nguồn vẫn sinh một lệnh điều chuyển riêng
- * (BR-57: một lệnh có một kho nguồn và một kho đích); nút "Tự chia từ nhiều kho" lấy lần lượt từ kho có nhiều hàng nhất.
- */
+type Allocation = { storeId: number; qty: string }
+/** AllocationEditor: để người điều phối tự chọn kho nguồn và nhập số lượng cho từng kho. */
 function AllocationEditor({
   request,
   stock,
@@ -92,32 +88,9 @@ function AllocationEditor({
               Math.min(line.remainingQty, a.sellableQty) ||
             Number(b.central) - Number(a.central),
         )
-  /** Chia tự động: kho có nhiều hàng nhất trước, sang kho tiếp theo nếu chưa đủ. */
-  function autoSplit(line: (typeof lines)[number]): Allocation[] {
-    let left = line.remainingQty
-    const result: Allocation[] = []
-    for (const s of options(line)) {
-      if (left <= 0) break
-      const qty = Math.min(left, s.sellableQty)
-      result.push({ storeId: s.storeId, qty })
-      left -= qty
-    }
-    return result.length ? result : [{ storeId: 0, qty: 0 }]
-  }
   const [values, setValues] = useState<Record<number, Allocation[]>>(() =>
       Object.fromEntries(
-        lines.map((l) => {
-          const s = options(l)[0]
-          return [
-            l.productId,
-            [
-              {
-                storeId: s?.storeId ?? 0,
-                qty: s ? Math.min(l.remainingQty, s.sellableQty) : 0,
-              },
-            ],
-          ]
-        }),
+        lines.map((l) => [l.productId, [{ storeId: 0, qty: '' }]]),
       ),
     ),
     [busy, setBusy] = useState(false),
@@ -127,15 +100,19 @@ function AllocationEditor({
     groups = new Map<number, { line: (typeof lines)[number]; qty: number }[]>()
   for (const line of lines) {
     for (const value of values[line.productId]) {
-      if (value.storeId && value.qty > 0)
+      const qty = value.qty === '' ? 0 : Number(value.qty)
+      if (value.storeId && qty > 0)
         groups.set(value.storeId, [
           ...(groups.get(value.storeId) ?? []),
-          { line, qty: value.qty },
+          { line, qty },
         ])
     }
   }
   const taken = (productId: number) =>
-    values[productId].reduce((sum, v) => sum + (v.qty || 0), 0)
+    values[productId].reduce(
+      (sum, v) => sum + (v.qty === '' ? 0 : Number(v.qty)),
+      0,
+    )
   const canHandOff = !hasExistingPurchase(request.purchaseOrders)
   const valid =
       (groups.size > 0 || canHandOff) &&
@@ -147,10 +124,11 @@ function AllocationEditor({
           taken(l.productId) <= l.remainingQty &&
           allocations.every((v) => {
             const available = options(l).find((s) => s.storeId === v.storeId)
+            const qty = v.qty === '' ? 0 : Number(v.qty)
             return (
-              Number.isInteger(v.qty) &&
-              v.qty >= 0 &&
-              (!v.qty || (!!available && v.qty <= available.sellableQty))
+              Number.isInteger(qty) &&
+              qty >= 0 &&
+              (!qty || (!!available && qty <= available.sellableQty))
             )
           })
         )
@@ -225,20 +203,6 @@ function AllocationEditor({
           </span>
           <HeadButton
             action={{
-              key: 'split',
-              label: 'Tự chia từ nhiều kho',
-              icon: 'layers',
-              disabled: busy || partial,
-              onClick: () =>
-                setValues(
-                  Object.fromEntries(
-                    lines.map((l) => [l.productId, autoSplit(l)]),
-                  ),
-                ),
-            }}
-          />
-          <HeadButton
-            action={{
               key: 'cancel',
               label: partial ? 'Xem các lệnh đã tạo' : 'Hủy',
               to: '/replenishment-requests/' + request.id,
@@ -284,10 +248,7 @@ function AllocationEditor({
                     const allocations = values[l.productId],
                       sources = options(l),
                       left = l.remainingQty - taken(l.productId),
-                      unused = sources.filter(
-                        (s) =>
-                          !allocations.some((v) => v.storeId === s.storeId),
-                      )
+                      canAddSource = allocations.length < sources.length
                     return allocations.map((v, index) => {
                       const available = sources.find(
                         (s) => s.storeId === v.storeId,
@@ -338,19 +299,10 @@ function AllocationEditor({
                                       })),
                                   ]}
                                   onChange={(value) => {
-                                    const storeId = Number(value),
-                                      s = sources.find(
-                                        (x) => x.storeId === storeId,
-                                      )
-                                    const room =
-                                      l.remainingQty -
-                                      taken(l.productId) +
-                                      (v.qty || 0)
+                                    const storeId = Number(value)
                                     update(l.productId, index, {
+                                      ...v,
                                       storeId,
-                                      qty: s
-                                        ? Math.min(room, s.sellableQty)
-                                        : 0,
                                     })
                                   }}
                                 />
@@ -387,7 +339,7 @@ function AllocationEditor({
                               <small>Chưa có kho nguồn còn tồn kho</small>
                             )}
                             {index === allocations.length - 1 &&
-                              unused.length > 0 && (
+                              canAddSource && (
                                 <button
                                   type="button"
                                   className="tf-coord-add"
@@ -397,14 +349,14 @@ function AllocationEditor({
                                       [l.productId]: [
                                         ...old[l.productId],
                                         {
-                                          storeId: unused[0].storeId,
-                                          qty: Math.min(Math.max(left, 0), unused[0].sellableQty),
+                                          storeId: 0,
+                                          qty: '',
                                         },
                                       ],
                                     }))
                                   }
                                 >
-                                  ＋ Thêm kho nguồn: {storeName(unused[0].storeId)}
+                                  ＋ Thêm kho nguồn
                                 </button>
                               )}
                           </td>
@@ -425,7 +377,7 @@ function AllocationEditor({
                               onChange={(e) =>
                                 update(l.productId, index, {
                                   ...v,
-                                  qty: Number(e.target.value),
+                                  qty: e.target.value,
                                 })
                               }
                             />

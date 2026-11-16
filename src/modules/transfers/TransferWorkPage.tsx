@@ -1,4 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import ExcessDispatchEditor from './ExcessDispatchEditor'
 import { uploadAttachment } from '../../shared/api/upload'
@@ -7,6 +8,7 @@ import { dateTime } from '../inventory/presentation'
 import { useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
+import InspectionNoteField from '../receiving/InspectionNoteField'
 import {
   useInventoryData,
   useInventoryScope,
@@ -248,7 +250,12 @@ function WorkEditor({
       receipt?.lines ??
       order!.lines.filter((l) => (l.extraReceivedQty ?? 0) > 0),
     [values, setValues] = useState<
-      Record<number, { qty: number; damaged: number; reason: string }>
+      Record<number, {
+        qty: number
+        damaged: number
+        wrong: number
+        reason: string
+      }>
     >(() =>
       Object.fromEntries(
         lines.map((l) => [
@@ -263,12 +270,14 @@ function WorkEditor({
                     ? l.passedQty
                     : 0,
             damaged: 'damagedQty' in l ? l.damagedQty : 0,
+            wrong: 'wrongItemQty' in l ? (l.wrongItemQty ?? 0) : 0,
             reason: 'shortReason' in l ? (l.shortReason ?? '') : '',
           },
         ]),
       ),
     ),
     [files, setFiles] = useState<File[]>([]),
+    [inspectionNote, setInspectionNote] = useState(receipt?.inspectionNote ?? ''),
     [reason, setReason] = useState(''),
     [action, setAction] = useState(''),
     [busy, setBusy] = useState(false),
@@ -301,6 +310,16 @@ function WorkEditor({
         ? order?.sourceStoreId
         : order?.destStoreId) &&
     receipt.status === 'AWAITING_CONFIRMATION'
+  const isReturnReceipt = receipt?.receiptType === 'RETURN_TO_SOURCE'
+  const receivedQty = (productId: number) => {
+    const { qty, wrong, damaged } = values[productId]
+    return qty + wrong + damaged
+  }
+  const noteRequired = receipt?.lines.some((line) =>
+    receivedQty(line.productId) !== line.documentQty ||
+    values[line.productId].wrong > 0 ||
+    values[line.productId].damaged > 0,
+  ) ?? false
   const valid =
     lines.length > 0 &&
     lines.every((l) => {
@@ -315,6 +334,12 @@ function WorkEditor({
         Number.isInteger(v.damaged) &&
         v.damaged >= 0 &&
         v.damaged <= 100000 &&
+        Number.isInteger(v.wrong) &&
+        v.wrong >= 0 &&
+        v.wrong <= 100000 &&
+        (!isReturnReceipt ||
+          !('documentQty' in l) ||
+          receivedQty(l.productId) <= l.documentQty) &&
         (mode !== 'prepare' ||
           !('plannedQty' in l) ||
           v.qty >= l.plannedQty ||
@@ -323,6 +348,10 @@ function WorkEditor({
     })
   async function save() {
     if (lock.current || !valid || !canRecord) return
+    if (mode === 'receipt' && noteRequired && !inspectionNote.trim()) {
+      setError('Nhập ghi chú kiểm hàng trước khi gửi kết quả.')
+      return
+    }
     lock.current = true
     setBusy(true)
     setError('')
@@ -343,10 +372,12 @@ function WorkEditor({
             }
           : mode === 'receipt'
             ? {
+                inspectionNote: inspectionNote.trim() || null,
                 lines: lines.map((l) => ({
                   productId: l.productId,
                   passedQty: values[l.productId].qty,
                   damagedQty: values[l.productId].damaged,
+                  wrongItemQty: values[l.productId].wrong,
                 })),
               }
             : {
@@ -499,8 +530,7 @@ function WorkEditor({
               Nhập số thực tế xác nhận xuất thêm; số này không lấy từ số đã
               soạn.
             </p>
-            <input
-              type="file"
+            <LocalizedFileInput
               multiple
               accept="image/jpeg,image/png,image/webp,application/pdf"
               disabled={busy || !canRecord}
@@ -520,7 +550,7 @@ function WorkEditor({
         {receipt && (
           <p className="tf-note">
             Đến: {dateTime(receipt.arrivedAt)}
-            {receipt && (
+            {!canRecord && (
               <span>
                 {' '}
                 · Thực nhận:{' '}
@@ -545,6 +575,9 @@ function WorkEditor({
           </p>
         )}
         <InventoryNotice error={error} />
+        {receipt?.inspectionNote && !canRecord && (
+          <p className="tf-note"><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+        )}
         <form
           id={WORK_FORM}
           className="tf-form"
@@ -567,7 +600,8 @@ function WorkEditor({
                           ? 'Xuất thêm'
                           : 'Đã soạn'}
                     </th>
-                    <th>{mode === 'receipt' ? 'Số hỏng' : 'Lý do thiếu'}</th>
+                    <th>{mode === 'receipt' ? 'Giao sai' : 'Lý do thiếu'}</th>
+                    {mode === 'receipt' && <th>Hư hỏng</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -578,7 +612,7 @@ function WorkEditor({
                         <small>{l.partName}</small>
                         {preparation && 'storageArea' in l && (
                           <small>
-                            {l.storageArea} / {l.binLocation} · Có thể bán{' '}
+                            {l.storageArea} / {l.binLocation} · Tồn kho{' '}
                             {l.sellableQty}
                             {l.barcodes?.length
                               ? ' · Mã vạch: ' + l.barcodes.join(', ')
@@ -604,7 +638,17 @@ function WorkEditor({
                           <>
                             {l.documentQty}
                             <small>
-                              Thực nhận: {l.deliveredQty} · Thừa: {l.excessQty}
+                              Thực nhận:{' '}
+                              {canRecord
+                                ? receivedQty(l.productId)
+                                : l.deliveredQty}
+                              {' · Thừa: '}
+                              {canRecord
+                                ? Math.max(
+                                    0,
+                                    receivedQty(l.productId) - l.documentQty,
+                                  )
+                                : l.excessQty}
                             </small>
                           </>
                         ) : 'plannedQty' in l ? (
@@ -620,9 +664,11 @@ function WorkEditor({
                           type="number"
                           min={0}
                           max={
-                            'sellableQty' in l
-                              ? Math.min(l.plannedQty, l.sellableQty)
-                              : 2147483647
+                            isReturnReceipt && 'documentQty' in l
+                              ? l.documentQty
+                              : 'sellableQty' in l
+                                ? Math.min(l.plannedQty, l.sellableQty)
+                                : 2147483647
                           }
                           aria-invalid={
                             'sellableQty' in l &&
@@ -643,18 +689,18 @@ function WorkEditor({
                       <td>
                         {mode === 'receipt' ? (
                           <input
-                            aria-label={'Số hỏng ' + l.sku}
+                            aria-label={'Giao sai ' + l.sku}
                             type="number"
                             required
                             min={0}
                             max={100000}
-                            value={values[l.productId].damaged}
+                            value={values[l.productId].wrong}
                             onChange={(e) =>
                               setValues({
                                 ...values,
                                 [l.productId]: {
                                   ...values[l.productId],
-                                  damaged: Number(e.target.value),
+                                  wrong: Number(e.target.value),
                                 },
                               })
                             }
@@ -676,11 +722,49 @@ function WorkEditor({
                           />
                         )}
                       </td>
+                      {mode === 'receipt' && (
+                        <td>
+                          <input
+                            aria-label={'Hư hỏng ' + l.sku}
+                            type="number"
+                            required
+                            min={0}
+                            max={100000}
+                            value={values[l.productId].damaged}
+                            onChange={(e) =>
+                              setValues({
+                                ...values,
+                                [l.productId]: {
+                                  ...values[l.productId],
+                                  damaged: Number(e.target.value),
+                                },
+                              })
+                            }
+                          />
+                          {isReturnReceipt &&
+                            'documentQty' in l &&
+                            receivedQty(l.productId) > l.documentQty && (
+                              <small className="tf-validation-hint">
+                                Đạt, giao sai và hư hỏng không được vượt số trên phiếu.
+                              </small>
+                            )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {receipt && canRecord && (
+              <div className="tf-note">
+                <InspectionNoteField
+                  value={inspectionNote}
+                  onChange={setInspectionNote}
+                  required={noteRequired}
+                  disabled={busy}
+                />
+              </div>
+            )}
             {mode === 'extra' && (
               <label className="tf-note">
                 Lý do (bắt buộc nếu xác nhận 0)
@@ -712,6 +796,9 @@ function WorkEditor({
             )
           }}
         >
+          {action === 'confirm' && receipt?.inspectionNote && (
+            <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+          )}
           {action === 'recount' ? (
             <label>
               Lý do

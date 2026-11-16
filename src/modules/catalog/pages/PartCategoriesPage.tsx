@@ -203,11 +203,7 @@ export default function PartCategoriesPage() {
                 <tr>
                   <th>Tên nhóm</th>
                   <th>Loại xe</th>
-                  <th className="category-count">
-                    Số
-                    <br />
-                    phụ tùng
-                  </th>
+                  <th className="category-count">Số phụ tùng</th>
                   <th>Trạng thái</th>
                   <th className="category-actions">Thao tác</th>
                 </tr>

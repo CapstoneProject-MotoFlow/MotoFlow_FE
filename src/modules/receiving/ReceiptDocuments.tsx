@@ -26,6 +26,7 @@ export default function ReceiptDocuments({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const files = documents.filter((file) => !isImage(file))
+  const imageFiles = documents.filter(isImage)
   if (!documents.length) return null
 
   async function toggleImages() {
@@ -50,21 +51,28 @@ export default function ReceiptDocuments({
 
   return (
     <div className="receiving-receipt-documents">
-      {documents.some(isImage) && (
-        <button
-          type="button"
-          className="mf-btn mf-btn--secondary"
-          aria-expanded={!!images}
-          aria-controls={previewId}
-          disabled={loading}
-          onClick={() => void toggleImages()}
-        >
-          {loading
-            ? 'Đang tải ảnh…'
-            : images
-              ? 'Ẩn ảnh chứng từ'
-              : 'Xem ảnh chứng từ'}
-        </button>
+      {imageFiles.length > 0 && (
+        <div className="receiving-image-document-actions">
+          <ul className="receiving-document-list" aria-label="Tên ảnh chứng từ">
+            {imageFiles.map((file) => (
+              <li key={file.id}>{file.fileName}</li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="mf-btn mf-btn--secondary"
+            aria-expanded={!!images}
+            aria-controls={previewId}
+            disabled={loading}
+            onClick={() => void toggleImages()}
+          >
+            {loading
+              ? 'Đang tải ảnh…'
+              : images
+                ? 'Ẩn ảnh chứng từ'
+                : 'Xem ảnh chứng từ'}
+          </button>
+        </div>
       )}
       {error && <p role="alert">{error}</p>}
       <div id={previewId} hidden={!images}>

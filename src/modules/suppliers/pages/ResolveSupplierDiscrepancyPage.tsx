@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
+import LocalizedFileInput from '../../../shared/ui/LocalizedFileInput'
 import { apiMessage } from '../supplierService'
 import { uploadAttachment as uploadReceiptDocument } from '../../../shared/api/upload'
 import {
@@ -228,17 +229,16 @@ function CaseAction({
               />
             </label>
             {returning && (
-              <label className="receiving-layout-wide">
-                Bằng chứng trả hàng
-                <input
-                  type="file"
+              <div className="receiving-layout-wide">
+                <span>Bằng chứng trả hàng</span>
+                <LocalizedFileInput
                   name="evidence"
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   multiple
                   required
                   disabled={!allowed || saving}
                 />
-              </label>
+              </div>
             )}
           </div>
         )}

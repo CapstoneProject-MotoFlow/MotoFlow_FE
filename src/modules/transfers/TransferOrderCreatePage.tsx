@@ -238,7 +238,7 @@ export default function TransferOrderCreatePage() {
               <h2>Tóm tắt</h2>
               <dl>
                 <div>
-                  <dt>Số sản phẩm</dt>
+                  <dt>Số phụ tùng</dt>
                   <dd>{rows.filter((r) => r.productId > 0).length}</dd>
                 </div>
                 <div>
@@ -429,7 +429,7 @@ export default function TransferOrderCreatePage() {
                   ])
                 }
               >
-                ＋ Thêm sản phẩm
+                ＋ Thêm phụ tùng
               </button>
             </div>
           </section>

@@ -46,6 +46,33 @@
   border-collapse: collapse;
   text-align: left;
 }
+.receiving-panel table.receiving-task-table {
+  min-width: 48rem;
+  table-layout: fixed;
+}
+.receiving-task-table th:nth-child(1),
+.receiving-task-table td:nth-child(1) {
+  width: 18%;
+}
+.receiving-task-table th:nth-child(2),
+.receiving-task-table td:nth-child(2) {
+  width: 23%;
+}
+.receiving-task-table th:nth-child(3),
+.receiving-task-table td:nth-child(3) {
+  width: 16%;
+}
+.receiving-task-table th:nth-child(4),
+.receiving-task-table td:nth-child(4) {
+  width: 22%;
+}
+.receiving-task-table th:nth-child(5),
+.receiving-task-table td:nth-child(5) {
+  width: 21%;
+}
+.receiving-task-table td:last-child .mf-row-actions {
+  justify-content: flex-end;
+}
 
 .receiving-panel :is(th, td) {
   padding: 0.75rem 1.25rem;
@@ -652,6 +679,32 @@
 .receiving-confirm-table :is(th, td) {
   padding: 0.45rem;
   border-bottom: 1px solid #eef1f5;
+}
+
+.ui-form-dialog.receiving-confirm-dialog {
+  width: min(1200px, calc(100vw - 48px));
+}
+
+.receiving-confirm-dialog .receiving-confirm-table {
+  min-width: 1080px;
+  table-layout: auto;
+}
+
+.receiving-confirm-dialog .receiving-confirm-table th {
+  white-space: nowrap;
+}
+
+.receiving-confirm-dialog .receiving-confirm-table td {
+  vertical-align: top;
+}
+
+.receiving-confirm-dialog .receiving-confirm-table td:first-child {
+  min-width: 180px;
+}
+
+.receiving-confirm-dialog .receiving-confirm-table :is(th, td):nth-last-child(-n + 2) {
+  min-width: 7.5rem;
+  white-space: nowrap;
 }
 
 @media (max-width: 760px) {

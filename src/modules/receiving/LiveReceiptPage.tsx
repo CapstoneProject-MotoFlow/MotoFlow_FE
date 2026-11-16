@@ -12,7 +12,9 @@ import {
   inspectionResultFields,
 } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
+import InspectionNoteField from './InspectionNoteField'
 import { documentCode } from '../../shared/utils/documentCode'
+import { formatDate } from '../../shared/utils/format'
 import './receiving.css'
 
 type Line = {
@@ -43,11 +45,11 @@ type Receipt = {
   deliveryDocumentNo: string
   arrivedAt: string
   recordedById: number | null
-  documentQuantitiesSaved: boolean
   supplierName: string
   storeName: string
   status: string
   recountReason: string | null
+  inspectionNote?: string | null
   canRecord: boolean
   canConfirm: boolean
   canReturnForRecount: boolean
@@ -158,6 +160,20 @@ function ReceiptForm({
       })
   }
   const [counts, setCounts] = useState<Counts>({})
+  const [inspectionNote, setInspectionNote] = useState(receipt.inspectionNote ?? '')
+  const [lotDates, setLotDates] = useState<
+    Record<number, { manufactureDate: string; expiryDate: string }>
+  >(() =>
+    Object.fromEntries(
+      receipt.lines.map((line) => [
+        line.id,
+        {
+          manufactureDate: line.manufactureDate ?? '',
+          expiryDate: line.expiryDate ?? '',
+        },
+      ]),
+    ),
+  )
   const [arrivedAt, setArrivedAt] = useState(
     receipt.arrivedAt?.slice(0, 16) ?? '',
   )
@@ -169,8 +185,6 @@ function ReceiptForm({
   const [recountOpen, setRecountOpen] = useState(false)
   const editing =
     screen === 'inspection' && receipt.canRecord && receipt.lines.length > 0
-  const hasDocumentQuantities =
-    receipt.documentQuantitiesSaved || receipt.recordedById != null
   const reviewing = screen === 'excess' && receipt.canDecideExcess
   const confirming = screen === 'confirmation' && receipt.canConfirm
   const recounting = screen === 'confirmation' && receipt.canReturnForRecount
@@ -183,7 +197,7 @@ function ReceiptForm({
     : receipt.lines
 
   function countValue(line: Line, field: CountField) {
-    if (field === 'documentQty' && hasDocumentQuantities)
+    if (field === 'documentQty')
       return String(line.documentQty)
     return (
       counts[line.id]?.[field] ??
@@ -199,6 +213,14 @@ function ReceiptForm({
     return inspectionResult(
       inspectionCountFields.map(([field]) => countValue(line, field)),
       line.expectedQty ?? 0,
+    )
+  }
+  function hasInvalidLotDates(line: Line) {
+    const dates = lotDates[line.id]
+    return !!(
+      dates?.manufactureDate &&
+      dates.expiryDate &&
+      dates.expiryDate < dates.manufactureDate
     )
   }
 
@@ -217,6 +239,15 @@ function ReceiptForm({
         { checked: 0, short: 0, excess: 0, damaged: 0 },
       )
     : null
+  const noteRequired = editing && rows.some((row) => {
+    const result = resultFor(row)
+    return !!result && (
+      result.deliveredQty !== result.documentQty ||
+      result.excessQty > 0 ||
+      result.wrongItemQty > 0 ||
+      result.damagedQty > 0
+    )
+  })
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     if (event.target !== event.currentTarget) return
@@ -243,6 +274,14 @@ function ReceiptForm({
       )
       return
     }
+    if (editing && receipt.lines.some(hasInvalidLotDates)) {
+      setError('Hạn dùng không được trước ngày sản xuất. Hãy sửa ngày ở dòng báo lỗi.')
+      return
+    }
+    if (noteRequired && !inspectionNote.trim()) {
+      setError('Nhập ghi chú kiểm hàng trước khi gửi kết quả.')
+      return
+    }
     if (recount && !reason) {
       setError('Nhập lý do trả về kiểm lại.')
       return
@@ -253,17 +292,20 @@ function ReceiptForm({
       const path = '/goods-receipt-notes/' + receipt.id
       if (editing) {
         await axiosClient.post(path + '/result', {
+          inspectionNote: inspectionNote.trim() || null,
           lines: receipt.lines.map((line) => ({
             lineId: line.id,
             ...Object.fromEntries(
-              inspectionCountFields.map(([field]) => [
-                field,
-                Number(countValue(line, field)),
-              ]),
+              inspectionCountFields
+                .filter(([field]) => field !== 'documentQty')
+                .map(([field]) => [
+                  field,
+                  Number(countValue(line, field)),
+                ]),
             ),
             manufacturerLotNo: line.manufacturerLotNo,
-            manufactureDate: line.manufactureDate,
-            expiryDate: line.expiryDate,
+            manufactureDate: lotDates[line.id]?.manufactureDate || null,
+            expiryDate: lotDates[line.id]?.expiryDate || null,
           })),
           arrivedAt: arrivedAt || null,
         })
@@ -456,12 +498,6 @@ function ReceiptForm({
           )}
         </header>
         {!rows.length && <p>Phiếu này chưa có dòng phụ tùng để xử lý.</p>}
-        {editing && !hasDocumentQuantities && (
-          <p>
-            Phiếu cũ chưa lưu số lượng theo chứng từ. Nhập số này một lần để
-            kiểm nhận.
-          </p>
-        )}
         {editing &&
           onlyUnchecked &&
           inspectionTotals?.checked === rows.length &&
@@ -473,12 +509,9 @@ function ReceiptForm({
             <thead>
               <tr>
                 <th>Phụ tùng</th>
-                {!editing && (
-                  <>
-                    <th>Vị trí (khu – kệ)</th>
-                    <th>Cần nhận</th>
-                  </>
-                )}
+                <th>Còn chờ nhận</th>
+                <th>Ngày sản xuất</th>
+                <th>Hạn dùng</th>
                 {[...inspectionCountFields, ...inspectionResultFields].map(
                   ([field, label]) => <th key={field}>{label}</th>,
                 )}
@@ -529,12 +562,39 @@ function ReceiptForm({
                           : ''}
                       </small>
                     </td>
-                    {!editing && <td>{line.binLocation ?? '—'}</td>}
-                    {!editing && <td>{line.expectedQty ?? '—'}</td>}
+                    <td>{line.expectedQty ?? '—'}</td>
+                    {(['manufactureDate', 'expiryDate'] as const).map((field) => (
+                      <td key={field}>
+                        {editing ? (
+                          <>
+                            <input
+                              type="date"
+                              aria-label={`${field === 'manufactureDate' ? 'Ngày sản xuất' : 'Hạn dùng'} ${line.sku}`}
+                              value={lotDates[line.id]?.[field] ?? ''}
+                              onChange={(event) =>
+                                setLotDates((previous) => ({
+                                  ...previous,
+                                  [line.id]: {
+                                    ...previous[line.id],
+                                    [field]: event.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                            {field === 'expiryDate' && hasInvalidLotDates(line) && (
+                              <small className="receiving-field-error" role="alert">
+                                Hạn dùng không được trước ngày sản xuất.
+                              </small>
+                            )}
+                          </>
+                        ) : (
+                          formatDate(line[field])
+                        )}
+                      </td>
+                    ))}
                     {inspectionCountFields.map(([field, label]) => (
                       <td key={field}>
-                        {editing &&
-                        (field !== 'documentQty' || !hasDocumentQuantities) ? (
+                        {editing && field !== 'documentQty' ? (
                           <input
                             type="number"
                             min={0}
@@ -609,6 +669,20 @@ function ReceiptForm({
           </table>
         </div>
       </section>
+      {editing ? (
+        <section className="receiving-panel">
+          <div className="receiving-layout-fields">
+            <InspectionNoteField
+              value={inspectionNote}
+              onChange={setInspectionNote}
+              required={noteRequired}
+              disabled={saving}
+            />
+          </div>
+        </section>
+      ) : receipt.inspectionNote && (
+        <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+      )}
       {showRecount && (
         <section className="receiving-panel">
           <h2>Trả về kiểm lại</h2>

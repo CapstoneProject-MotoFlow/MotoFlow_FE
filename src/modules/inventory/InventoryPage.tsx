@@ -229,15 +229,15 @@ export default function InventoryPage() {
   // Review C1: bảng vừa khung 1366px (cột thao tác 2x2, bỏ bớt khoảng đệm).
   const weights = [
     ...(selectable ? [4] : []),
-    27,
+    24,
     ...(grouped ? [] : [8]),
-    8,
-    8,
     9,
+    11,
     9,
+    11,
     ...(scope.owner ? [11] : []),
     12,
-    15,
+    13,
   ]
   const weightTotal = weights.reduce((a, b) => a + b, 0)
   const columns = (grouped ? 8 : scope.owner ? 9 : 8) + (selectable ? 1 : 0)
@@ -351,7 +351,7 @@ export default function InventoryPage() {
             >
               {lows
                 ? group
-                  ? 'Thiếu ở ' + lows + ' kho'
+                  ? `${lows} kho đang dưới ngưỡng`
                   : 'Dưới ngưỡng'
                 : totals.availableQty
                   ? 'Đủ hàng'
@@ -651,22 +651,16 @@ export default function InventoryPage() {
                   className="stock-numeric"
                   title="Gồm hàng hỏng, giao sai, chờ kiểm, chờ trả nhà cung cấp"
                 >
-                  Chưa
-                  <br />
-                  bán được ⓘ
+                  Chưa bán được ⓘ
                 </th>
                 <th className="stock-numeric">
-                  Đang
-                  <br />
-                  chuyển
+                  Đang chuyển
                 </th>
                 <th
                   className="stock-numeric"
                   title="Có thể bán cộng chưa bán được; không tính hàng đang chuyển"
                 >
-                  Tồn
-                  <br />
-                  thực tế ⓘ
+                  Tồn thực tế ⓘ
                 </th>
                 {scope.owner && <th className="stock-numeric">Giá trị tồn</th>}
                 <th>Tình trạng</th>
