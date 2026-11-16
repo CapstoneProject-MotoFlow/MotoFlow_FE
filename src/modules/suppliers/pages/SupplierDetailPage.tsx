@@ -150,7 +150,7 @@ export default function SupplierDetailPage() {
             </dl>
             <dl>
               {[
-                ['Phiếu đang mở', '—'],
+                ['Đơn nhập hàng đang mở', '—'],
                 ['Giá trị chưa nhận', '—'],
                 ['Đã nhận trong năm', '—'],
                 ['Sai lệch chưa đóng', String(data.openDiscrepancyCount)],
@@ -167,7 +167,7 @@ export default function SupplierDetailPage() {
               <h2>Giao dịch với nhà cung cấp</h2>
               <div className="supplier-tabs">
                 {[
-                  ['orders', 'Yêu cầu nhập hàng'],
+                  ['orders', 'Đơn nhập hàng'],
                   ['deliveries', 'Phiếu nhập'],
                   [
                     'discrepancies',
@@ -188,7 +188,7 @@ export default function SupplierDetailPage() {
               <>
                 <div className="supplier-filter">
                   <select
-                    aria-label="Lọc yêu cầu nhập hàng"
+                    aria-label="Lọc đơn nhập hàng"
                     value={orderStatus}
                     onChange={(e) => setOrderStatus(e.target.value)}
                   >
@@ -225,7 +225,7 @@ export default function SupplierDetailPage() {
                         )
                         .map((x) => (
                           <tr key={x.id}>
-                            <td>{documentCode('YCN', x.id)}</td>
+                            <td>{documentCode('DNH', x.id)}</td>
                             <td>{x.lineCount}</td>
                             <td>{x.storeName}</td>
                             <td>{date(x.createdAt)}</td>
@@ -248,8 +248,7 @@ export default function SupplierDetailPage() {
                   </table>
                 </div>
                 <p className="supplier-data-note">
-                  Các yêu cầu nhập hàng gần nhất ({data.purchaseOrderCount} yêu
-                  cầu)
+                  Các đơn nhập hàng gần nhất ({data.purchaseOrderCount} đơn)
                 </p>
               </>
             )}
@@ -259,7 +258,7 @@ export default function SupplierDetailPage() {
                   <thead>
                     <tr>
                       <th>Phiếu nhập</th>
-                      <th>Yêu cầu nhập hàng</th>
+                      <th>Đơn nhập hàng</th>
                       <th>Chứng từ giao</th>
                       <th>Hàng đến</th>
                       <th>Xác nhận lúc</th>
@@ -270,7 +269,7 @@ export default function SupplierDetailPage() {
                     {data.deliveries.map((x) => (
                       <tr key={x.id}>
                         <td>{documentCode('PN', x.id)}</td>
-                        <td>{documentCode('YCN', x.purchaseOrderId)}</td>
+                        <td>{documentCode('DNH', x.purchaseOrderId)}</td>
                         <td>{x.deliveryDocumentNo || '—'}</td>
                         <td>{date(x.arrivedAt)}</td>
                         <td>

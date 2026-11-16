@@ -435,11 +435,11 @@ function WorkEditor({
             {resultSubmitted ? (
               <>
                 <strong>
-                  Đã gửi kết quả soạn hàng, đang chờ quản lý cửa hàng xác nhận
+                  Đã gửi kết quả soạn hàng, đang chờ quản lý kho nguồn xác nhận
                   xuất.
                 </strong>
                 <p>
-                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi quản lý cửa hàng
+                  Bạn vẫn có thể chỉnh sửa số đã soạn trước khi quản lý kho nguồn
                   xác nhận xuất.
                 </p>
               </>
@@ -470,7 +470,7 @@ function WorkEditor({
         {preparation?.canRecord && !valid && (
           <p className="tf-validation-hint">
             Số đã soạn phải là số nguyên, từ 0 đến mức thấp hơn giữa kế hoạch và
-            số có thể bán. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
+            tồn kho. Nếu soạn ít hơn kế hoạch, hãy nhập lý do.
           </p>
         )}
         {receipt && !receiptAcceptsResult(receipt.status) && (
@@ -480,12 +480,12 @@ function WorkEditor({
                 <strong>
                   {bm
                     ? 'Kết quả kiểm nhận đang chờ bạn duyệt.'
-                    : 'Kết quả đã gửi, đang chờ quản lý cửa hàng nhận xác nhận.'}
+                    : 'Kết quả đã gửi, đang chờ quản lý kho nhận xác nhận.'}
                 </strong>
                 <p>
                   {bm
                     ? 'Kiểm tra số đạt, số hỏng rồi chọn Xác nhận nhận hàng ở đầu thẻ. Nếu số liệu chưa đúng, chọn Yêu cầu kiểm lại để nhân viên cập nhật.'
-                    : 'Bạn không cần gửi lại. Nếu cần sửa, quản lý cửa hàng phải chọn Yêu cầu kiểm lại trước.'}
+                    : 'Bạn không cần gửi lại. Nếu cần sửa, quản lý kho nhận phải chọn Yêu cầu kiểm lại trước.'}
                 </p>
               </>
             ) : (

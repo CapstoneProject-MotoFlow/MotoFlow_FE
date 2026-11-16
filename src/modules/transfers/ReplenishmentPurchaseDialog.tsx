@@ -126,17 +126,17 @@ export default function ReplenishmentPurchaseDialog({
 
   return (
     <FormDialog
-      title={'Lập yêu cầu nhập hàng cho ' + documentCode('YBS', request.id)}
+      title={'Lập đơn nhập hàng cho ' + documentCode('YBS', request.id)}
       formId="replenishment-purchase"
       className="tf-purchase-dialog"
-      submitLabel={created ? 'Đã tạo yêu cầu' : 'Tạo yêu cầu nhập hàng'}
+      submitLabel={created ? 'Đã tạo đơn nhập hàng' : 'Tạo đơn nhập hàng'}
       submitDisabled={!valid || !Number.isSafeInteger(total)}
       hideSubmit={!!created}
       closeLabel={created ? 'Đóng' : 'Để sau'}
       busy={busy}
       footerExtra={
         <span>
-          Tổng tiền phiếu <strong>{money.format(total)}</strong>
+          Tổng tiền đơn nhập hàng <strong>{money.format(total)}</strong>
         </span>
       }
       onClose={onClose}
@@ -180,7 +180,7 @@ export default function ReplenishmentPurchaseDialog({
             )
             setCopyText(
               [
-                'Yêu cầu nhập hàng ' + purchaseOrderCode(r.data.id),
+                'Đơn nhập hàng ' + purchaseOrderCode(r.data.id),
                 'Nhà cung cấp: ' + supplier.supplierName,
                 'Kho nhận: ' + request.storeName,
                 ...(arrival ? ['Ngày giao dự kiến: ' + date(arrival)] : []),
@@ -199,7 +199,7 @@ export default function ReplenishmentPurchaseDialog({
             setError(
               inventoryError(err) +
                 (allocationSaved
-                  ? ' Số lượng chuyển mua đã lưu. Có thể thử tạo phiếu lại.'
+                  ? ' Số lượng chuyển mua đã lưu. Có thể thử tạo lại đơn nhập hàng.'
                   : ''),
             )
           } finally {
@@ -215,8 +215,8 @@ export default function ReplenishmentPurchaseDialog({
         )}
         {hasExistingPurchase(request.purchaseOrders) && (
           <p role="alert">
-            Yêu cầu bổ sung này đã có yêu cầu nhập hàng. Vui lòng kiểm tra yêu
-            cầu liên quan để tránh lập trùng.
+            Yêu cầu bổ sung này đã có đơn nhập hàng. Vui lòng kiểm tra đơn
+            nhập hàng liên quan để tránh lập trùng.
           </p>
         )}
         {created ? (
@@ -224,7 +224,7 @@ export default function ReplenishmentPurchaseDialog({
             <p role="status">
               Đã tạo{' '}
               <Link to={'/purchase-orders/' + created}>
-                yêu cầu nhập hàng {purchaseOrderCode(created)}
+                đơn nhập hàng {purchaseOrderCode(created)}
               </Link>
             </p>
             <label>

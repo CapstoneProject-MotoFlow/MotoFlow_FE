@@ -41,7 +41,7 @@ export const debtStatusLabels: Record<string, string> = {
   SETTLED: 'Đã trả hết',
 }
 
-/** Yêu cầu nhập hàng (YCN). */
+/** Đơn nhập hàng (DNH). */
 export const purchaseOrderStatusLabels: Record<string, string> = {
   AWAITING_DELIVERY: 'Chờ giao hàng',
   RECEIVING: 'Đang nhận hàng',

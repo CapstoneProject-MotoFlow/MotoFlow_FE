@@ -146,7 +146,7 @@ test('staff receiving assignments open the receipt create screen, other transfer
         type: 'TASK_ASSIGNED',
         refType: 'PURCHASE_ORDER',
         refId: 7,
-        message: 'Bạn được giao nhận hàng và lập phiếu nhập cho PO #7',
+        message: 'Bạn được giao nhận hàng và lập phiếu nhập cho đơn nhập hàng DNH-0007',
       },
       'STAFF',
     ),

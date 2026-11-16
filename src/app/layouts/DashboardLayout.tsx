@@ -164,9 +164,13 @@ export default function DashboardLayout() {
           </div>
         )}
         {location.state?.accessDenied && (
-          <p className="owner-notice" role="alert">
-            Bạn không có quyền truy cập chức năng này. (MSG05)
-          </p>
+          <section className="access-denied-card" role="alert">
+            <h2>Không có quyền truy cập</h2>
+            <p>Bạn chưa được cấp quyền sử dụng chức năng này. (MSG05)</p>
+            <Link className="mf-btn mf-btn--secondary" to="/">
+              Về trang chủ
+            </Link>
+          </section>
         )}
         <HeaderSearchTarget.Provider value={searchTarget}>
           <PageErrorBoundary key={location.pathname}>

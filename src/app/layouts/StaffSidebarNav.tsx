@@ -15,7 +15,7 @@ const items: NavItem[] = [
   },
   { label: 'Đơn bán', href: '/sales-orders', icon: 'receipt' },
   {
-    label: 'Nhập hàng',
+    label: 'Đơn nhập hàng',
     href: '/purchase-orders',
     icon: 'clipboard',
   },
