@@ -13,6 +13,7 @@ import {
 } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 import { documentCode } from '../../shared/utils/documentCode'
+import { formatDate } from '../../shared/utils/format'
 import './receiving.css'
 
 type Line = {
@@ -491,7 +492,7 @@ function ReceiptForm({
             <thead>
               <tr>
                 <th>Phụ tùng</th>
-                <th>Cần nhập</th>
+                <th>Còn chờ nhận</th>
                 <th>Ngày sản xuất</th>
                 <th>Hạn dùng</th>
                 {[...inspectionCountFields, ...inspectionResultFields].map(
@@ -570,7 +571,7 @@ function ReceiptForm({
                             )}
                           </>
                         ) : (
-                          line[field] ?? '—'
+                          formatDate(line[field])
                         )}
                       </td>
                     ))}

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import { apiMessage } from '../suppliers/supplierService'
-import { formatDateTime } from '../../shared/utils/format'
+import { formatDate, formatDateTime } from '../../shared/utils/format'
 import { inspectionCountFields, inspectionResultFields } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 
@@ -180,7 +180,7 @@ function ExistingReceiptActionDialog({
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th>Cần nhập</th>
+                    <th>Còn chờ nhận</th>
                     {inspectionColumns.map(([field, label]) => (
                       <th key={field}>{label}</th>
                     ))}
@@ -196,8 +196,8 @@ function ExistingReceiptActionDialog({
                       {inspectionColumns.map(([field]) => (
                         <td key={field}>{line[field]}</td>
                       ))}
-                      <td>{line.manufactureDate ?? '—'}</td>
-                      <td>{line.expiryDate ?? '—'}</td>
+                      <td>{formatDate(line.manufactureDate)}</td>
+                      <td>{formatDate(line.expiryDate)}</td>
                     </tr>
                   ))}
                 </tbody>

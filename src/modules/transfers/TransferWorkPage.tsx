@@ -308,6 +308,11 @@ function WorkEditor({
         ? order?.sourceStoreId
         : order?.destStoreId) &&
     receipt.status === 'AWAITING_CONFIRMATION'
+  const isReturnReceipt = receipt?.receiptType === 'RETURN_TO_SOURCE'
+  const receivedQty = (productId: number) => {
+    const { qty, wrong, damaged } = values[productId]
+    return qty + wrong + damaged
+  }
   const valid =
     lines.length > 0 &&
     lines.every((l) => {
@@ -325,9 +330,9 @@ function WorkEditor({
         Number.isInteger(v.wrong) &&
         v.wrong >= 0 &&
         v.wrong <= 100000 &&
-        (mode !== 'receipt' ||
+        (!isReturnReceipt ||
           !('documentQty' in l) ||
-          v.qty + v.wrong + v.damaged <= l.documentQty) &&
+          receivedQty(l.productId) <= l.documentQty) &&
         (mode !== 'prepare' ||
           !('plannedQty' in l) ||
           v.qty >= l.plannedQty ||
@@ -533,7 +538,7 @@ function WorkEditor({
         {receipt && (
           <p className="tf-note">
             Đến: {dateTime(receipt.arrivedAt)}
-            {receipt && (
+            {!canRecord && (
               <span>
                 {' '}
                 · Thực nhận:{' '}
@@ -618,7 +623,17 @@ function WorkEditor({
                           <>
                             {l.documentQty}
                             <small>
-                              Thực nhận: {l.deliveredQty} · Thừa: {l.excessQty}
+                              Thực nhận:{' '}
+                              {canRecord
+                                ? receivedQty(l.productId)
+                                : l.deliveredQty}
+                              {' · Thừa: '}
+                              {canRecord
+                                ? Math.max(
+                                    0,
+                                    receivedQty(l.productId) - l.documentQty,
+                                  )
+                                : l.excessQty}
                             </small>
                           </>
                         ) : 'plannedQty' in l ? (
@@ -634,11 +649,11 @@ function WorkEditor({
                           type="number"
                           min={0}
                           max={
-                            'documentQty' in l
+                            isReturnReceipt && 'documentQty' in l
                               ? l.documentQty
                               : 'sellableQty' in l
-                              ? Math.min(l.plannedQty, l.sellableQty)
-                              : 2147483647
+                                ? Math.min(l.plannedQty, l.sellableQty)
+                                : 2147483647
                           }
                           aria-invalid={
                             'sellableQty' in l &&
@@ -711,11 +726,9 @@ function WorkEditor({
                               })
                             }
                           />
-                          {'documentQty' in l &&
-                            values[l.productId].qty +
-                              values[l.productId].wrong +
-                              values[l.productId].damaged >
-                              l.documentQty && (
+                          {isReturnReceipt &&
+                            'documentQty' in l &&
+                            receivedQty(l.productId) > l.documentQty && (
                               <small className="tf-validation-hint">
                                 Đạt, giao sai và hư hỏng không được vượt số trên phiếu.
                               </small>

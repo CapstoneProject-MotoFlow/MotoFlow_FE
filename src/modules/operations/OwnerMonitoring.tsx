@@ -135,7 +135,7 @@ export default function OwnerMonitoring() {
       href: '/replenishment-requests/' + r.id + '/coordinate',
     })),
   ]
-    .sort((a, b) => b.at.localeCompare(a.at))
+    .sort((a, b) => a.at.localeCompare(b.at))
     .slice(0, 5)
   const loading = counts.loading || excess.loading || replenishments.loading,
     error = counts.error || excess.error || replenishments.error

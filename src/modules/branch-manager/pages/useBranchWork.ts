@@ -181,7 +181,7 @@ export function useBranchWork(coordinator: boolean) {
     })),
   ]
   const rows = [...new Map(work.map((w) => [w.key, w])).values()].sort(
-    (a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key),
+    (a, b) => a.at.localeCompare(b.at) || a.key.localeCompare(b.key),
   )
   const sources = [
     sales,
