@@ -1,5 +1,23 @@
 .docs-page {
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--dashboard-page-gutter, 56px));
   min-width: 0;
+  margin-inline: auto;
+}
+
+.docs-page > .mf-page-header {
+  align-items: flex-start;
+  padding: 0 2px;
+}
+
+.docs-page .mf-page-header-side {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.docs-page .mf-breadcrumb {
+  justify-content: flex-end;
+  overflow-wrap: anywhere;
 }
 
 .docs-split {
@@ -69,9 +87,41 @@
 
 .docs-filters {
   margin-block: 16px;
+  align-items: flex-end;
 }
 .docs-search {
   flex: 1 1 240px;
+  min-width: min(240px, 100%);
+}
+
+.docs-filters > label {
+  flex: 1 1 150px;
+  min-width: min(150px, 100%);
+}
+
+.docs-filters > .docs-search {
+  flex: 2 1 280px;
+  min-width: min(240px, 100%);
+}
+
+.docs-filters input,
+.docs-filters select {
+  width: 100%;
+}
+
+.docs-filters > .docs-actions {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+.docs-filters > .docs-actions .mf-btn {
+  padding-inline: 12px;
+}
+
+@media (max-width: 1450px) {
+  .docs-filters > .docs-actions {
+    flex-basis: 100%;
+  }
 }
 .docs-pager {
   justify-content: space-between;
