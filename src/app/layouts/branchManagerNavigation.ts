@@ -60,15 +60,13 @@ export const branchManagerNavigation: NavItem[] = [
   },
   {
     label: 'Báo cáo bán hàng',
-    href: '#bm-sales-reports',
+    href: '/reports/sales',
     icon: 'chart',
-    pending: true,
   },
   {
     label: 'Báo cáo kho hàng',
-    href: '#bm-inventory-reports',
+    href: '/reports/inventory',
     icon: 'scale',
-    pending: true,
   },
   { label: 'Bảng giá', href: '/pricing/retail-prices', icon: 'tag' },
   { label: 'Phụ tùng', href: '/branch-manager/products', icon: 'tool' },

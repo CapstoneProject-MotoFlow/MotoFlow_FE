@@ -235,6 +235,26 @@ const StoresPage = lazy(() => import('../../modules/stores/pages/StoresPage'))
 const ProfileChangePasswordPage = lazy(
   () => import('../../modules/profile/pages/ProfileChangePasswordPage'),
 )
+const SalesReportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.SalesReportPage,
+  })),
+)
+const InventoryReportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.InventoryReportPage,
+  })),
+)
+const GrossMarginReportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.GrossMarginReportPage,
+  })),
+)
+const AccountingExportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.AccountingExportPage,
+  })),
+)
 
 function InventoryLegacyRedirect({
   movements = false,
@@ -318,6 +338,11 @@ export default function AppRoutes() {
             <Route
               element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
             >
+              <Route path="/reports/sales" element={<SalesReportPage />} />
+              <Route
+                path="/reports/inventory"
+                element={<InventoryReportPage />}
+              />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route
                 path="/inventory/movements"
@@ -350,6 +375,14 @@ export default function AppRoutes() {
               />
             </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
+              <Route
+                path="/reports/gross-margin"
+                element={<GrossMarginReportPage />}
+              />
+              <Route
+                path="/reports/accounting-export"
+                element={<AccountingExportPage />}
+              />
               <Route path="/pricing/rules" element={<PricingRulesPage />} />
               <Route
                 path="/purchase-orders/new"
