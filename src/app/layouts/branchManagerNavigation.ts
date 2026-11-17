@@ -50,15 +50,13 @@ export const branchManagerNavigation: NavItem[] = [
   },
   {
     label: 'Tra cứu chứng từ',
-    href: '#bm-documents',
+    href: '/documents',
     icon: 'document',
-    pending: true,
   },
   {
     label: 'Yêu cầu điều chỉnh',
-    href: '#bm-adjustments',
+    href: '/adjustments',
     icon: 'sliders',
-    pending: true,
   },
   {
     label: 'Báo cáo bán hàng',

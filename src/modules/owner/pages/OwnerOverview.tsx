@@ -12,12 +12,13 @@ import OwnerMonitoring from '../../operations/OwnerMonitoring'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
 import PageHeader from '../../../shared/ui/PageHeader'
 import '../owner.css'
-const metrics: { key: string; title: string; icon: IconName; href?: string }[] =
+const metrics: { key: string; title: string; icon: IconName; href: string }[] =
   [
     {
       key: 'ADJUSTMENTS_AWAITING_APPROVAL',
       title: 'Điều chỉnh chờ duyệt',
       icon: 'sliders',
+      href: '/adjustments',
     },
     {
       key: 'EXCESS_AWAITING_DECISION',
@@ -92,25 +93,13 @@ export default function OwnerOverview() {
       {/* Góp ý cô Hoài: 2 thẻ to đầu trang chiếm quá nhiều chỗ, thu thành một dải gọn. */}
       <section className="owner-waiting" aria-label="Việc chờ bạn duyệt">
         <span className="owner-waiting-title">Chờ bạn duyệt</span>
-        {waiting.map((m) =>
-          m.href ? (
-            <Link className="owner-waiting-chip" key={m.key} to={m.href}>
-              <Icon name={m.icon} />
-              {m.title}
-              <strong>{counts[m.key]}</strong>
-            </Link>
-          ) : (
-            <span
-              className="owner-waiting-chip is-static"
-              key={m.key}
-              title="Màn duyệt điều chỉnh đang được hoàn thiện."
-            >
-              <Icon name={m.icon} />
-              {m.title}
-              <strong>{counts[m.key]}</strong>
-            </span>
-          ),
-        )}
+        {waiting.map((m) => (
+          <Link className="owner-waiting-chip" key={m.key} to={m.href}>
+            <Icon name={m.icon} />
+            {m.title}
+            <strong>{counts[m.key]}</strong>
+          </Link>
+        ))}
         {loaded && !waiting.length && (
           <span className="owner-waiting-empty">
             <Icon name="check" />

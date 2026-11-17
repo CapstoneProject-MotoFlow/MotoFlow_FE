@@ -71,16 +71,14 @@ export const ownerNavigation: NavItem[] = [
   { label: 'Kiểm kê', href: '/stock-counts', icon: 'checklist' },
   {
     label: 'Tra cứu chứng từ',
-    href: '#documents',
+    href: '/documents',
     icon: 'document',
     group: 'CHỨNG TỪ',
-    pending: true,
   },
   {
     label: 'Yêu cầu điều chỉnh',
-    href: '#adjustments',
+    href: '/adjustments',
     icon: 'sliders',
-    pending: true,
   },
   {
     label: 'Báo cáo bán hàng',
