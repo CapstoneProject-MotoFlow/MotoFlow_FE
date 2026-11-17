@@ -50,7 +50,7 @@ export type WorkReceipt = {
   purchaseOrderId: number
   status: string
   assigneeName: string | null
-  deliveryDocumentNo: string
+  deliveryDocumentNo: string | null
 }
 
 export function receiptWork(receipts: WorkReceipt[], orderId: number) {

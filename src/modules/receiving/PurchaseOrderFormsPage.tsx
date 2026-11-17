@@ -23,6 +23,7 @@ import type { Supplier } from '../suppliers/types'
 import { apiMessage } from '../suppliers/supplierService'
 import { isAxiosError } from 'axios'
 import ProductPicker, { type ProductOption } from './ProductPicker'
+import MoneyInput from '../../shared/ui/MoneyInput'
 import DeliveryDocumentFields from './DeliveryDocumentFields'
 import {
   receiptDocumentUploadEnabled,
@@ -66,6 +67,7 @@ type DraftLine = {
 }
 type EditableOrder = {
   id: number
+  supplierId: number
   supplierName: string
   storeName: string
   expectedArrival: string | null
@@ -135,6 +137,14 @@ type PurchaseDraft = {
   nextId: number
   lines: DraftLine[]
   products: Record<number, ProductOption>
+}
+
+/** GET /purchase-orders/last-prices (Mạnh, việc B2 17/11): phụ tùng chưa từng nhập từ NCC này thì không có dòng. */
+type LastPurchasePrice = {
+  productId: number
+  lastPrice: number
+  receivedAt?: string | null
+  purchaseOrderId?: number | null
 }
 
 const orderMoney = new Intl.NumberFormat('vi-VN', {
@@ -250,6 +260,44 @@ function OrderFormLayout({
     (total, line) => total + Number(line.quantity) * Number(line.price),
     0,
   )
+  // Giá nhập lần trước: giá trên phiếu nhập đã xác nhận gần nhất của cùng nhà cung cấp (PM 17/11).
+  // BE chưa có API hoặc lỗi thì cột hiện "—"; kết quả gắn với NCC đã hỏi để đổi NCC không hiện giá cũ.
+  const priceSupplierId = order ? String(order.supplierId ?? '') : supplierId
+  const pricedProductIds = Array.from(
+    new Set(draft.lines.map((line) => line.productId).filter(Boolean)),
+  )
+    .sort()
+    .join(',')
+  const [lastPriceResult, setLastPriceResult] = useState<{
+    supplierId: string
+    prices: Record<number, number>
+  }>()
+  useEffect(() => {
+    if (!owner || !priceSupplierId || !pricedProductIds) return
+    const controller = new AbortController()
+    void axiosClient
+      .get<LastPurchasePrice[]>('/purchase-orders/last-prices', {
+        params: { supplierId: priceSupplierId, productIds: pricedProductIds },
+        signal: controller.signal,
+      })
+      .then(({ data }) => {
+        if (controller.signal.aborted) return
+        setLastPriceResult({
+          supplierId: priceSupplierId,
+          prices: Object.fromEntries(
+            data.map((item) => [item.productId, item.lastPrice]),
+          ),
+        })
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLastPriceResult(undefined)
+      })
+    return () => controller.abort()
+  }, [owner, priceSupplierId, pricedProductIds])
+  const lastPrices: Record<number, number> =
+    lastPriceResult?.supplierId === priceSupplierId
+      ? lastPriceResult.prices
+      : {}
   const back = order ? '/purchase-orders/' + order.id : '/purchase-orders'
   const [selectedProducts, setSelectedProducts] = useState<
     Record<number, ProductOption>
@@ -560,17 +608,18 @@ function OrderFormLayout({
                       }
                     />
                   </td>
-                  <td>—</td>
                   <td>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10000000000}
+                    {lastPrices[Number(line.productId)] === undefined
+                      ? '—'
+                      : orderMoney.format(lastPrices[Number(line.productId)])}
+                  </td>
+                  <td>
+                    <MoneyInput
                       required
                       aria-label={'Giá nhập dòng ' + (index + 1)}
                       value={line.price}
-                      onChange={(event) =>
-                        updateLine(line.id, 'price', event.target.value)
+                      onValueChange={(digits) =>
+                        updateLine(line.id, 'price', digits)
                       }
                     />
                   </td>

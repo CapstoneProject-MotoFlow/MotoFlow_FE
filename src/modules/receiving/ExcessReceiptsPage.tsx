@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { apiMessage } from '../suppliers/supplierService'
+import { documentCode } from '../../shared/utils/documentCode'
 import './receiving.css'
 
 type Row = {
@@ -10,7 +11,7 @@ type Row = {
   purchaseOrderId: number
   supplierName: string
   storeName: string
-  deliveryDocumentNo: string
+  deliveryDocumentNo: string | null
   confirmedAt: string | null
 }
 
@@ -69,7 +70,12 @@ export default function ExcessReceiptsPage() {
               <tbody>
                 {data?.items.map((row) => (
                   <tr key={row.id}>
-                    <td>{row.deliveryDocumentNo}</td>
+                    <td>
+                      {documentCode('PN', row.id)}
+                      {row.deliveryDocumentNo && (
+                        <small> · Chứng từ {row.deliveryDocumentNo}</small>
+                      )}
+                    </td>
                     <td>{row.supplierName}</td>
                     <td>{row.storeName}</td>
                     <td>

@@ -21,7 +21,7 @@ type Receipt = {
   id: number
   supplierName: string
   storeName: string
-  deliveryDocumentNo: string
+  deliveryDocumentNo: string | null
   deliveryDocumentDate: string | null
   arrivedAt: string
   assignee: { fullName: string } | null
@@ -109,8 +109,12 @@ export function ReceiptDialog({
               <div>
                 <dt>Chứng từ giao hàng</dt>
                 <dd>
-                  {receipt.data.deliveryDocumentNo} ·{' '}
-                  {date(receipt.data.deliveryDocumentDate)}
+                  {receipt.data.deliveryDocumentNo ||
+                  receipt.data.deliveryDocumentDate
+                    ? (receipt.data.deliveryDocumentNo ?? '—') +
+                      ' · ' +
+                      date(receipt.data.deliveryDocumentDate)
+                    : '—'}
                 </dd>
               </div>
               <div>

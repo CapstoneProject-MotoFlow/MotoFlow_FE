@@ -12,6 +12,7 @@ import {
   inspectionResultFields,
 } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
+import PassAllButton from './PassAllButton'
 import InspectionNoteField from './InspectionNoteField'
 import { documentCode } from '../../shared/utils/documentCode'
 import { formatDate } from '../../shared/utils/format'
@@ -42,7 +43,7 @@ type Receipt = {
   id: number
   replacement: boolean
   purchaseOrderId: number
-  deliveryDocumentNo: string
+  deliveryDocumentNo: string | null
   arrivedAt: string
   recordedById: number | null
   supplierName: string
@@ -339,7 +340,9 @@ function ReceiptForm({
           <h2>
             {editing
               ? 'Chứng từ giao hàng'
-              : `Chứng từ giao hàng · ${receipt.deliveryDocumentNo}`}
+              : receipt.deliveryDocumentNo
+                ? `Chứng từ giao hàng · ${receipt.deliveryDocumentNo}`
+                : 'Chứng từ giao hàng'}
           </h2>
           {assignable && (
             <button
@@ -357,7 +360,7 @@ function ReceiptForm({
           {editing && (
             <div>
               <dt>Số chứng từ</dt>
-              <dd>{receipt.deliveryDocumentNo}</dd>
+              <dd>{receipt.deliveryDocumentNo || '—'}</dd>
             </div>
           )}
           <div>
@@ -420,30 +423,12 @@ function ReceiptForm({
         {editing ? (
           <div className="receiving-staff-files-block">
             <strong>Ảnh chứng từ</strong>
+            {/* PM 17/11: Staff xem ảnh giống BM, bằng nút "Xem ảnh chứng từ" (link tải luôn mới). */}
             {receipt.documents?.length ? (
-              <ul className="receiving-document-list receiving-staff-files">
-                {receipt.documents.map((file) => (
-                  <li key={file.id}>
-                    <span
-                      className="receiving-staff-file-icon"
-                      aria-hidden="true"
-                    >
-                      ▧
-                    </span>
-                    {file.downloadUrl ? (
-                      <a
-                        href={file.downloadUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {file.fileName}
-                      </a>
-                    ) : (
-                      file.fileName
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <ReceiptDocuments
+                receiptId={receipt.id}
+                documents={receipt.documents}
+              />
             ) : (
               <span className="receiving-staff-no-file">
                 Chưa có ảnh chứng từ đính kèm.
@@ -623,18 +608,16 @@ function ReceiptForm({
                     ))}
                     {editing && (
                       <td>
-                        <input
-                          aria-label={'Đạt đủ ' + line.sku}
-                          type="checkbox"
+                        <PassAllButton
+                          sku={line.sku}
                           disabled={!canFill}
-                          checked={
+                          pressed={
                             result !== null &&
                             result.documentQty === result.deliveredQty &&
                             result.wrongItemQty === 0 &&
                             result.damagedQty === 0
                           }
-                          onChange={(event) => {
-                            const full = event.target.checked
+                          onToggle={(full) => {
                             setCounts((previous) => ({
                               ...previous,
                               [line.id]: {
@@ -776,7 +759,7 @@ function ReceiptForm({
       {assignment && (
         <ReceiptActionDialog
           receiptId={receipt.id}
-          documentNo={receipt.deliveryDocumentNo}
+          documentNo={documentCode('PN', receipt.id)}
           mode="assign"
           onClose={closeAssignment}
           onSaved={() => {

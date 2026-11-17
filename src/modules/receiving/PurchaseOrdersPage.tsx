@@ -44,7 +44,7 @@ type Assignment = {
   goodsReceiptNoteId: number
   purchaseOrderId: number
   supplierName: string
-  deliveryDocumentNo: string
+  deliveryDocumentNo: string | null
   arrivedAt: string
   taskStatus: string
   lineCount: number
@@ -73,7 +73,7 @@ type Detail = Order & {
   }[]
   receipts: {
     id: number
-    deliveryDocumentNo: string
+    deliveryDocumentNo: string | null
     arrivedAt: string
     status: string
     replacement: boolean
@@ -646,8 +646,14 @@ export default function PurchaseOrdersPage() {
                                 '/goods-receipt-notes/' + row.goodsReceiptNoteId
                               }
                             >
-                              {row.deliveryDocumentNo}
+                              {documentCode('PN', row.goodsReceiptNoteId)}
                             </Link>
+                            {row.deliveryDocumentNo && (
+                              <small>
+                                {' '}
+                                · Chứng từ {row.deliveryDocumentNo}
+                              </small>
+                            )}
                           </td>
                           <td>{purchaseOrderCode(row.purchaseOrderId)}</td>
                           <td>{row.supplierName}</td>
@@ -868,7 +874,7 @@ export default function PurchaseOrdersPage() {
         <ReceiptActionDialog
           key={action.receipt.id + action.mode}
           receiptId={action.receipt.id}
-          documentNo={action.receipt.deliveryDocumentNo}
+          documentNo={documentCode('PN', action.receipt.id)}
           mode={action.mode}
           onClose={() => setAction(null)}
           onSaved={() => {
@@ -1128,7 +1134,10 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                               <span>Người kiểm nhận: {inspector}</span>
                             )}
                             <small>
-                              {receipt.deliveryDocumentNo} ·{' '}
+                              {receipt.deliveryDocumentNo &&
+                                'Chứng từ ' +
+                                  receipt.deliveryDocumentNo +
+                                  ' · '}
                               {day(receipt.arrivedAt)}
                               {receipt.replacement ? ' · Giao bù' : ''}
                             </small>
