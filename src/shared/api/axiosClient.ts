@@ -6,7 +6,9 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { getAccessToken, setAccessToken, clearAccessToken } from './accessToken'
 import type { LoginResponse } from '../types/auth'
-const apiBaseUrl = '/api/v1'
+// Local dev leaves this unset and uses the Vite proxy. Cloudflare Pages sets the full API root.
+const configured = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '')
+const apiBaseUrl = configured && configured.length > 0 ? configured : '/api/v1'
 const axiosClient = axios.create({
   baseURL: apiBaseUrl,
   withCredentials: true,

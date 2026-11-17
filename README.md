@@ -13,7 +13,7 @@ npm run dev
 
 Mở địa chỉ Vite hiện trong terminal (mặc định `http://localhost:5173`). Giữ terminal mở khi sử dụng; nhấn `Ctrl+C` để dừng.
 
-Frontend gửi request `/api/*` đến backend tại `http://localhost:8080`. Các chức năng cần dữ liệu thật sẽ hoạt động khi backend và database đã được khởi chạy theo hướng dẫn riêng của backend. Việc chạy FE không tự tạo hay đồng bộ database.
+Frontend gửi request `/api/v1/*` đến backend tại `http://localhost:8080`. Các chức năng cần dữ liệu thật sẽ hoạt động khi backend và database đã được khởi chạy theo hướng dẫn riêng của backend. Việc chạy FE không tự tạo hay đồng bộ database.
 
 ## Lệnh thường dùng
 
@@ -75,6 +75,6 @@ src/
 - Không đặt secret trong biến `VITE_*`; giá trị này có thể đọc được trong trình duyệt.
 - Khi đổi dependency, cập nhật và commit `package-lock.json` vì cài đặt dùng `npm ci`.
 
-## Docker
+## Cloudflare Pages
 
-`npm run build` tạo thư mục `dist/`. Dockerfile trong repo đóng gói frontend đã build; proxy `/api` trong môi trường deploy được cấu hình tại tầng triển khai.
+`npm run build` tạo thư mục `dist/`. Cloudflare Pages build nhánh `main` và xuất bản site. Biến `VITE_API_BASE_URL` trên Pages là gốc API, gồm `/api/v1`. Máy local không đặt biến này: Vite chuyển `/api` tới `http://127.0.0.1:8080`.
