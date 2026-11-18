@@ -68,9 +68,8 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Kỳ kho',
-    href: '#inventory-periods',
+    href: '/inventory/periods',
     icon: 'calendar',
-    pending: true,
   },
   { label: 'Kiểm kê', href: '/stock-counts', icon: 'checklist' },
   {

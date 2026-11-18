@@ -84,6 +84,9 @@ export function useInventoryData<T>(
     data: enabled && response?.key === key ? response.data : undefined,
     error,
     loading: enabled && response?.key !== key,
+    reload() {
+      setAttempt((previous) => previous + 1)
+    },
     retry() {
       if (error) setAttempt((previous) => previous + 1)
     },
