@@ -13,6 +13,7 @@ import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
+import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
 import './stock-count.css'
 export default function CountLiveRecord() {
   const { id } = useParams(),
@@ -24,7 +25,15 @@ export default function CountLiveRecord() {
       <PageBackLink to={'/stock-counts/' + id} />
       <InventoryHeader title="Ghi số đếm" />
       <InventoryNotice loading={r.loading} error={r.error} />
-      {r.data && (
+      {r.data && (r.data.countType === 'OPENING' ? (
+        <OpeningEditor
+          key={id + ':' + revision}
+          data={r.data}
+          manager={scope.user?.role === 'BRANCH_MANAGER'}
+          userId={scope.user?.id}
+          onSaved={() => setRevision((n) => n + 1)}
+        />
+      ) : (
         <Editor
           key={id + ':' + revision}
           data={r.data}
@@ -32,10 +41,127 @@ export default function CountLiveRecord() {
           userId={scope.user?.id}
           onSaved={() => setRevision((n) => n + 1)}
         />
-      )}
+      ))}
     </main>
   )
 }
+
+type OpeningLine = {
+  key: string
+  product: ProductOption
+  expiryDate: string
+  countedQty: string
+  damagedQty: string
+}
+
+function OpeningEditor({
+  data,
+  manager,
+  userId,
+  onSaved,
+}: {
+  data: CountDto
+  manager: boolean
+  userId?: number
+  onSaved: () => void
+}) {
+  const [rows, setRows] = useState<OpeningLine[]>(() => data.lines.map((line) => ({
+    key: String(line.id),
+    product: { id: line.productId, sku: line.sku, partName: line.partName },
+    expiryDate: line.expiryDate ?? '',
+    countedQty: line.countedQty == null ? '' : String(line.countedQty),
+    damagedQty: String(line.damagedQty ?? 0),
+  })))
+  const [selected, setSelected] = useState<ProductOption>()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+  const lock = useRef(false)
+  const assignment = useInventoryData<Assignment & { current: { assigneeId: number; assigneeName: string; status: string } | null }>(
+    '/warehouse-tasks', { taskType: 'COUNTING', documentId: data.id }, 0, manager,
+  )
+  const allowed = !manager || assignment.data?.current?.assigneeId === userId
+  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities && allowed && assignment.data?.current?.status !== 'RESULT_SUBMITTED'
+  const valid = rows.length > 0 && rows.every((row, index) => {
+    const quantity = Number(row.countedQty)
+    const damaged = Number(row.damagedQty)
+    return /^\d+$/.test(row.countedQty) && Number.isSafeInteger(quantity) && quantity >= 0 &&
+      /^\d+$/.test(row.damagedQty) && Number.isSafeInteger(damaged) && damaged <= quantity &&
+      !rows.slice(0, index).some((other) => other.product.id === row.product.id && other.expiryDate === row.expiryDate)
+  })
+
+  async function act(action: 'start' | 'save' | 'submit') {
+    if (lock.current || !allowed || (action !== 'start' && (!editable || !valid)) || (action === 'submit' && !confirmed)) return
+    lock.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      if (action === 'start') {
+        await axiosClient.post(`/stock-counts/${data.id}/start`)
+        onSaved()
+        return
+      }
+      await axiosClient.put(`/stock-counts/${data.id}/opening-lines`, {
+        lines: rows.map((row) => ({
+          productId: row.product.id,
+          expiryDate: row.expiryDate || null,
+          countedQty: Number(row.countedQty),
+          damagedQty: Number(row.damagedQty),
+        })),
+      })
+      if (action === 'submit') {
+        await axiosClient.post(`/stock-counts/${data.id}/submit`)
+        setNotice('Đã gửi số đếm đầu kỳ cho quản lý xác nhận.')
+        refreshNotifications()
+      } else {
+        setNotice('Đã lưu số đếm đầu kỳ.')
+      }
+      onSaved()
+    } catch (failure) {
+      setError(inventoryError(failure))
+    } finally {
+      lock.current = false
+      setBusy(false)
+    }
+  }
+
+  return <InventoryPanel title={documentCode('KK', data.id) + ' · ' + data.storeName}>
+    <InventoryNotice loading={assignment.loading} error={error || assignment.error} />
+    {notice && <p className="stock-notice" role="status">{notice}</p>}
+    {!allowed && <p className="count-unavailable">Chỉ người được giao mới có thể ghi số đếm.</p>}
+    {(data.status === 'DRAFT' || data.awaitingBookQuantities) && allowed && <div className="stock-notice">
+      <p>Kiểm kê đầu kỳ không có số sổ sách. Bắt đầu đếm để nhập số lượng thực tế và hạn sử dụng.</p>
+      <button className="count-primary" disabled={busy || data.countDate > today()} onClick={() => void act('start')}>Bắt đầu đếm</button>
+    </div>}
+    {editable && <div className="opening-count-add">
+      <ProductPicker selected={selected} excludedIds={[]} label="Thêm phụ tùng" disabled={busy} onSelect={(product) => {
+        setSelected(product)
+        setRows((previous) => [...previous, { key: `${product.id}-${Date.now()}`, product, expiryDate: '', countedQty: '', damagedQty: '0' }])
+        setConfirmed(false)
+      }} />
+      <p>Mỗi dòng là một phụ tùng và hạn sử dụng. Có thể thêm nhiều lô/hạn dùng cho cùng một phụ tùng.</p>
+    </div>}
+    <div className="stock-table-scroll"><table className="stock-table">
+      <thead><tr><th>Phụ tùng</th><th>Hạn sử dụng</th><th>Số đếm thực tế</th><th>Hư hỏng</th>{editable && <th />}</tr></thead>
+      <tbody>{rows.map((row) => <tr key={row.key}>
+        <td><strong>{row.product.partName}</strong><small>{row.product.sku}</small></td>
+        <td><input aria-label={`Hạn sử dụng ${row.product.sku}`} type="date" value={row.expiryDate} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, expiryDate: event.target.value} : item)); setConfirmed(false)}} /></td>
+        <td><input aria-label={`Số đếm ${row.product.sku}`} type="number" min="0" step="1" value={row.countedQty} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, countedQty: event.target.value} : item)); setConfirmed(false)}} /></td>
+        <td><input aria-label={`Số hư hỏng ${row.product.sku}`} type="number" min="0" step="1" value={row.damagedQty} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, damagedQty: event.target.value} : item)); setConfirmed(false)}} /></td>
+        {editable && <td><button type="button" className="mf-btn mf-btn--secondary" disabled={busy} onClick={() => {setRows((items) => items.filter((item) => item.key !== row.key)); setConfirmed(false)}}>Bỏ</button></td>}
+      </tr>)}{!rows.length && <tr><td colSpan={editable ? 5 : 4}>Thêm phụ tùng để bắt đầu lập tồn đầu kỳ.</td></tr>}</tbody>
+    </table></div>
+    {editable && <div className="stock-notice count-buttons">
+      {error && <p role="alert" className="count-validation-error">{error}</p>}
+      <label><input type="checkbox" checked={confirmed} disabled={busy || !valid} onChange={(event) => setConfirmed(event.target.checked)} /> Tôi xác nhận số lượng và hạn sử dụng đã nhập chính xác.</label>
+      <button disabled={busy || !valid} onClick={() => void act('save')}>Lưu tạm</button>
+      <button className="count-primary" disabled={busy || !valid || !confirmed} onClick={() => void act('submit')}>Gửi quản lý xác nhận</button>
+    </div>}
+  </InventoryPanel>
+}
+
 function Editor({
   data,
   manager,

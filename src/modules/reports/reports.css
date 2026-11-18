@@ -195,6 +195,19 @@
   color: #344054;
   font: inherit;
 }
+.sales-store-filter .searchable-filter {
+  width: 240px;
+}
+.reports-page .searchable-filter input[role='combobox'] {
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 32px 0 12px;
+  border: 1px solid #d0d9e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #172b4d;
+  font: inherit;
+}
 .sales-current-store,
 .sales-report-range {
   color: #475467;
@@ -342,18 +355,12 @@
   color: #172b4d;
   box-shadow: 0 1px 3px #1018281a;
 }
-.margin-store-filter select,
-.margin-category-filter select {
+.margin-store-filter .searchable-filter,
+.margin-category-filter .searchable-filter {
   height: 38px;
   min-width: 205px;
-  padding: 0 12px;
-  border: 1px solid #d0d9e8;
-  border-radius: 8px;
-  background: #fff;
-  color: #344054;
-  font: inherit;
 }
-.margin-category-filter select {
+.margin-category-filter .searchable-filter {
   min-width: 230px;
 }
 .margin-period-range {
@@ -498,10 +505,20 @@
   cursor: pointer;
 }
 .accounting-export-filters {
-  padding: 20px 24px 4px;
+  padding: 20px 16px 4px;
   display: grid;
   grid-template-columns: repeat(2, minmax(240px, 1fr));
   gap: 16px;
+}
+.accounting-export-page {
+  max-width: 960px;
+}
+.accounting-export-page .report-panel > header {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+.accounting-export-page .report-panel > header h2 {
+  font-size: 14px;
 }
 .accounting-export-filters label {
   display: grid;
@@ -527,7 +544,7 @@
   font: inherit;
 }
 .report-export-sets {
-  margin: 20px 24px 0;
+  margin: 18px 16px 0;
 }
 .report-export-sets > header {
   display: flex;
@@ -536,44 +553,83 @@
   margin-bottom: 10px;
 }
 .report-export-set {
-  min-height: 52px;
-  padding: 9px 14px;
+  min-height: 40px;
+  padding: 7px 12px;
   border: 1px solid #e4e7ec;
   border-bottom: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
+  cursor: pointer;
 }
-.report-export-set:first-of-type {
+.report-export-set:first-child {
   border-radius: 10px 10px 0 0;
 }
-.report-export-set:last-of-type {
+.report-export-set:last-child {
   border-bottom: 1px solid #e4e7ec;
   border-radius: 0 0 10px 10px;
 }
 .report-export-set > span {
   display: grid;
-  grid-template-columns: 18px minmax(180px, 1fr);
-  column-gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
+  gap: 2px;
 }
 .report-export-set input {
-  grid-row: span 2;
   width: 16px;
   height: 16px;
   accent-color: #465fff;
 }
 .report-export-set strong {
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
   color: #344054;
 }
 .report-export-set small {
-  font-size: 12px;
+  font-size: 11px;
   color: #667085;
 }
-.report-export-set > small {
+.report-export-set .report-export-count {
   white-space: nowrap;
+  font-size: 11px;
+}
+.report-export-info {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #98a2b3;
+  border-radius: 50%;
+  color: #667085;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  cursor: help;
+}
+.report-export-sets > header button {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.report-export-list {
+  border-radius: 10px;
+}
+.report-export-footer {
+  margin: 14px 16px 18px;
+  padding-top: 12px;
+  border-top: 1px solid #e8edf4;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.accounting-export-page .report-export-footer {
+  margin: 14px 16px 18px;
+  padding: 12px 0 0;
 }
 .report-panel {
   min-width: 0;
@@ -924,6 +980,20 @@
   color: #172b4d;
   font: inherit;
 }
+.inventory-period-select .searchable-filter,
+.inventory-store-select .searchable-filter {
+  width: 214px;
+}
+.inventory-report-table-tools > .searchable-filter {
+  width: 220px;
+  flex: 0 1 220px;
+}
+.accounting-export-filters .searchable-filter {
+  width: 100%;
+}
+.accounting-export-page .searchable-filter input[role='combobox'] {
+  height: 42px;
+}
 .inventory-store-select strong {
   min-height: 38px;
   display: flex;
@@ -1175,6 +1245,10 @@
   .inventory-store-select select {
     width: min(214px, 100%);
   }
+  .inventory-period-select .searchable-filter,
+  .inventory-store-select .searchable-filter {
+    width: min(214px, 100%);
+  }
   .inventory-report-table-tools {
     padding: 12px 16px;
   }
@@ -1201,6 +1275,26 @@
   .report-metrics strong {
     font-size: 19px;
   }
+  .accounting-export-filters {
+    padding: 14px 12px 0;
+    grid-template-columns: 1fr;
+  }
+  .report-export-sets {
+    margin: 14px 12px 0;
+  }
+  .report-export-set {
+    grid-template-columns: 18px minmax(0, 1fr);
+    padding: 8px;
+  }
+  .report-export-set .report-export-count {
+    grid-column: 2;
+  }
+  .report-export-footer,
+  .accounting-export-page .report-export-footer {
+    margin: 12px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
   .report-quick-range {
     width: 100%;
   }
@@ -1221,9 +1315,10 @@
   }
   .margin-store-filter,
   .margin-category-filter,
-  .margin-store-filter select,
-  .margin-category-filter select {
+  .margin-store-filter .searchable-filter,
+  .margin-category-filter .searchable-filter {
     width: 100%;
+    min-width: 0;
   }
   .margin-panel-actions {
     flex-wrap: wrap;
@@ -1235,7 +1330,7 @@
     grid-column: 2;
   }
   .sales-store-filter,
-  .sales-store-filter select {
+  .sales-store-filter .searchable-filter {
     width: 100%;
   }
   .report-chart-legend {

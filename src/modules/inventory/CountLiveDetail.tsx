@@ -1,5 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
@@ -15,6 +15,7 @@ import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
+import type { OpeningCostsResponse } from './openingBalanceApi'
 import './stock-count.css'
 export default function CountLiveDetail() {
   const { id } = useParams(),
@@ -57,6 +58,12 @@ export default function CountLiveDetail() {
     submitted = assignment.data?.current?.status === 'RESULT_SUBMITTED',
     open = d && ['DRAFT', 'COUNTING'].includes(d.status),
     own = staff || assignment.data?.current?.assigneeId === scope.user?.id
+  const openingCosts = useInventoryData<OpeningCostsResponse>(
+    '/stock-counts/' + id + '/opening-costs',
+    {},
+    revision,
+    !!d && scope.owner && d.countType === 'OPENING',
+  )
   function choose(value: string) {
     setAction(value)
     setSelected([])
@@ -118,6 +125,7 @@ export default function CountLiveDetail() {
                 !!reasons[l.id]?.trim(),
             )
           : true
+  const openingReady = d?.countType !== 'OPENING' || openingCosts.data?.complete === true
   return (
     <main className="inventory-workspace count-workspace">
       <PageBackLink to="/stock-counts" />
@@ -218,9 +226,10 @@ export default function CountLiveDetail() {
                 <>
                   <button
                     className="count-primary"
+                    disabled={!openingReady}
                     onClick={() => choose('approve')}
                   >
-                    Duyệt chênh lệch
+                    {d.countType === 'OPENING' ? 'Duyệt tồn đầu kỳ' : 'Duyệt chênh lệch'}
                   </button>
                   <button onClick={() => choose('recount')}>
                     Trả về đếm lại
@@ -234,6 +243,15 @@ export default function CountLiveDetail() {
               </p>
             )}
           </InventoryPanel>
+          {scope.owner && d.countType === 'OPENING' && d.status === 'AWAITING_APPROVAL' && (
+            <OpeningCostsPanel
+              data={openingCosts.data}
+              loading={openingCosts.loading}
+              error={openingCosts.error}
+              onRetry={openingCosts.reload}
+              onSaved={() => setRevision((n) => n + 1)}
+            />
+          )}
           <InventoryPanel title="Kết quả kiểm kê">
             <div className="stock-table-scroll">
               <table className="stock-table">
@@ -398,5 +416,119 @@ export default function CountLiveDetail() {
         </>
       )}
     </main>
+  )
+}
+
+function OpeningCostsPanel({
+  data,
+  loading,
+  error,
+  onRetry,
+  onSaved,
+}: {
+  data?: OpeningCostsResponse
+  loading: boolean
+  error?: string
+  onRetry: () => void
+  onSaved: () => void
+}) {
+  const [costs, setCosts] = useState<Record<number, string>>({})
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
+  useEffect(() => {
+    if (data)
+      setCosts(
+        Object.fromEntries(
+          data.parts.map((part) => [
+            part.productId,
+            part.initialUnitCost == null ? '' : String(part.initialUnitCost),
+          ]),
+        ),
+      )
+  }, [data])
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!data || busy) return
+    setBusy(true)
+    setSaveError('')
+    setMessage('')
+    try {
+      await axiosClient.put(`/stock-counts/${data.stockCountId}/opening-costs`, {
+        costs: data.parts
+          .filter((part) => costs[part.productId] !== '')
+          .map((part) => ({
+            productId: part.productId,
+            initialUnitCost: Number(costs[part.productId]),
+          })),
+      })
+      setMessage('Đã lưu giá vốn ban đầu.')
+      onSaved()
+    } catch (failure) {
+      setSaveError(inventoryError(failure))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <InventoryPanel title="Giá vốn ban đầu cho tồn đầu kỳ">
+      <InventoryNotice loading={loading} error={error} onRetry={onRetry} />
+      {data && (
+        <>
+          {!data.complete && (
+            <p className="stock-notice">
+              Còn thiếu giá vốn: {data.missingSkus.join(', ')}. Nhập đủ trước khi duyệt.
+            </p>
+          )}
+          {message && <p className="stock-notice" role="status">{message}</p>}
+          {saveError && <p className="stock-notice stock-error" role="alert">{saveError}</p>}
+          <form className="opening-cost-form" onSubmit={(event) => void save(event)}>
+            <div className="stock-table-scroll">
+              <table className="stock-table">
+                <thead>
+                  <tr><th>Phụ tùng / lô</th><th>Số lượng tồn đầu</th><th>Giá vốn ban đầu</th><th>Giá trị</th></tr>
+                </thead>
+                <tbody>
+                  {data.parts.map((part) => (
+                    <tr key={part.productId}>
+                      <td>
+                        <strong>{part.partName}</strong><small>{part.sku}</small>
+                        {part.lots.map((lot, index) => (
+                          <small key={index}>
+                            {lot.expiryDate ? `HSD ${lot.expiryDate}` : 'Không hạn'} · {lot.quantity} {part.baseUnit} · hỏng {lot.damagedQty}
+                          </small>
+                        ))}
+                      </td>
+                      <td>{part.quantity.toLocaleString('vi-VN')} {part.baseUnit}</td>
+                      <td>
+                        <input
+                          aria-label={`Giá vốn ${part.sku}`}
+                          type="number"
+                          min="1"
+                          step="1"
+                          required={!part.locked}
+                          disabled={part.locked || busy}
+                          value={costs[part.productId] ?? ''}
+                          onChange={(event) => setCosts((values) => ({ ...values, [part.productId]: event.target.value }))}
+                        />
+                        {part.locked && <small>Đã khóa sau khi duyệt</small>}
+                      </td>
+                      <td>{costs[part.productId] ? money.format(part.quantity * Number(costs[part.productId])) : '—'}</td>
+                    </tr>
+                  ))}
+                  {!data.parts.length && <tr><td colSpan={4}>Chưa có số đếm dương được gửi lên.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="opening-cost-footer">
+              <strong>Tổng giá trị đã tính: {money.format(data.totalValue)}</strong>
+              <button className="count-primary" type="submit" disabled={busy || !data.parts.some((part) => !part.locked)}>
+                {busy ? 'Đang lưu…' : 'Lưu giá vốn'}
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+    </InventoryPanel>
   )
 }

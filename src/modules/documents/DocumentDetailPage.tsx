@@ -1,11 +1,15 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useRef, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import axiosClient from '../../shared/api/axiosClient'
+import { uploadAttachment } from '../../shared/api/upload'
 import { useInventoryData } from '../inventory/api'
 import { paymentMethodLabels } from '../../shared/labels/status'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import FormDialog from '../../shared/ui/FormDialog'
 import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import PageHeader from '../../shared/ui/PageHeader'
+import AdjustmentEffects from './AdjustmentEffects'
+import { inventoryError } from '../inventory/api'
 import {
   Card,
   EvidenceList,
@@ -26,7 +30,13 @@ import {
   validId,
   workPath,
 } from './model'
-import type { DocumentDetail, DocumentLine, DocumentLink } from './types'
+import type {
+  AdjustmentDetail,
+  AdjustmentEffects as Effects,
+  DocumentDetail,
+  DocumentLine,
+  DocumentLink,
+} from './types'
 
 function RecordLink({ record }: { record: DocumentLink }) {
   const href = record.documentType
@@ -165,101 +175,137 @@ function CorrectionDialog({
   data: DocumentDetail
   onClose: () => void
 }) {
+  const navigate = useNavigate()
   const { document: row, content } = data
   const isPayment = row.type === 'PAYMENT'
-  const unit = isPayment ? '₫' : ''
-  const targets = isPayment
-    ? [
-        { name: 'Số tiền', value: content.amount },
-        { name: 'Hình thức thanh toán', value: content.paymentMethod },
-      ]
-    : (content.lines ?? []).map((line) => ({
-        name: line.partName + ' · ' + line.sku,
-        value:
-          row.type === 'SALES_ORDER'
-            ? line.deliveredQty
-            : row.type === 'TRANSFER_ORDER'
-              ? line.receivedQty
-              : line.passedQty,
-      }))
+  const isReceipt = row.type === 'GOODS_RECEIPT'
+  const documentType = isPayment
+    ? 'DEBT_PAYMENT'
+    : isReceipt
+      ? 'GOODS_RECEIPT_NOTE'
+      : 'SALES_ORDER'
+  const lines = (content.lines ?? []).filter(
+    (line): line is DocumentLine & { id: number } => Number.isSafeInteger(line.id),
+  )
+  const targets = lines.map((line) => ({
+    line,
+    name: line.partName + ' · ' + line.sku,
+    value: isReceipt ? (line.toStockQty ?? line.passedQty) : line.deliveredQty,
+  }))
   const [selected, setSelected] = useState(0)
   const [correct, setCorrect] = useState('')
-  const current = targets[selected]?.value
-  const method = typeof current === 'string'
-  const delta =
-    typeof current === 'number' && correct !== ''
-      ? Number(correct) - current
-      : null
+  const [reason, setReason] = useState('')
+  const [files, setFiles] = useState<File[]>([])
+  const [preview, setPreview] = useState<Effects>()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const uploaded = useRef(
+    new Map<File, Awaited<ReturnType<typeof uploadAttachment>>>(),
+  )
+  const current = isPayment ? content.amount : targets[selected]?.value
+  const delta = current != null && correct !== '' ? Number(correct) - current : null
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy) return
+    if (!reason.trim() || reason.length > 500) {
+      setError('Nhập lý do sửa, tối đa 500 ký tự.')
+      return
+    }
+    if (!isPayment && (!targets[selected] || correct === '')) {
+      setError('Chọn dòng chứng từ và nhập giá trị đúng.')
+      return
+    }
+    if (isPayment && (!Number.isSafeInteger(Number(correct)) || Number(correct) <= 0)) {
+      setError('Số tiền đúng phải là số nguyên lớn hơn 0.')
+      return
+    }
+    if (files.length > 10 || files.some((file) =>
+      !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type) ||
+      !file.size || file.size > 10 * 1024 * 1024 || file.name.length > 255
+    )) {
+      setError('Tối đa 10 tệp JPG, PNG, WebP hoặc PDF, không quá 10 MB mỗi tệp.')
+      return
+    }
+    const body = {
+      documentType,
+      documentId: row.id,
+      lines: isPayment ? [] : [{ lineId: targets[selected].line.id, correctedQty: Number(correct) }],
+      correctedAmount: isPayment ? Number(correct) : undefined,
+      reason: reason.trim(),
+    }
+    setError('')
+    setBusy(true)
+    try {
+      if (!preview) {
+        const { data: effects } = await axiosClient.post<Effects>(
+          '/adjustment-requests/corrections/preview', body,
+        )
+        setPreview(effects)
+        return
+      }
+      const attachments = []
+      for (const file of files) {
+        let attachment = uploaded.current.get(file)
+        if (!attachment) {
+          attachment = await uploadAttachment(file)
+          uploaded.current.set(file, attachment)
+        }
+        attachments.push(attachment)
+      }
+      const { data: adjustment } = await axiosClient.post<AdjustmentDetail>(
+        '/adjustment-requests/corrections', { ...body, attachments },
+      )
+      onClose()
+      navigate(adjustmentPath(adjustment.id), { replace: true })
+    } catch (failure) {
+      setError(inventoryError(failure))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <FormDialog
       title={'Yêu cầu sửa chứng từ ' + row.number}
       formId="document-correction"
-      submitLabel="Gửi Owner duyệt"
-      submitDisabled
+      submitLabel={busy ? 'Đang xử lý…' : preview ? 'Gửi Owner duyệt' : 'Xem trước ảnh hưởng'}
+      busy={busy}
+      submitDisabled={!isPayment && (!targets.length || correct === '')}
       onClose={onClose}
     >
       <form
         id="document-correction"
         className="docs-form"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={submit}
       >
         <p className="docs-note">
           Chứng từ gốc được giữ để đối chiếu. Điều chỉnh được ghi vào ngày Owner
           duyệt trong kỳ đang mở.
         </p>
-        <label>
-          Nội dung cần sửa
-          <select
-            value={selected}
-            onChange={(event) => {
-              setSelected(Number(event.target.value))
-              setCorrect('')
-            }}
-          >
-            {targets.map((target, index) => (
-              <option value={index} key={index}>
-                {target.name}
-              </option>
-            ))}
+        {!isPayment && <label>
+          Dòng cần sửa
+          <select value={selected} onChange={(event) => { setSelected(Number(event.target.value)); setCorrect(''); setPreview(undefined) }}>
+            {targets.map((target, index) => <option value={index} key={target.line.id}>{target.name}</option>)}
           </select>
-        </label>
+        </label>}
         <div className="docs-facts docs-correction-values">
           <div>
             <strong>Đang ghi</strong>
             <p>
-              {method
-                ? (paymentMethodLabels[current] ?? current)
-                : isPayment
-                  ? formatMoney(current)
-                  : (current ?? '—')}
+              {isPayment ? formatMoney(current) : (current ?? '—')}
             </p>
           </div>
           <label>
-            {unit && !method ? 'Giá trị đúng (' + unit + ')' : 'Giá trị đúng'}
-            {method ? (
-              <select
-                required
-                value={correct}
-                onChange={(event) => setCorrect(event.target.value)}
-              >
-                <option value="">Chọn hình thức</option>
-                {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
+            {isPayment ? 'Số tiền đúng (₫)' : 'Số lượng đúng'}
+            <input
                 required
                 type="number"
                 min="0"
                 step="1"
                 value={correct}
-                onChange={(event) => setCorrect(event.target.value)}
+                onChange={(event) => { setCorrect(event.target.value); setPreview(undefined) }}
               />
-            )}
           </label>
           <div>
             <strong>Chênh lệch</strong>
@@ -270,7 +316,7 @@ function CorrectionDialog({
         </div>
         <label>
           Lý do
-          <textarea required rows={3} maxLength={500} />
+          <textarea required rows={3} maxLength={500} value={reason} onChange={(event) => { setReason(event.target.value); setPreview(undefined) }} />
         </label>
         <div>
           <strong>Chứng cứ</strong>
@@ -278,11 +324,11 @@ function CorrectionDialog({
             aria-label="Chứng cứ"
             accept=".jpg,.jpeg,.png,.webp,.pdf"
             multiple
+            onChange={(event) => { uploaded.current.clear(); setFiles(Array.from(event.currentTarget.files ?? [])); setPreview(undefined) }}
           />
         </div>
-        <p role="status" className="docs-note">
-          Chờ API kiểm tra phụ thuộc, xem ảnh hưởng và gửi yêu cầu sửa chứng từ.
-        </p>
+        {preview && <AdjustmentEffects data={preview} />}
+        {error && <p role="alert" className="docs-alert">{error}</p>}
       </form>
     </FormDialog>
   )
@@ -332,11 +378,11 @@ export default function DocumentDetailPage() {
               (item.status === 'PENDING' || item.status === 'APPROVED'),
           )
           const canCorrect =
-            import.meta.env.VITE_DOCUMENT_CORRECTION_API === 'true' &&
-            row.type !== 'ADJUSTMENT' &&
-            row.status !== 'CANCELLED' &&
-            !pending &&
-            (row.type === 'PAYMENT' || !!content.lines?.length)
+            row.status !== 'CANCELLED' && !pending && (
+              (row.type === 'SALES_ORDER' && row.status === 'COMPLETED' && !!content.lines?.every((line) => line.id != null)) ||
+              (row.type === 'GOODS_RECEIPT' && row.status === 'CONFIRMED' && !!content.lines?.every((line) => line.id != null)) ||
+              (row.type === 'PAYMENT' && content.paymentType === 'DEBT_PAYMENT' && row.status === 'VERIFIED' && content.amount != null)
+            )
           const author =
             typeof content.createdBy === 'string'
               ? content.createdBy

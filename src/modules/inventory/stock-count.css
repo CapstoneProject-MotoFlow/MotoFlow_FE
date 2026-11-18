@@ -419,3 +419,40 @@
     min-width: 0;
   }
 }
+.opening-count-add {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) 1fr;
+  align-items: center;
+  gap: 14px;
+}
+.opening-count-add p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+.opening-cost-form .stock-table input[type='number'],
+.count-record-row input[type='date'] {
+  width: 150px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d0d9e8;
+  border-radius: 8px;
+  background: #fff;
+}
+.opening-cost-footer {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 18px;
+}
+@media (max-width: 700px) {
+  .opening-count-add {
+    grid-template-columns: 1fr;
+  }
+  .opening-cost-footer {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}

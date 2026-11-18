@@ -67,6 +67,9 @@ const InventoryMovementsPage = lazy(
 const InventoryPage = lazy(
   () => import('../../modules/inventory/InventoryPage'),
 )
+const InventoryPeriodsPage = lazy(
+  () => import('../../modules/inventory/InventoryPeriodsPage'),
+)
 const StockCountListPage = lazy(
   () => import('../../modules/inventory/StockCountListPage'),
 )
@@ -385,6 +388,8 @@ export default function AppRoutes() {
               />
             </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
+              <Route path="/inventory/periods" element={<InventoryPeriodsPage />} />
+              <Route path="/inventory/periods/:id" element={<InventoryPeriodsPage />} />
               <Route
                 path="/reports/gross-margin"
                 element={<GrossMarginReportPage />}

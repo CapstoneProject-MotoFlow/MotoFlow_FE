@@ -39,6 +39,7 @@ export type HistoryItem = {
 }
 
 export type DocumentLine = {
+  id?: number
   productId: number
   sku: string
   partName: string
@@ -73,6 +74,7 @@ export type DocumentDetail = {
     arrivedAt?: string
     confirmedAt?: string | null
     paymentMethod?: string
+    paymentType?: string
     amount?: number
     recordedBy?: string
     transactionReference?: string | null

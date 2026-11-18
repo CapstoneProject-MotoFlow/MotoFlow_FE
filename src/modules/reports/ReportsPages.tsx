@@ -3,20 +3,22 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import type { Page } from '../inventory/types'
-import type { OrderDto, SummaryDto } from '../sales/salesApi'
 import type { Debtor } from '../receivables/types'
+import type { DocumentRow } from '../documents/types'
 import PageHeader from '../../shared/ui/PageHeader'
 import { formatMoney, formatDateTime } from '../../shared/utils/format'
+import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { inventoryError } from '../inventory/api'
 import { movementLink } from '../inventory/presentation'
-import { downloadBlob } from '../../shared/utils/xlsx'
+import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
+import readXlsxFile from 'read-excel-file/browser'
+import { mapConcurrent } from '../../shared/utils/mapConcurrent'
 import {
   categoryOptions,
   type Category,
@@ -78,13 +80,15 @@ function ReportFrame({
   title,
   children,
   subtitle,
+  className,
 }: {
   title: string
   children: React.ReactNode
   subtitle?: string
+  className?: string
 }) {
   return (
-    <main className="reports-page">
+    <main className={`reports-page ${className ?? ''}`}>
       <PageHeader
         title={title}
         subtitle={subtitle}
@@ -205,36 +209,57 @@ function PeriodTabs({
   )
 }
 
-function SalesChart({
-  orders,
-  from,
-  to,
-  stores,
-}: {
-  orders: SummaryDto[]
+type SalesFigures = {
+  completedOrders: number
+  revenue: number
+  orderPayments: number
+  refunds: number
+  debtCollected: number
+  totalCollected: number
+  creditSales: number
+  revenueCorrections: number
+  collectionCorrections: number
+  receivableCorrections: number
+  receivableAtEnd: number | null
+}
+type SalesPeriod = { from: string; to: string; figures: SalesFigures }
+type SalesStore = { storeId: number; storeName: string; figures: SalesFigures }
+type SalesCollection = {
   from: string
   to: string
-  stores: ReturnType<typeof useInventoryScope>['stores']
+  groupBy: 'DAY' | 'MONTH'
+  storeId: number | null
+  total: SalesFigures
+  periods: SalesPeriod[]
+  stores: SalesStore[]
+}
+type SalesChartSeries = {
+  storeId: number
+  storeName: string
+  periods: SalesPeriod[]
+}
+
+function SalesChart({ series, from, to }: {
+  series: SalesChartSeries[]
+  from: string
+  to: string
 }) {
   const daily = new Map<
     string,
     Map<number, { revenue: number; orders: number }>
   >()
-  for (const order of orders) {
-    const date = order.createdAt.slice(0, 10)
-    const stores =
-      daily.get(date) ?? new Map<number, { revenue: number; orders: number }>()
-    const item = stores.get(order.storeId) ?? { revenue: 0, orders: 0 }
-    item.revenue += order.total ?? 0
-    item.orders++
-    stores.set(order.storeId, item)
-    daily.set(date, stores)
-  }
-  const storeNames = new Map(stores.map((store) => [store.id, store.storeName]))
-  for (const order of orders) storeNames.set(order.storeId, order.storeName)
-  const storeIds = [...storeNames.keys()].filter((id) =>
-    [...daily.values()].some((items) => items.has(id)),
-  )
+  for (const store of series)
+    for (const period of store.periods) {
+      const date = period.from.slice(0, 10)
+      const items = daily.get(date) ?? new Map<number, { revenue: number; orders: number }>()
+      items.set(store.storeId, {
+        revenue: period.figures.revenue,
+        orders: period.figures.completedOrders,
+      })
+      daily.set(date, items)
+    }
+  const storeNames = new Map(series.map((store) => [store.storeId, store.storeName]))
+  const storeIds = series.map((store) => store.storeId)
   const totals = new Map<number, number>()
   for (const items of daily.values())
     for (const [storeId, item] of items)
@@ -365,17 +390,18 @@ export function SalesReportPage() {
   const key = `sales:${from}:${to}:${scope.storeId}`
   const loadSales = useCallback(
     async (signal: AbortSignal) => {
-      const [orders, debtors] = await Promise.all([
-        allPages<SummaryDto>(
-          '/sales-orders',
-          {
-            view: 'COMPLETED',
-            createdFrom: from,
-            createdTo: to,
-            storeId: scope.storeId || undefined,
-          },
-          signal,
-        ),
+      const [sales, debtors] = await Promise.all([
+        axiosClient
+          .get<SalesCollection>('/reports/sales-collection', {
+            params: {
+              from,
+              to,
+              storeId: scope.storeId || undefined,
+              groupBy: 'DAY',
+            },
+            signal,
+          })
+          .then((response) => response.data),
         allPages<Debtor>(
           '/receivables/customers',
           { storeId: scope.storeId || undefined },
@@ -388,80 +414,35 @@ export function SalesReportPage() {
         0,
       )
       const debtorCount = debtors.filter((debtor) => debtor.debt > 0).length
-      const stores = new Map<
-        number,
-        {
-          name: string
-          revenue: number
-          orders: number
-          collected: number
-          debt: number
-        }
-      >()
-      let revenue = 0,
-        collected = 0,
-        debt = 0
-      if (orders.length > 150) {
-        for (const order of orders) {
-          const row = stores.get(order.storeId) ?? {
-            name: order.storeName,
-            revenue: 0,
-            orders: 0,
-            collected: 0,
-            debt: 0,
-          }
-          row.revenue += order.total ?? 0
-          row.orders++
-          stores.set(order.storeId, row)
-        }
-        return {
-          orders,
-          stores,
-          revenue: orders.reduce((s, o) => s + (o.total ?? 0), 0),
-          collected: null as number | null,
-          debt: null as number | null,
-          receivables,
-          overdueReceivables,
-          debtorCount,
-        }
-      }
-      for (let i = 0; i < orders.length; i += 4) {
-        const details = await Promise.all(
-          orders
-            .slice(i, i + 4)
-            .map((order) =>
-              axiosClient
-                .get<OrderDto>(`/sales-orders/${order.id}`, { signal })
-                .then((r) => r.data),
-            ),
-        )
-        for (const order of details) {
-          const row = stores.get(order.storeId) ?? {
-            name: order.storeName,
-            revenue: 0,
-            orders: 0,
-            collected: 0,
-            debt: 0,
-          }
-          const sale = order.total ?? 0,
-            paid = order.money?.netCollected ?? 0,
-            credit = order.money?.credit?.amount ?? 0
-          row.revenue += sale
-          row.orders++
-          row.collected += paid
-          row.debt += credit
-          stores.set(order.storeId, row)
-          revenue += sale
-          collected += paid
-          debt += credit
-        }
-      }
+      const series = sales.stores.length <= 1
+        ? sales.stores.map((store) => ({
+            storeId: store.storeId,
+            storeName: store.storeName,
+            periods: sales.periods,
+          }))
+        : await mapConcurrent(
+            sales.stores,
+            5,
+            async (store) => {
+              const { data } = await axiosClient.get<SalesCollection>(
+                '/reports/sales-collection',
+                {
+                  params: {
+                    from,
+                    to,
+                    storeId: store.storeId,
+                    groupBy: 'DAY',
+                  },
+                  signal,
+                },
+              )
+              return { storeId: store.storeId, storeName: store.storeName, periods: data.periods }
+            },
+            () => !signal.aborted,
+          )
       return {
-        orders,
-        stores,
-        revenue,
-        collected,
-        debt,
+        report: sales,
+        series,
         receivables,
         overdueReceivables,
         debtorCount,
@@ -470,12 +451,8 @@ export function SalesReportPage() {
     [from, to, scope.storeId],
   )
   const report = useLoad(key, loadSales)
-  const rows = [...(report.data?.stores.values() ?? [])]
-  const daily = new Map<string, SummaryDto[]>()
-  for (const order of report.data?.orders ?? []) {
-    const date = order.createdAt.slice(0, 10)
-    daily.set(date, [...(daily.get(date) ?? []), order])
-  }
+  const rows = report.data?.report.stores ?? []
+  const daily = report.data?.report.periods ?? []
   const setPeriodRange = (value: 'month' | 'week') => {
     setPeriod(value)
     setFrom(
@@ -493,19 +470,16 @@ export function SalesReportPage() {
         </div>
         {scope.owner ? (
           <label className="sales-store-filter">
-            <select
+            <SearchableFilter
+              label="Cửa hàng"
               value={scope.storeId}
-              onChange={(event) =>
-                scope.filter({ storeId: event.target.value })
-              }
-            >
-              <option value="">Mọi cửa hàng</option>
-              {scope.stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.storeName}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Mọi cửa hàng' },
+                ...scope.stores.map((store) => ({ value: String(store.id), label: store.storeName })),
+              ]}
+              searchPlaceholder="Tìm cửa hàng..."
+              onChange={(storeId) => scope.filter({ storeId })}
+            />
           </label>
         ) : (
           <span className="sales-current-store">{scope.warehouse}</span>
@@ -523,9 +497,9 @@ export function SalesReportPage() {
               icon="sales"
               tone="blue"
               label="Doanh số"
-              value={report.data.revenue}
+              value={report.data.report.total.revenue}
               details={[
-                `${report.data.orders.length} đơn hoàn tất`,
+                `${report.data.report.total.completedOrders} đơn hoàn tất`,
                 `Trong kỳ ${from.slice(8, 10)}/${from.slice(5, 7)} – ${to.slice(8, 10)}/${to.slice(5, 7)}`,
               ]}
             />
@@ -533,11 +507,9 @@ export function SalesReportPage() {
               icon="cash"
               tone="green"
               label="Tiền thu đã xác minh"
-              value={report.data.collected}
+              value={report.data.report.total.totalCollected}
               details={[
-                report.data.collected == null
-                  ? 'Không tải được chi tiết thu tiền'
-                  : 'Tổng thu từ đơn hoàn tất',
+                `Thu đơn ${amount(report.data.report.total.orderPayments)} · thu nợ ${amount(report.data.report.total.debtCollected)}`,
                 'Theo kỳ đang chọn',
               ]}
             />
@@ -545,7 +517,7 @@ export function SalesReportPage() {
               icon="debt"
               tone="orange"
               label="Nợ mới phát sinh"
-              value={report.data.debt}
+              value={report.data.report.total.creditSales}
               details={[
                 `Phát sinh trong kỳ ${from.slice(8, 10)}/${from.slice(5, 7)} – ${to.slice(8, 10)}/${to.slice(5, 7)}`,
                 'Từ đơn bán hoàn tất',
@@ -569,10 +541,9 @@ export function SalesReportPage() {
           >
             <section className="report-chart-card">
               <SalesChart
-                orders={report.data.orders}
+                series={report.data.series}
                 from={from}
                 to={to}
-                stores={scope.stores}
               />
             </section>
             <div className="report-table-wrap">
@@ -588,18 +559,12 @@ export function SalesReportPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.name}>
-                      <td>{row.name}</td>
-                      <td>{amount(row.revenue)}</td>
-                      <td>{row.orders}</td>
-                      <td>
-                        {amount(
-                          report.data?.collected == null ? null : row.collected,
-                        )}
-                      </td>
-                      <td>
-                        {amount(report.data?.debt == null ? null : row.debt)}
-                      </td>
+                    <tr key={row.storeId}>
+                      <td>{row.storeName}</td>
+                      <td>{amount(row.figures.revenue)}</td>
+                      <td>{row.figures.completedOrders}</td>
+                      <td>{amount(row.figures.totalCollected)}</td>
+                      <td>{amount(row.figures.creditSales)}</td>
                     </tr>
                   ))}
                   {!rows.length && (
@@ -628,14 +593,11 @@ export function SalesReportPage() {
                       downloadCsv(`BaoCaoBanHang_${from}_${to}.csv`, [
                         ['Ngày', 'Số đơn', 'Doanh số'],
                         ...[...daily]
-                          .sort(([a], [b]) => a.localeCompare(b))
-                          .map(([date, orders]) => [
-                            date,
-                            orders.length,
-                            orders.reduce(
-                              (sum, order) => sum + (order.total ?? 0),
-                              0,
-                            ),
+                          .sort((a, b) => a.from.localeCompare(b.from))
+                          .map((row) => [
+                            row.from,
+                            row.figures.completedOrders,
+                            row.figures.revenue,
                           ]),
                       ])
                     }
@@ -656,19 +618,12 @@ export function SalesReportPage() {
                     </thead>
                     <tbody>
                       {[...daily]
-                        .sort(([a], [b]) => b.localeCompare(a))
-                        .map(([date, orders]) => (
-                          <tr key={date}>
-                            <td>{date}</td>
-                            <td>{orders.length}</td>
-                            <td>
-                              {amount(
-                                orders.reduce(
-                                  (sum, order) => sum + (order.total ?? 0),
-                                  0,
-                                ),
-                              )}
-                            </td>
+                        .sort((a, b) => b.from.localeCompare(a.from))
+                        .map((row) => (
+                          <tr key={row.from}>
+                            <td>{row.from}</td>
+                            <td>{row.figures.completedOrders}</td>
+                            <td>{amount(row.figures.revenue)}</td>
                           </tr>
                         ))}
                     </tbody>
@@ -949,37 +904,33 @@ export function InventoryReportPage() {
       <div className="inventory-report-controls">
         <label className="inventory-period-select">
           <span>Kỳ báo cáo</span>
-          <select
+          <SearchableFilter
+            label="Kỳ báo cáo"
             value={month}
-            onChange={(event) => {
-              setMonth(event.target.value)
+            options={monthChoices().map((value) => ({ value, label: monthName(value) }))}
+            searchPlaceholder="Tìm kỳ báo cáo..."
+            onChange={(value) => {
+              setMonth(value)
               setPage(0)
             }}
-          >
-            {monthChoices().map((value) => (
-              <option key={value} value={value}>
-                {monthName(value)}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         {scope.owner ? (
           <label className="inventory-store-select">
             <span>Cửa hàng</span>
-            <select
+            <SearchableFilter
+              label="Cửa hàng"
               value={scope.storeId}
-              onChange={(event) => {
-                scope.filter({ storeId: event.target.value })
+              options={[
+                { value: '', label: 'Mọi cửa hàng' },
+                ...scope.stores.map((store) => ({ value: String(store.id), label: store.storeName })),
+              ]}
+              searchPlaceholder="Tìm cửa hàng..."
+              onChange={(storeId) => {
+                scope.filter({ storeId })
                 setPage(0)
               }}
-            >
-              <option value="">Mọi cửa hàng</option>
-              {scope.stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.storeName}
-                </option>
-              ))}
-            </select>
+            />
           </label>
         ) : (
           <div className="inventory-store-select">
@@ -1061,35 +1012,29 @@ export function InventoryReportPage() {
                 placeholder="Tìm tên hoặc SKU"
               />
             </label>
-            <select
-              aria-label="Nhóm phụ tùng"
+            <SearchableFilter
+              label="Nhóm phụ tùng"
               value={categoryId}
-              onChange={(event) => {
-                setCategoryId(event.target.value)
+              options={[
+                { value: '', label: 'Mọi nhóm phụ tùng' },
+                ...categoryOptions(categories.data ?? []).map((category) => ({ value: String(category.id), label: category.label ?? category.categoryName })),
+              ]}
+              searchPlaceholder="Tìm nhóm phụ tùng..."
+              onChange={(value) => {
+                setCategoryId(value)
                 setPage(0)
               }}
-            >
-              <option value="">Mọi nhóm phụ tùng</option>
-              {categoryOptions(categories.data ?? []).map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label ?? category.categoryName}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Nguồn nhập, xuất"
+            />
+            <SearchableFilter
+              label="Nguồn nhập, xuất"
               value={source}
-              onChange={(event) =>
-                setSource(event.target.value as StockSource | '')
-              }
-            >
-              <option value="">Mọi nguồn nhập, xuất</option>
-              {stockSources.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Mọi nguồn nhập, xuất' },
+                ...stockSources.map(([value, label]) => ({ value, label })),
+              ]}
+              searchPlaceholder="Tìm nguồn..."
+              onChange={(value) => setSource(value as StockSource | '')}
+            />
             {data?.withValues && (
               <div
                 className="inventory-view-toggle"
@@ -1485,39 +1430,37 @@ export function GrossMarginReportPage() {
         </div>
         {scope.owner ? (
           <label className="margin-store-filter">
-            <select
+            <SearchableFilter
+              label="Cửa hàng"
               value={scope.storeId}
-              onChange={(event) => {
-                scope.filter({ storeId: event.target.value })
+              options={[
+                { value: '', label: 'Mọi cửa hàng' },
+                ...scope.stores.map((store) => ({ value: String(store.id), label: store.storeName })),
+              ]}
+              searchPlaceholder="Tìm cửa hàng..."
+              onChange={(storeId) => {
+                scope.filter({ storeId })
                 setExpanded(new Set())
               }}
-            >
-              <option value="">Mọi cửa hàng</option>
-              {scope.stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.storeName}
-                </option>
-              ))}
-            </select>
+            />
           </label>
         ) : (
           <span className="margin-current-store">{scope.warehouse}</span>
         )}
         <label className="margin-category-filter">
-          <select
+          <SearchableFilter
+            label="Nhóm phụ tùng"
             value={categoryId}
-            onChange={(event) => {
-              setCategoryId(event.target.value)
+            options={[
+              { value: '', label: 'Mọi nhóm phụ tùng' },
+              ...categoryOptions(categories.data ?? []).map((category) => ({ value: String(category.id), label: category.label ?? category.categoryName })),
+            ]}
+            searchPlaceholder="Tìm nhóm phụ tùng..."
+            onChange={(value) => {
+              setCategoryId(value)
               setExpanded(new Set())
             }}
-          >
-            <option value="">Mọi nhóm phụ tùng</option>
-            {categoryOptions(categories.data ?? []).map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label ?? category.categoryName}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <span className="margin-period-range">
           {scopeLabel} · {dmy(range.from)} – {dmy(range.to)} · so với{' '}
@@ -1787,13 +1730,6 @@ function downloadCsv(name: string, rows: unknown[][]) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-/** Tên tệp trong Content-Disposition (ưu tiên filename* UTF-8). Trả undefined khi trình duyệt không đọc được header. */
-function attachmentName(header: unknown) {
-  const value = typeof header === 'string' ? header : ''
-  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(value)?.[1]
-  if (encoded) return decodeURIComponent(encoded)
-  return /filename="?([^";]+)"?/i.exec(value)?.[1]
-}
 /** Lỗi của request tải tệp: BE trả JSON nhưng axios đọc thành Blob. */
 async function downloadError(error: unknown) {
   const data = (error as { response?: { data?: unknown } }).response?.data
@@ -1808,65 +1744,147 @@ async function downloadError(error: unknown) {
   return inventoryError(error)
 }
 
-const accountingSheets = [
-  ['Doanh thu', 'Theo ngày: đơn hoàn tất, doanh thu, tiền thu, hoàn tiền, thu nợ, bán chịu và điều chỉnh.'],
-  ['Bán hàng', 'Dòng đơn bán hoàn tất: khách hàng, phụ tùng, số lượng, đơn giá, thành tiền và giá vốn.'],
-  ['Mua hàng', 'Phiếu nhập đã xác nhận: nhà cung cấp, đơn nhập hàng, phụ tùng, số lượng và giá nhập.'],
-  ['Thu tiền', 'Phiếu thu, hoàn tiền và thu nợ đã xác nhận.'],
-  ['Chứng từ điều chỉnh', 'Đề nghị điều chỉnh đã áp dụng: loại, chứng từ gốc, lý do, người duyệt và giá trị.'],
+const accountingDataSets = [
+  { key: 'daily-sales', label: 'Doanh thu theo ngày', description: 'Doanh số đơn hoàn tất, tiền thu và nợ mới.' },
+  { key: 'sales-orders', label: 'Đơn bán và dòng đơn', description: 'Số đơn, khách hàng, phụ tùng, số lượng và giá trị.' },
+  { key: 'purchase-orders', label: 'Nhập hàng: phiếu nhập, lượt nhận, giá nhập', description: 'Phiếu nhập, nhà cung cấp, phụ tùng, số lượng và giá nhập.' },
+  { key: 'collections', label: 'Thu tiền và công nợ', description: 'Phiếu thu, hoàn tiền và thu nợ đã xác nhận.' },
+  { key: 'inventory-period', label: 'Nhập, xuất, tồn kỳ và giá bình quân kỳ (sổ S2d-HKD)', description: 'Số lượng, giá trị và giá vốn bình quân theo phụ tùng.' },
+  { key: 'documents', label: 'Danh sách chứng từ', description: 'Số, loại, ngày, cửa hàng, đối tượng, trạng thái và giá trị.' },
 ] as const
 
-/**
- * UC-89 Xuất dữ liệu kế toán (PM chốt 18/11): tệp Excel do BE #62 tạo
- * (`GET /reports/accounting-export?from&to&storeId`), FE chỉ tải về, không tự dựng workbook.
- */
+type AccountingDataSet = (typeof accountingDataSets)[number]['key']
+type AccountingRows = unknown[][]
+type AccountingPeriod = { id: number; month: string; status: 'OPEN' | 'CLOSED' }
+type AccountingBalanceRow = {
+  storeName: string; sku: string; partName: string; baseUnit: string
+  openingQty: number; openingValue: number; inQty: number; inValue: number
+  outQty: number; outValue: number; closingQty: number; closingValue: number
+  periodAvgUnitCost: number | null
+}
+type AccountingExportData = {
+  rows: Partial<Record<AccountingDataSet, AccountingRows>>
+  adjustments: AccountingRows
+  periods: AccountingPeriod[]
+}
+
+function accountingRowsCount(rows: AccountingRows, includesWorkbookTitle = false) {
+  return Math.max(0, rows.length - (includesWorkbookTitle ? 3 : 1))
+}
+
+async function loadAccountingExportData(
+  range: { from: string; to: string }, storeId: string, month: string, signal: AbortSignal,
+): Promise<AccountingExportData> {
+  const [workbookResponse, documents, periodsResponse] = await Promise.all([
+    axiosClient.get<Blob>('/reports/accounting-export', {
+      params: { storeId: storeId || undefined, from: range.from, to: range.to },
+      responseType: 'blob', signal,
+    }),
+    allPages<DocumentRow>('/documents', { storeId: storeId || undefined, from: range.from, to: range.to }, signal),
+    axiosClient.get<AccountingPeriod[]>('/inventory-periods', { signal }),
+  ])
+  const workbook = await readXlsxFile(workbookResponse.data)
+  const sheets = new Map(workbook.map(({ sheet, data }) => [sheet, data as AccountingRows]))
+  const rows: AccountingExportData['rows'] = {
+    'daily-sales': sheets.get('Doanh thu'),
+    'sales-orders': sheets.get('Bán hàng'),
+    'purchase-orders': sheets.get('Mua hàng'),
+    collections: sheets.get('Thu tiền'),
+    documents: [
+      ['Loại chứng từ', 'Số chứng từ', 'Ngày', 'Cửa hàng', 'Đối tượng', 'Trạng thái', 'Giá trị'],
+      ...documents.map((item) => [item.type, item.number, item.documentDate, item.storeName, item.partnerName ?? '', item.status, item.value ?? '']),
+    ],
+  }
+  const period = periodsResponse.data.find((item) => item.month === month)
+  if (period) {
+    const balances: AccountingBalanceRow[] = []
+    for (let page = 0; ; page++) {
+      const response = await axiosClient.get<{ page: Page<AccountingBalanceRow> }>(
+        `/inventory-periods/${period.id}/balances`,
+        { params: { storeId: storeId || undefined, page, size: 100 }, signal },
+      )
+      balances.push(...response.data.page.items)
+      if (!response.data.page.items.length || balances.length >= response.data.page.totalItems) break
+    }
+    rows['inventory-period'] = [
+      ['Cửa hàng', 'SKU', 'Phụ tùng', 'Đơn vị', 'Tồn đầu kỳ', 'Giá trị đầu kỳ', 'Nhập trong kỳ', 'Giá trị nhập', 'Xuất trong kỳ', 'Giá trị xuất', 'Tồn cuối kỳ', 'Giá trị cuối kỳ', 'Giá vốn bình quân kỳ'],
+      ...balances.map((item) => [item.storeName, item.sku, item.partName, item.baseUnit, item.openingQty, item.openingValue, item.inQty, item.inValue, item.outQty, item.outValue, item.closingQty, item.closingValue, item.periodAvgUnitCost ?? '']),
+    ]
+  }
+  return { rows, adjustments: sheets.get('Chứng từ điều chỉnh') ?? [], periods: periodsResponse.data }
+}
+
+/** UC-89 Xuất các bộ dữ liệu kế toán từ workbook và API theo kỳ đã chọn. */
 export function AccountingExportPage() {
   const scope = useInventoryScope()
   const [month, setMonth] = useState(() => monthStart().slice(0, 7))
+  const [selected, setSelected] = useState<AccountingDataSet[]>(() => accountingDataSets.map(({ key }) => key))
+  const [exportData, setExportData] = useState<AccountingExportData | null>(null)
+  const [loadingData, setLoadingData] = useState(true)
+  const [dataRevision, setDataRevision] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [history, setHistory] = useState<
     { filename: string; store: string; createdAt: string; blob: Blob }[]
   >([])
-  const abort = useRef<AbortController | null>(null)
-  useEffect(() => () => abort.current?.abort(), [])
   const range = monthRange(month)
   const store = scope.owner
     ? (scope.stores.find((item) => String(item.id) === scope.storeId)
         ?.storeName ?? 'Mọi cửa hàng')
     : scope.warehouse
+  const availableSelected = selected.filter((key) => !!exportData?.rows[key])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setLoadingData(true)
+    setError('')
+    loadAccountingExportData(range, scope.storeId, month, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setExportData(data)
+      })
+      .catch(async (failure) => {
+        if (!controller.signal.aborted) {
+          setExportData(null)
+          setError(await downloadError(failure))
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingData(false)
+      })
+    return () => controller.abort()
+  }, [month, range.from, range.to, scope.storeId, dataRevision])
 
   async function download() {
-    abort.current?.abort()
-    const controller = new AbortController()
-    abort.current = controller
+    if (busy || loadingData || !exportData || !availableSelected.length) return
     setBusy(true)
     setError('')
     try {
-      const response = await axiosClient.get<Blob>(
-        '/reports/accounting-export',
-        {
-          params: {
-            storeId: scope.storeId || undefined,
-            from: range.from,
-            to: range.to,
-          },
-          responseType: 'blob',
-          signal: controller.signal,
-        },
-      )
-      // Bản deploy khác tên miền thì trình duyệt không đọc được Content-Disposition: đặt tên theo mẫu của BE.
-      const filename =
-        attachmentName(response.headers['content-disposition']) ??
-        `MotoFlow_KeToan_${range.from}_${range.to}.xlsx`
-      downloadBlob(filename, response.data)
+      const selectedSheets = availableSelected.flatMap((key) => {
+        const definition = accountingDataSets.find((item) => item.key === key)
+        const rows = exportData.rows[key]
+        if (!definition || !rows) return []
+        const sheets: { name: string; rows: unknown[][] }[] = [
+          { name: definition.label.replaceAll(':', ' -'), rows },
+        ]
+        if (key === 'documents' && exportData.adjustments.length) {
+          sheets.push({ name: 'Chứng từ điều chỉnh', rows: exportData.adjustments })
+        }
+        return sheets
+      })
+      if (!selectedSheets.length) {
+        setError('Không có bộ dữ liệu khả dụng để xuất trong kỳ đã chọn.')
+        return
+      }
+      const filename = `MotoFlow_KeToan_${range.from}_${range.to}.xlsx`
+      const blob = createXlsx(selectedSheets)
+      downloadBlob(filename, blob)
       setHistory((previous) =>
         [
           {
             filename,
             store,
             createdAt: new Date().toISOString(),
-            blob: response.data,
+            blob,
           },
           ...previous.filter(
             (item) => item.filename !== filename || item.store !== store,
@@ -1874,50 +1892,51 @@ export function AccountingExportPage() {
         ].slice(0, 5),
       )
     } catch (failure) {
-      if (!controller.signal.aborted) setError(await downloadError(failure))
+      setError(await downloadError(failure))
     } finally {
-      if (!controller.signal.aborted) setBusy(false)
+      setBusy(false)
     }
   }
 
   return (
     <ReportFrame
       title="Xuất dữ liệu kế toán"
-      subtitle="Tải tệp Excel số liệu bán hàng, mua hàng, thu tiền và điều chỉnh của kỳ."
+      subtitle="Tải các bộ dữ liệu kế toán trong kỳ đã chọn."
+      className="accounting-export-page"
     >
-      <Panel title="Chọn kỳ và cửa hàng">
+      <Panel title="Chọn dữ liệu">
         <div className="accounting-export-filters">
           <label>
             <span>
-              Kỳ <b>*</b>
+              Kỳ kho <b>*</b>
             </span>
-            <select
+            <SearchableFilter
+              label="Kỳ kho"
               value={month}
-              onChange={(event) => setMonth(event.target.value)}
-            >
-              {monthChoices().map((value) => (
-                <option key={value} value={value}>
-                  {monthName(value)}
-                </option>
-              ))}
-            </select>
+              options={monthChoices().map((value) => {
+                const period = exportData?.periods.find((item) => item.month === value)
+                return {
+                  value,
+                  label: `${monthName(value)}${period ? ` · ${period.status === 'CLOSED' ? 'đã đóng' : 'đang ghi'}` : ''}`,
+                }
+              })}
+              searchPlaceholder="Tìm kỳ kho..."
+              onChange={setMonth}
+            />
           </label>
           {scope.owner ? (
             <label>
               <span>Cửa hàng</span>
-              <select
+              <SearchableFilter
+                label="Cửa hàng"
                 value={scope.storeId}
-                onChange={(event) =>
-                  scope.filter({ storeId: event.target.value })
-                }
-              >
-                <option value="">Mọi cửa hàng</option>
-                {scope.stores.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.storeName}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'Mọi cửa hàng' },
+                  ...scope.stores.map((item) => ({ value: String(item.id), label: item.storeName })),
+                ]}
+                searchPlaceholder="Tìm cửa hàng..."
+                onChange={(storeId) => scope.filter({ storeId })}
+              />
             </label>
           ) : (
             <label>
@@ -1928,41 +1947,50 @@ export function AccountingExportPage() {
         </div>
         <section className="report-export-sets">
           <header>
-            <strong>Tệp gồm các sheet</strong>
+            <strong>Bộ dữ liệu</strong>
+            <button type="button" onClick={() => setSelected([])} disabled={!selected.length}>Bỏ chọn tất cả</button>
           </header>
-          {accountingSheets.map(([name, description]) => (
-            <div className="report-export-set" key={name}>
-              <span>
-                <strong>{name}</strong>
-                <small>{description}</small>
-              </span>
-            </div>
-          ))}
+          <div className="report-export-list">
+            {accountingDataSets.map(({ key, label, description }) => {
+              const rows = exportData?.rows[key]
+              const count = rows ? accountingRowsCount(rows, key !== 'documents' && key !== 'inventory-period') + (key === 'documents' ? accountingRowsCount(exportData?.adjustments ?? [], true) : 0) : null
+              return (
+                <label className="report-export-set" key={key}>
+                  <input type="checkbox" checked={selected.includes(key) && (loadingData || !!rows)} disabled={!loadingData && !rows} onChange={() => setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />
+                  <span>
+                    <strong>{label}<span className="report-export-info" title={description} aria-label={description}>i</span></strong>
+                    <small>{description}</small>
+                  </span>
+                  <small className="report-export-count">{loadingData ? 'Đang tải…' : count === null ? 'Chưa có dữ liệu' : `${count.toLocaleString('vi-VN')} dòng`}</small>
+                </label>
+              )
+            })}
+          </div>
         </section>
         <div className="report-export-footer">
           <span>
-            {store} · {dmy(range.from)} – {dmy(range.to)} · Tệp Excel (.xlsx)
+            Sẽ xuất {availableSelected.length} bộ dữ liệu, {availableSelected.reduce((total, key) => {
+              const rows = exportData?.rows[key]
+              return total + (rows ? accountingRowsCount(rows, key !== 'documents' && key !== 'inventory-period') + (key === 'documents' ? accountingRowsCount(exportData?.adjustments ?? [], true) : 0) : 0)
+            }, 0).toLocaleString('vi-VN')} dòng
           </span>
           <button
             className="report-primary"
             type="button"
-            disabled={busy}
+            disabled={busy || loadingData || !availableSelected.length || !exportData}
             onClick={() => void download()}
           >
-            {busy ? 'Đang tạo tệp…' : 'Tải tệp Excel'}
+            {busy ? 'Đang tạo tệp…' : '↓  Xuất Excel'}
           </button>
         </div>
         {error && (
           <div className="accounting-load-error" role="alert">
-            Không tải được tệp. {error}
+            <span>{loadingData ? 'Không tải được dữ liệu. ' : ''}{error}</span>
+            <button type="button" onClick={() => setDataRevision((value) => value + 1)}>Thử lại</button>
           </div>
         )}
-        <div className="report-note">
-          Tệp do hệ thống tạo từ số liệu đã ghi nhận trong kỳ. Kỳ chưa khóa là số
-          tạm tính, có thể còn thay đổi.
-        </div>
       </Panel>
-      <Panel title="Lần tải trên thiết bị này">
+      <Panel title="Lần xuất trước">
         <div className="report-export-history">
           {history.length ? (
             <>
