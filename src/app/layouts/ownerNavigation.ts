@@ -19,7 +19,11 @@ export const ownerNavigation: NavItem[] = [
     icon: 'receipt',
     group: 'BÁN HÀNG',
   },
-  { label: 'Đơn nháp', href: '/sales-drafts', icon: 'document' },
+  {
+    label: 'Đơn nháp',
+    href: '/sales-orders?tab=DRAFT',
+    icon: 'receipt',
+  },
   { label: 'Đơn chưa đáp ứng đủ', href: '/unmet-demand', icon: 'clipboard' },
   { label: 'Khách hàng', href: '/owner/customers', icon: 'users' },
   {
@@ -82,23 +86,20 @@ export const ownerNavigation: NavItem[] = [
   },
   {
     label: 'Báo cáo bán hàng',
-    href: '#sales-reports',
+    href: '/reports/sales',
     icon: 'chart',
     group: 'BÁO CÁO',
-    pending: true,
   },
   {
     label: 'Báo cáo kho hàng',
-    href: '#inventory-reports',
+    href: '/reports/inventory',
     icon: 'scale',
-    pending: true,
   },
-  { label: 'Lãi gộp', href: '#gross-profit', icon: 'coins', pending: true },
+  { label: 'Lãi gộp', href: '/reports/gross-margin', icon: 'coins' },
   {
     label: 'Xuất dữ liệu kế toán',
-    href: '#accounting-export',
+    href: '/reports/accounting-export',
     icon: 'download',
-    pending: true,
   },
   {
     label: 'Bảng giá',

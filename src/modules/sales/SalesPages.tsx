@@ -29,6 +29,7 @@ import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
 import DemandReplenishment from './DemandReplenishment'
 import { SalesOrderFormView, type SalesProduct } from './SalesOrderForm'
+import { SalesDraftTab } from './SalesDraftPages'
 import { documentCode } from '../../shared/utils/documentCode'
 import { salesOrderStatusLabels as salesStates } from '../../shared/labels/status'
 export { SalesOrderFormView }
@@ -82,7 +83,9 @@ export function SalesOrderListPage({
     staff = scope.user?.role === 'STAFF',
     p = scope.params
   const tab = p.get('tab') ?? 'OPEN',
-    closed = ['COMPLETED', 'CANCELLED'].includes(tab)
+    closed = ['COMPLETED', 'CANCELLED'].includes(tab),
+    // PM 17/11: tab "Nháp" ngoài cùng bên phải (Owner, BM) thay cho mục "Đơn nháp" trên sidebar.
+    drafts = !staff && tab === 'DRAFT'
   const from = p.get('from') ?? today(),
     to = p.get('to') ?? today()
   const page = Math.max(0, Number(p.get('page')) || 0)
@@ -101,7 +104,7 @@ export function SalesOrderListPage({
       : staff && tab === 'OPEN'
         ? 'AWAITING_PICKING'
         : (p.get('status') ?? ''),
-    !closed || from <= to,
+    !drafts && (!closed || from <= to),
   )
   const matches = orders.length
     ? orders
@@ -129,41 +132,55 @@ export function SalesOrderListPage({
               nextAction: o.nextAction,
             }) as SalesOrder,
         )
+  const createAction = (
+    <div className="sales-list-actions">
+      {['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '') && (
+        <Link className="sales-primary" to="/sales-orders/new">
+          Tạo đơn bán
+        </Link>
+      )}
+    </div>
+  )
+  const tabBar = (
+    <div className="stock-tabs">
+      {(staff
+        ? [
+            ['OPEN', 'Cần lấy'],
+            ['PICKED', 'Đã gửi'],
+          ]
+        : [
+            ['OPEN', 'Chưa hoàn tất'],
+            ['COMPLETED', 'Hoàn tất'],
+            ['CANCELLED', 'Đã hủy'],
+            ['DRAFT', 'Nháp'],
+          ]
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          aria-pressed={tab === value}
+          onClick={() => scope.filter({ tab: value, status: '' })}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+  if (drafts)
+    return (
+      <Shell title="Đơn bán">
+        <InventoryPanel title="Đơn nháp của tôi" action={createAction}>
+          {tabBar}
+          <SalesDraftTab scope={scope} />
+        </InventoryPanel>
+      </Shell>
+    )
   return (
     <Shell title={staff ? 'Đơn được giao lấy hàng' : 'Đơn bán'}>
       <InventoryPanel
         title={staff ? 'Việc lấy hàng của tôi' : 'Danh sách đơn bán'}
-        action={
-          <div className="sales-list-actions">
-            {['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '') && (
-              <Link className="sales-primary" to="/sales-orders/new">
-                Tạo đơn bán
-              </Link>
-            )}
-          </div>
-        }
+        action={createAction}
       >
-        <div className="stock-tabs">
-          {(staff
-            ? [
-                ['OPEN', 'Cần lấy'],
-                ['PICKED', 'Đã gửi'],
-              ]
-            : [
-                ['OPEN', 'Chưa hoàn tất'],
-                ['COMPLETED', 'Hoàn tất'],
-                ['CANCELLED', 'Đã hủy'],
-              ]
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              aria-pressed={tab === value}
-              onClick={() => scope.filter({ tab: value, status: '' })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {tabBar}
         <div className="stock-filters">
           <WarehouseFilter
             owner={scope.owner}

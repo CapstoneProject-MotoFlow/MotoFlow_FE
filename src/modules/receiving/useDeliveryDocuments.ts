@@ -18,8 +18,8 @@ type UploadedDocument = Awaited<ReturnType<typeof uploadAttachment>>
 
 /** Phần body chung gửi BE khi lập phiếu nhận. */
 export type DeliveryDocumentBody = {
-  deliveryDocumentNo: string
-  deliveryDocumentDate: string
+  deliveryDocumentNo: string | null
+  deliveryDocumentDate: string | null
   arrivedAt: string | null
   delivererName: string | null
   vehiclePlateNo: string | null
@@ -63,8 +63,6 @@ export function useDeliveryDocuments(submitLabel: string) {
         : 'Giới hạn ngày giờ đã cập nhật. Bấm ' + submitLabel + ' để tiếp tục.'
     }
     if (input.validity.valueMissing) {
-      if (input.name === 'documentNo') return 'Nhập số chứng từ.'
-      if (input.name === 'documentDate') return 'Chọn ngày chứng từ.'
       if (input.name === 'documents' && receiptDocumentUploadEnabled)
         return 'Chọn ít nhất một tệp chứng từ.'
       return undefined
@@ -72,14 +70,14 @@ export function useDeliveryDocuments(submitLabel: string) {
     return 'Kiểm tra lại thông tin chứng từ.'
   }
 
-  /** Đọc và kiểm tra bộ trường chứng từ trong form. */
+  /**
+   * Đọc và kiểm tra bộ trường chứng từ trong form. Số và ngày chứng từ không bắt buộc (PM 17/11):
+   * để trống thì gửi null; có ngày thì vẫn không được sau hôm nay.
+   */
   function read(form: HTMLFormElement): ReadResult {
     const fields = new FormData(form)
     const documentNo = String(fields.get('documentNo') ?? '').trim()
-    if (!documentNo) return { error: 'Nhập số chứng từ.', focus: 'documentNo' }
     const documentDate = String(fields.get('documentDate') ?? '')
-    if (!documentDate)
-      return { error: 'Chọn ngày chứng từ.', focus: 'documentDate' }
     const arrivedAt = String(fields.get('arrivedAt') ?? '')
     if (receiptDatesInFuture(documentDate, arrivedAt)) {
       refreshDateLimits()
@@ -92,8 +90,8 @@ export function useDeliveryDocuments(submitLabel: string) {
       return { error: 'Chọn từ 1 đến 10 tệp chứng từ.', focus: 'documents' }
     return {
       body: {
-        deliveryDocumentNo: documentNo,
-        deliveryDocumentDate: documentDate,
+        deliveryDocumentNo: documentNo || null,
+        deliveryDocumentDate: documentDate || null,
         arrivedAt: arrivedAt || null,
         delivererName: String(fields.get('delivererName') ?? '').trim() || null,
         vehiclePlateNo:

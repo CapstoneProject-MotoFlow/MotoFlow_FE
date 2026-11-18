@@ -19,6 +19,7 @@ import type { Assignment } from '../inventory/countAssignment'
 import TransferAction from './TransferAction'
 import CardHead, { HeadButton } from './CardHead'
 import ReceiptDocumentSummary from './ReceiptDocumentSummary'
+import PassAllButton from '../receiving/PassAllButton'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
 
@@ -315,6 +316,31 @@ function WorkEditor({
     const { qty, wrong, damaged } = values[productId]
     return qty + wrong + damaged
   }
+  // Kế hoạch 14/11 việc 11: Thiếu = Đã xuất − Đạt − Giao sai − Hư hỏng (tối thiểu 0), Thừa = phần vượt.
+  type ReceiptLine = Receipt['lines'][number]
+  const deliveredOf = (l: ReceiptLine) =>
+    canRecord ? receivedQty(l.productId) : l.deliveredQty
+  const shortOf = (l: ReceiptLine) =>
+    Math.max(0, l.documentQty - deliveredOf(l))
+  const excessOf = (l: ReceiptLine) =>
+    canRecord
+      ? Math.max(0, receivedQty(l.productId) - l.documentQty)
+      : l.excessQty
+  const passedAll = (l: ReceiptLine) =>
+    values[l.productId].qty === l.documentQty &&
+    values[l.productId].wrong === 0 &&
+    values[l.productId].damaged === 0
+  const receiptTotals = (receipt?.lines ?? []).reduce(
+    (total, l) => ({
+      document: total.document + l.documentQty,
+      passed: total.passed + values[l.productId].qty,
+      wrong: total.wrong + values[l.productId].wrong,
+      damaged: total.damaged + values[l.productId].damaged,
+      short: total.short + shortOf(l),
+      excess: total.excess + excessOf(l),
+    }),
+    { document: 0, passed: 0, wrong: 0, damaged: 0, short: 0, excess: 0 },
+  )
   const noteRequired = receipt?.lines.some((line) =>
     receivedQty(line.productId) !== line.documentQty ||
     values[line.productId].wrong > 0 ||
@@ -592,16 +618,29 @@ function WorkEditor({
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th>{mode === 'receipt' ? 'Theo phiếu' : 'Kế hoạch'}</th>
                     <th>
                       {mode === 'receipt'
-                        ? 'Số đạt'
+                        ? isReturnReceipt
+                          ? 'Theo phiếu'
+                          : 'Đã xuất'
+                        : 'Kế hoạch'}
+                    </th>
+                    <th>
+                      {mode === 'receipt'
+                        ? 'Đạt'
                         : mode === 'extra'
                           ? 'Xuất thêm'
                           : 'Đã soạn'}
                     </th>
                     <th>{mode === 'receipt' ? 'Giao sai' : 'Lý do thiếu'}</th>
-                    {mode === 'receipt' && <th>Hư hỏng</th>}
+                    {mode === 'receipt' && (
+                      <>
+                        <th>Hư hỏng</th>
+                        <th>Thiếu</th>
+                        <th>Thừa</th>
+                        {canRecord && <th>Đạt đủ</th>}
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -637,19 +676,7 @@ function WorkEditor({
                         {'documentQty' in l ? (
                           <>
                             {l.documentQty}
-                            <small>
-                              Thực nhận:{' '}
-                              {canRecord
-                                ? receivedQty(l.productId)
-                                : l.deliveredQty}
-                              {' · Thừa: '}
-                              {canRecord
-                                ? Math.max(
-                                    0,
-                                    receivedQty(l.productId) - l.documentQty,
-                                  )
-                                : l.excessQty}
-                            </small>
+                            <small>Thực nhận: {deliveredOf(l)}</small>
                           </>
                         ) : 'plannedQty' in l ? (
                           l.plannedQty
@@ -750,9 +777,48 @@ function WorkEditor({
                             )}
                         </td>
                       )}
+                      {mode === 'receipt' && 'documentQty' in l && (
+                        <>
+                          <td>{shortOf(l)}</td>
+                          <td>{excessOf(l)}</td>
+                          {canRecord && (
+                            <td>
+                              <PassAllButton
+                                sku={l.sku}
+                                pressed={passedAll(l)}
+                                onToggle={(full) =>
+                                  setValues({
+                                    ...values,
+                                    [l.productId]: {
+                                      ...values[l.productId],
+                                      qty: full ? l.documentQty : 0,
+                                      wrong: 0,
+                                      damaged: 0,
+                                    },
+                                  })
+                                }
+                              />
+                            </td>
+                          )}
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
+                {mode === 'receipt' && receipt && (
+                  <tfoot>
+                    <tr>
+                      <th scope="row">Tổng</th>
+                      <td>{receiptTotals.document}</td>
+                      <td>{receiptTotals.passed}</td>
+                      <td>{receiptTotals.wrong}</td>
+                      <td>{receiptTotals.damaged}</td>
+                      <td>{receiptTotals.short}</td>
+                      <td>{receiptTotals.excess}</td>
+                      {canRecord && <td />}
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
             {receipt && canRecord && (

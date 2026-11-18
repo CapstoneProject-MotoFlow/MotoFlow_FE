@@ -1,14 +1,13 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { isAxiosError } from 'axios'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import Icon from '../../shared/ui/Icon'
 import PageHeader from '../../shared/ui/PageHeader'
-import Hint from '../../shared/ui/Hint'
 import { formatDateTime } from '../../shared/utils/format'
-import { draftKey, readDraft } from '../../shared/utils/localDraft'
+import ServerDraftList from '../../shared/ui/ServerDraftList'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import type { DashboardStore } from '../../shared/types/store'
 import { apiMessage } from '../suppliers/supplierService'
@@ -27,6 +26,16 @@ import { receivingWork } from '../operations/receivingTaskModel'
 import { documentCode } from '../../shared/utils/documentCode'
 import './receiving.css'
 
+/** GET /purchase-orders/drafts (Mạnh, việc D1 17/11): nháp của chính người dùng, mới nhất trước. */
+type PurchaseOrderDraftRow = {
+  id: number
+  supplierName: string | null
+  storeName: string | null
+  lineCount: number | null
+  orderedValue: number | null
+  createdAt: string
+  updatedAt?: string | null
+}
 type Order = {
   id: number
   supplierId: number
@@ -44,7 +53,7 @@ type Assignment = {
   goodsReceiptNoteId: number
   purchaseOrderId: number
   supplierName: string
-  deliveryDocumentNo: string
+  deliveryDocumentNo: string | null
   arrivedAt: string
   taskStatus: string
   lineCount: number
@@ -73,7 +82,7 @@ type Detail = Order & {
   }[]
   receipts: {
     id: number
-    deliveryDocumentNo: string
+    deliveryDocumentNo: string | null
     arrivedAt: string
     status: string
     replacement: boolean
@@ -204,7 +213,18 @@ export default function PurchaseOrdersPage() {
   const staff = user?.role === 'STAFF'
   const owner = user?.role === 'OWNER'
   const manager = user?.role === 'BRANCH_MANAGER'
-  const [view, setView] = useState('OPEN')
+  // PM 17/11: tab "Nháp" ngoài cùng bên phải cho người tạo đơn (Owner); ?tab=DRAFT mở thẳng tab này.
+  const tabs = owner ? [...views, ['DRAFT', 'Nháp']] : views
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [view, setViewState] = useState(() => {
+    const wanted = searchParams.get('tab')
+    return tabs.some(([value]) => value === wanted) ? wanted! : 'OPEN'
+  })
+  function setView(value: string) {
+    setViewState(value)
+    setSearchParams(value === 'OPEN' ? {} : { tab: value }, { replace: true })
+  }
+  const drafts = view === 'DRAFT'
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [supplierId, setSupplierId] = useState('')
@@ -213,7 +233,11 @@ export default function PurchaseOrdersPage() {
   const [createdFrom, setCreatedFrom] = useState('')
   const [createdTo, setCreatedTo] = useState('')
   const dateRangeError =
-    view !== 'OPEN' && !!createdFrom && !!createdTo && createdFrom > createdTo
+    view !== 'OPEN' &&
+    !drafts &&
+    !!createdFrom &&
+    !!createdTo &&
+    createdFrom > createdTo
   const [suppliers, setSuppliers] = useState<
     { id: number; supplierName: string }[]
   >([])
@@ -299,7 +323,7 @@ export default function PurchaseOrdersPage() {
   }, [owner])
 
   useEffect(() => {
-    if (dateRangeError) return
+    if (dateRangeError || drafts) return
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
       setLoading(true)
@@ -389,6 +413,7 @@ export default function PurchaseOrdersPage() {
     createdFrom,
     createdTo,
     dateRangeError,
+    drafts,
   ])
 
   const total = dateRangeError
@@ -406,7 +431,6 @@ export default function PurchaseOrdersPage() {
         title="Đơn nhập hàng"
         breadcrumb={[{ label: 'Nhập hàng' }, { label: 'Đơn nhập hàng' }]}
       />
-      {owner && <PurchaseDraftNotice user={user} />}
       {assigned && (
         <p className="mf-success-notice" role="status">
           {assigned}
@@ -519,7 +543,7 @@ export default function PurchaseOrdersPage() {
         {!staff && (
           <div className="receiving-filters">
             <div className="receiving-views" aria-label="Trạng thái">
-              {views.map(([value, label]) => (
+              {tabs.map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
@@ -538,7 +562,7 @@ export default function PurchaseOrdersPage() {
                 </button>
               ))}
             </div>
-            <div className="receiving-filter-row">
+            <div className="receiving-filter-row" hidden={drafts}>
               <div className="receiving-list-search">
                 <Icon name="search" />
                 <input
@@ -617,9 +641,41 @@ export default function PurchaseOrdersPage() {
         {dateRangeError && (
           <p role="alert">Ngày kết thúc phải từ ngày bắt đầu trở đi.</p>
         )}
-        {!dateRangeError && loading && <p role="status">Đang tải…</p>}
-        {!dateRangeError && !loading && error && <p role="alert">{error}</p>}
-        {
+        {!drafts && !dateRangeError && loading && (
+          <p role="status">Đang tải…</p>
+        )}
+        {!drafts && !dateRangeError && !loading && error && (
+          <p role="alert">{error}</p>
+        )}
+        {drafts ? (
+          <ServerDraftList<PurchaseOrderDraftRow>
+            path="/purchase-orders/drafts"
+            code={(id) => documentCode('DNH', id)}
+            openPath={(id) => '/purchase-orders/drafts/' + id}
+            searchLabel="Tìm nháp"
+            emptyText='Chưa có nháp. Khi tạo đơn nhập hàng, bấm "Lưu nháp" để lưu lại làm tiếp sau.'
+            tableClassName="table-scroll"
+            columns={[
+              {
+                header: 'Nhà cung cấp',
+                cell: (row) => row.supplierName ?? '—',
+              },
+              { header: 'Kho nhận', cell: (row) => row.storeName ?? '—' },
+              { header: 'Số dòng', cell: (row) => row.lineCount ?? '—' },
+              {
+                header: 'Giá trị',
+                cell: (row) =>
+                  row.orderedValue == null
+                    ? '—'
+                    : money.format(row.orderedValue),
+              },
+              {
+                header: 'Lưu lúc',
+                cell: (row) => formatDateTime(row.updatedAt ?? row.createdAt),
+              },
+            ]}
+          />
+        ) : (
           <>
             <div className="table-scroll">
               {staff ? (
@@ -646,8 +702,14 @@ export default function PurchaseOrdersPage() {
                                 '/goods-receipt-notes/' + row.goodsReceiptNoteId
                               }
                             >
-                              {row.deliveryDocumentNo}
+                              {documentCode('PN', row.goodsReceiptNoteId)}
                             </Link>
+                            {row.deliveryDocumentNo && (
+                              <small>
+                                {' '}
+                                · Chứng từ {row.deliveryDocumentNo}
+                              </small>
+                            )}
                           </td>
                           <td>{purchaseOrderCode(row.purchaseOrderId)}</td>
                           <td>{row.supplierName}</td>
@@ -862,13 +924,13 @@ export default function PurchaseOrdersPage() {
               </footer>
             }
           </>
-        }
+        )}
       </section>
       {action && (
         <ReceiptActionDialog
           key={action.receipt.id + action.mode}
           receiptId={action.receipt.id}
-          documentNo={action.receipt.deliveryDocumentNo}
+          documentNo={documentCode('PN', action.receipt.id)}
           mode={action.mode}
           onClose={() => setAction(null)}
           onSaved={() => {
@@ -1128,7 +1190,10 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                               <span>Người kiểm nhận: {inspector}</span>
                             )}
                             <small>
-                              {receipt.deliveryDocumentNo} ·{' '}
+                              {receipt.deliveryDocumentNo &&
+                                'Chứng từ ' +
+                                  receipt.deliveryDocumentNo +
+                                  ' · '}
                               {day(receipt.arrivedAt)}
                               {receipt.replacement ? ' · Giao bù' : ''}
                             </small>
@@ -1233,24 +1298,5 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
         </div>
       )}
     </main>
-  )
-}
-
-/** Nhắc Owner còn bản nháp đơn nhập hàng lưu trên máy này. */
-function PurchaseDraftNotice({
-  user,
-}: {
-  user: Parameters<typeof draftKey>[1]
-}) {
-  const [saved] = useState(() =>
-    readDraft<{ lines: unknown[] }>(draftKey('purchase-order', user)),
-  )
-  if (!saved) return null
-  return (
-    <Hint>
-      Bạn có một bản nháp đơn nhập hàng ({saved.data.lines.length} dòng) lưu
-      lúc {formatDateTime(saved.savedAt)}.{' '}
-      <Link to="/purchase-orders/new">Mở bản nháp</Link>
-    </Hint>
   )
 }

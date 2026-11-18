@@ -1,0 +1,32 @@
+/* Tab "Nháp" dùng chung (ServerDraftList): Đơn nhập hàng, Yêu cầu bổ sung. */
+.mf-draft-head {
+  display: grid;
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+.mf-draft-search {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+  font-size: 14px;
+}
+.mf-draft-search input {
+  min-height: var(--mf-control-h, 40px);
+  padding: 0 12px;
+  border: 1px solid var(--mf-border, #d0d5dd);
+  border-radius: var(--mf-radius, 8px);
+  font: inherit;
+}
+.mf-draft-hint {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+.mf-draft-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 14px;
+}

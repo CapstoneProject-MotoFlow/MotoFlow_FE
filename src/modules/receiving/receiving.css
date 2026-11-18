@@ -937,7 +937,8 @@
   }
 }
 
-.receiving-panel tr[hidden] {
+.receiving-panel tr[hidden],
+.receiving-filter-row[hidden] {
   display: none;
 }
 
@@ -989,4 +990,20 @@
   border: 1px solid #dce2eb;
   border-radius: 0.55rem;
   text-decoration: none;
+}
+
+/* PM 17/11: nút "Đạt đủ" của bảng kiểm nhận (NCC và điều chuyển) to, dễ bấm; thay ô tích nhỏ. */
+.receiving-pass-all {
+  min-width: 104px;
+  min-height: 40px;
+  white-space: nowrap;
+}
+.receiving-pass-all.is-pressed {
+  border-color: #12b76a;
+  color: #027a48;
+  background: #ecfdf3;
+}
+.receiving-pass-all.is-pressed:hover:not(:disabled) {
+  border-color: #039855;
+  background: #d1fadf;
 }

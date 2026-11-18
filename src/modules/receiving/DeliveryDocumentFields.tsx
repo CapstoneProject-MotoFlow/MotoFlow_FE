@@ -31,26 +31,25 @@ export default function DeliveryDocumentFields({
   const { dateLimits, refreshDateLimits, images, setImages } = state
   return (
     <div className="receiving-layout-fields">
+      {/* PM 17/11: số và ngày chứng từ của phiếu nhập NCC không bắt buộc; ảnh chứng từ vẫn bắt buộc. */}
       <label>
-        Số chứng từ{' '}
+        Số chứng từ (nếu có){' '}
         <input
           name="documentNo"
-          required
           maxLength={50}
           defaultValue={defaultDocumentNo}
-          placeholder="Nhập số chứng từ"
+          placeholder="Để trống nếu chứng từ không có số"
         />
         <FieldError message={errors?.documentNo} />
       </label>
       <label>
-        Ngày chứng từ
+        Ngày chứng từ (nếu có)
         <input
           name="documentDate"
           type="date"
           max={dateLimits.date}
           onFocus={refreshDateLimits}
           onChange={refreshDateLimits}
-          required
         />
         <FieldError message={errors?.documentDate} />
       </label>

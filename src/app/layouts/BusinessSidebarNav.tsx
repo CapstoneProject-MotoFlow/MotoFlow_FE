@@ -101,7 +101,9 @@ export default function BusinessSidebarNav({
   }))
   const location = useLocation()
   const active = (href: string) =>
-    href.includes('#')
+    href.includes('?')
+      ? location.pathname + location.search === href
+      : href.includes('#')
       ? location.pathname + location.hash === href
       : location.pathname === href ||
         (href !== '/owner/inventory' &&

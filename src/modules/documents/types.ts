@@ -63,6 +63,9 @@ export type DocumentDetail = {
     lines?: DocumentLine[]
     note?: string | null
     createdBy?: string | Person | null
+    createdByName?: string | null
+    recordedByName?: string | null
+    requestedBy?: string | Person | null
     version?: number
     priceType?: string
     deliveryDocumentNo?: string | null
@@ -112,6 +115,7 @@ export type PrintParty = {
 }
 
 export type DocumentPrint = {
+  documentType: DocumentType
   form: PrintForm
   number: string
   documentDate: string
@@ -138,11 +142,13 @@ export type DocumentPrint = {
     credit: number | null
   } | null
   payment: {
+    paymentType: 'ORDER_PAYMENT' | 'REFUND' | 'DEBT_PAYMENT'
     paymentMethod: string
     amount: number
     tenderedAmount: number | null
     changeGiven: number | null
     transactionReference: string | null
+    allocations: { receivableId: number; salesOrderId: number | null; amount: number }[]
   } | null
   note: string | null
 }

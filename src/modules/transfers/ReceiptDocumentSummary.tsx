@@ -4,15 +4,17 @@
  * Công dụng: Hiện chứng từ giao hàng của phiếu nhận điều chuyển (số, ngày chứng từ, người giao, biển số xe, người lập, tệp)
  * như màn chi tiết phiếu nhập. compact: một dòng ngắn trong thẻ phiếu ở trang chi tiết lệnh.
  */
+import axiosClient from '../../shared/api/axiosClient'
 import { date } from '../inventory/presentation'
-import ReceiptImage from '../receiving/ReceiptImage'
+import ReceiptDocuments from '../receiving/ReceiptDocuments'
 import type { ReceiptDocumentInfo } from './types'
 
 export default function ReceiptDocumentSummary({
   receipt,
   compact,
 }: {
-  receipt: ReceiptDocumentInfo
+  /** id và transferOrderId (nếu có) dùng để tải lại link ảnh khi bấm xem. */
+  receipt: ReceiptDocumentInfo & { id?: number; transferOrderId?: number }
   compact?: boolean
 }) {
   const creator = receipt.createdBy?.fullName ?? receipt.createdByName ?? null
@@ -59,28 +61,21 @@ export default function ReceiptDocumentSummary({
         </div>
       </dl>
       {files.length > 0 && (
-        <ul
-          className="receiving-document-list tf-receipt-doc-files"
-          aria-label="Chứng từ đính kèm"
-        >
-          {files.map((file) => (
-            <li key={file.id}>
-              {file.downloadUrl && file.contentType?.startsWith('image/') ? (
-                <ReceiptImage
-                  key={file.downloadUrl}
-                  src={file.downloadUrl}
-                  name={file.fileName}
-                />
-              ) : file.downloadUrl ? (
-                <a href={file.downloadUrl} target="_blank" rel="noreferrer">
-                  {file.fileName}
-                </a>
-              ) : (
-                file.fileName
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="tf-receipt-doc-files">
+          {/* PM 17/11: cùng kiểu xem ảnh với phiếu nhập NCC (tên ảnh + nút, bấm mới tải link mới). */}
+          <ReceiptDocuments
+            receiptId={receipt.id ?? 0}
+            documents={files}
+            label="ảnh nhận hàng"
+            reload={async () => {
+              if (!receipt.id || !receipt.transferOrderId) return files
+              const { data } = await axiosClient.get<ReceiptDocumentInfo>(
+                `/transfer-orders/${receipt.transferOrderId}/receipts/${receipt.id}`,
+              )
+              return data.documents ?? []
+            }}
+          />
+        </div>
       )}
     </div>
   )

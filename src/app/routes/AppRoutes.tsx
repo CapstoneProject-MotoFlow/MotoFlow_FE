@@ -111,6 +111,11 @@ const NewPurchaseOrderPage = lazy(() =>
     default: module.NewPurchaseOrderPage,
   })),
 )
+const PurchaseOrderDraftPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
+    default: module.PurchaseOrderDraftPage,
+  })),
+)
 const EditPurchaseOrderPage = lazy(() =>
   import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
     default: module.EditPurchaseOrderPage,
@@ -176,6 +181,11 @@ const ReplenishmentDetailPage = lazy(() =>
 const TransferCreatePage = lazy(
   () => import('../../modules/transfers/TransferCreatePage'),
 )
+const ReplenishmentDraftPage = lazy(() =>
+  import('../../modules/transfers/ReplenishmentCreatePage').then((m) => ({
+    default: m.ReplenishmentDraftPage,
+  })),
+)
 const TransferDetailPage = lazy(
   () => import('../../modules/transfers/TransferDetailPage'),
 )
@@ -234,6 +244,26 @@ const AdminPermissionHistoryPage = lazy(
 const StoresPage = lazy(() => import('../../modules/stores/pages/StoresPage'))
 const ProfileChangePasswordPage = lazy(
   () => import('../../modules/profile/pages/ProfileChangePasswordPage'),
+)
+const SalesReportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.SalesReportPage,
+  })),
+)
+const InventoryReportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.InventoryReportPage,
+  })),
+)
+const GrossMarginReportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.GrossMarginReportPage,
+  })),
+)
+const AccountingExportPage = lazy(() =>
+  import('../../modules/reports/ReportsPages').then((m) => ({
+    default: m.AccountingExportPage,
+  })),
 )
 
 function InventoryLegacyRedirect({
@@ -318,6 +348,11 @@ export default function AppRoutes() {
             <Route
               element={<RequireRole roles={['OWNER', 'BRANCH_MANAGER']} />}
             >
+              <Route path="/reports/sales" element={<SalesReportPage />} />
+              <Route
+                path="/reports/inventory"
+                element={<InventoryReportPage />}
+              />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route
                 path="/inventory/movements"
@@ -350,10 +385,22 @@ export default function AppRoutes() {
               />
             </Route>
             <Route element={<RequireRole roles={['OWNER']} />}>
+              <Route
+                path="/reports/gross-margin"
+                element={<GrossMarginReportPage />}
+              />
+              <Route
+                path="/reports/accounting-export"
+                element={<AccountingExportPage />}
+              />
               <Route path="/pricing/rules" element={<PricingRulesPage />} />
               <Route
                 path="/purchase-orders/new"
                 element={<NewPurchaseOrderPage />}
+              />
+              <Route
+                path="/purchase-orders/drafts/:id"
+                element={<PurchaseOrderDraftPage />}
               />
               <Route
                 path="/goods-receipt-notes/excess"
@@ -549,6 +596,10 @@ export default function AppRoutes() {
               <Route
                 path="/replenishment-requests/new"
                 element={<TransferCreatePage replenishment />}
+              />
+              <Route
+                path="/replenishment-requests/drafts/:id"
+                element={<ReplenishmentDraftPage />}
               />
               <Route element={<RequireTransferCoordinator />}>
                 <Route

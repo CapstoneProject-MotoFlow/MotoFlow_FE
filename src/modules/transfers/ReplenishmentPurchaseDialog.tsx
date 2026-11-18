@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import FormDialog from '../../shared/ui/FormDialog'
+import MoneyInput from '../../shared/ui/MoneyInput'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
@@ -349,23 +350,13 @@ export default function ReplenishmentPurchaseDialog({
                         </small>
                       </td>
                       <td>
-                        <input
+                        <MoneyInput
                           aria-label={'Giá nhập ' + l.sku}
                           required={Number(l.quantity) > 0}
                           disabled={Number(l.quantity) === 0}
-                          inputMode="numeric"
-                          value={
-                            prices[l.productId]
-                              ? Number(prices[l.productId]).toLocaleString(
-                                  'vi-VN',
-                                )
-                              : ''
-                          }
-                          onChange={(e) =>
-                            setPrices({
-                              ...prices,
-                              [l.productId]: e.target.value.replace(/\D/g, ''),
-                            })
+                          value={prices[l.productId] ?? ''}
+                          onValueChange={(digits) =>
+                            setPrices({ ...prices, [l.productId]: digits })
                           }
                         />
                       </td>

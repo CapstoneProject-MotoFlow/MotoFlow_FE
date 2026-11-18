@@ -1093,3 +1093,12 @@ p.tf-validation-hint {
 .tf-store-name {
   font-weight: 600;
 }
+/* Kế hoạch 14/11 việc 11: dòng tổng của bảng kiểm nhận điều chuyển. */
+.tf-table tfoot td {
+  border-top: 2px solid #eaecf0;
+  font-weight: 600;
+}
+/* PM 17/11: tab "Nháp" dùng ô tìm riêng, ẩn ô tìm của danh sách. */
+.tf-list-search[hidden] {
+  display: none;
+}
