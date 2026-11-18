@@ -185,6 +185,24 @@ const TransferWorkPage = lazy(
 const TransferReceiptCreatePage = lazy(
   () => import('../../modules/transfers/TransferReceiptCreatePage'),
 )
+const DocumentSearchPage = lazy(
+  () => import('../../modules/documents/DocumentSearchPage'),
+)
+const DocumentDetailPage = lazy(
+  () => import('../../modules/documents/DocumentDetailPage'),
+)
+const DocumentPrintPage = lazy(
+  () => import('../../modules/documents/DocumentPrintPage'),
+)
+const AdjustmentListPage = lazy(
+  () => import('../../modules/documents/AdjustmentListPage'),
+)
+const StockLossPage = lazy(
+  () => import('../../modules/documents/StockLossPage'),
+)
+const AdjustmentDetailPage = lazy(
+  () => import('../../modules/documents/AdjustmentDetailPage'),
+)
 const PastDateStockPage = lazy(
   () => import('../../modules/inventory/PastDateStockPage'),
 )
@@ -553,6 +571,21 @@ export default function AppRoutes() {
               <Route
                 path="/inventory/past-date-stock"
                 element={<PastDateStockPage />}
+              />
+              <Route path="/documents" element={<DocumentSearchPage />} />
+              <Route
+                path="/documents/:type/:id"
+                element={<DocumentDetailPage />}
+              />
+              <Route
+                path="/documents/:type/:id/print"
+                element={<DocumentPrintPage />}
+              />
+              <Route path="/adjustments" element={<AdjustmentListPage />} />
+              <Route path="/adjustments/new" element={<StockLossPage />} />
+              <Route
+                path="/adjustments/:id"
+                element={<AdjustmentDetailPage />}
               />
               <Route path="/receivables" element={<ReceivableListPage />} />
               <Route

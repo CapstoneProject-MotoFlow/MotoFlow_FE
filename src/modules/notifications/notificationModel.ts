@@ -45,6 +45,8 @@ export function noticeTarget(
   if (notice.refType === 'REPLENISHMENT_REQUEST' && role !== 'STAFF')
     return { path: '/replenishment-requests/' + id }
   if (notice.refType === 'SALES_ORDER') return { path: '/sales-orders/' + id }
+  if (notice.refType === 'ADJUSTMENT_REQUEST' && role !== 'STAFF')
+    return { path: '/adjustments/' + id }
   if (notice.refType === 'STOCK_COUNT') return { path: '/stock-counts/' + id }
   if (notice.refType === 'STOCK_COUNT_REQUEST' && role !== 'STAFF')
     return { path: '/stock-counts' }
