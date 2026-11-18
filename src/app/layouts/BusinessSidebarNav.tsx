@@ -14,7 +14,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
   {
     label: 'Bán hàng',
     icon: 'receipt',
-    labels: ['Đơn bán', 'Đơn chưa đáp ứng đủ', 'Khách hàng'],
+    labels: ['Đơn bán', 'Đơn nháp', 'Đơn chưa đáp ứng đủ', 'Khách hàng'],
   },
   {
     label: 'Điều chuyển',
@@ -101,7 +101,9 @@ export default function BusinessSidebarNav({
   }))
   const location = useLocation()
   const active = (href: string) =>
-    href.includes('#')
+    href.includes('?')
+      ? location.pathname + location.search === href
+      : href.includes('#')
       ? location.pathname + location.hash === href
       : location.pathname === href ||
         (href !== '/owner/inventory' &&

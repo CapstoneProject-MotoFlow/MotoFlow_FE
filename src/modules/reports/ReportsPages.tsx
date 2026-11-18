@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useInventoryScope } from '../inventory/api'
@@ -13,6 +20,7 @@ import { formatMoney, formatDateTime } from '../../shared/utils/format'
 import { inventoryError } from '../inventory/api'
 import { movementLink } from '../inventory/presentation'
 import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
+import { mapConcurrent } from '../../shared/utils/mapConcurrent'
 import { documentStatus, documentTypes } from '../documents/model'
 import './reports.css'
 
@@ -1883,6 +1891,8 @@ export function AccountingExportPage() {
     [history, setHistory] = useState<
       { filename: string; createdAt: string; rows: number; blob: Blob }[]
     >([])
+  const exportAbort = useRef<AbortController | null>(null)
+  useEffect(() => () => exportAbort.current?.abort(), [])
   const key = `accounting:${from}:${to}:${scope.storeId}`
   const loadDocuments = useCallback(
     (signal: AbortSignal) =>
@@ -1918,7 +1928,11 @@ export function AccountingExportPage() {
     if (!selected.size) return
     setExportError('')
     const sheets: { name: string; rows: unknown[][] }[] = []
-    const signal = new AbortController().signal
+    // Review 18/11 R-23: hủy các request còn chạy khi xuất lại hoặc rời màn hình.
+    exportAbort.current?.abort()
+    const controller = new AbortController()
+    exportAbort.current = controller
+    const signal = controller.signal
     let totalRows = 0
     try {
       if (selected.has('documents') && report.data) {
@@ -1940,42 +1954,55 @@ export function AccountingExportPage() {
       if (selected.has('receipts')) {
         type ReceiptSummary = { id: number; status: string; supplierName: string; storeId: number; storeName: string; deliveryDocumentNo: string | null; arrivedAt: string; confirmedAt: string | null }
         type ReceiptDetail = ReceiptSummary & { lines: { sku: string; partName: string; baseUnit: string; deliveredQty: number; passedQty: number; unitPrice: number | null; excessDecision: string | null }[] }
+        // Review 18/11 R-22: chỉ phiếu đã xác nhận (hàng đã ghi vào kho), tính kỳ theo ngày xác nhận.
         const receipts = await allPages<ReceiptSummary>(
           '/goods-receipt-notes',
-          { storeId: scope.storeId || undefined },
+          { storeId: scope.storeId || undefined, status: 'CONFIRMED' },
           signal,
         )
         const periodReceipts = receipts.filter((receipt) => {
-          const date = receipt.arrivedAt.slice(0, 10)
-          return date >= from && date <= to
+          const date = receipt.confirmedAt?.slice(0, 10)
+          return !!date && date >= from && date <= to
         })
-        const details: ReceiptDetail[] = []
-        for (let index = 0; index < periodReceipts.length; index += 8) {
-          details.push(...await Promise.all(periodReceipts.slice(index, index + 8).map(async (receipt) => {
-            const { data } = await axiosClient.get<ReceiptDetail>(`/goods-receipt-notes/${receipt.id}`)
-            return data
-          })))
-        }
-        const rows: unknown[][] = [['Phiếu nhập', 'Ngày nhận', 'Nhà cung cấp', 'Cửa hàng', 'SKU', 'Phụ tùng', 'Số lượng nhận', 'Số lượng vào kho', 'Đơn giá nhập', 'Thành tiền']]
+        const details = await mapConcurrent(
+          periodReceipts,
+          8,
+          async (receipt) =>
+            (
+              await axiosClient.get<ReceiptDetail>(
+                `/goods-receipt-notes/${receipt.id}`,
+                { signal },
+              )
+            ).data,
+          () => !signal.aborted,
+        )
+        const rows: unknown[][] = [['Phiếu nhập', 'Ngày xác nhận', 'Nhà cung cấp', 'Cửa hàng', 'SKU', 'Phụ tùng', 'Số lượng nhận', 'Số lượng vào kho', 'Đơn giá nhập', 'Thành tiền']]
         for (const receipt of details) for (const line of receipt.lines) {
           const qty = line.passedQty
-          rows.push([`PN-${receipt.id}`, receipt.arrivedAt.slice(0, 10).split('-').reverse().join('/'), receipt.supplierName, receipt.storeName, line.sku, line.partName, line.deliveredQty, qty, line.unitPrice, line.unitPrice == null ? null : line.unitPrice * qty])
+          rows.push([`PN-${receipt.id}`, (receipt.confirmedAt ?? receipt.arrivedAt).slice(0, 10).split('-').reverse().join('/'), receipt.supplierName, receipt.storeName, line.sku, line.partName, line.deliveredQty, qty, line.unitPrice, line.unitPrice == null ? null : line.unitPrice * qty])
         }
         sheets.push({ name: 'Nhap hang', rows })
         totalRows += rows.length - 1
       }
       if (selected.has('payments')) {
         type CustomerDebtData = { customerId: number; customerName: string; storeId: number | null; storeName: string | null; debts: { id: number; originType: string; salesOrderId: number | null; originalAmount: number; correctionAmount: number; collectedAmount: number; remainingAmount: number; status: string; dueDate: string; recognizedAt: string; note: string | null }[]; payments: { id: number; amount: number; tenderedAmount: number | null; changeAmount: number | null; paymentMethod: string; transactionReference: string | null; status: string; recordedAt: string; recordedBy: string; storeName: string; allocations: { receivableId: number; allocatedAmount: number }[] }[] }
-        const customers = await allPages<Customer>('/customers', {}, signal)
-        const records: CustomerDebtData[] = []
-        for (let index = 0; index < customers.length; index += 8) {
-          records.push(...await Promise.all(customers.slice(index, index + 8).map(async (customer) => {
-            const { data } = await axiosClient.get<CustomerDebtData>(`/customers/${customer.id}/debts`, {
-              params: { storeId: scope.storeId || undefined },
-            })
-            return data
-          })))
-        }
+        // Review 18/11 R-23: BE chưa có API phiếu thu theo kỳ, nên vẫn phải đọc từng khách để không sót phiếu thu
+        // của khách đã trả hết nợ. Bỏ qua khách tạo sau ngày cuối kỳ (chưa thể có phát sinh) và dừng khi đóng màn.
+        const customers = (await allPages<Customer>('/customers', {}, signal)).filter(
+          (customer) => customer.createdAt.slice(0, 10) <= to,
+        )
+        const records = await mapConcurrent(
+          customers,
+          8,
+          async (customer) =>
+            (
+              await axiosClient.get<CustomerDebtData>(
+                `/customers/${customer.id}/debts`,
+                { params: { storeId: scope.storeId || undefined }, signal },
+              )
+            ).data,
+          () => !signal.aborted,
+        )
         const payments = records.flatMap((record) => record.payments.filter((payment) => payment.recordedAt.slice(0, 10) >= from && payment.recordedAt.slice(0, 10) <= to).map((payment) => ({ record, payment })))
         const debts = records.flatMap((record) => record.debts.filter((debt) => debt.recognizedAt.slice(0, 10) >= from && debt.recognizedAt.slice(0, 10) <= to).map((debt) => ({ record, debt })))
         const paymentRows: unknown[][] = [['Mã phiếu thu', 'Ngày thu', 'Khách hàng', 'Cửa hàng', 'Phương thức', 'Mã giao dịch', 'Người ghi nhận', 'Số tiền', 'Tiền khách đưa', 'Tiền thối lại', 'Trạng thái']]
@@ -2009,9 +2036,9 @@ export function AccountingExportPage() {
         sheets.push({ name: 'Nhap xuat ton', rows })
         totalRows += rows.length - 1
       }
-      if (!sheets.length) return
+      if (!sheets.length || signal.aborted) return
     } catch (error) {
-      setExportError(inventoryError(error))
+      if (!signal.aborted) setExportError(inventoryError(error))
       return
     }
     const filename = `MotoFlow_ke_toan_${from.slice(0, 7)}.xlsx`

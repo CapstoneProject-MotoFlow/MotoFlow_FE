@@ -12,12 +12,15 @@ import { formatDateTime } from '../../shared/utils/format'
 import ServerDraftList from '../../shared/ui/ServerDraftList'
 import './transfers.css'
 
-/** GET /replenishment-requests/drafts (Vinh, việc D2 17/11): nháp của chính người dùng, mới nhất trước. */
+/**
+ * GET /replenishment-requests/drafts (BE #61, D2): nháp của chính người dùng, mới nhất trước.
+ * Cùng dạng ReplenishmentRowResponse của danh sách yêu cầu (PM 18/11: FE theo tên của BE).
+ */
 type ReplenishmentDraftRow = {
   id: number
   storeName: string | null
   lineCount: number | null
-  totalQty: number | null
+  totalRequestedQty: number | null
   createdAt: string
   updatedAt?: string | null
 }
@@ -135,7 +138,7 @@ export default function ReplenishmentListPage() {
               { header: 'Số dòng', cell: (row) => row.lineCount ?? '—' },
               {
                 header: 'Tổng số lượng',
-                cell: (row) => row.totalQty ?? '—',
+                cell: (row) => row.totalRequestedQty ?? '—',
               },
               {
                 header: 'Lưu lúc',

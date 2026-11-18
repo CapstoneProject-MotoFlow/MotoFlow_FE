@@ -30,13 +30,14 @@ export type ReplenishmentPrefill = {
   lines: { productId: number; sku: string; partName: string; qty: number }[]
 }
 /**
- * GET /replenishment-requests/drafts/{id} (Vinh, việc D2 17/11): nháp lưu trên server, chỉ người tạo mở được.
+ * GET /replenishment-requests/drafts/{id} (BE #61, D2): nháp lưu trên server, chỉ người tạo mở được.
+ * Cùng dạng ReplenishmentDetailResponse: cửa hàng cần hàng là requestingStoreId (PM 18/11: FE theo tên của BE).
  * Gửi nháp (POST …/submit) thành yêu cầu thật, giữ nguyên id.
  */
 export type ReplenishmentDraft = {
   id: number
   status: string
-  storeId: number | null
+  requestingStoreId: number | null
   note: string | null
   createdAt?: string | null
   updatedAt?: string | null
@@ -65,8 +66,8 @@ export default function ReplenishmentCreatePage({
     [store, setStore] = useState(
       prefill?.storeId
         ? String(prefill.storeId)
-        : savedDraft?.storeId
-          ? String(savedDraft.storeId)
+        : savedDraft?.requestingStoreId
+          ? String(savedDraft.requestingStoreId)
           : '',
     ),
     [note, setNote] = useState(savedDraft?.note ?? ''),
