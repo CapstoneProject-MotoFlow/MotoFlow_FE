@@ -8,7 +8,19 @@ import { date } from '../inventory/presentation'
 import type { Page } from '../inventory/types'
 import { states, type Replenishment, type ReplenishmentRow } from './types'
 import { documentCode as code } from '../../shared/utils/documentCode'
+import { formatDateTime } from '../../shared/utils/format'
+import ServerDraftList from '../../shared/ui/ServerDraftList'
 import './transfers.css'
+
+/** GET /replenishment-requests/drafts (Vinh, việc D2 17/11): nháp của chính người dùng, mới nhất trước. */
+type ReplenishmentDraftRow = {
+  id: number
+  storeName: string | null
+  lineCount: number | null
+  totalQty: number | null
+  createdAt: string
+  updatedAt?: string | null
+}
 export default function ReplenishmentListPage() {
   const scope = useInventoryScope(),
     search = scope.params.get('q') ?? '',
@@ -18,6 +30,8 @@ export default function ReplenishmentListPage() {
   const branch = manager && !coordinator
   const activeStatus =
     scope.params.get('status') || (branch ? 'OPEN' : 'AWAITING_COORDINATION')
+  // PM 17/11: tab "Nháp" ngoài cùng bên phải; nháp lưu trên server, chỉ người tạo thấy.
+  const drafts = activeStatus === 'DRAFT'
   const filters = { storeId: scope.storeId, q: search.trim() }
   const base = useInventoryData<Page<ReplenishmentRow>>(
     '/replenishment-requests',
@@ -28,7 +42,7 @@ export default function ReplenishmentListPage() {
       status: activeStatus === 'ALL' ? undefined : activeStatus,
     },
     0,
-    activeStatus !== 'OPEN',
+    activeStatus !== 'OPEN' && !drafts,
   )
   const open = useOpenReplenishments(filters, page, activeStatus === 'OPEN')
   const r = activeStatus === 'OPEN' ? open : base
@@ -63,12 +77,14 @@ export default function ReplenishmentListPage() {
                   ['OPEN', 'Chưa đóng'],
                   ['CLOSED', 'Đã đóng'],
                   ['ALL', 'Tất cả'],
+                  ['DRAFT', 'Nháp'],
                 ]
               : [
                   ['AWAITING_COORDINATION', 'Chờ điều phối'],
                   ['IN_PROGRESS', 'Đang thực hiện'],
                   ['CLOSED', 'Đã đóng'],
                   ['ALL', 'Tất cả'],
+                  ['DRAFT', 'Nháp'],
                 ]
             ).map(([value, label]) => (
               <button
@@ -77,13 +93,13 @@ export default function ReplenishmentListPage() {
                 onClick={() => scope.filter({ status: value })}
               >
                 {label}{' '}
-                {branch && activeStatus === value && r.data && (
+                {branch && !drafts && activeStatus === value && r.data && (
                   <span className="tf-tab-count">{r.data.totalItems}</span>
                 )}
               </button>
             ))}
           </div>
-          <div className="tf-list-search">
+          <div className="tf-list-search" hidden={drafts}>
             <input
               aria-label="Tìm yêu cầu"
               placeholder="Tìm mã yêu cầu hoặc cửa hàng"
@@ -106,47 +122,71 @@ export default function ReplenishmentListPage() {
             )}
           </div>
         </div>
-        <InventoryNotice
-          loading={r.loading}
-          error={r.error || scope.storesError}
-        />
-        <div className="tf-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Yêu cầu</th>
-                <th>Cửa hàng</th>
-                <th>Hàng yêu cầu</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.data?.items.map((row) => (
-                <ReplenishmentRow
-                  key={row.id}
-                  row={row}
-                  canCoordinate={coordinator}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {r.data && !r.data.items.length && (
-          <p className="tf-empty">Không có yêu cầu phù hợp.</p>
+        {drafts && (
+          <ServerDraftList<ReplenishmentDraftRow>
+            path="/replenishment-requests/drafts"
+            code={(id) => code('YBS', id)}
+            openPath={(id) => '/replenishment-requests/drafts/' + id}
+            searchLabel="Tìm nháp"
+            emptyText='Chưa có nháp. Khi tạo yêu cầu bổ sung, bấm "Lưu nháp" để lưu lại làm tiếp sau.'
+            tableClassName="tf-table"
+            columns={[
+              { header: 'Cửa hàng', cell: (row) => row.storeName ?? '—' },
+              { header: 'Số dòng', cell: (row) => row.lineCount ?? '—' },
+              {
+                header: 'Tổng số lượng',
+                cell: (row) => row.totalQty ?? '—',
+              },
+              {
+                header: 'Lưu lúc',
+                cell: (row) => formatDateTime(row.updatedAt ?? row.createdAt),
+              },
+            ]}
+          />
         )}
-        <Pagination
-          total={r.data?.totalItems ?? 0}
-          page={page}
-          loading={r.loading}
-          onPage={(n) => {
-            scope.setParams((p) => {
-              const next = new URLSearchParams(p)
-              next.set('page', String(n))
-              return next
-            })
-          }}
-        />
+        <div hidden={drafts}>
+          <InventoryNotice
+            loading={!drafts && r.loading}
+            error={drafts ? undefined : r.error || scope.storesError}
+          />
+          <div className="tf-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Yêu cầu</th>
+                  <th>Cửa hàng</th>
+                  <th>Hàng yêu cầu</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.data?.items.map((row) => (
+                  <ReplenishmentRow
+                    key={row.id}
+                    row={row}
+                    canCoordinate={coordinator}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {r.data && !r.data.items.length && (
+            <p className="tf-empty">Không có yêu cầu phù hợp.</p>
+          )}
+          <Pagination
+            total={r.data?.totalItems ?? 0}
+            page={page}
+            loading={r.loading}
+            onPage={(n) => {
+              scope.setParams((p) => {
+                const next = new URLSearchParams(p)
+                next.set('page', String(n))
+                return next
+              })
+            }}
+          />
+        </div>
       </section>
     </main>
   )

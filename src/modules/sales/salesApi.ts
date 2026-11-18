@@ -1,4 +1,7 @@
 import type { SalesOrder } from './salesModel'
+/** PM 17/11: nháp đơn bán nằm ở tab "Nháp" của màn Đơn bán (không còn mục "Đơn nháp" trên sidebar). */
+export const salesDraftsPath = '/sales-orders?tab=DRAFT'
+
 export type OrderActions = {
   canUpdate: boolean
   canAssignPicker: boolean

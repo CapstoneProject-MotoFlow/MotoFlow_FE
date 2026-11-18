@@ -27,6 +27,7 @@ export default function DocumentSearchPage() {
   } = useInventoryScope()
   const defaults = dateWindow(7)
   const q = params.get('q') ?? ''
+  const numberSearch = /^#?\d+$/.test(q.trim())
   const rawType = params.get('type') ?? ''
   const type = isDocumentType(rawType) ? rawType : ''
   const from = params.get('from') ?? defaults.from
@@ -38,8 +39,8 @@ export default function DocumentSearchPage() {
     {
       q: q.trim(),
       type,
-      from,
-      to,
+      from: numberSearch ? undefined : from,
+      to: numberSearch ? undefined : to,
       storeId,
       page: pageIndex(params.get('page')),
       size: 20,
@@ -133,12 +134,17 @@ export default function DocumentSearchPage() {
             })}
           </div>
         </div>
+        {numberSearch && q.trim() && (
+          <p className="docs-note" role="status">
+            Đang tìm theo số, bỏ qua khoảng ngày.
+          </p>
+        )}
         {storesError && (
           <p role="alert" className="docs-muted">
             Không tải được danh sách cửa hàng.
           </p>
         )}
-        {dateError ? (
+        {dateError && !numberSearch ? (
           <p className="docs-alert" role="alert">
             Từ ngày phải trước hoặc bằng đến ngày.
           </p>

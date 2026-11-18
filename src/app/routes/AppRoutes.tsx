@@ -111,6 +111,11 @@ const NewPurchaseOrderPage = lazy(() =>
     default: module.NewPurchaseOrderPage,
   })),
 )
+const PurchaseOrderDraftPage = lazy(() =>
+  import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
+    default: module.PurchaseOrderDraftPage,
+  })),
+)
 const EditPurchaseOrderPage = lazy(() =>
   import('../../modules/receiving/PurchaseOrderFormsPage').then((module) => ({
     default: module.EditPurchaseOrderPage,
@@ -175,6 +180,11 @@ const ReplenishmentDetailPage = lazy(() =>
 )
 const TransferCreatePage = lazy(
   () => import('../../modules/transfers/TransferCreatePage'),
+)
+const ReplenishmentDraftPage = lazy(() =>
+  import('../../modules/transfers/ReplenishmentCreatePage').then((m) => ({
+    default: m.ReplenishmentDraftPage,
+  })),
 )
 const TransferDetailPage = lazy(
   () => import('../../modules/transfers/TransferDetailPage'),
@@ -389,6 +399,10 @@ export default function AppRoutes() {
                 element={<NewPurchaseOrderPage />}
               />
               <Route
+                path="/purchase-orders/drafts/:id"
+                element={<PurchaseOrderDraftPage />}
+              />
+              <Route
                 path="/goods-receipt-notes/excess"
                 element={<ExcessReceiptsPage />}
               />
@@ -582,6 +596,10 @@ export default function AppRoutes() {
               <Route
                 path="/replenishment-requests/new"
                 element={<TransferCreatePage replenishment />}
+              />
+              <Route
+                path="/replenishment-requests/drafts/:id"
+                element={<ReplenishmentDraftPage />}
               />
               <Route element={<RequireTransferCoordinator />}>
                 <Route

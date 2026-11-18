@@ -19,7 +19,6 @@ export const ownerNavigation: NavItem[] = [
     icon: 'receipt',
     group: 'BÁN HÀNG',
   },
-  { label: 'Đơn nháp', href: '/sales-drafts', icon: 'document' },
   { label: 'Đơn chưa đáp ứng đủ', href: '/unmet-demand', icon: 'clipboard' },
   { label: 'Khách hàng', href: '/owner/customers', icon: 'users' },
   {

@@ -332,6 +332,7 @@ export default function DocumentDetailPage() {
               (item.status === 'PENDING' || item.status === 'APPROVED'),
           )
           const canCorrect =
+            import.meta.env.VITE_DOCUMENT_CORRECTION_API === 'true' &&
             row.type !== 'ADJUSTMENT' &&
             row.status !== 'CANCELLED' &&
             !pending &&
@@ -339,7 +340,12 @@ export default function DocumentDetailPage() {
           const author =
             typeof content.createdBy === 'string'
               ? content.createdBy
-              : content.createdBy?.fullName
+              : content.createdBy?.fullName ??
+                content.createdByName ??
+                content.recordedByName ??
+                (typeof content.requestedBy === 'string'
+                  ? content.requestedBy
+                  : content.requestedBy?.fullName)
           return (
             <>
               <div className="docs-split">

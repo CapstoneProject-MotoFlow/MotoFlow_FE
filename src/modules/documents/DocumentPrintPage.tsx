@@ -12,6 +12,7 @@ import {
   type PrintForm,
 } from './model'
 import type { DocumentDetail, DocumentPrint, PrintParty } from './types'
+import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 
 function Party({ title, party }: { title: string; party: PrintParty }) {
   return (
@@ -54,7 +55,11 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
           <p>{formatDateTime(data.documentDate)}</p>
         </div>
       </div>
-      <h2>{printForms[data.form]}</h2>
+      <h2>
+        {data.form === 'PAYMENT_RECEIPT' && data.payment?.paymentType === 'REFUND'
+          ? 'Phiếu chi hoàn tiền'
+          : printForms[data.form]}
+      </h2>
       <div className="docs-print-parties">
         <Party title="Đơn vị lập" party={data.store} />
         {data.counterpart && <Party title="Đối tác" party={data.counterpart} />}
@@ -108,11 +113,22 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
         <Facts
           items={[
             [
+              'Loại phiếu',
+              payment.paymentType === 'REFUND'
+                ? 'Hoàn tiền'
+                : payment.paymentType === 'DEBT_PAYMENT'
+                  ? 'Thu nợ'
+                  : 'Thu tiền đơn bán',
+            ],
+            [
               'Hình thức thanh toán',
               paymentMethodLabels[payment.paymentMethod] ??
                 payment.paymentMethod,
             ],
-            ['Số tiền', formatMoney(payment.amount)],
+            [
+              'Số tiền',
+              formatMoney(payment.paymentType === 'REFUND' ? -payment.amount : payment.amount),
+            ],
             [
               'Khách đưa',
               payment.tenderedAmount != null
@@ -129,7 +145,26 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
           ]}
         />
       )}
-      {data.note && <p>{data.note}</p>}
+      {!!payment?.allocations.length && (
+        <Table label="Phân bổ khoản thu" headers={['Đơn bán', 'Khoản nợ', 'Số tiền phân bổ']}>
+          {payment.allocations.map((allocation) => (
+            <tr key={allocation.receivableId}>
+              <td>{allocation.salesOrderId ? `Đơn bán #${allocation.salesOrderId}` : '—'}</td>
+              <td>#{allocation.receivableId}</td>
+              <td>{formatMoney(allocation.amount)}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
+      {data.note && (
+        <p>
+          {data.documentType === 'SALES_ORDER'
+            ? 'Hình thức: ' + (data.note === 'PAID' ? 'Trả đủ' : 'Ghi nợ')
+            : data.documentType === 'GOODS_RECEIPT'
+              ? 'Số chứng từ NCC: ' + data.note
+              : 'Ghi chú: ' + data.note}
+        </p>
+      )}
       <div className="docs-signatures">
         <strong>Người lập</strong>
         <strong>Người giao / nhận</strong>
@@ -196,12 +231,36 @@ export default function DocumentPrintPage() {
                 Quay lại
               </Link>
               {print.data && (
-                <button
-                  className="mf-btn mf-btn--primary"
-                  onClick={() => window.print()}
-                >
-                  In / Lưu PDF
-                </button>
+                <>
+                  <button className="mf-btn mf-btn--secondary" onClick={() => window.print()}>
+                    In / Lưu PDF
+                  </button>
+                  <button
+                    className="mf-btn mf-btn--primary"
+                    onClick={() => {
+                      const data = print.data!
+                      const rows: unknown[][] = [
+                        ['Số chứng từ', 'Loại', 'Ngày', 'Cửa hàng', 'Đối tượng', 'Phụ tùng', 'SKU', 'Số lượng', 'Đơn vị', 'Đơn giá', 'Thành tiền'],
+                        ...data.lines.map((line) => [
+                          data.number,
+                          printForms[data.form],
+                          data.documentDate.slice(0, 10).split('-').reverse().join('/'),
+                          data.store.name,
+                          data.counterpart?.name ?? '',
+                          line.partName,
+                          line.sku,
+                          line.quantity,
+                          line.baseUnit,
+                          line.unitPrice,
+                          line.amount,
+                        ]),
+                      ]
+                      downloadBlob(`${data.number}.xlsx`, createXlsx([{ name: 'Chung tu', rows }]))
+                    }}
+                  >
+                    Xuất Excel
+                  </button>
+                </>
               )}
             </div>
             {selected ? (

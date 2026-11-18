@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import PageHeader from '../../shared/ui/PageHeader'
 import CardHead, { HeadButton } from './CardHead'
 import Hint from '../../shared/ui/Hint'
+import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { formatDateTime } from '../../shared/utils/format'
-import {
-  clearDraft,
-  draftKey,
-  readDraft,
-  writeDraft,
-} from '../../shared/utils/localDraft'
+import { documentCode } from '../../shared/utils/documentCode'
 import axiosClient from '../../shared/api/axiosClient'
 import {
   useInventoryScope,
@@ -33,37 +29,74 @@ export type ReplenishmentPrefill = {
   storeId?: number
   lines: { productId: number; sku: string; partName: string; qty: number }[]
 }
-type Draft = { store: string; note: string; rows: Row[] }
-export default function ReplenishmentCreatePage() {
+/**
+ * GET /replenishment-requests/drafts/{id} (Vinh, việc D2 17/11): nháp lưu trên server, chỉ người tạo mở được.
+ * Gửi nháp (POST …/submit) thành yêu cầu thật, giữ nguyên id.
+ */
+export type ReplenishmentDraft = {
+  id: number
+  status: string
+  storeId: number | null
+  note: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
+  lines: {
+    productId: number
+    sku: string
+    partName: string
+    requestedQty: number | null
+  }[]
+}
+export const replenishmentDraftsPath = '/replenishment-requests?status=DRAFT'
+
+export default function ReplenishmentCreatePage({
+  savedDraft,
+}: {
+  /** Nháp mở lại từ tab "Nháp" (PM 17/11: nháp lưu trên server, không lưu trên trình duyệt). */
+  savedDraft?: ReplenishmentDraft
+} = {}) {
   const scope = useInventoryScope(),
     navigate = useNavigate(),
     location = useLocation(),
-    prefill = (location.state as { prefill?: ReplenishmentPrefill } | null)
-      ?.prefill,
-    key = draftKey('replenishment', scope.user),
-    [restored] = useState(() => (prefill ? undefined : readDraft<Draft>(key))),
+    prefill = savedDraft
+      ? undefined
+      : (location.state as { prefill?: ReplenishmentPrefill } | null)?.prefill,
+    draftCode = savedDraft ? documentCode('YBS', savedDraft.id) : '',
     [store, setStore] = useState(
-      prefill?.storeId ? String(prefill.storeId) : (restored?.data.store ?? ''),
+      prefill?.storeId
+        ? String(prefill.storeId)
+        : savedDraft?.storeId
+          ? String(savedDraft.storeId)
+          : '',
     ),
-    [note, setNote] = useState(restored?.data.note ?? ''),
+    [note, setNote] = useState(savedDraft?.note ?? ''),
     [rows, setRows] = useState<Row[]>(() =>
       prefill?.lines.length
         ? prefill.lines.map((line, index) => ({ key: index + 1, ...line }))
-        : restored?.data.rows.length
-          ? restored.data.rows
+        : savedDraft?.lines.length
+          ? savedDraft.lines.map((line, index) => ({
+              key: index + 1,
+              productId: line.productId,
+              sku: line.sku,
+              partName: line.partName,
+              qty: line.requestedQty ?? 1,
+            }))
           : [{ key: 1, productId: 0, sku: '', partName: '', qty: 1 }],
     ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [draftNotice, setDraftNotice] = useState(
-      restored
-        ? 'Đang mở bản nháp lưu lúc ' + formatDateTime(restored.savedAt) + '.'
-        : prefill
-          ? 'Đã điền sẵn ' +
-            prefill.lines.length +
-            ' phụ tùng chọn từ màn Tồn kho. Kiểm tra số lượng rồi gửi.'
-          : '',
-    )
+    [confirmDelete, setConfirmDelete] = useState(false),
+    savedAt = savedDraft?.updatedAt ?? savedDraft?.createdAt,
+    draftNotice = savedDraft
+      ? 'Đang mở nháp ' +
+        draftCode +
+        (savedAt ? ', lưu lúc ' + formatDateTime(savedAt) : '') +
+        '. Bấm "Gửi yêu cầu" để gửi nháp thành yêu cầu.'
+      : prefill
+        ? 'Đã điền sẵn ' +
+          prefill.lines.length +
+          ' phụ tùng chọn từ màn Tồn kho. Kiểm tra số lượng rồi gửi.'
+        : ''
   // Dùng dữ liệu điền sẵn một lần; tải lại trang thì không ghi đè bản nháp người dùng đã lưu.
   useEffect(() => {
     if (prefill)
@@ -102,18 +135,24 @@ export default function ReplenishmentCreatePage() {
     setBusy(true)
     setError('')
     try {
-      const r = await axiosClient.post<{ id: number }>(
-        '/replenishment-requests',
-        {
-          storeId: Number(destination),
-          note: note.trim(),
-          lines: rows.map((l) => ({
-            productId: l.productId,
-            requestedQty: l.qty,
-          })),
-        },
-      )
-      clearDraft(key)
+      const body = {
+        storeId: Number(destination),
+        note: note.trim(),
+        lines: rows.map((l) => ({
+          productId: l.productId,
+          requestedQty: l.qty,
+        })),
+      }
+      // Gửi nháp: BE kiểm như tạo yêu cầu, đổi nháp thành yêu cầu thật, giữ nguyên id (PM 17/11).
+      const r = savedDraft
+        ? await axiosClient.post<{ id: number }>(
+            '/replenishment-requests/drafts/' + savedDraft.id + '/submit',
+            body,
+          )
+        : await axiosClient.post<{ id: number }>(
+            '/replenishment-requests',
+            body,
+          )
       navigate('/replenishment-requests/' + r.data.id, {
         state: {
           created:
@@ -134,36 +173,94 @@ export default function ReplenishmentCreatePage() {
       setBusy(false)
     }
   }
+  /** Lưu nháp lên server: POST /replenishment-requests/drafts, hoặc PUT …/drafts/{id} khi đang mở nháp. */
+  async function saveDraft() {
+    if (lock.current) return
+    lock.current = true
+    setBusy(true)
+    setError('')
+    try {
+      const body = {
+        storeId: Number(destination) || null,
+        note: note.trim() || null,
+        lines: selectedRows.map((l) => ({
+          productId: l.productId,
+          requestedQty: l.qty,
+        })),
+      }
+      const r = savedDraft
+        ? await axiosClient.put<{ id: number }>(
+            '/replenishment-requests/drafts/' + savedDraft.id,
+            body,
+          )
+        : await axiosClient.post<{ id: number }>(
+            '/replenishment-requests/drafts',
+            body,
+          )
+      navigate(replenishmentDraftsPath, {
+        state: {
+          notice: 'Đã lưu nháp ' + documentCode('YBS', r.data.id) + '.',
+        },
+      })
+    } catch (e) {
+      setError(inventoryError(e))
+      lock.current = false
+      setBusy(false)
+    }
+  }
+  async function deleteDraft() {
+    if (!savedDraft || lock.current) return
+    lock.current = true
+    setBusy(true)
+    setError('')
+    try {
+      await axiosClient.delete(
+        '/replenishment-requests/drafts/' + savedDraft.id,
+      )
+      navigate(replenishmentDraftsPath, {
+        state: { notice: 'Đã xóa nháp ' + draftCode + '.' },
+      })
+    } catch (e) {
+      setError(inventoryError(e))
+      lock.current = false
+      setBusy(false)
+    }
+  }
   return (
     <main className="dashboard-content tf-page tf-repl-create tf-replenishment-form">
       <PageHeader
-        title="Tạo yêu cầu bổ sung"
-        breadcrumb={[
-          { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
-          { label: 'Tạo mới' },
-        ]}
+        title={
+          savedDraft
+            ? 'Nháp yêu cầu bổ sung ' + draftCode
+            : 'Tạo yêu cầu bổ sung'
+        }
+        breadcrumb={
+          savedDraft
+            ? [
+                { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
+                { label: 'Nháp', to: replenishmentDraftsPath },
+                { label: draftCode },
+              ]
+            : [
+                { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
+                { label: 'Tạo mới' },
+              ]
+        }
       />
-      {draftNotice && (
-        <Hint>
-          {draftNotice}{' '}
-          {restored && (
-            <button
-              type="button"
-              className="mf-btn mf-btn--link"
-              onClick={() => {
-                clearDraft(key)
-                setRows([
-                  { key: 1, productId: 0, sku: '', partName: '', qty: 1 },
-                ])
-                setNote('')
-                setStore('')
-                setDraftNotice('Đã bỏ bản nháp.')
-              }}
-            >
-              Bỏ nháp
-            </button>
-          )}
-        </Hint>
+      {draftNotice && <Hint>{draftNotice}</Hint>}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={'Xóa nháp ' + draftCode + '?'}
+          message="Nháp bị xóa hẳn và không khôi phục được."
+          confirmLabel="Xóa nháp"
+          cancelLabel="Không xóa"
+          danger
+          onConfirm={async () => {
+            setConfirmDelete(false)
+            await deleteDraft()
+          }}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
       <InventoryNotice error={error || scope.storesError} />
       <form
@@ -183,25 +280,28 @@ export default function ReplenishmentCreatePage() {
                 action={{
                   key: 'cancel',
                   label: 'Hủy',
-                  to: '/replenishment-requests',
+                  to: savedDraft
+                    ? replenishmentDraftsPath
+                    : '/replenishment-requests',
                 }}
               />
+              {savedDraft && (
+                <HeadButton
+                  action={{
+                    key: 'delete-draft',
+                    label: 'Xóa nháp',
+                    disabled: busy,
+                    onClick: () => setConfirmDelete(true),
+                  }}
+                />
+              )}
               <HeadButton
                 action={{
                   key: 'draft',
                   label: 'Lưu nháp',
                   icon: 'note',
                   disabled: busy || !selectedRows.length,
-                  onClick: () => {
-                    const saved = writeDraft<Draft>(key, { store, note, rows })
-                    setDraftNotice(
-                      saved
-                        ? 'Đã lưu nháp lúc ' +
-                            formatDateTime(saved.savedAt) +
-                            ' trên máy này.'
-                        : 'Không lưu được nháp trên máy này.',
-                    )
-                  },
+                  onClick: () => void saveDraft(),
                 }}
               />
               <HeadButton
@@ -407,5 +507,60 @@ export function PartChoice({
         }}
       />
     </div>
+  )
+}
+
+/** Route /replenishment-requests/drafts/:id: mở lại nháp yêu cầu bổ sung lưu trên server (PM 17/11). */
+export function ReplenishmentDraftPage() {
+  const { id } = useParams()
+  const valid = !!id && /^[1-9]\d*$/.test(id)
+  const [result, setResult] = useState<{
+    id: string
+    draft?: ReplenishmentDraft
+    error?: string
+  }>()
+  useEffect(() => {
+    if (!valid) return
+    const controller = new AbortController()
+    void axiosClient
+      .get<ReplenishmentDraft>('/replenishment-requests/drafts/' + id, {
+        signal: controller.signal,
+      })
+      .then(({ data }) => {
+        if (!controller.signal.aborted) setResult({ id: id!, draft: data })
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setResult({ id: id!, error: inventoryError(e) })
+      })
+    return () => controller.abort()
+  }, [id, valid])
+  const current = result?.id === id ? result : undefined
+  if (current?.draft?.status === 'DRAFT')
+    return <ReplenishmentCreatePage key={id} savedDraft={current.draft} />
+  return (
+    <main className="dashboard-content tf-page tf-repl-create">
+      <PageHeader
+        title="Nháp yêu cầu bổ sung"
+        breadcrumb={[
+          { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
+          { label: 'Nháp', to: replenishmentDraftsPath },
+        ]}
+      />
+      {!valid ? (
+        <p role="alert">Mã nháp không hợp lệ.</p>
+      ) : current?.error ? (
+        <InventoryNotice error={current.error} />
+      ) : current?.draft ? (
+        <p role="status">
+          Nháp này đã được gửi thành yêu cầu bổ sung.{' '}
+          <Link to={'/replenishment-requests/' + current.draft.id}>
+            Xem yêu cầu {documentCode('YBS', current.draft.id)}
+          </Link>
+        </p>
+      ) : (
+        <p role="status">Đang tải nháp…</p>
+      )}
+    </main>
   )
 }

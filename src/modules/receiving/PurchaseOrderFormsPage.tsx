@@ -3,12 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Hint from '../../shared/ui/Hint'
 import FieldError from '../../shared/ui/FieldError'
 import { formatDateTime } from '../../shared/utils/format'
-import {
-  clearDraft,
-  draftKey,
-  readDraft,
-  writeDraft,
-} from '../../shared/utils/localDraft'
+import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import {
   useEffect,
   useRef,
@@ -128,16 +123,29 @@ export type PurchasePrefill = {
   storeId?: number
   lines: { productId: number; sku: string; partName: string; qty: number }[]
 }
-/** Bản nháp lưu trên trình duyệt (BE chưa có trạng thái DRAFT cho đơn nhập hàng). */
-type PurchaseDraft = {
-  supplierId: string
-  storeId: string
-  expectedArrival: string
-  note: string
-  nextId: number
-  lines: DraftLine[]
-  products: Record<number, ProductOption>
+/**
+ * GET /purchase-orders/drafts/{id} (Mạnh, việc D1 17/11): nháp lưu trên server, chỉ người tạo mở được.
+ * Ô chưa nhập lúc lưu nháp là null. Gửi nháp (POST …/submit) thành đơn thật, giữ nguyên id.
+ */
+export type PurchaseOrderDraft = {
+  id: number
+  status: string
+  supplierId: number | null
+  storeId: number | null
+  expectedArrival: string | null
+  note: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
+  lines: {
+    id: number
+    productId: number
+    sku: string
+    partName: string
+    orderedQty: number | null
+    purchasePrice: number | null
+  }[]
 }
+const purchaseDraftsPath = '/purchase-orders?tab=DRAFT'
 
 /** GET /purchase-orders/last-prices (Mạnh, việc B2 17/11): phụ tùng chưa từng nhập từ NCC này thì không có dòng. */
 type LastPurchasePrice = {
@@ -155,34 +163,44 @@ const orderMoney = new Intl.NumberFormat('vi-VN', {
 function OrderFormLayout({
   editing,
   order,
+  savedDraft,
 }: {
   editing: boolean
   order?: EditableOrder
+  /** Nháp mở lại từ tab "Nháp" (PM 17/11: nháp lưu trên server, không lưu trên trình duyệt). */
+  savedDraft?: PurchaseOrderDraft
 }) {
   const { user } = useAuth()
   const owner = user?.role === 'OWNER'
   const navigate = useNavigate()
   const location = useLocation()
-  const prefill = order
+  const source = order ?? savedDraft
+  const prefill = source
     ? undefined
     : (location.state as { prefill?: PurchasePrefill } | null)?.prefill
-  const key = draftKey('purchase-order', user)
-  const [restored] = useState(() =>
-    order || prefill ? undefined : readDraft<PurchaseDraft>(key),
+  const draftCode = savedDraft ? documentCode('DNH', savedDraft.id) : ''
+  const [supplierId, setSupplierId] = useState(
+    savedDraft?.supplierId ? String(savedDraft.supplierId) : '',
   )
-  const [supplierId, setSupplierId] = useState(restored?.data.supplierId ?? '')
   const [storeId, setStoreId] = useState(
-    prefill?.storeId ? String(prefill.storeId) : (restored?.data.storeId ?? ''),
-  )
-  const [draftNotice, setDraftNotice] = useState(
-    restored
-      ? 'Đang mở bản nháp lưu lúc ' + formatDateTime(restored.savedAt) + '.'
-      : prefill
-        ? 'Đã điền sẵn ' +
-          prefill.lines.length +
-          ' phụ tùng chọn từ màn Tồn kho. Chọn nhà cung cấp và nhập giá nhập.'
+    prefill?.storeId
+      ? String(prefill.storeId)
+      : savedDraft?.storeId
+        ? String(savedDraft.storeId)
         : '',
   )
+  const savedAt = savedDraft?.updatedAt ?? savedDraft?.createdAt
+  const draftNotice = savedDraft
+    ? 'Đang mở nháp ' +
+      draftCode +
+      (savedAt ? ', lưu lúc ' + formatDateTime(savedAt) : '') +
+      '. Bấm "Tạo đơn nhập hàng" để gửi nháp thành đơn.'
+    : prefill
+      ? 'Đã điền sẵn ' +
+        prefill.lines.length +
+        ' phụ tùng chọn từ màn Tồn kho. Chọn nhà cung cấp và nhập giá nhập.'
+      : ''
+  const [confirmDelete, setConfirmDelete] = useState(false)
   // Dùng dữ liệu điền sẵn một lần; tải lại trang thì không ghi đè bản nháp người dùng đã lưu.
   useEffect(() => {
     if (prefill)
@@ -201,32 +219,32 @@ function OrderFormLayout({
     errors: string[]
   }>()
   const [draft, setDraft] = useState(() =>
-    restored
-      ? { nextId: restored.data.nextId, lines: restored.data.lines }
-      : prefill?.lines.length
+    prefill?.lines.length
+      ? {
+          nextId: prefill.lines.length + 1,
+          lines: prefill.lines.map((line, index) => ({
+            id: index + 1,
+            productId: String(line.productId),
+            quantity: String(line.qty),
+            price: '',
+          })),
+        }
+      : source?.lines.length
         ? {
-            nextId: prefill.lines.length + 1,
-            lines: prefill.lines.map((line, index) => ({
-              id: index + 1,
+            nextId: Math.max(0, ...source.lines.map((line) => line.id)) + 1,
+            lines: source.lines.map((line) => ({
+              id: line.id,
               productId: String(line.productId),
-              quantity: String(line.qty),
-              price: '',
+              quantity: line.orderedQty == null ? '' : String(line.orderedQty),
+              price:
+                line.purchasePrice == null ? '' : String(line.purchasePrice),
             })),
           }
         : {
-            nextId: order
-              ? Math.max(0, ...order.lines.map((line) => line.id)) + 1
-              : 2,
-            lines: order
-              ? order.lines.map((line) => ({
-                  id: line.id,
-                  productId: String(line.productId),
-                  quantity: String(line.orderedQty),
-                  price: String(line.purchasePrice),
-                }))
-              : ([
-                  { id: 1, productId: '', quantity: '', price: '' },
-                ] as DraftLine[]),
+            nextId: 2,
+            lines: [
+              { id: 1, productId: '', quantity: '', price: '' },
+            ] as DraftLine[],
           },
   )
   useEffect(() => {
@@ -298,48 +316,74 @@ function OrderFormLayout({
     lastPriceResult?.supplierId === priceSupplierId
       ? lastPriceResult.prices
       : {}
-  const back = order ? '/purchase-orders/' + order.id : '/purchase-orders'
+  const back = order
+    ? '/purchase-orders/' + order.id
+    : savedDraft
+      ? purchaseDraftsPath
+      : '/purchase-orders'
   const [selectedProducts, setSelectedProducts] = useState<
     Record<number, ProductOption>
   >(() =>
-    restored
-      ? restored.data.products
-      : Object.fromEntries(
-          [...(order?.lines ?? []), ...(prefill?.lines ?? [])].map((line) => [
-            line.productId,
-            { id: line.productId, sku: line.sku, partName: line.partName },
-          ]),
-        ),
+    Object.fromEntries(
+      [...(source?.lines ?? []), ...(prefill?.lines ?? [])].map((line) => [
+        line.productId,
+        { id: line.productId, sku: line.sku, partName: line.partName },
+      ]),
+    ),
   )
-  function saveDraft() {
-    const fields = new FormData(formRef.current ?? undefined)
-    const saved = writeDraft<PurchaseDraft>(key, {
-      supplierId,
-      storeId,
-      expectedArrival: String(fields.get('expectedArrival') ?? ''),
-      note: String(fields.get('note') ?? ''),
-      nextId: draft.nextId,
-      lines: draft.lines,
-      products: selectedProducts,
-    })
-    setDraftNotice(
-      saved
-        ? 'Đã lưu nháp lúc ' +
-            formatDateTime(saved.savedAt) +
-            ' trên máy này. Mở lại "Tạo đơn nhập hàng" để làm tiếp.'
-        : 'Không lưu được nháp trên máy này.',
-    )
+  /**
+   * Lưu nháp lên server (PM 17/11): POST /purchase-orders/drafts, hoặc PUT …/drafts/{id} khi đang mở nháp.
+   * Ô chưa nhập gửi null; BE kiểm nội dung nháp (việc D1). Lưu xong về tab "Nháp" của danh sách.
+   */
+  async function saveDraft() {
+    if (!owner || saving || !formRef.current) return
+    const fields = new FormData(formRef.current)
+    const payload = {
+      supplierId: Number(fields.get('supplierId')) || null,
+      storeId: Number(fields.get('storeId')) || null,
+      expectedArrival: fields.get('expectedArrival') || null,
+      note: String(fields.get('note') ?? '').trim() || null,
+      lines: draft.lines
+        .filter((line) => line.productId)
+        .map((line) => ({
+          productId: Number(line.productId),
+          quantity: line.quantity === '' ? null : Number(line.quantity),
+          purchasePrice: line.price === '' ? null : Number(line.price),
+        })),
+    }
+    setSaveError('')
+    setSaving(true)
+    try {
+      const { data } = savedDraft
+        ? await axiosClient.put<{ id: number }>(
+            '/purchase-orders/drafts/' + savedDraft.id,
+            payload,
+          )
+        : await axiosClient.post<{ id: number }>(
+            '/purchase-orders/drafts',
+            payload,
+          )
+      navigate(purchaseDraftsPath, {
+        state: { notice: 'Đã lưu nháp ' + documentCode('DNH', data.id) + '.' },
+      })
+    } catch (error) {
+      setSaveError(apiMessage(error))
+      setSaving(false)
+    }
   }
-  function discardDraft() {
-    clearDraft(key)
-    setSupplierId('')
-    setStoreId('')
-    setDraft({
-      nextId: 2,
-      lines: [{ id: 1, productId: '', quantity: '', price: '' }],
-    })
-    formRef.current?.reset()
-    setDraftNotice('Đã bỏ bản nháp.')
+  async function deleteDraft() {
+    if (!savedDraft || saving) return
+    setSaveError('')
+    setSaving(true)
+    try {
+      await axiosClient.delete('/purchase-orders/drafts/' + savedDraft.id)
+      navigate(purchaseDraftsPath, {
+        state: { notice: 'Đã xóa nháp ' + draftCode + '.' },
+      })
+    } catch (error) {
+      setSaveError(apiMessage(error))
+      setSaving(false)
+    }
   }
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -387,12 +431,17 @@ function OrderFormLayout({
               reason: String(fields.get('reason') ?? '').trim(),
             },
           )
-        : await axiosClient.post<{ id: number }>('/purchase-orders', {
-            ...payload,
-            supplierId,
-            storeId,
-          })
-      if (!order) clearDraft(key)
+        : savedDraft
+          ? // Gửi nháp: BE kiểm như tạo đơn, đổi nháp thành đơn thật và giữ nguyên id (PM 17/11).
+            await axiosClient.post<{ id: number }>(
+              '/purchase-orders/drafts/' + savedDraft.id + '/submit',
+              { ...payload, supplierId, storeId },
+            )
+          : await axiosClient.post<{ id: number }>('/purchase-orders', {
+              ...payload,
+              supplierId,
+              storeId,
+            })
       navigate('/purchase-orders/' + data.id)
     } catch (error) {
       setSaveError(apiMessage(error))
@@ -420,19 +469,20 @@ function OrderFormLayout({
       className="receiving-stack receiving-order-form"
       onSubmit={createOrder}
     >
-      {draftNotice && (
-        <Hint>
-          {draftNotice}{' '}
-          {restored && (
-            <button
-              type="button"
-              className="mf-btn mf-btn--link"
-              onClick={discardDraft}
-            >
-              Bỏ nháp
-            </button>
-          )}
-        </Hint>
+      {draftNotice && <Hint>{draftNotice}</Hint>}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={'Xóa nháp ' + draftCode + '?'}
+          message="Nháp bị xóa hẳn và không khôi phục được."
+          confirmLabel="Xóa nháp"
+          cancelLabel="Không xóa"
+          danger
+          onConfirm={async () => {
+            setConfirmDelete(false)
+            await deleteDraft()
+          }}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
       {owner && !options && <p role="status">Đang tải danh sách lựa chọn…</p>}
       {!!options?.errors.length && (
@@ -488,16 +538,14 @@ function OrderFormLayout({
               <input
                 type="date"
                 name="expectedArrival"
-                defaultValue={
-                  order?.expectedArrival ?? restored?.data.expectedArrival ?? ''
-                }
+                defaultValue={source?.expectedArrival ?? ''}
               />
             </label>
             <label className="receiving-layout-wide">
               Ghi chú
               <textarea
                 name="note"
-                defaultValue={order?.note ?? restored?.data.note ?? ''}
+                defaultValue={source?.note ?? ''}
                 rows={2}
                 maxLength={500}
                 placeholder="Ví dụ: Nhập thêm cho mùa bảo dưỡng cuối năm, nhà cung cấp giao đủ một lần, kèm hóa đơn VAT."
@@ -550,14 +598,28 @@ function OrderFormLayout({
               type="button"
               className="mf-btn mf-btn--secondary receiving-order-draft"
               disabled={!owner || saving}
-              onClick={saveDraft}
+              onClick={() => void saveDraft()}
             >
               Lưu nháp
             </button>
           )}
+          {savedDraft && (
+            <button
+              type="button"
+              className="mf-btn mf-btn--link receiving-order-draft"
+              disabled={!owner || saving}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Xóa nháp
+            </button>
+          )}
           <div className="receiving-order-cancel">
             <Link to={back}>
-              {editing ? 'Hủy thay đổi' : 'Quay lại danh sách'}
+              {editing
+                ? 'Hủy thay đổi'
+                : savedDraft
+                  ? 'Quay lại danh sách nháp'
+                  : 'Quay lại danh sách'}
             </Link>
           </div>
         </aside>
@@ -1050,6 +1112,52 @@ export function EditPurchaseOrderPage() {
       )}
     </FormShell>
   )
+}
+
+/** Route /purchase-orders/drafts/:id: mở lại nháp đơn nhập hàng lưu trên server (PM 17/11). */
+export function PurchaseOrderDraftPage() {
+  const { id } = useParams()
+  const valid = !!id && /^[1-9]\d*$/.test(id)
+  return (
+    <FormShell
+      title={
+        'Nháp đơn nhập hàng' + (valid ? ' ' + documentCode('DNH', id) : '')
+      }
+      backTo={purchaseDraftsPath}
+    >
+      {valid ? <OpenDraft key={id} id={id} /> : <MissingDocument />}
+    </FormShell>
+  )
+}
+
+function OpenDraft({ id }: { id: string }) {
+  const [saved, setSaved] = useState<PurchaseOrderDraft>()
+  const [error, setError] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    void axiosClient
+      .get<PurchaseOrderDraft>('/purchase-orders/drafts/' + id, { signal })
+      .then(({ data }) => {
+        if (!signal.aborted) setSaved(data)
+      })
+      .catch((error) => {
+        if (!signal.aborted) setError(apiMessage(error))
+      })
+    return () => controller.abort()
+  }, [id])
+  if (error) return <p role="alert">{error}</p>
+  if (!saved) return <p role="status">Đang tải nháp…</p>
+  if (saved.status !== 'DRAFT')
+    return (
+      <p role="status">
+        Nháp này đã được gửi thành đơn nhập hàng.{' '}
+        <Link to={'/purchase-orders/' + saved.id}>
+          Xem đơn {documentCode('DNH', saved.id)}
+        </Link>
+      </p>
+    )
+  return <OrderFormLayout editing={false} savedDraft={saved} />
 }
 
 export function NewGoodsReceiptPage() {

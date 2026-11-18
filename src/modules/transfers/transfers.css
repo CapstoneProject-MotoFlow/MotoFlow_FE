@@ -1098,3 +1098,7 @@ p.tf-validation-hint {
   border-top: 2px solid #eaecf0;
   font-weight: 600;
 }
+/* PM 17/11: tab "Nháp" dùng ô tìm riêng, ẩn ô tìm của danh sách. */
+.tf-list-search[hidden] {
+  display: none;
+}

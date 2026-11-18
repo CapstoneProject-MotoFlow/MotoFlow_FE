@@ -937,7 +937,8 @@
   }
 }
 
-.receiving-panel tr[hidden] {
+.receiving-panel tr[hidden],
+.receiving-filter-row[hidden] {
   display: none;
 }
 

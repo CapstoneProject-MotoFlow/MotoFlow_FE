@@ -120,7 +120,7 @@ export default function TransferDetailPage() {
     !!d &&
     d.status === 'RECONCILING' &&
     d.discrepancies.length > 0 &&
-    (coordinator || source)
+    (coordinator || source || dest)
   // Mọi thao tác của lệnh nằm một chỗ ở góc phải tiêu đề thẻ; mỗi vai trò chỉ có một nút chính (nền xanh).
   const actions: HeadAction[] = []
   let closeAction: HeadAction | undefined
@@ -241,6 +241,8 @@ export default function TransferDetailPage() {
                   inHead
                   canDecide={coordinator}
                   canReturn={source && !!returns.data?.length}
+                  canReportTransitLoss={(coordinator || dest) && unresolvedLines.length > 0}
+                  lossStoreId={d.destStoreId}
                   returnLines={returns.data ?? []}
                   id={d.id}
                   lines={unresolvedLines}

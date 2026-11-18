@@ -30,7 +30,7 @@ import {
   validQuantity,
   type SalesOrder,
 } from './salesModel'
-import type { OrderDto } from './salesApi'
+import { salesDraftsPath, type OrderDto } from './salesApi'
 
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
@@ -303,7 +303,7 @@ export function SalesOrderFormView({
       editing
         ? '/sales-orders/' + editing.id
         : draftOrder
-          ? '/sales-drafts'
+          ? salesDraftsPath
           : '/sales-orders',
     )
   }
@@ -397,7 +397,7 @@ export function SalesOrderFormView({
             body(),
           )
         : await axiosClient.post<OrderDto>('/sales-orders/drafts', body())
-      navigate('/sales-drafts', {
+      navigate(salesDraftsPath, {
         state: { notice: 'Đã lưu đơn nháp SO-' + result.data.id + '.' },
       })
     })
@@ -406,7 +406,7 @@ export function SalesOrderFormView({
     if (!draftOrder) return
     return run(async () => {
       await axiosClient.delete('/sales-orders/drafts/' + draftOrder.id)
-      navigate('/sales-drafts', {
+      navigate(salesDraftsPath, {
         state: { notice: 'Đã xóa đơn nháp ' + draftOrder.code + '.' },
       })
     })
@@ -435,7 +435,8 @@ export function SalesOrderFormView({
         breadcrumb={
           draftOrder
             ? [
-                { label: 'Đơn nháp', to: '/sales-drafts' },
+                { label: 'Đơn bán', to: '/sales-orders' },
+                { label: 'Nháp', to: salesDraftsPath },
                 { label: draftOrder.code },
               ]
             : [

@@ -1,5 +1,6 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import TransferAction from './TransferAction'
+import TransitLossAction from './TransitLossAction'
 export default function CoordinationAction({
   id,
   lines,
@@ -9,6 +10,8 @@ export default function CoordinationAction({
   canReturn = false,
   returnLines,
   inHead = false,
+  canReportTransitLoss = false,
+  lossStoreId,
 }: {
   id: number
   lines: {
@@ -28,6 +31,8 @@ export default function CoordinationAction({
   canReturn?: boolean
   /** Đặt nút trên dòng tiêu đề thẻ (CardHead) thay vì một khối riêng. */
   inHead?: boolean
+  canReportTransitLoss?: boolean
+  lossStoreId?: number
   /** Hàng trả về nguồn: nhận id phiếu nhận vừa mở để chuyển ngay sang bước giao việc kiểm nhận. */
   onSaved: (receiptId?: number) => void
 }) {
@@ -78,13 +83,33 @@ export default function CoordinationAction({
           Ghi nhận hàng trả về nguồn
         </button>
       )}
+      {!replenishment && canReportTransitLoss && lines.length > 0 && (
+        <button
+          type="button"
+          className={inHead ? 'mf-btn mf-btn--secondary' : undefined}
+          onClick={() => open('transit-loss')}
+        >
+          Báo mất trên đường
+        </button>
+      )}
     </>
   )
   const Wrapper = inHead ? Fragment : NoteBlock
   return (
     <Wrapper>
       {inHead ? buttons : <div className="tf-filters">{buttons}</div>}
-      {action && (
+      {action === 'transit-loss' && lossStoreId ? (
+        <TransitLossAction
+          transferOrderId={id}
+          storeId={lossStoreId}
+          lines={lines}
+          onClose={() => setAction('')}
+          onSaved={() => {
+            setAction('')
+            onSaved()
+          }}
+        />
+      ) : action ? (
         <TransferAction
           title={
             action === 'purchase'
@@ -212,7 +237,7 @@ export default function CoordinationAction({
             </p>
           )}
         </TransferAction>
-      )}
+      ) : null}
     </Wrapper>
   )
 }
