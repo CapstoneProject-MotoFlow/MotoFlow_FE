@@ -1245,3 +1245,23 @@
     height: 250px;
   }
 }
+
+/* UC-88 (PM 18/11): phân trang báo cáo kho theo API inventory-operations. */
+.report-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0 0;
+  font-size: 14px;
+}
+.report-pagination button {
+  min-width: 36px;
+  min-height: 32px;
+  border: 1px solid #dce2eb;
+  border-radius: 8px;
+  background: #fff;
+}
+.report-pagination button:disabled {
+  opacity: 0.5;
+}
