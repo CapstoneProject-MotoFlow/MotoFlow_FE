@@ -168,7 +168,7 @@ export default function SuggestionRules({
                 <tr>
                   <th>Nhóm hàng</th>
                   <th>Loại xe</th>
-                  <th>Tỷ lệ cộng thêm</th>
+                  <th className="pricing-col-rate">Tỷ lệ cộng thêm</th>
                 </tr>
               </thead>
               <tbody>
