@@ -917,8 +917,7 @@ input::placeholder {
   align-items: center;
   gap: 6px 8px;
 }
-.mf-row-actions > .mf-btn.mf-btn,
-.mf-row-actions > .mf-row-menu-toggle.mf-row-menu-toggle {
+.mf-row-actions > .mf-btn.mf-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -945,14 +944,12 @@ input::placeholder {
   color: #fff;
   background: var(--mf-primary-hover);
 }
-.mf-row-actions > .mf-btn.mf-btn--secondary,
-.mf-row-actions > .mf-row-menu-toggle.mf-row-menu-toggle {
+.mf-row-actions > .mf-btn.mf-btn--secondary {
   border-color: var(--mf-border);
   color: var(--mf-text);
   background: #fff;
 }
-.mf-row-actions > .mf-btn.mf-btn--secondary:hover:not(:disabled),
-.mf-row-actions > .mf-row-menu-toggle.mf-row-menu-toggle:hover {
+.mf-row-actions > .mf-btn.mf-btn--secondary:hover:not(:disabled) {
   border-color: #b9c4d6;
   color: var(--mf-primary);
   background: #f6f8fb;
@@ -1111,70 +1108,6 @@ input::placeholder {
   > tr
   > td:first-child {
   min-width: 150px;
-}
-
-/* Review T4: nút "⋯ Khác" và menu thao tác phụ trên từng dòng bảng. */
-.mf-row-menu-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: var(--mf-control-h-sm, 36px);
-  padding: 0 10px;
-  border: 1px solid var(--mf-border, #d8dfe9);
-  border-radius: var(--mf-radius-sm, 6px);
-  background: #fff;
-  color: var(--mf-text, #1d2939);
-  font: inherit;
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.mf-row-menu-toggle[aria-expanded='true'] {
-  border-color: var(--mf-primary, #4b5eff);
-  color: var(--mf-primary, #4b5eff);
-}
-.mf-row-menu {
-  position: fixed;
-  z-index: 60;
-  display: grid;
-  min-width: 200px;
-  padding: 6px;
-  border: 1px solid var(--mf-border, #d8dfe9);
-  border-radius: var(--mf-radius, 8px);
-  background: #fff;
-  box-shadow: 0 12px 28px #1018282e;
-}
-.mf-row-menu > button {
-  min-height: 38px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--mf-text, #1d2939);
-  font: inherit;
-  font-size: 14px;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.mf-row-menu > button:hover:not(:disabled),
-.mf-row-menu > button:focus-visible {
-  background: #f2f4f7;
-  outline: none;
-}
-.mf-row-menu > button.is-danger {
-  color: var(--mf-danger, #c4320a);
-}
-.mf-row-menu > button:disabled {
-  color: #98a2b3;
-  cursor: not-allowed;
-}
-.admin-dashboard .mf-row-menu-toggle.mf-row-menu-toggle {
-  color: var(--mf-text, #1d2939);
-  padding: 0 10px;
-}
-.admin-dashboard .mf-row-menu-toggle.mf-row-menu-toggle[aria-expanded='true'] {
-  color: var(--mf-primary, #4b5eff);
 }
 
 /* Lỗi kiểm tra form bằng tiếng Việt, hiện ngay dưới ô (FieldError + useFormValidation). */

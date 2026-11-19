@@ -5,7 +5,6 @@
  */
 import { useEffect, useState, useCallback } from 'react'
 import PageHeader from '../../../shared/ui/PageHeader'
-import RowMenu from '../../../shared/ui/RowMenu'
 import EmptyState from '../../../shared/ui/EmptyState'
 import { formatMoney } from '../../../shared/utils/format'
 import { Link } from 'react-router-dom'
@@ -184,7 +183,7 @@ export default function CustomerListPage({
                         {formatMoney(debtOf(row))}
                       </td>
                       <td className="branch-customer-actions">
-                        {/* Review T4: một nút chính trên dòng, quyền mua chịu đưa vào menu. */}
+                        {/* Mục 12 (PM 19/11): bỏ menu "Khác", cấp/thu hồi mua chịu hiện ngay trên dòng. */}
                         <div className="mf-row-actions">
                           <button
                             type="button"
@@ -194,21 +193,20 @@ export default function CustomerListPage({
                             Sửa
                           </button>
                           {chain && (
-                            <RowMenu
-                              ariaLabel={
-                                'Thao tác khác với ' + row.customerName
+                            <button
+                              type="button"
+                              className={
+                                'mf-btn mf-btn--sm ' +
+                                (row.creditStatus === 'ELIGIBLE'
+                                  ? 'mf-btn--danger'
+                                  : 'mf-btn--secondary')
                               }
-                              items={[
-                                {
-                                  label:
-                                    row.creditStatus === 'ELIGIBLE'
-                                      ? 'Thu hồi quyền mua chịu'
-                                      : 'Cấp quyền mua chịu',
-                                  danger: row.creditStatus === 'ELIGIBLE',
-                                  onSelect: () => setCreditCustomer(row),
-                                },
-                              ]}
-                            />
+                              onClick={() => setCreditCustomer(row)}
+                            >
+                              {row.creditStatus === 'ELIGIBLE'
+                                ? 'Thu hồi mua chịu'
+                                : 'Cấp quyền mua chịu'}
+                            </button>
                           )}
                         </div>
                       </td>

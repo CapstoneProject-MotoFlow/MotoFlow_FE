@@ -266,7 +266,7 @@
 }
 .account-row-actions {
   justify-content: flex-end;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .accounts-empty {
   height: 120px !important;
