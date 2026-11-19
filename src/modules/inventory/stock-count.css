@@ -231,6 +231,20 @@
 .count-record-row {
   border-bottom: 1px solid #eaecf0;
 }
+/*
+ * Mục 7 (PM 19/11): màn Ghi số đếm dùng bảng; dòng <tr> mang class này bị display: grid ở trên
+ * nên ô lệch khỏi cột tiêu đề. Giữ dòng bảng là table-row.
+ */
+.stock-table tr.count-record-row {
+  display: table-row;
+  padding: 0;
+}
+.stock-table tr.count-record-row td {
+  vertical-align: middle;
+}
+.stock-table tr.count-record-row input[type='number'] {
+  max-width: 160px;
+}
 .count-record-row small {
   display: block;
   color: #667085;
