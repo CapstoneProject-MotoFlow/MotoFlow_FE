@@ -1,5 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import DebtEvidence from './DebtEvidence'
+import DebtPaymentDetailDialog from './DebtPaymentDetailDialog'
 import OpeningDebtPicker from './OpeningDebtPicker'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -250,6 +251,7 @@ export function ReceivableDetailPage() {
     ),
     [tab, setTab] = useState('open'),
     [allPayments, setAllPayments] = useState(false),
+    [paymentId, setPaymentId] = useState<number>(),
     [notice, setNotice] = useState('')
   const resource = useInventoryData<DebtDetail>(
     `/customers/${id}/debts`,
@@ -494,6 +496,7 @@ export function ReceivableDetailPage() {
                     <th>Số tiền</th>
                     <th>Trừ vào</th>
                     <th>Xác minh</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -510,28 +513,10 @@ export function ReceivableDetailPage() {
                           {p.paymentMethod === 'CASH'
                             ? 'Tiền mặt'
                             : 'Chuyển khoản'}
-                          <small>{p.transactionReference}</small>
-                          <DebtEvidence files={p.evidence} />
                         </td>
-                        <td
-                          title={
-                            p.tenderedAmount == null
-                              ? undefined
-                              : 'Khách đưa: ' +
-                                money.format(p.tenderedAmount) +
-                                '; tiền thối: ' +
-                                money.format(p.changeAmount ?? 0)
-                          }
-                        >
+                        <td>
                           {money.format(p.amount)}
                           <small>{p.storeName}</small>
-                          {p.tenderedAmount != null && (
-                            <small>
-                              Khách đưa: {money.format(p.tenderedAmount)}
-                              <br />
-                              Tiền thối: {money.format(p.changeAmount ?? 0)}
-                            </small>
-                          )}
                         </td>
                         <td>
                           {p.allocations.map((a) => (
@@ -554,6 +539,15 @@ export function ReceivableDetailPage() {
                                 : 'Chưa xác minh'}
                           </span>
                         </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--secondary"
+                            onClick={() => setPaymentId(p.id)}
+                          >
+                            Chi tiết
+                          </button>
+                        </td>
                       </tr>
                     ),
                   )}
@@ -574,6 +568,13 @@ export function ReceivableDetailPage() {
               <p className="rv-empty">Chưa có khoản thu nợ.</p>
             )}
           </section>
+          {d.payments.some((p) => p.id === paymentId) && (
+            <DebtPaymentDetailDialog
+              payment={d.payments.find((p) => p.id === paymentId)!}
+              source={(receivableId) => debtSource(d.debts, receivableId)}
+              onClose={() => setPaymentId(undefined)}
+            />
+          )}
           {action && (
             <DebtDialog
               key={action}
