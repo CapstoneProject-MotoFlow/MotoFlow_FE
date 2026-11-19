@@ -1210,7 +1210,7 @@ async function downloadError(error: unknown) {
 
 const accountingDataSets = [
   { key: 'daily-sales', label: 'Doanh thu theo ngày', description: 'Doanh số đơn hoàn tất, tiền thu và nợ mới.' },
-  { key: 'sales-orders', label: 'Đơn bán và dòng đơn', description: 'Số đơn, khách hàng, phụ tùng, số lượng và giá trị.' },
+  { key: 'sales-orders', label: 'Đơn bán và sản phẩm', description: 'Số đơn, khách hàng, phụ tùng, số lượng và giá trị.' },
   { key: 'purchase-orders', label: 'Nhập hàng: phiếu nhập, lượt nhận, giá nhập', description: 'Phiếu nhập, nhà cung cấp, phụ tùng, số lượng và giá nhập.' },
   { key: 'collections', label: 'Thu tiền và công nợ', description: 'Phiếu thu, hoàn tiền và thu nợ đã xác nhận.' },
   { key: 'inventory-period', label: 'Nhập, xuất, tồn kỳ và giá bình quân kỳ (sổ S2d-HKD)', description: 'Số lượng, giá trị và giá vốn bình quân theo phụ tùng.' },
@@ -1236,6 +1236,19 @@ function accountingRowsCount(rows: AccountingRows, includesWorkbookTitle = false
   return Math.max(0, rows.length - (includesWorkbookTitle ? 3 : 1))
 }
 
+/**
+ * Mục D (PM 19/11): ô ngày của workbook BE được read-excel-file đọc thành Date (giờ UTC); ghi lại bằng String(Date)
+ * sẽ ra "... GMT+0700". Đổi về chữ "dd/mm/yyyy" hoặc "dd/mm/yyyy HH:mm", không kèm múi giờ.
+ */
+function excelDateText(value: unknown) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return value
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${pad(value.getUTCDate())}/${pad(value.getUTCMonth() + 1)}/${value.getUTCFullYear()}`
+  return value.getUTCHours() || value.getUTCMinutes()
+    ? `${date} ${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}`
+    : date
+}
+
 async function loadAccountingExportData(
   range: { from: string; to: string }, storeId: string, month: string, signal: AbortSignal,
 ): Promise<AccountingExportData> {
@@ -1248,7 +1261,9 @@ async function loadAccountingExportData(
     axiosClient.get<AccountingPeriod[]>('/inventory-periods', { signal }),
   ])
   const workbook = await readXlsxFile(workbookResponse.data)
-  const sheets = new Map(workbook.map(({ sheet, data }) => [sheet, data as AccountingRows]))
+  const sheets = new Map(
+    workbook.map(({ sheet, data }) => [sheet, data.map((row) => row.map(excelDateText)) as AccountingRows]),
+  )
   const rows: AccountingExportData['rows'] = {
     'daily-sales': sheets.get('Doanh thu'),
     'sales-orders': sheets.get('Bán hàng'),
@@ -1256,7 +1271,7 @@ async function loadAccountingExportData(
     collections: sheets.get('Thu tiền'),
     documents: [
       ['Loại chứng từ', 'Số chứng từ', 'Ngày', 'Cửa hàng', 'Đối tượng', 'Trạng thái', 'Giá trị'],
-      ...documents.map((item) => [item.type, item.number, item.documentDate, item.storeName, item.partnerName ?? '', item.status, item.value ?? '']),
+      ...documents.map((item) => [item.type, item.number, formatDateTime(item.documentDate), item.storeName, item.partnerName ?? '', item.status, item.value ?? '']),
     ],
   }
   const period = periodsResponse.data.find((item) => item.month === month)
@@ -1423,7 +1438,6 @@ export function AccountingExportPage() {
                   <input type="checkbox" checked={selected.includes(key) && (loadingData || !!rows)} disabled={!loadingData && !rows} onChange={() => setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />
                   <span>
                     <strong>{label}<span className="report-export-info" title={description} aria-label={description}>i</span></strong>
-                    <small>{description}</small>
                   </span>
                   <small className="report-export-count">{loadingData ? 'Đang tải…' : count === null ? 'Chưa có dữ liệu' : `${count.toLocaleString('vi-VN')} dòng`}</small>
                 </label>
