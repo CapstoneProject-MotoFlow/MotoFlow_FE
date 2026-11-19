@@ -25,8 +25,9 @@ export function noticeTarget(
     !['OWNER', 'BRANCH_MANAGER', 'STAFF'].includes(role ?? '')
   )
     return
+  // refId của thông báo sai lệch là phiếu nhận: mở thẳng màn xử lý của phiếu đó.
   if (role === 'OWNER' && notice.type === 'SUPPLIER_DISCREPANCY_OPENED')
-    return { path: '/supplier-discrepancies' }
+    return { path: '/supplier-discrepancies?receipt=' + id }
   // Staff được giao việc nhận hàng (SUPPLIER_RECEIVING / TRANSFER_RECEIVING): mở thẳng màn lập phiếu nhận.
   // Việc chuẩn bị hàng xuất cũng gắn TRANSFER_ORDER nên phân biệt theo nội dung "nhận hàng".
   if (role === 'STAFF' && notice.type === 'TASK_ASSIGNED') {
