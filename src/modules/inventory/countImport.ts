@@ -7,6 +7,13 @@ const header = (value: unknown) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/đ/g, 'd')
     .toLowerCase()
+/** Rows of the count template (screen "Ghi số đếm"): one per SKU/lot of the sheet, count left blank. */
+export function countTemplateRows(lines: Pick<CountLine, 'sku' | 'lotCode'>[]) {
+  return [
+    ['SKU', 'Mã lô', 'Số đếm'],
+    ...lines.map((line) => [line.sku, line.lotCode ?? '', '']),
+  ]
+}
 /** Validate the entire sheet before changing any input. A SKU with multiple lots requires a lot code. */
 export function mapCountSheet(
   rows: unknown[][],

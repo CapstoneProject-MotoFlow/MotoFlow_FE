@@ -549,7 +549,7 @@ function OrderFormLayout({
                 defaultValue={source?.note ?? ''}
                 rows={2}
                 maxLength={500}
-                placeholder="Ví dụ: Nhập thêm cho mùa bảo dưỡng cuối năm, nhà cung cấp giao đủ một lần, kèm hóa đơn VAT."
+                placeholder="Ví dụ: Nhà cung cấp giao bằng xe biển số 30A-12345, người giao hàng liên hệ qua số 0123456789."
               />
             </label>
             {editing && (
@@ -857,23 +857,6 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       setError('Phiếu này chưa có phụ tùng chờ nhận.')
       return
     }
-    // Mục 3 (PM 19/11): bỏ ô "Số lượng trên chứng từ". BE vẫn cần documentLines (tính số thiếu
-    // = số chứng từ − thực giao), nên gửi số đang chờ nhận: phần còn lại của đơn, hoặc tổng số
-    // còn phải giao bù của các hồ sơ đã chọn.
-    const documentLines = documentProducts.map(({ productId }) => ({
-      productId,
-      documentQty: replacement
-        ? replacementCases
-            .filter(
-              (item) =>
-                item.productId === productId && selectedCases.includes(item.id),
-            )
-            .reduce((sum, item) => sum + item.openReplacementQty, 0)
-        : (lines.find((line) => line.productId === productId)
-            ?.outstandingQty ??
-          lines.find((line) => line.productId === productId)?.remainingQty ??
-          0),
-    }))
     saveLock.current = true
     setError('')
     setStage(receiptDocumentUploadEnabled ? 'uploading' : 'creating')
@@ -882,7 +865,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
         '/purchase-orders/' + orderId + '/goods-receipt-notes',
-        { ...read.body, replacementForCaseIds, documents, documentLines },
+        { ...read.body, replacementForCaseIds, documents },
       )
       // BE đã giao việc kiểm nhận của phiếu cho chính người lập: mở thẳng màn ghi kết quả kiểm.
       refreshNotifications()

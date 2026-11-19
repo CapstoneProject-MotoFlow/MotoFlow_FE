@@ -207,6 +207,9 @@
   align-items: center;
   flex-wrap: wrap;
 }
+.count-excel-tools > span {
+  flex-basis: 100%;
+}
 .count-disabled-link {
   opacity: 0.5;
   cursor: not-allowed;

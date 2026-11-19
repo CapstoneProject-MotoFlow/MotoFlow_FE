@@ -10,7 +10,6 @@ import {
   inspectionCountFields,
   inspectionResult,
   inspectionResultFields,
-  inspectionShownCountFields,
 } from './receivingRules'
 import LotDatesDialog from './LotDatesDialog'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
@@ -202,8 +201,6 @@ function ReceiptForm({
     : receipt.lines
 
   function countValue(line: Line, field: CountField) {
-    if (field === 'documentQty')
-      return String(line.documentQty)
     return (
       counts[line.id]?.[field] ??
       (receipt.recordedById != null
@@ -301,12 +298,10 @@ function ReceiptForm({
           lines: receipt.lines.map((line) => ({
             lineId: line.id,
             ...Object.fromEntries(
-              inspectionCountFields
-                .filter(([field]) => field !== 'documentQty')
-                .map(([field]) => [
-                  field,
-                  Number(countValue(line, field)),
-                ]),
+              inspectionCountFields.map(([field]) => [
+                field,
+                Number(countValue(line, field)),
+              ]),
             ),
             manufacturerLotNo: line.manufacturerLotNo,
             manufactureDate: lotDates[line.id]?.manufactureDate || null,
@@ -494,12 +489,17 @@ function ReceiptForm({
         <div
           className={`table-scroll${editing ? ' receiving-staff-table-scroll' : ''}`}
         >
+          {editing && (
+            <p className="receiving-staff-summary">
+              Nhập số lượng ghi trên chứng từ của đợt giao này; nhập 0 nếu mã hàng không có trên chứng từ.
+            </p>
+          )}
           <table>
             <thead>
               <tr>
                 <th>Phụ tùng</th>
                 <th>Còn chờ nhận</th>
-                {[...inspectionShownCountFields, ...inspectionResultFields].map(
+                {[...inspectionCountFields, ...inspectionResultFields].map(
                   ([field, label]) => <th key={field}>{label}</th>,
                 )}
                 {editing && <th>Đạt đủ</th>}
@@ -579,7 +579,7 @@ function ReceiptForm({
                       )}
                     </td>
                     <td>{line.expectedQty ?? '—'}</td>
-                    {inspectionShownCountFields.map(([field, label]) => (
+                    {inspectionCountFields.map(([field, label]) => (
                       <td key={field}>
                         {editing ? (
                           <input
