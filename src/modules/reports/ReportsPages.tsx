@@ -303,7 +303,7 @@ export function InventoryReportPage() {
         if (!chunk.page.items.length || all.length >= chunk.page.totalItems)
           break
       }
-      downloadCsv(`BaoCaoKho_${month}.csv`, [
+      downloadExcel(`BaoCaoKho_${month}.xlsx`, 'Bao cao kho', [
         [
           'Cửa hàng',
           'SKU',
@@ -462,7 +462,7 @@ export function InventoryReportPage() {
             disabled={exporting || !total}
             onClick={() => void exportCsv()}
           >
-            {exporting ? 'Đang xuất…' : 'Xuất CSV'}
+            {exporting ? 'Đang xuất…' : 'Xuất Excel'}
           </button>
         }
       >
@@ -524,7 +524,7 @@ export function InventoryReportPage() {
           </div>
           {exportError && (
             <div className="report-error" role="alert">
-              Không xuất được CSV. {exportError}
+              Không xuất được Excel. {exportError}
             </div>
           )}
           {data ? (
@@ -1051,7 +1051,7 @@ export function GrossMarginReportPage() {
                   className="report-panel-action"
                   type="button"
                   onClick={() =>
-                    downloadCsv(`BaoCaoLoiNhuan_${range.from}_${range.to}.csv`, [
+                    downloadExcel(`BaoCaoLoiNhuan_${range.from}_${range.to}.xlsx`, 'Loi nhuan', [
                       [
                         'Nhóm phụ tùng',
                         'Doanh thu',
@@ -1071,7 +1071,7 @@ export function GrossMarginReportPage() {
                     ])
                   }
                 >
-                  Xuất CSV
+                  Xuất Excel
                 </button>
               </div>
             }
@@ -1178,20 +1178,9 @@ export function GrossMarginReportPage() {
   )
 }
 
-function csvCell(value: unknown) {
-  return '"' + String(value ?? '').replaceAll('"', '""') + '"'
-}
-function downloadCsv(name: string, rows: unknown[][]) {
-  const content =
-    '\ufeff' + rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
-  const url = URL.createObjectURL(
-    new Blob([content], { type: 'text/csv;charset=utf-8' }),
-  )
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = name
-  anchor.click()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+/** Mục B (PM 19/11): mọi nút xuất tải tệp Excel (.xlsx) một sheet, thay cho CSV. */
+function downloadExcel(name: string, sheet: string, rows: unknown[][]) {
+  downloadBlob(name, createXlsx([{ name: sheet, rows }]))
 }
 
 /** Lỗi của request tải tệp: BE trả JSON nhưng axios đọc thành Blob. */
