@@ -12,6 +12,7 @@ import FormDialog from '../../../shared/ui/FormDialog'
 import Icon from '../../../shared/ui/Icon'
 import { apiMessage } from '../../suppliers/supplierService'
 import './part-categories.css'
+import { matchesSearch } from '../../../shared/utils/searchText'
 type Category = {
   id: number
   categoryName: string
@@ -122,10 +123,9 @@ export default function PartCategoriesPage() {
     }
   }
   const all = flatten(rows)
-  const text = query.trim().toLocaleLowerCase('vi')
+  const text = query.trim()
   const matches = (row: Category): boolean =>
-    row.categoryName.toLocaleLowerCase('vi').includes(text) ||
-    row.children.some(matches)
+    matchesSearch(query, row.categoryName) || row.children.some(matches)
   // Render child rows in one tbody so the table keeps valid HTML.
   function visibleRows(
     row: Category,

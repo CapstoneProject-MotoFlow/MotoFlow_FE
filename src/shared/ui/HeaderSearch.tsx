@@ -7,6 +7,7 @@ import { useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { HeaderSearchTarget } from './HeaderSearchTarget'
+import { matchesSearch } from '../utils/searchText'
 
 export type SearchItem = {
   id: string | number
@@ -30,11 +31,9 @@ export default function HeaderSearch({
   const [open, setOpen] = useState(false)
   const target = useContext(HeaderSearchTarget)
   if (!target) return null
-  const text = query.trim().toLocaleLowerCase('vi')
+  const text = query.trim()
   const matches = items
-    .filter((item) =>
-      [item.label, item.meta].join(' ').toLocaleLowerCase('vi').includes(text),
-    )
+    .filter((item) => matchesSearch(query, [item.label, item.meta].join(' ')))
     .slice(0, 10)
   return createPortal(
     <div

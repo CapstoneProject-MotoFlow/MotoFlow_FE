@@ -31,6 +31,7 @@ import {
 } from '../services/accountService'
 
 import { roleNames } from '../../../shared/utils/roles'
+import { matchesSearch } from '../../../shared/utils/searchText'
 type CreatedAccount = {
   account: Account
   temporaryPassword: string
@@ -142,15 +143,13 @@ export default function AccountsPage() {
   const filtered = useMemo(
     () =>
       accounts.filter((account) => {
-        const search = query.trim().toLocaleLowerCase('vi')
-        const matchesQuery =
-          !search ||
-          [
-            account.fullName,
-            account.username,
-            account.phone,
-            account.email,
-          ].some((value) => value?.toLocaleLowerCase('vi').includes(search))
+        const matchesQuery = matchesSearch(
+          query,
+          account.fullName,
+          account.username,
+          account.phone,
+          account.email,
+        )
         const matchesState =
           tab === 'ALL' ||
           (tab === 'ACTIVE'

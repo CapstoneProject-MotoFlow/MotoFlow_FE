@@ -24,6 +24,7 @@ import {
 import { formatDate } from '../../../shared/utils/format'
 import { roleNames } from '../../../shared/utils/roles'
 import { managerPermissionLabel } from '../../owner/managerPermissions'
+import { matchesSearch } from '../../../shared/utils/searchText'
 
 type ChangeFilter =
   | ''
@@ -112,14 +113,13 @@ export default function AdminPermissionHistoryPage() {
     [stores],
   )
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('vi')
     return history.filter((item) => {
       const account = accountById.get(item.accountId)
-      const matchesQuery =
-        !normalized ||
-        `${account?.fullName || ''} ${account?.username || ''}`
-          .toLocaleLowerCase('vi')
-          .includes(normalized)
+      const matchesQuery = matchesSearch(
+        query,
+        account?.fullName,
+        account?.username,
+      )
       const day = item.changedAt.slice(0, 10)
       return (
         matchesQuery &&
