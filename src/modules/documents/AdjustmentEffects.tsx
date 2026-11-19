@@ -12,7 +12,6 @@ export default function AdjustmentEffects({ data }: { data: Effects }) {
           label="Ảnh hưởng tồn kho"
           headers={[
             'Phụ tùng',
-            'Lô',
             'Hiện tại',
             'Chênh lệch',
             'Sau điều chỉnh',
@@ -26,11 +25,10 @@ export default function AdjustmentEffects({ data }: { data: Effects }) {
                 <small>
                   {line.sku} ·{' '}
                   {stockStatusLabels[line.stockStatus] ?? line.stockStatus}
+                  {/* Mục 7 (PM 19/11): bỏ cột Lô; hàng xử lý theo lô (có hạn dùng) ghi lô ở dòng phụ. */}
+                  {(line.manufacturerLotNo || line.lotId) &&
+                    ' · Lô ' + (line.manufacturerLotNo || '#' + line.lotId)}
                 </small>
-              </td>
-              <td>
-                {line.manufacturerLotNo ||
-                  (line.lotId ? '#' + line.lotId : '—')}
               </td>
               <td>
                 {line.currentQty} {line.baseUnit}
