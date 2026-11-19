@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useInventoryData } from '../inventory/api'
 import type { Page } from '../inventory/types'
 import { formatDateTime } from '../../shared/utils/format'
+import ImageViewer from '../../shared/ui/ImageViewer'
+import { isHttpUrl, isImageFile } from '../../shared/utils/imageFile'
 import { historyLabels } from './model'
 import type { Evidence, HistoryItem } from './types'
 import './documents.css'
@@ -167,26 +169,54 @@ export function History({ items }: { items: HistoryItem[] }) {
   )
 }
 
+/** Mục E (PM 19/11): ảnh mở trong trình xem ảnh nổi, chuyển qua lại giữa các ảnh; tệp khác (PDF) mở tab mới. */
 export function EvidenceList({ files }: { files: Evidence[] }) {
+  const [viewing, setViewing] = useState<number>()
+  const images = files.filter(
+    (file) => isHttpUrl(file.downloadUrl) && isImageFile(file.fileName),
+  )
   return files.length ? (
-    <ul className="docs-files">
-      {files.map((file) => (
-        <li key={file.id}>
-          <span>{file.fileName}</span>
-          {file.downloadUrl && /^https?:\/\//i.test(file.downloadUrl) && (
-            <a
-              href={file.downloadUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mf-btn mf-btn--secondary"
-              aria-label={'Xem ' + file.fileName}
-            >
-              Xem
-            </a>
-          )}
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="docs-files">
+        {files.map((file) => (
+          <li key={file.id}>
+            <span>{file.fileName}</span>
+            {images.includes(file) ? (
+              <button
+                type="button"
+                className="mf-btn mf-btn--secondary"
+                aria-label={'Xem ' + file.fileName}
+                onClick={() => setViewing(images.indexOf(file))}
+              >
+                Xem
+              </button>
+            ) : (
+              isHttpUrl(file.downloadUrl) && (
+                <a
+                  href={file.downloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mf-btn mf-btn--secondary"
+                  aria-label={'Xem ' + file.fileName}
+                >
+                  Xem
+                </a>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+      {viewing !== undefined && (
+        <ImageViewer
+          images={images.map((file) => ({
+            src: file.downloadUrl ?? '',
+            name: file.fileName,
+          }))}
+          start={viewing}
+          onClose={() => setViewing(undefined)}
+        />
+      )}
+    </>
   ) : (
     <p className="docs-muted">Chưa có tệp đính kèm.</p>
   )

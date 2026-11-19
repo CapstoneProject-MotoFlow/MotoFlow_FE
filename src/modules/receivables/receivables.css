@@ -1115,3 +1115,16 @@
 .rv-page.rv-list-page .rv-overview > :is(article, button) > strong {
   grid-column: 1 / -1;
 }
+/* Mục E (PM 19/11): tên ảnh chứng từ bấm để mở trình xem ảnh. */
+.rv-evidence-view {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #3641f5;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-evidence-view:hover {
+  text-decoration: underline;
+}
