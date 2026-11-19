@@ -1233,7 +1233,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                       )}
                       {(owner || manager) && (
                         <Link
-                          className="mf-btn mf-btn--sm"
+                          className="mf-btn mf-btn--sm mf-btn--secondary"
                           to={
                             '/supplier-discrepancies?receipt=' +
                             row.goodsReceiptNoteId
