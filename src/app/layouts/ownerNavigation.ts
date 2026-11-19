@@ -89,7 +89,7 @@ export const ownerNavigation: NavItem[] = [
     href: '/reports/inventory',
     icon: 'scale',
   },
-  { label: 'Lãi gộp', href: '/reports/gross-margin', icon: 'coins' },
+  { label: 'Lợi nhuận', href: '/reports/gross-margin', icon: 'coins' },
   {
     label: 'Xuất dữ liệu kế toán',
     href: '/reports/accounting-export',

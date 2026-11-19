@@ -721,7 +721,7 @@ function fetchMargin(
     .then((response) => response.data)
 }
 
-/** Ô "So kỳ trước" của một dòng: thay đổi lãi gộp, hoặc ghi rõ dòng chỉ có ở một kỳ. */
+/** Ô "So kỳ trước" của một dòng: thay đổi lợi nhuận, hoặc ghi rõ dòng chỉ có ở một kỳ. */
 function MarginChange({ row }: { row: MarginCompareRow }) {
   if (!row.current) return <>Kỳ này không bán</>
   return (
@@ -818,7 +818,7 @@ function MarginProducts({
 }
 
 /**
- * UC-102 Lãi gộp (Owner): số liệu từ BE #62 `GET /reports/gross-margin` (doanh thu, giá vốn theo bình quân gia
+ * UC-102 Lợi nhuận (Owner): số liệu từ BE #62 `GET /reports/gross-margin` (doanh thu, giá vốn theo bình quân gia
  * quyền lúc xuất bán, điều chỉnh đơn bán, hàng xuất bỏ). Kỳ so sánh là tháng ngay trước kỳ đang xem.
  */
 export function GrossMarginReportPage() {
@@ -871,7 +871,7 @@ export function GrossMarginReportPage() {
       total.writeOffValue !== 0)
 
   return (
-    <ReportFrame title="Lãi gộp">
+    <ReportFrame title="Lợi nhuận">
       <div className="margin-report-filters">
         <div
           className="margin-period-tabs"
@@ -959,7 +959,7 @@ export function GrossMarginReportPage() {
             </article>
             <article>
               <span className="margin-card-icon margin-icon-green">▣</span>
-              <span>Lãi gộp</span>
+              <span>Lợi nhuận</span>
               <strong>{millions(total.grossMargin)}</strong>
               <small>
                 Kỳ trước: {millions(previousTotal?.grossMargin ?? 0)} ·{' '}
@@ -968,7 +968,7 @@ export function GrossMarginReportPage() {
             </article>
             <article>
               <span className="margin-card-icon margin-icon-cyan">％</span>
-              <span>Tỷ lệ lãi gộp</span>
+              <span>Tỷ lệ lợi nhuận</span>
               <strong>{percent(total.marginRate)}</strong>
               <small>Kỳ trước: {percent(previousTotal?.marginRate)}</small>
             </article>
@@ -977,10 +977,10 @@ export function GrossMarginReportPage() {
             <div className="report-note">
               Trong kỳ có điều chỉnh đơn bán: doanh thu{' '}
               {amount(total.correctionRevenue)}, giá vốn{' '}
-              {amount(total.correctionCost)}, nên lãi gộp sau điều chỉnh là{' '}
+              {amount(total.correctionCost)}, nên lợi nhuận sau điều chỉnh là{' '}
               <strong>{amount(total.adjustedMargin)}</strong>. Hàng mất, hỏng
               đã xuất bỏ trong kỳ: {amount(total.writeOffValue)} (không trừ vào
-              lãi gộp).
+              lợi nhuận).
             </div>
           )}
           {scope.owner && !scope.storeId && (
@@ -992,7 +992,7 @@ export function GrossMarginReportPage() {
                       <th>Cửa hàng</th>
                       <th>Doanh thu</th>
                       <th>Giá vốn</th>
-                      <th>Lãi gộp</th>
+                      <th>Lợi nhuận</th>
                       <th>Tỷ lệ</th>
                       <th>So kỳ trước</th>
                       <th>Thao tác</th>
@@ -1051,14 +1051,14 @@ export function GrossMarginReportPage() {
                   className="report-panel-action"
                   type="button"
                   onClick={() =>
-                    downloadCsv(`BaoCaoLaiGop_${range.from}_${range.to}.csv`, [
+                    downloadCsv(`BaoCaoLoiNhuan_${range.from}_${range.to}.csv`, [
                       [
                         'Nhóm phụ tùng',
                         'Doanh thu',
                         'Giá vốn',
-                        'Lãi gộp',
+                        'Lợi nhuận',
                         'Tỷ lệ (%)',
-                        'Lãi gộp kỳ trước',
+                        'Lợi nhuận kỳ trước',
                       ],
                       ...data.categories.map((row) => [
                         row.name,
@@ -1108,7 +1108,7 @@ export function GrossMarginReportPage() {
                     <th>Nhóm phụ tùng</th>
                     <th>Doanh thu</th>
                     <th>Giá vốn</th>
-                    <th>Lãi gộp</th>
+                    <th>Lợi nhuận</th>
                     <th>Tỷ lệ</th>
                     <th>So kỳ trước</th>
                     <th>Thao tác</th>
