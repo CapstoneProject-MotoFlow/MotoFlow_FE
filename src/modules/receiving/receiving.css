@@ -260,6 +260,11 @@
   color: #17623a;
 }
 
+.receiving-status--discrepancy_open {
+  background: #fff1f0;
+  color: #b42318;
+}
+
 .receiving-stack,
 .receiving-split {
   display: grid;

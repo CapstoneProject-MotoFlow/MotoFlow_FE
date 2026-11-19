@@ -19,6 +19,7 @@ import {
   purchaseOrderSearch,
   receiptStatusLabels,
   orderHistoryLabels,
+  purchaseOrderDisplayStatus,
 } from './receivingPresentation'
 import ReceivingAssignment from '../operations/ReceivingAssignment'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
@@ -812,7 +813,7 @@ export default function PurchaseOrdersPage() {
                               </>
                             )}
                             <td>
-                              <Status value={row.status} />
+                              <Status value={purchaseOrderDisplayStatus(row)} />
                             </td>
                             <td>
                               {manager ? (
@@ -999,7 +1000,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
       <PageBackLink to="/purchase-orders" />
       <header className="receiving-heading">
         <h1>Đơn nhập hàng {purchaseOrderCode(id ?? '')}</h1>
-        {detail && <Status value={detail.status} />}
+        {detail && <Status value={purchaseOrderDisplayStatus(detail)} />}
       </header>
       {detail &&
         (detail.canUpdate ||
