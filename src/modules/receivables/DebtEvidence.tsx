@@ -14,22 +14,23 @@ export default function DebtEvidence({ files }: { files?: Evidence[] }) {
   return (
     <details className="rv-evidence-list">
       <summary>Chứng từ ({files.length})</summary>
-      {files.map((file) => (
+      {files.map((file, index) => (
         <div key={file.id}>
+          {/* Mục 8 (PM 19/11): không hiện tên tệp, gọi theo thứ tự. */}
           {images.includes(file) ? (
             <button
               type="button"
               className="rv-evidence-view"
               onClick={() => setViewing(images.indexOf(file))}
             >
-              {file.fileName}
+              Xem ảnh {index + 1}
             </button>
           ) : isHttpUrl(file.downloadUrl) ? (
             <a href={file.downloadUrl} target="_blank" rel="noreferrer">
-              {file.fileName}
+              Mở tệp {index + 1}
             </a>
           ) : (
-            <span>{file.fileName} · Chưa có liên kết tải</span>
+            <span>Tệp {index + 1} · Chưa có liên kết tải</span>
           )}
           <small>
             {Math.ceil(file.fileSize / 1024)} KB · {file.uploadedByName ?? '—'}{' '}
@@ -44,7 +45,6 @@ export default function DebtEvidence({ files }: { files?: Evidence[] }) {
         <ImageViewer
           images={images.map((file) => ({
             src: file.downloadUrl ?? '',
-            name: file.fileName,
           }))}
           start={viewing}
           onClose={() => setViewing(undefined)}

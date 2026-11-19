@@ -305,6 +305,20 @@
   align-items: start;
   gap: 18px;
 }
+/* Mục 1 (PM 19/11): ô Ghi chú của popup lập đơn nhập hàng trải hết chiều ngang. */
+.tf-purchase-fields .tf-purchase-note {
+  grid-column: 1 / -1;
+}
+.tf-purchase-fields textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
 .tf-purchase-fields label,
 .tf-purchase-supplier {
   display: grid;
@@ -991,9 +1005,9 @@ p.tf-validation-hint {
 .tf-replenishment-detail .tf-table td {
   white-space: normal;
 }
-.tf-replenishment-documents summary {
+.tf-replenishment-documents h2 {
+  margin: 0;
   padding: 16px 20px;
-  cursor: pointer;
   font-size: 14px;
   font-weight: 600;
 }

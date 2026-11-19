@@ -178,39 +178,43 @@ export function EvidenceList({ files }: { files: Evidence[] }) {
   return files.length ? (
     <>
       <ul className="docs-files">
-        {files.map((file) => (
-          <li key={file.id}>
-            <span>{file.fileName}</span>
-            {images.includes(file) ? (
-              <button
-                type="button"
-                className="mf-btn mf-btn--secondary"
-                aria-label={'Xem ' + file.fileName}
-                onClick={() => setViewing(images.indexOf(file))}
-              >
-                Xem
-              </button>
-            ) : (
-              isHttpUrl(file.downloadUrl) && (
-                <a
-                  href={file.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
+        {files.map((file, index) => {
+          // Mục 8 (PM 19/11): không hiện tên tệp, gọi theo thứ tự "Ảnh 1", "Tệp 2".
+          const name =
+            (isImageFile(file.fileName) ? 'Ảnh ' : 'Tệp ') + (index + 1)
+          return (
+            <li key={file.id}>
+              <span>{name}</span>
+              {images.includes(file) ? (
+                <button
+                  type="button"
                   className="mf-btn mf-btn--secondary"
-                  aria-label={'Xem ' + file.fileName}
+                  aria-label={'Xem ' + name}
+                  onClick={() => setViewing(images.indexOf(file))}
                 >
                   Xem
-                </a>
-              )
-            )}
-          </li>
-        ))}
+                </button>
+              ) : (
+                isHttpUrl(file.downloadUrl) && (
+                  <a
+                    href={file.downloadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mf-btn mf-btn--secondary"
+                    aria-label={'Xem ' + name}
+                  >
+                    Xem
+                  </a>
+                )
+              )}
+            </li>
+          )
+        })}
       </ul>
       {viewing !== undefined && (
         <ImageViewer
           images={images.map((file) => ({
             src: file.downloadUrl ?? '',
-            name: file.fileName,
           }))}
           start={viewing}
           onClose={() => setViewing(undefined)}

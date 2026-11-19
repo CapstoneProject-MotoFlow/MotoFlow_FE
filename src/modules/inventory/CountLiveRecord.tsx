@@ -341,9 +341,7 @@ function Editor({
                 setNotice(
                   'Đã điền ' +
                     mapped.length +
-                    ' dòng từ ' +
-                    file.name +
-                    '. Kiểm tra trước khi gửi.',
+                    ' dòng từ tệp Excel. Kiểm tra trước khi gửi.',
                 )
               } catch (err) {
                 setError(inventoryError(err))

@@ -10,6 +10,7 @@ import { date, money } from '../inventory/presentation'
 import { purchaseOrderCode } from '../receiving/receivingPresentation'
 import type { Replenishment } from './types'
 import { hasExistingPurchase, unplannedQuantity } from './transferRules'
+import { purchaseOrderFormError } from '../receiving/receivingRules'
 import { documentCode } from '../../shared/utils/documentCode'
 type SupplierChoice = {
   id: number
@@ -26,6 +27,10 @@ export default function ReplenishmentPurchaseDialog({
   const [supplier, setSupplier] = useState<SupplierChoice>(),
     [supplierSearch, setSupplierSearch] = useState<string | null>(null),
     [arrival, setArrival] = useState(''),
+    // Mục 1 (PM 19/11): popup có ô Ghi chú như màn Tạo đơn nhập hàng; mặc định ghi yêu cầu nguồn.
+    [note, setNote] = useState(
+      'Phần chuyển mua từ yêu cầu ' + documentCode('YBS', request.id),
+    ),
     [quantities, setQuantities] = useState<Record<number, string>>({}),
     [prices, setPrices] = useState<Record<number, string>>({}),
     [busy, setBusy] = useState(false),
@@ -131,7 +136,11 @@ export default function ReplenishmentPurchaseDialog({
       formId="replenishment-purchase"
       className="tf-purchase-dialog"
       submitLabel={created ? 'Đã tạo đơn nhập hàng' : 'Tạo đơn nhập hàng'}
-      submitDisabled={!valid || !Number.isSafeInteger(total)}
+      // Mục 1: nút không khóa khi thiếu dữ liệu, bấm sẽ báo đúng ô còn thiếu.
+      submitDisabled={
+        request.status === 'CLOSED' ||
+        hasExistingPurchase(request.purchaseOrders)
+      }
       hideSubmit={!!created}
       closeLabel={created ? 'Đóng' : 'Để sau'}
       busy={busy}
@@ -145,16 +154,29 @@ export default function ReplenishmentPurchaseDialog({
       <form
         id="replenishment-purchase"
         className="tf-form"
+        noValidate
         onSubmit={async (e) => {
           e.preventDefault()
-          if (
-            lock.current ||
-            !valid ||
-            !supplier ||
-            !Number.isSafeInteger(total) ||
-            created
-          )
+          if (lock.current || created) return
+          const formError = purchaseOrderFormError({
+            supplier: !!supplier,
+            store: true,
+            lines: lines.map((l) => ({
+              label: 'của ' + l.sku,
+              quantity: l.quantity,
+              price: prices[l.productId] ?? '',
+              allowZero: true,
+              maxQuantity: l.availableQty,
+            })),
+          })
+          if (formError) {
+            setError(formError)
             return
+          }
+          if (!valid || !supplier || !Number.isSafeInteger(total)) {
+            setError('Tổng tiền đơn nhập hàng vượt giới hạn cho phép.')
+            return
+          }
           lock.current = true
           setBusy(true)
           setError('')
@@ -169,9 +191,7 @@ export default function ReplenishmentPurchaseDialog({
                 replenishmentRequestId: request.id,
                 includeUnallocated: !edited,
                 expectedArrival: arrival || undefined,
-                note:
-                  'Phần chuyển mua từ yêu cầu ' +
-                  documentCode('YBS', request.id),
+                note: note.trim() || null,
                 lines: orderedLines.map((l) => ({
                   productId: l.productId,
                   quantity: Number(l.quantity),
@@ -309,6 +329,15 @@ export default function ReplenishmentPurchaseDialog({
                   type="date"
                   value={arrival}
                   onChange={(e) => setArrival(e.target.value)}
+                />
+              </label>
+              <label className="tf-purchase-note">
+                Ghi chú
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
                 />
               </label>
             </div>

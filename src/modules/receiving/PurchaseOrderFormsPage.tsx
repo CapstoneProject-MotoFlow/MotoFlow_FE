@@ -1,7 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Hint from '../../shared/ui/Hint'
-import FieldError from '../../shared/ui/FieldError'
 import { formatDateTime } from '../../shared/utils/format'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import {
@@ -25,6 +24,7 @@ import {
   useDeliveryDocuments,
 } from './useDeliveryDocuments'
 import { inventoryError } from '../inventory/api'
+import { purchaseOrderFormError } from './receivingRules'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
@@ -396,23 +396,23 @@ function OrderFormLayout({
       quantity: Number(line.quantity),
       purchasePrice: Number(line.price),
     }))
-    if (
-      (!order && (!supplierId || !storeId)) ||
-      !lines.length ||
-      lines.some(
-        (line) =>
-          !line.productId ||
-          !Number.isInteger(line.quantity) ||
-          line.quantity < 1 ||
-          line.quantity > 1_000_000 ||
-          !Number.isInteger(line.purchasePrice) ||
-          line.purchasePrice < 1 ||
-          line.purchasePrice > 10_000_000_000,
-      )
-    ) {
-      setSaveError(
-        'Chọn nhà cung cấp, kho nhận và phụ tùng. Mỗi dòng cần số lượng và giá nhập nguyên dương hợp lệ.',
-      )
+    // Mục 1 (PM 19/11): báo đúng ô còn thiếu, cùng kiểu câu với popup lập đơn từ yêu cầu bổ sung.
+    const formError =
+      purchaseOrderFormError({
+        supplier: !!order || !!supplierId,
+        store: !!order || !!storeId,
+        lines: draft.lines.map((line, index) => ({
+          label: 'dòng ' + (index + 1),
+          productId: Number(line.productId),
+          quantity: line.quantity,
+          price: line.price,
+        })),
+      }) ||
+      (editing && !String(fields.get('reason') ?? '').trim()
+        ? 'Vui lòng nhập lý do sửa.'
+        : '')
+    if (formError) {
+      setSaveError(formError)
       return
     }
     setSaveError('')
@@ -467,6 +467,7 @@ function OrderFormLayout({
     <form
       ref={formRef}
       className="receiving-stack receiving-order-form"
+      noValidate
       onSubmit={createOrder}
     >
       {draftNotice && <Hint>{draftNotice}</Hint>}
@@ -856,10 +857,22 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       setError('Phiếu này chưa có phụ tùng chờ nhận.')
       return
     }
-    const fields = new FormData(form)
+    // Mục 3 (PM 19/11): bỏ ô "Số lượng trên chứng từ". BE vẫn cần documentLines (tính số thiếu
+    // = số chứng từ − thực giao), nên gửi số đang chờ nhận: phần còn lại của đơn, hoặc tổng số
+    // còn phải giao bù của các hồ sơ đã chọn.
     const documentLines = documentProducts.map(({ productId }) => ({
       productId,
-      documentQty: Number(fields.get(`documentQty-${productId}`)),
+      documentQty: replacement
+        ? replacementCases
+            .filter(
+              (item) =>
+                item.productId === productId && selectedCases.includes(item.id),
+            )
+            .reduce((sum, item) => sum + item.openReplacementQty, 0)
+        : (lines.find((line) => line.productId === productId)
+            ?.outstandingQty ??
+          lines.find((line) => line.productId === productId)?.remainingQty ??
+          0),
     }))
     saveLock.current = true
     setError('')
@@ -999,43 +1012,6 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
           </div>
         )}
       </Panel>
-      {documentProducts.length > 0 && (
-        <Panel title="Số lượng trên chứng từ">
-          <Hint>Nhập 0 nếu phụ tùng không có trên chứng từ giao hàng.</Hint>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Phụ tùng</th>
-                  <th scope="col">Số lượng trên chứng từ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documentProducts.map(({ productId, sku, partName }) => (
-                  <tr key={`${replacement}-${productId}`}>
-                    <td>
-                      <strong>{sku}</strong> {partName}
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        name={`documentQty-${productId}`}
-                        aria-label={`Số lượng trên chứng từ ${sku}`}
-                        data-label={`Số lượng trên chứng từ của ${sku}`}
-                        min={0}
-                        max={1_000_000}
-                        required
-                        disabled={saving}
-                      />
-                      <FieldError message={validation.errors[`documentQty-${productId}`]} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-      )}
       <ActionBar>
         {error && (
           <p className="receiving-receipt-submit-error" role="alert">

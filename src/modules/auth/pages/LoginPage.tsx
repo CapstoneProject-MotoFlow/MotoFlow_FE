@@ -79,9 +79,6 @@ export default function LoginPage() {
         <button className="submit-button" type="submit" disabled={submitting}>
           {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
-        <p className="login-card-footer">
-          MotoFlow · Kết nối vận hành, mở lối thành công
-        </p>
       </form>
     </div>
   )

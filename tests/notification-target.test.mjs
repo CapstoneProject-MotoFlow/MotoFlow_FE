@@ -107,7 +107,7 @@ test('discrepancy type routes Owner to resolution', () => {
     refId: 8,
   }
   assert.deepEqual(noticeTarget(notice, 'OWNER'), {
-    path: '/supplier-discrepancies',
+    path: '/supplier-discrepancies?receipt=8',
   })
   for (const role of ['STAFF', 'BRANCH_MANAGER'])
     assert.deepEqual(noticeTarget(notice, role), {

@@ -33,7 +33,12 @@ export default function NotificationActions({
       if (open && target) {
         // Inspection notices use the same reference for supplier and transfer receipts.
         // The API does not supply the parent transfer ID needed for its detail route.
-        if (notice.refType === 'GOODS_RECEIPT_NOTE') {
+        // Only the receipt detail route maps to an API path; other targets (e.g. supplier
+        // discrepancy resolution) are FE routes and must not be fetched.
+        if (
+          notice.refType === 'GOODS_RECEIPT_NOTE' &&
+          target.path.startsWith('/goods-receipt-notes/')
+        ) {
           try {
             await axiosClient.get(target.path, { signal: controller.signal })
           } catch (e) {

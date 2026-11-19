@@ -23,7 +23,9 @@ export default function LocalizedFileInput({
         type="file"
         className="localized-file-input-native"
         onChange={(event) => {
-          setNames(Array.from(event.currentTarget.files ?? []).map((file) => file.name).join(', '))
+          // Mục 8 (PM 19/11): không hiện tên tệp, chỉ báo số tệp đã chọn.
+          const count = event.currentTarget.files?.length ?? 0
+          setNames(count ? 'Đã chọn ' + count + ' tệp' : '')
           onChange?.(event)
         }}
       />
