@@ -80,13 +80,17 @@ export function ReceivableListPage() {
           </span>
           <span>Tổng nợ</span>
           <strong>{shown(totals.data?.debt)}</strong>
-          <small>Khách đang nợ · {scope.warehouse}</small>
         </article>
         <button
           type="button"
           onClick={() => scope.filter({ overdueOnly: !overdue })}
           aria-pressed={overdue}
-          title={totals.error}
+          title={
+            totals.error ||
+            (overdue
+              ? 'Bấm để xem lại tất cả khách'
+              : 'Bấm để chỉ xem khách có nợ quá hạn')
+          }
         >
           <span className="rv-stat-icon rv-icon-error">
             <Icon name="alert" />
@@ -95,11 +99,6 @@ export function ReceivableListPage() {
           <strong className={totals.data?.overdueDebt ? 'rv-overdue' : ''}>
             {shown(totals.data?.overdueDebt)}
           </strong>
-          <small>
-            {overdue
-              ? 'Bấm để xem lại tất cả khách'
-              : 'Bấm để chỉ xem khách có nợ quá hạn'}
-          </small>
         </button>
         <article title={totals.error}>
           <span className="rv-stat-icon rv-icon-warning">
@@ -113,7 +112,6 @@ export function ReceivableListPage() {
                 ? '—'
                 : (totals.data?.dueSoonCustomers ?? 0) + ' khách'}
           </strong>
-          <small>Khách có khoản nợ gần nhất đến hạn trong 7 ngày</small>
         </article>
       </div>
       <section className="stock-panel">

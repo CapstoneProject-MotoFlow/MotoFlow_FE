@@ -1084,3 +1084,19 @@
 .report-pagination button:disabled {
   opacity: 0.5;
 }
+/* Mục 11 (PM 19/11): tên thẻ nằm bên phải icon trên cùng một hàng. */
+.margin-report-cards article {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  min-height: 0;
+}
+.margin-report-cards article > span:nth-child(2) {
+  margin-top: 0;
+}
+.margin-report-cards article > :is(strong, small) {
+  grid-column: 1 / -1;
+}
+.margin-report-cards article > strong {
+  margin-top: 4px;
+}
