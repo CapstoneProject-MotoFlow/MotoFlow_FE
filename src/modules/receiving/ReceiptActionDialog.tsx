@@ -4,7 +4,10 @@ import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import { apiMessage } from '../suppliers/supplierService'
 import { formatDate, formatDateTime } from '../../shared/utils/format'
-import { inspectionCountFields, inspectionResultFields } from './receivingRules'
+import {
+  inspectionCountFields,
+  inspectionResultFields,
+} from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 
 type Assignment = {
@@ -40,7 +43,10 @@ type Receipt = {
     Record<(typeof inspectionColumns)[number][0], number>)[]
 }
 
-const inspectionColumns = [...inspectionCountFields, ...inspectionResultFields]
+const inspectionColumns = [
+  ...inspectionCountFields,
+  ...inspectionResultFields,
+]
 
 function ExistingReceiptActionDialog({
   receiptId,
@@ -188,20 +194,25 @@ function ExistingReceiptActionDialog({
                     {inspectionColumns.map(([field, label]) => (
                       <th key={field}>{label}</th>
                     ))}
-                    <th>Ngày sản xuất</th>
-                    <th>Hạn dùng</th>
                   </tr>
                 </thead>
                 <tbody>
                   {receipt.lines.map((line) => (
                     <tr key={line.id}>
-                      <td>{line.partName}</td>
+                      <td>
+                        {line.partName}
+                        {/* Mục 9 (PM 19/11): tạm ẩn cột NSX/HSD, chỉ ghi dưới tên khi có. */}
+                        {(line.manufactureDate || line.expiryDate) && (
+                          <small>
+                            NSX {formatDate(line.manufactureDate)} · HSD{' '}
+                            {formatDate(line.expiryDate)}
+                          </small>
+                        )}
+                      </td>
                       <td>{line.expectedQty ?? '—'}</td>
                       {inspectionColumns.map(([field]) => (
                         <td key={field}>{line[field]}</td>
                       ))}
-                      <td>{formatDate(line.manufactureDate)}</td>
-                      <td>{formatDate(line.expiryDate)}</td>
                     </tr>
                   ))}
                 </tbody>

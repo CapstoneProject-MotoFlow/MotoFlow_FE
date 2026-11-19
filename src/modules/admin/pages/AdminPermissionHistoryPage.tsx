@@ -7,6 +7,7 @@
 /** Admin permission audit screen. Combines each account's existing history endpoint for display/export. */
 import '../admin.css'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
+import { createXlsx, downloadBlob } from '../../../shared/utils/xlsx'
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
@@ -23,6 +24,7 @@ import {
 import { formatDate } from '../../../shared/utils/format'
 import { roleNames } from '../../../shared/utils/roles'
 import { managerPermissionLabel } from '../../owner/managerPermissions'
+import { matchesSearch } from '../../../shared/utils/searchText'
 
 type ChangeFilter =
   | ''
@@ -111,14 +113,13 @@ export default function AdminPermissionHistoryPage() {
     [stores],
   )
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('vi')
     return history.filter((item) => {
       const account = accountById.get(item.accountId)
-      const matchesQuery =
-        !normalized ||
-        `${account?.fullName || ''} ${account?.username || ''}`
-          .toLocaleLowerCase('vi')
-          .includes(normalized)
+      const matchesQuery = matchesSearch(
+        query,
+        account?.fullName,
+        account?.username,
+      )
       const day = item.changedAt.slice(0, 10)
       return (
         matchesQuery &&
@@ -135,7 +136,7 @@ export default function AdminPermissionHistoryPage() {
   const start = filtered.length ? (page - 1) * pageSize + 1 : 0
   const end = Math.min(page * pageSize, filtered.length)
 
-  function exportCsv() {
+  function exportExcel() {
     const rows = [
       [
         'Thời điểm',
@@ -163,15 +164,11 @@ export default function AdminPermissionHistoryPage() {
         ]
       }),
     ]
-    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+    // Mục B (PM 19/11): xuất Excel thay cho CSV. Ô chữ ghi dạng inline string nên không chạy công thức.
+    downloadBlob(
+      'lich-su-phan-quyen.xlsx',
+      createXlsx([{ name: 'Lich su phan quyen', rows }]),
     )
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'lich-su-phan-quyen.csv'
-    link.click()
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -212,9 +209,9 @@ export default function AdminPermissionHistoryPage() {
               className="secondary-button history-export"
               type="button"
               disabled={loading || filtered.length === 0}
-              onClick={exportCsv}
+              onClick={exportExcel}
             >
-              <span aria-hidden="true">⇧</span> Xuất CSV
+              <span aria-hidden="true">⇧</span> Xuất Excel
             </button>
           </div>
           <div className="history-filters">
@@ -413,9 +410,4 @@ function changeTone(type: string) {
       } as Record<string, string>
     )[type] || 'blue'
   )
-}
-
-function csvCell(value: string) {
-  const safeValue = /^[=+\-@]/.test(value) ? `'${value}` : value
-  return `"${safeValue.replaceAll('"', '""')}"`
 }

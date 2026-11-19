@@ -9,6 +9,7 @@ import { states, type TransferRow } from './types'
 import ReceivingAssignment from '../operations/ReceivingAssignment'
 import { documentCode as code } from '../../shared/utils/documentCode'
 import './transfers.css'
+import { matchesSearch } from '../../shared/utils/searchText'
 export default function ManagerTransferListPage() {
   const scope = useInventoryScope(),
     [search, setSearch] = useState(''),
@@ -49,15 +50,13 @@ export default function ManagerTransferListPage() {
   )
   const rows =
     r.data?.items.filter((row) =>
-      [
+      matchesSearch(
+        search,
         code('DC', row.id),
         row.replenishmentRequestId
           ? code('YBS', row.replenishmentRequestId)
           : '',
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+      ),
     ) ?? []
   return (
     <main className="dashboard-content tf-page tf-manager-list">

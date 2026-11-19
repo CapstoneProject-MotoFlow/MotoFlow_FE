@@ -20,6 +20,7 @@ const {
   inspectionResult,
   receiptDateLimits,
   receiptDatesInFuture,
+  purchaseOrderFormError,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -120,4 +121,78 @@ test('BM action prefers confirmation, then unassigned inspection and stays withi
     undefined,
   )
   assert.equal(receiptWork(receipts, 8), undefined)
+})
+
+test('purchase order form names the missing field (mục 1)', () => {
+  const line = { label: 'dòng 1', productId: 5, quantity: '2', price: '1000' }
+  assert.equal(
+    purchaseOrderFormError({ supplier: false, store: true, lines: [line] }),
+    'Vui lòng chọn nhà cung cấp.',
+  )
+  assert.equal(
+    purchaseOrderFormError({ supplier: true, store: false, lines: [line] }),
+    'Vui lòng chọn kho nhận.',
+  )
+  assert.equal(
+    purchaseOrderFormError({ supplier: true, store: true, lines: [] }),
+    'Vui lòng thêm ít nhất một phụ tùng.',
+  )
+  assert.equal(
+    purchaseOrderFormError({
+      supplier: true,
+      store: true,
+      lines: [{ ...line, productId: 0 }],
+    }),
+    'Vui lòng chọn phụ tùng dòng 1.',
+  )
+  assert.equal(
+    purchaseOrderFormError({
+      supplier: true,
+      store: true,
+      lines: [{ ...line, price: '' }],
+    }),
+    'Vui lòng nhập giá nhập dòng 1.',
+  )
+  assert.equal(
+    purchaseOrderFormError({
+      supplier: true,
+      store: true,
+      lines: [{ ...line, quantity: '0' }],
+    }),
+    'Số lượng dòng 1 phải là số nguyên từ 1 đến 1.000.000.',
+  )
+  assert.equal(
+    purchaseOrderFormError({ supplier: true, store: true, lines: [line] }),
+    '',
+  )
+})
+
+test('replenishment purchase popup skips zero lines but needs one', () => {
+  const line = {
+    label: 'của BUG-1',
+    quantity: '0',
+    price: '',
+    allowZero: true,
+    maxQuantity: 20,
+  }
+  assert.equal(
+    purchaseOrderFormError({ supplier: true, store: true, lines: [line] }),
+    'Vui lòng nhập số lượng mua cho ít nhất một phụ tùng.',
+  )
+  assert.equal(
+    purchaseOrderFormError({
+      supplier: true,
+      store: true,
+      lines: [{ ...line, quantity: '21' }],
+    }),
+    'Số lượng của BUG-1 phải là số nguyên từ 0 đến 20.',
+  )
+  assert.equal(
+    purchaseOrderFormError({
+      supplier: true,
+      store: true,
+      lines: [{ ...line, quantity: '3' }],
+    }),
+    'Vui lòng nhập giá nhập của BUG-1.',
+  )
 })

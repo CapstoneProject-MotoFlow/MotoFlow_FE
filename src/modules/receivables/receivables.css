@@ -1054,3 +1054,77 @@
 .rv-list-page .rv-table th.mf-num {
   text-align: right;
 }
+/* Mục 10 (PM 19/11): popup Chi tiết phiếu thu. */
+.rv-payment-facts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+.rv-payment-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f2f4f7;
+}
+.rv-payment-facts dt {
+  color: #667085;
+}
+.rv-payment-facts dd {
+  margin: 0;
+  color: #101828;
+  text-align: right;
+}
+.rv-payment-subtitle {
+  margin: 18px 0 8px;
+  color: #101828;
+  font-size: 15px;
+  font-weight: 600;
+}
+.rv-payment-allocations {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rv-payment-allocations li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rv-payment-allocations small {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+}
+.rv-payment-none {
+  margin: 0;
+  color: #667085;
+}
+/* Mục 11 (PM 19/11): tên thẻ nằm bên phải icon, bỏ dòng mô tả để thẻ gọn. */
+.rv-page.rv-list-page .rv-overview > article,
+.rv-page.rv-list-page .rv-overview > button {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  align-content: start;
+  column-gap: 12px;
+  row-gap: 12px;
+  min-height: 0;
+}
+.rv-page.rv-list-page .rv-overview > :is(article, button) > strong {
+  grid-column: 1 / -1;
+}
+/* Mục E (PM 19/11): tên ảnh chứng từ bấm để mở trình xem ảnh. */
+.rv-evidence-view {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #3641f5;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-evidence-view:hover {
+  text-decoration: underline;
+}

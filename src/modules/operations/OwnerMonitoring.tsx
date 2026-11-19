@@ -174,7 +174,6 @@ export default function OwnerMonitoring() {
             tone="blue"
             label="Doanh thu"
             value={sales.data ? formatMoney(sales.data.revenue) : '—'}
-            note={periodLabel}
             href={salesLink}
           />
           <Kpi
@@ -182,7 +181,6 @@ export default function OwnerMonitoring() {
             tone="slate"
             label="Số đơn bán được"
             value={count(sales.data?.orders, 'đơn')}
-            note={periodLabel}
             href={salesLink}
           />
           <Kpi
@@ -199,7 +197,7 @@ export default function OwnerMonitoring() {
             note={
               sales.data && sales.data.collected == null
                 ? `Kỳ có hơn ${COLLECTED_DETAIL_LIMIT} đơn, chọn kỳ ngắn hơn`
-                : 'Khách đã trả khi mua'
+                : undefined
             }
           />
           <Kpi
@@ -213,7 +211,6 @@ export default function OwnerMonitoring() {
                   : formatMoney(sales.data.credit)
                 : '—'
             }
-            note="Phần chưa thu, đã vào công nợ"
             href="/receivables"
           />
         </div>

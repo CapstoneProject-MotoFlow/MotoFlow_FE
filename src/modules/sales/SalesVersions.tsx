@@ -19,7 +19,8 @@ type Version = {
   }[]
 }
 export default function SalesVersions({ id }: { id: number }) {
-  const [open, setOpen] = useState(false)
+  // Lịch sử mở sẵn khi vào màn (PM 19/11); người dùng vẫn có thể thu gọn.
+  const [open, setOpen] = useState(true)
   const data = useInventoryData<Version[]>(
     '/sales-orders/' + id + '/versions',
     {},

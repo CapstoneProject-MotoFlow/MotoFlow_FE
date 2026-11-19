@@ -13,6 +13,7 @@ import axiosClient from '../../../shared/api/axiosClient'
 import '../owner.css'
 import './products.css'
 import './product-create.css'
+import { matchesSearch } from '../../../shared/utils/searchText'
 type Category = {
   id: number
   categoryName: string
@@ -370,9 +371,10 @@ export default function ProductCreatePage() {
                           (m) =>
                             m.status === 'ACTIVE' &&
                             !selected.includes(m.id) &&
-                            `${m.manufacturer} ${m.modelName}`
-                              .toLowerCase()
-                              .includes(query.toLowerCase()),
+                            matchesSearch(
+                              query,
+                              `${m.manufacturer} ${m.modelName}`,
+                            ),
                         )
                         .map((m) => (
                           <button

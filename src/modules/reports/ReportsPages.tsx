@@ -9,7 +9,6 @@ import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import type { Page } from '../inventory/types'
-import type { Debtor } from '../receivables/types'
 import type { DocumentRow } from '../documents/types'
 import PageHeader from '../../shared/ui/PageHeader'
 import { formatMoney, formatDateTime } from '../../shared/utils/format'
@@ -18,47 +17,15 @@ import { inventoryError } from '../inventory/api'
 import { movementLink } from '../inventory/presentation'
 import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 import readXlsxFile from 'read-excel-file/browser'
-import { mapConcurrent } from '../../shared/utils/mapConcurrent'
 import {
   categoryOptions,
   type Category,
 } from '../catalog/api/searchProducts'
+import { defaultTo, monthStart, useLoad } from './reportData'
 import './reports.css'
 
-const day = (date: Date) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(
-    date,
-  )
-const defaultTo = () => day(new Date())
-const monthStart = () =>
-  day(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 const amount = (n: number | null | undefined) =>
   n == null ? '—' : formatMoney(n)
-
-function useLoad<T>(key: string, load: (signal: AbortSignal) => Promise<T>) {
-  const [state, setState] = useState<{ key: string; data?: T; error?: string }>(
-    { key: '' },
-  )
-  const [retry, setRetry] = useState(0)
-  useEffect(() => {
-    const controller = new AbortController()
-    load(controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted) setState({ key: key + retry, data })
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted)
-          setState({ key: key + retry, error: inventoryError(error) })
-      })
-    return () => controller.abort()
-  }, [key, retry, load])
-  return {
-    data: state.key === key + retry ? state.data : undefined,
-    error: state.key === key + retry ? state.error : undefined,
-    loading: state.key !== key + retry,
-    reload: () => setRetry((v) => v + 1),
-  }
-}
 
 async function allPages<T>(
   path: string,
@@ -117,246 +84,6 @@ function Panel({
     </section>
   )
 }
-function SalesMetric({
-  icon,
-  label,
-  value,
-  details,
-  tone,
-  linked,
-}: {
-  icon: 'sales' | 'cash' | 'debt' | 'people'
-  label: string
-  value: number | null
-  details: string[]
-  tone: 'blue' | 'green' | 'orange' | 'slate'
-  linked?: boolean
-}) {
-  return (
-    <article className="sales-metric-card">
-      <span
-        className={`sales-metric-icon sales-metric-icon--${tone}`}
-        aria-hidden="true"
-      >
-        {icon === 'sales' && (
-          <svg viewBox="0 0 24 24">
-            <path d="M4 19V5m0 14h17M7 15l4-4 3 2 6-7" />
-          </svg>
-        )}
-        {icon === 'cash' && (
-          <svg viewBox="0 0 24 24">
-            <rect x="3" y="6" width="18" height="12" rx="2" />
-            <circle cx="12" cy="12" r="3" />
-            <path d="M6 9h.01M18 15h.01" />
-          </svg>
-        )}
-        {icon === 'debt' && (
-          <svg viewBox="0 0 24 24">
-            <path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" />
-          </svg>
-        )}
-        {icon === 'people' && (
-          <svg viewBox="0 0 24 24">
-            <circle cx="9" cy="8" r="3" />
-            <path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1" />
-          </svg>
-        )}
-      </span>
-      <span className="sales-metric-label">{label}</span>
-      {linked ? (
-        <Link className="sales-metric-link" to="/receivables">
-          Công nợ →
-        </Link>
-      ) : null}
-      <strong className="sales-metric-value">
-        {value == null
-          ? '—'
-          : (value / 1_000_000).toLocaleString('vi-VN', {
-              maximumFractionDigits: 1,
-            })}
-        {value != null && <small>triệu</small>}
-      </strong>
-      <span className="sales-metric-detail">{details[0]}</span>
-      <span className="sales-metric-detail">{details[1]}</span>
-    </article>
-  )
-}
-
-function PeriodTabs({
-  value,
-  onChange,
-}: {
-  value: 'month' | 'week'
-  onChange: (v: 'month' | 'week') => void
-}) {
-  return (
-    <div className="report-period-tabs" aria-label="Kỳ báo cáo">
-      <button
-        type="button"
-        aria-pressed={value === 'month'}
-        onClick={() => onChange('month')}
-      >
-        Tháng này
-      </button>
-      <button
-        type="button"
-        aria-pressed={value === 'week'}
-        onClick={() => onChange('week')}
-      >
-        7 ngày gần nhất
-      </button>
-    </div>
-  )
-}
-
-type SalesFigures = {
-  completedOrders: number
-  revenue: number
-  orderPayments: number
-  refunds: number
-  debtCollected: number
-  totalCollected: number
-  creditSales: number
-  revenueCorrections: number
-  collectionCorrections: number
-  receivableCorrections: number
-  receivableAtEnd: number | null
-}
-type SalesPeriod = { from: string; to: string; figures: SalesFigures }
-type SalesStore = { storeId: number; storeName: string; figures: SalesFigures }
-type SalesCollection = {
-  from: string
-  to: string
-  groupBy: 'DAY' | 'MONTH'
-  storeId: number | null
-  total: SalesFigures
-  periods: SalesPeriod[]
-  stores: SalesStore[]
-}
-type SalesChartSeries = {
-  storeId: number
-  storeName: string
-  periods: SalesPeriod[]
-}
-
-function SalesChart({ series, from, to }: {
-  series: SalesChartSeries[]
-  from: string
-  to: string
-}) {
-  const daily = new Map<
-    string,
-    Map<number, { revenue: number; orders: number }>
-  >()
-  for (const store of series)
-    for (const period of store.periods) {
-      const date = period.from.slice(0, 10)
-      const items = daily.get(date) ?? new Map<number, { revenue: number; orders: number }>()
-      items.set(store.storeId, {
-        revenue: period.figures.revenue,
-        orders: period.figures.completedOrders,
-      })
-      daily.set(date, items)
-    }
-  const storeNames = new Map(series.map((store) => [store.storeId, store.storeName]))
-  const storeIds = series.map((store) => store.storeId)
-  const totals = new Map<number, number>()
-  for (const items of daily.values())
-    for (const [storeId, item] of items)
-      totals.set(storeId, (totals.get(storeId) ?? 0) + item.revenue)
-  const start = new Date(`${from}T12:00:00`)
-  const end = new Date(`${to}T12:00:00`)
-  const dates: string[] = []
-  for (
-    const date = new Date(start);
-    date <= end;
-    date.setDate(date.getDate() + 1)
-  )
-    dates.push(day(date))
-  const values = dates.map((date) =>
-    [...(daily.get(date)?.values() ?? [])].reduce(
-      (sum, item) => sum + item.revenue,
-      0,
-    ),
-  )
-  const top = Math.max(
-    20_000_000,
-    Math.ceil(Math.max(0, ...values) / 20_000_000) * 20_000_000,
-  )
-  const colors = ['#2a78d6', '#f06b36', '#19a974', '#8b5cf6', '#e8a317']
-  return (
-    <>
-      <div className="report-chart-legend">
-        {storeIds.map((storeId, index) => (
-          <span key={storeId}>
-            <i style={{ background: colors[index % colors.length] }} />
-            {storeNames.get(storeId)}
-            <strong>
-              {((totals.get(storeId) ?? 0) / 1_000_000).toLocaleString(
-                'vi-VN',
-                { maximumFractionDigits: 1 },
-              )}{' '}
-              tr
-            </strong>
-          </span>
-        ))}
-      </div>
-      <div className="report-chart-unit">Triệu đồng</div>
-      <div
-        className="report-chart"
-        role="img"
-        aria-label="Biểu đồ doanh số bán hàng theo ngày"
-      >
-        <div className="report-chart-axis">
-          {[4, 3, 2, 1, 0].map((step) => (
-            <span key={step}>
-              {((top / 1_000_000 / 4) * step).toLocaleString('vi-VN')}
-            </span>
-          ))}
-        </div>
-        <div className="report-chart-plot">
-          <div className="report-chart-bars">
-            {dates.map((date) => {
-              const items =
-                daily.get(date) ??
-                new Map<number, { revenue: number; orders: number }>()
-              const total = [...items.values()].reduce(
-                (sum, item) => sum + item.revenue,
-                0,
-              )
-              return (
-                <div
-                  className="report-chart-column"
-                  key={date}
-                  title={`${date}: ${amount(total)}`}
-                >
-                  <div className="report-chart-stack">
-                    {storeIds.map((storeId, index) => (
-                      <div
-                        key={storeId}
-                        className="report-chart-bar"
-                        style={{
-                          height: `${((items.get(storeId)?.revenue ?? 0) / top) * 100}%`,
-                          background: colors[index % colors.length],
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <small>
-                    {date.slice(8, 10)}/{date.slice(5, 7)}
-                  </small>
-                </div>
-              )
-            })}
-          </div>
-          {!storeIds.length && (
-            <span className="report-state">Chưa có doanh số theo ngày.</span>
-          )}
-        </div>
-      </div>
-    </>
-  )
-}
 function LoadState({
   loading,
   error,
@@ -379,269 +106,6 @@ function LoadState({
       </div>
     )
   return <div className="report-state">{empty}</div>
-}
-
-export function SalesReportPage() {
-  const scope = useInventoryScope()
-  const [from, setFrom] = useState(monthStart),
-    [to, setTo] = useState(defaultTo)
-  const [period, setPeriod] = useState<'month' | 'week'>('month')
-  const [showDays, setShowDays] = useState(false)
-  const key = `sales:${from}:${to}:${scope.storeId}`
-  const loadSales = useCallback(
-    async (signal: AbortSignal) => {
-      const [sales, debtors] = await Promise.all([
-        axiosClient
-          .get<SalesCollection>('/reports/sales-collection', {
-            params: {
-              from,
-              to,
-              storeId: scope.storeId || undefined,
-              groupBy: 'DAY',
-            },
-            signal,
-          })
-          .then((response) => response.data),
-        allPages<Debtor>(
-          '/receivables/customers',
-          { storeId: scope.storeId || undefined },
-          signal,
-        ),
-      ])
-      const receivables = debtors.reduce((sum, debtor) => sum + debtor.debt, 0)
-      const overdueReceivables = debtors.reduce(
-        (sum, debtor) => sum + debtor.overdueDebt,
-        0,
-      )
-      const debtorCount = debtors.filter((debtor) => debtor.debt > 0).length
-      const series = sales.stores.length <= 1
-        ? sales.stores.map((store) => ({
-            storeId: store.storeId,
-            storeName: store.storeName,
-            periods: sales.periods,
-          }))
-        : await mapConcurrent(
-            sales.stores,
-            5,
-            async (store) => {
-              const { data } = await axiosClient.get<SalesCollection>(
-                '/reports/sales-collection',
-                {
-                  params: {
-                    from,
-                    to,
-                    storeId: store.storeId,
-                    groupBy: 'DAY',
-                  },
-                  signal,
-                },
-              )
-              return { storeId: store.storeId, storeName: store.storeName, periods: data.periods }
-            },
-            () => !signal.aborted,
-          )
-      return {
-        report: sales,
-        series,
-        receivables,
-        overdueReceivables,
-        debtorCount,
-      }
-    },
-    [from, to, scope.storeId],
-  )
-  const report = useLoad(key, loadSales)
-  const rows = report.data?.report.stores ?? []
-  const daily = report.data?.report.periods ?? []
-  const setPeriodRange = (value: 'month' | 'week') => {
-    setPeriod(value)
-    setFrom(
-      value === 'month'
-        ? monthStart()
-        : day(new Date(Date.now() - 6 * 86400000)),
-    )
-    setTo(defaultTo())
-  }
-  return (
-    <ReportFrame title="Báo cáo bán hàng">
-      <div className="sales-report-filters">
-        <div className="sales-report-period">
-          <PeriodTabs value={period} onChange={setPeriodRange} />
-        </div>
-        {scope.owner ? (
-          <label className="sales-store-filter">
-            <SearchableFilter
-              label="Cửa hàng"
-              value={scope.storeId}
-              options={[
-                { value: '', label: 'Mọi cửa hàng' },
-                ...scope.stores.map((store) => ({ value: String(store.id), label: store.storeName })),
-              ]}
-              searchPlaceholder="Tìm cửa hàng..."
-              onChange={(storeId) => scope.filter({ storeId })}
-            />
-          </label>
-        ) : (
-          <span className="sales-current-store">{scope.warehouse}</span>
-        )}
-        <span className="sales-report-range">
-          {scope.owner && !scope.storeId ? 'Toàn chuỗi' : scope.warehouse} ·{' '}
-          {from.slice(8, 10)}/{from.slice(5, 7)} – {to.slice(8, 10)}/
-          {to.slice(5, 7)}/{to.slice(0, 4)}
-        </span>
-      </div>
-      {report.data ? (
-        <>
-          <section className="sales-report-cards">
-            <SalesMetric
-              icon="sales"
-              tone="blue"
-              label="Doanh số"
-              value={report.data.report.total.revenue}
-              details={[
-                `${report.data.report.total.completedOrders} đơn hoàn tất`,
-                `Trong kỳ ${from.slice(8, 10)}/${from.slice(5, 7)} – ${to.slice(8, 10)}/${to.slice(5, 7)}`,
-              ]}
-            />
-            <SalesMetric
-              icon="cash"
-              tone="green"
-              label="Tiền thu đã xác minh"
-              value={report.data.report.total.totalCollected}
-              details={[
-                `Thu đơn ${amount(report.data.report.total.orderPayments)} · thu nợ ${amount(report.data.report.total.debtCollected)}`,
-                'Theo kỳ đang chọn',
-              ]}
-            />
-            <SalesMetric
-              icon="debt"
-              tone="orange"
-              label="Nợ mới phát sinh"
-              value={report.data.report.total.creditSales}
-              details={[
-                `Phát sinh trong kỳ ${from.slice(8, 10)}/${from.slice(5, 7)} – ${to.slice(8, 10)}/${to.slice(5, 7)}`,
-                'Từ đơn bán hoàn tất',
-              ]}
-              linked
-            />
-            <SalesMetric
-              icon="people"
-              tone="slate"
-              label="Phải thu hiện tại"
-              value={report.data.receivables}
-              details={[
-                `Quá hạn ${(report.data.overdueReceivables / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu`,
-                `${report.data.debtorCount} khách hàng đang nợ`,
-              ]}
-              linked
-            />
-          </section>
-          <Panel
-            title={`Doanh số theo ngày · ${scope.owner && !scope.storeId ? 'Toàn chuỗi' : scope.warehouse}`}
-          >
-            <section className="report-chart-card">
-              <SalesChart
-                series={report.data.series}
-                from={from}
-                to={to}
-              />
-            </section>
-            <div className="report-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Cửa hàng</th>
-                    <th>Doanh thu</th>
-                    <th>Đơn hoàn tất</th>
-                    <th>Đã thu</th>
-                    <th>Nợ mới</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.storeId}>
-                      <td>{row.storeName}</td>
-                      <td>{amount(row.figures.revenue)}</td>
-                      <td>{row.figures.completedOrders}</td>
-                      <td>{amount(row.figures.totalCollected)}</td>
-                      <td>{amount(row.figures.creditSales)}</td>
-                    </tr>
-                  ))}
-                  {!rows.length && (
-                    <tr>
-                      <td colSpan={5} className="report-state">
-                        Không có đơn hoàn tất trong khoảng đã chọn.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <section className="report-day-table">
-              <header>
-                <h3>Số liệu theo ngày</h3>
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowDays((value) => !value)}
-                  >
-                    {showDays ? 'Ẩn bảng' : 'Xem bảng'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      downloadCsv(`BaoCaoBanHang_${from}_${to}.csv`, [
-                        ['Ngày', 'Số đơn', 'Doanh số'],
-                        ...[...daily]
-                          .sort((a, b) => a.from.localeCompare(b.from))
-                          .map((row) => [
-                            row.from,
-                            row.figures.completedOrders,
-                            row.figures.revenue,
-                          ]),
-                      ])
-                    }
-                  >
-                    Xuất CSV
-                  </button>
-                </div>
-              </header>
-              {showDays && (
-                <div className="report-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Ngày</th>
-                        <th>Số đơn</th>
-                        <th>Doanh số</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...daily]
-                        .sort((a, b) => b.from.localeCompare(a.from))
-                        .map((row) => (
-                          <tr key={row.from}>
-                            <td>{row.from}</td>
-                            <td>{row.figures.completedOrders}</td>
-                            <td>{amount(row.figures.revenue)}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </Panel>
-        </>
-      ) : (
-        <LoadState
-          loading={report.loading}
-          error={report.error}
-          reload={report.reload}
-        />
-      )}
-    </ReportFrame>
-  )
 }
 
 /** "2026-11" → "Kỳ 11/2026". */
@@ -839,7 +303,7 @@ export function InventoryReportPage() {
         if (!chunk.page.items.length || all.length >= chunk.page.totalItems)
           break
       }
-      downloadCsv(`BaoCaoKho_${month}.csv`, [
+      downloadExcel(`BaoCaoKho_${month}.xlsx`, 'Bao cao kho', [
         [
           'Cửa hàng',
           'SKU',
@@ -998,7 +462,7 @@ export function InventoryReportPage() {
             disabled={exporting || !total}
             onClick={() => void exportCsv()}
           >
-            {exporting ? 'Đang xuất…' : 'Xuất CSV'}
+            {exporting ? 'Đang xuất…' : 'Xuất Excel'}
           </button>
         }
       >
@@ -1060,7 +524,7 @@ export function InventoryReportPage() {
           </div>
           {exportError && (
             <div className="report-error" role="alert">
-              Không xuất được CSV. {exportError}
+              Không xuất được Excel. {exportError}
             </div>
           )}
           {data ? (
@@ -1257,7 +721,7 @@ function fetchMargin(
     .then((response) => response.data)
 }
 
-/** Ô "So kỳ trước" của một dòng: thay đổi lãi gộp, hoặc ghi rõ dòng chỉ có ở một kỳ. */
+/** Ô "So kỳ trước" của một dòng: thay đổi lợi nhuận, hoặc ghi rõ dòng chỉ có ở một kỳ. */
 function MarginChange({ row }: { row: MarginCompareRow }) {
   if (!row.current) return <>Kỳ này không bán</>
   return (
@@ -1354,7 +818,7 @@ function MarginProducts({
 }
 
 /**
- * UC-102 Lãi gộp (Owner): số liệu từ BE #62 `GET /reports/gross-margin` (doanh thu, giá vốn theo bình quân gia
+ * UC-102 Lợi nhuận (Owner): số liệu từ BE #62 `GET /reports/gross-margin` (doanh thu, giá vốn theo bình quân gia
  * quyền lúc xuất bán, điều chỉnh đơn bán, hàng xuất bỏ). Kỳ so sánh là tháng ngay trước kỳ đang xem.
  */
 export function GrossMarginReportPage() {
@@ -1407,7 +871,7 @@ export function GrossMarginReportPage() {
       total.writeOffValue !== 0)
 
   return (
-    <ReportFrame title="Lãi gộp">
+    <ReportFrame title="Lợi nhuận">
       <div className="margin-report-filters">
         <div
           className="margin-period-tabs"
@@ -1495,7 +959,7 @@ export function GrossMarginReportPage() {
             </article>
             <article>
               <span className="margin-card-icon margin-icon-green">▣</span>
-              <span>Lãi gộp</span>
+              <span>Lợi nhuận</span>
               <strong>{millions(total.grossMargin)}</strong>
               <small>
                 Kỳ trước: {millions(previousTotal?.grossMargin ?? 0)} ·{' '}
@@ -1504,7 +968,7 @@ export function GrossMarginReportPage() {
             </article>
             <article>
               <span className="margin-card-icon margin-icon-cyan">％</span>
-              <span>Tỷ lệ lãi gộp</span>
+              <span>Tỷ lệ lợi nhuận</span>
               <strong>{percent(total.marginRate)}</strong>
               <small>Kỳ trước: {percent(previousTotal?.marginRate)}</small>
             </article>
@@ -1513,10 +977,10 @@ export function GrossMarginReportPage() {
             <div className="report-note">
               Trong kỳ có điều chỉnh đơn bán: doanh thu{' '}
               {amount(total.correctionRevenue)}, giá vốn{' '}
-              {amount(total.correctionCost)}, nên lãi gộp sau điều chỉnh là{' '}
+              {amount(total.correctionCost)}, nên lợi nhuận sau điều chỉnh là{' '}
               <strong>{amount(total.adjustedMargin)}</strong>. Hàng mất, hỏng
               đã xuất bỏ trong kỳ: {amount(total.writeOffValue)} (không trừ vào
-              lãi gộp).
+              lợi nhuận).
             </div>
           )}
           {scope.owner && !scope.storeId && (
@@ -1528,7 +992,7 @@ export function GrossMarginReportPage() {
                       <th>Cửa hàng</th>
                       <th>Doanh thu</th>
                       <th>Giá vốn</th>
-                      <th>Lãi gộp</th>
+                      <th>Lợi nhuận</th>
                       <th>Tỷ lệ</th>
                       <th>So kỳ trước</th>
                       <th>Thao tác</th>
@@ -1587,14 +1051,14 @@ export function GrossMarginReportPage() {
                   className="report-panel-action"
                   type="button"
                   onClick={() =>
-                    downloadCsv(`BaoCaoLaiGop_${range.from}_${range.to}.csv`, [
+                    downloadExcel(`BaoCaoLoiNhuan_${range.from}_${range.to}.xlsx`, 'Loi nhuan', [
                       [
                         'Nhóm phụ tùng',
                         'Doanh thu',
                         'Giá vốn',
-                        'Lãi gộp',
+                        'Lợi nhuận',
                         'Tỷ lệ (%)',
-                        'Lãi gộp kỳ trước',
+                        'Lợi nhuận kỳ trước',
                       ],
                       ...data.categories.map((row) => [
                         row.name,
@@ -1607,7 +1071,7 @@ export function GrossMarginReportPage() {
                     ])
                   }
                 >
-                  Xuất CSV
+                  Xuất Excel
                 </button>
               </div>
             }
@@ -1644,7 +1108,7 @@ export function GrossMarginReportPage() {
                     <th>Nhóm phụ tùng</th>
                     <th>Doanh thu</th>
                     <th>Giá vốn</th>
-                    <th>Lãi gộp</th>
+                    <th>Lợi nhuận</th>
                     <th>Tỷ lệ</th>
                     <th>So kỳ trước</th>
                     <th>Thao tác</th>
@@ -1714,20 +1178,9 @@ export function GrossMarginReportPage() {
   )
 }
 
-function csvCell(value: unknown) {
-  return '"' + String(value ?? '').replaceAll('"', '""') + '"'
-}
-function downloadCsv(name: string, rows: unknown[][]) {
-  const content =
-    '\ufeff' + rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
-  const url = URL.createObjectURL(
-    new Blob([content], { type: 'text/csv;charset=utf-8' }),
-  )
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = name
-  anchor.click()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+/** Mục B (PM 19/11): mọi nút xuất tải tệp Excel (.xlsx) một sheet, thay cho CSV. */
+function downloadExcel(name: string, sheet: string, rows: unknown[][]) {
+  downloadBlob(name, createXlsx([{ name: sheet, rows }]))
 }
 
 /** Lỗi của request tải tệp: BE trả JSON nhưng axios đọc thành Blob. */
@@ -1746,7 +1199,7 @@ async function downloadError(error: unknown) {
 
 const accountingDataSets = [
   { key: 'daily-sales', label: 'Doanh thu theo ngày', description: 'Doanh số đơn hoàn tất, tiền thu và nợ mới.' },
-  { key: 'sales-orders', label: 'Đơn bán và dòng đơn', description: 'Số đơn, khách hàng, phụ tùng, số lượng và giá trị.' },
+  { key: 'sales-orders', label: 'Đơn bán và sản phẩm', description: 'Số đơn, khách hàng, phụ tùng, số lượng và giá trị.' },
   { key: 'purchase-orders', label: 'Nhập hàng: phiếu nhập, lượt nhận, giá nhập', description: 'Phiếu nhập, nhà cung cấp, phụ tùng, số lượng và giá nhập.' },
   { key: 'collections', label: 'Thu tiền và công nợ', description: 'Phiếu thu, hoàn tiền và thu nợ đã xác nhận.' },
   { key: 'inventory-period', label: 'Nhập, xuất, tồn kỳ và giá bình quân kỳ (sổ S2d-HKD)', description: 'Số lượng, giá trị và giá vốn bình quân theo phụ tùng.' },
@@ -1772,6 +1225,19 @@ function accountingRowsCount(rows: AccountingRows, includesWorkbookTitle = false
   return Math.max(0, rows.length - (includesWorkbookTitle ? 3 : 1))
 }
 
+/**
+ * Mục D (PM 19/11): ô ngày của workbook BE được read-excel-file đọc thành Date (giờ UTC); ghi lại bằng String(Date)
+ * sẽ ra "... GMT+0700". Đổi về chữ "dd/mm/yyyy" hoặc "dd/mm/yyyy HH:mm", không kèm múi giờ.
+ */
+function excelDateText(value: unknown) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return value
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${pad(value.getUTCDate())}/${pad(value.getUTCMonth() + 1)}/${value.getUTCFullYear()}`
+  return value.getUTCHours() || value.getUTCMinutes()
+    ? `${date} ${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}`
+    : date
+}
+
 async function loadAccountingExportData(
   range: { from: string; to: string }, storeId: string, month: string, signal: AbortSignal,
 ): Promise<AccountingExportData> {
@@ -1784,7 +1250,9 @@ async function loadAccountingExportData(
     axiosClient.get<AccountingPeriod[]>('/inventory-periods', { signal }),
   ])
   const workbook = await readXlsxFile(workbookResponse.data)
-  const sheets = new Map(workbook.map(({ sheet, data }) => [sheet, data as AccountingRows]))
+  const sheets = new Map(
+    workbook.map(({ sheet, data }) => [sheet, data.map((row) => row.map(excelDateText)) as AccountingRows]),
+  )
   const rows: AccountingExportData['rows'] = {
     'daily-sales': sheets.get('Doanh thu'),
     'sales-orders': sheets.get('Bán hàng'),
@@ -1792,7 +1260,7 @@ async function loadAccountingExportData(
     collections: sheets.get('Thu tiền'),
     documents: [
       ['Loại chứng từ', 'Số chứng từ', 'Ngày', 'Cửa hàng', 'Đối tượng', 'Trạng thái', 'Giá trị'],
-      ...documents.map((item) => [item.type, item.number, item.documentDate, item.storeName, item.partnerName ?? '', item.status, item.value ?? '']),
+      ...documents.map((item) => [item.type, item.number, formatDateTime(item.documentDate), item.storeName, item.partnerName ?? '', item.status, item.value ?? '']),
     ],
   }
   const period = periodsResponse.data.find((item) => item.month === month)
@@ -1959,7 +1427,6 @@ export function AccountingExportPage() {
                   <input type="checkbox" checked={selected.includes(key) && (loadingData || !!rows)} disabled={!loadingData && !rows} onChange={() => setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />
                   <span>
                     <strong>{label}<span className="report-export-info" title={description} aria-label={description}>i</span></strong>
-                    <small>{description}</small>
                   </span>
                   <small className="report-export-count">{loadingData ? 'Đang tải…' : count === null ? 'Chưa có dữ liệu' : `${count.toLocaleString('vi-VN')} dòng`}</small>
                 </label>

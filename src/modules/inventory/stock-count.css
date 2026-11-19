@@ -8,6 +8,12 @@
   font: inherit;
   white-space: nowrap;
 }
+/* Mục 6 (PM 19/11): "Ghi số đếm" là link dạng nút chính; đè màu chữ của .inventory-workspace a. */
+.count-workspace a.count-primary {
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+}
 .count-workspace button:disabled,
 .count-form button:disabled {
   cursor: not-allowed;
@@ -217,15 +223,6 @@
 .count-excel-tools > span {
   flex-basis: 100%;
 }
-.count-buttons > .count-record-action {
-  color: #465fff;
-  border-color: #cbd2ff;
-  background: #fff;
-}
-.count-buttons > .count-record-action:hover:not(:disabled) {
-  border-color: #465fff;
-  background: #f7f8ff;
-}
 .count-disabled-link {
   opacity: 0.5;
   cursor: not-allowed;
@@ -238,6 +235,20 @@
 }
 .count-record-row {
   border-bottom: 1px solid #eaecf0;
+}
+/*
+ * Mục 7 (PM 19/11): màn Ghi số đếm dùng bảng; dòng <tr> mang class này bị display: grid ở trên
+ * nên ô lệch khỏi cột tiêu đề. Giữ dòng bảng là table-row.
+ */
+.stock-table tr.count-record-row {
+  display: table-row;
+  padding: 0;
+}
+.stock-table tr.count-record-row td {
+  vertical-align: middle;
+}
+.stock-table tr.count-record-row input[type='number'] {
+  max-width: 160px;
 }
 .count-workspace .stock-table td:nth-child(3) input,
 .count-workspace .stock-table td:nth-child(4) input {

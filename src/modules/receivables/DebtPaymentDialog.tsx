@@ -27,7 +27,6 @@ export default function DebtPaymentDialog({
       String(data.storeId ?? (storeIds.length === 1 ? storeIds[0] : '')),
     ),
     [amount, setAmount] = useState(''),
-    [cash, setCash] = useState(''),
     [files, setFiles] = useState<File[]>([]),
     [method, setMethod] = useState('CASH'),
     [reference, setReference] = useState(''),
@@ -88,17 +87,7 @@ export default function DebtPaymentDialog({
     setError('')
   }
   async function save() {
-    if (
-      lock.current ||
-      !preview ||
-      !confirmed ||
-      !valid ||
-      (method === 'CASH' &&
-        (!Number.isSafeInteger(Number(cash || amount)) ||
-          Number(cash || amount) < value ||
-          Number(cash || amount) > 100000000000))
-    )
-      return
+    if (lock.current || !preview || !confirmed || !valid) return
     lock.current = true
     setBusy(true)
     setError('')
@@ -111,7 +100,8 @@ export default function DebtPaymentDialog({
         transactionReference:
           method === 'BANK_TRANSFER' ? reference.trim() : undefined,
         expectedAllocations: confirmedAllocations(preview),
-        tenderedAmount: method === 'CASH' ? Number(cash || amount) : undefined,
+        // Mục 9 (PM 19/11): bỏ ô Tiền khách đưa; thu nợ tiền mặt coi như khách đưa đúng số tiền thu.
+        tenderedAmount: method === 'CASH' ? value : undefined,
         evidence,
       })
       onSaved()
@@ -136,11 +126,7 @@ export default function DebtPaymentDialog({
         !preview ||
         !confirmed ||
         loading ||
-        (method === 'BANK_TRANSFER' && !reference.trim()) ||
-        (method === 'CASH' &&
-          (!Number.isSafeInteger(Number(cash || amount)) ||
-            Number(cash || amount) < value ||
-            Number(cash || amount) > 100000000000))
+        (method === 'BANK_TRANSFER' && !reference.trim())
       }
       busy={busy}
       onClose={onClose}
@@ -214,33 +200,6 @@ export default function DebtPaymentDialog({
               ))}
             </div>
           </div>
-          {method === 'CASH' && (
-            <label className="rv-full">
-              Tiền khách đưa (đ)
-              <input
-                inputMode="numeric"
-                placeholder={
-                  value > 0
-                    ? money.format(value)
-                    : 'Bằng số tiền thu nếu để trống'
-                }
-                value={cash ? Number(cash).toLocaleString('vi-VN') : ''}
-                onChange={(e) => {
-                  setCash(e.target.value.replace(/\D/g, ''))
-                  change()
-                }}
-              />
-              <small>
-                Tiền thối:{' '}
-                {money.format(Math.max(0, Number(cash || amount) - value))}
-              </small>
-              {cash && Number(cash) < value && (
-                <small role="alert" className="rv-overdue">
-                  Tiền khách đưa phải đủ số tiền thu.
-                </small>
-              )}
-            </label>
-          )}
           {method === 'BANK_TRANSFER' && (
             <label className="rv-full">
               Mã giao dịch <span>*</span>
@@ -370,11 +329,11 @@ export default function DebtPaymentDialog({
             {files.map((file, i) => (
               <div className="rv-file" key={i}>
                 <span>
-                  {file.name} · {Math.ceil(file.size / 1024)} KB
+                  Tệp {i + 1} · {Math.ceil(file.size / 1024)} KB
                 </span>
                 <button
                   type="button"
-                  aria-label={'Bỏ ' + file.name}
+                  aria-label={'Bỏ tệp ' + (i + 1)}
                   onClick={() => {
                     setFiles(files.filter((_, index) => index !== i))
                     change()

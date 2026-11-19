@@ -11,6 +11,7 @@ import {
   inspectionResult,
   inspectionResultFields,
 } from './receivingRules'
+import LotDatesDialog from './LotDatesDialog'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
 import PassAllButton from './PassAllButton'
 import InspectionNoteField from './InspectionNoteField'
@@ -178,6 +179,8 @@ function ReceiptForm({
   const [arrivedAt, setArrivedAt] = useState(
     receipt.arrivedAt?.slice(0, 16) ?? '',
   )
+  const [lotDialog, setLotDialog] = useState<number>()
+  const lotDialogLine = receipt.lines.find((line) => line.id === lotDialog)
   const [onlyUnchecked, setOnlyUnchecked] = useState(false)
   const [focusedLine, setFocusedLine] = useState<number>()
   const [saving, setSaving] = useState(false)
@@ -496,8 +499,6 @@ function ReceiptForm({
               <tr>
                 <th>Phụ tùng</th>
                 <th>Còn chờ nhận</th>
-                <th>Ngày sản xuất</th>
-                <th>Hạn dùng</th>
                 {[...inspectionCountFields, ...inspectionResultFields].map(
                   ([field, label]) => <th key={field}>{label}</th>,
                 )}
@@ -508,6 +509,12 @@ function ReceiptForm({
             <tbody>
               {rows.map((line) => {
                 const result = editing ? resultFor(line) : line
+                const dates = editing
+                  ? lotDates[line.id]
+                  : {
+                      manufactureDate: line.manufactureDate ?? '',
+                      expiryDate: line.expiryDate ?? '',
+                    }
                 const document = countValue(line, 'documentQty')
                 const canFill =
                   editing && inspectionResult([document, document, '0', '0'], 0)
@@ -547,37 +554,31 @@ function ReceiptForm({
                           ? ` · kệ ${line.binLocation}`
                           : ''}
                       </small>
+                      {/* Mục 9 (PM 19/11): tạm ẩn cột NSX/HSD; nhập qua nút "Có HSD", ghi ngày dưới tên. */}
+                      {(dates?.manufactureDate || dates?.expiryDate) && (
+                        <small className="receiving-lot-dates">
+                          NSX {formatDate(dates.manufactureDate)} · HSD{' '}
+                          {formatDate(dates.expiryDate)}
+                        </small>
+                      )}
+                      {editing && hasInvalidLotDates(line) && (
+                        <small className="receiving-field-error" role="alert">
+                          Hạn dùng không được trước ngày sản xuất.
+                        </small>
+                      )}
+                      {editing && (
+                        <button
+                          type="button"
+                          className="mf-btn mf-btn--sm receiving-lot-button"
+                          aria-label={'Nhập hạn sử dụng ' + line.sku}
+                          disabled={saving}
+                          onClick={() => setLotDialog(line.id)}
+                        >
+                          {dates?.expiryDate ? 'Sửa HSD' : 'Có HSD'}
+                        </button>
+                      )}
                     </td>
                     <td>{line.expectedQty ?? '—'}</td>
-                    {(['manufactureDate', 'expiryDate'] as const).map((field) => (
-                      <td key={field}>
-                        {editing ? (
-                          <>
-                            <input
-                              type="date"
-                              aria-label={`${field === 'manufactureDate' ? 'Ngày sản xuất' : 'Hạn dùng'} ${line.sku}`}
-                              value={lotDates[line.id]?.[field] ?? ''}
-                              onChange={(event) =>
-                                setLotDates((previous) => ({
-                                  ...previous,
-                                  [line.id]: {
-                                    ...previous[line.id],
-                                    [field]: event.target.value,
-                                  },
-                                }))
-                              }
-                            />
-                            {field === 'expiryDate' && hasInvalidLotDates(line) && (
-                              <small className="receiving-field-error" role="alert">
-                                Hạn dùng không được trước ngày sản xuất.
-                              </small>
-                            )}
-                          </>
-                        ) : (
-                          formatDate(line[field])
-                        )}
-                      </td>
-                    ))}
                     {inspectionCountFields.map(([field, label]) => (
                       <td key={field}>
                         {editing ? (
@@ -666,6 +667,22 @@ function ReceiptForm({
         </section>
       ) : receipt.inspectionNote && (
         <p><strong>Ghi chú kiểm hàng:</strong> {receipt.inspectionNote}</p>
+      )}
+      {editing && lotDialogLine && (
+        <LotDatesDialog
+          key={lotDialogLine.id}
+          sku={lotDialogLine.sku}
+          partName={lotDialogLine.partName}
+          value={lotDates[lotDialogLine.id]}
+          onClose={() => setLotDialog(undefined)}
+          onSave={(dates) => {
+            setLotDates((previous) => ({
+              ...previous,
+              [lotDialogLine.id]: dates,
+            }))
+            setLotDialog(undefined)
+          }}
+        />
       )}
       {showRecount && (
         <section className="receiving-panel">

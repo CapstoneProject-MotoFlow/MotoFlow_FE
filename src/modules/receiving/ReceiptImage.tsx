@@ -16,7 +16,7 @@ export default function ReceiptImage({
       ) : (
         <img src={src} alt={name} onError={() => setFailed(true)} />
       )}
-      <figcaption>{name}</figcaption>
+      {/* Mục 8 (PM 19/11): không hiện tên tệp dưới ảnh. */}
     </figure>
   )
 }

@@ -587,3 +587,7 @@
     gap: 6px;
   }
 }
+/* Mục 8 (PM 19/11): ô nhập tỷ lệ nằm sát phải nên tiêu đề cột cũng căn phải cho thẳng hàng. */
+.pricing-table th.pricing-col-rate {
+  text-align: right;
+}

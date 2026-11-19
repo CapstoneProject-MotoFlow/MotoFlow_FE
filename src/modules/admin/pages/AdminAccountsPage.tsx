@@ -10,7 +10,6 @@
  * Shared dashboard navigation and API client are imported rather than duplicated.
  */
 import '../admin.css'
-import RowMenu from '../../../shared/ui/RowMenu'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
@@ -32,6 +31,7 @@ import {
 } from '../services/accountService'
 
 import { roleNames } from '../../../shared/utils/roles'
+import { matchesSearch } from '../../../shared/utils/searchText'
 type CreatedAccount = {
   account: Account
   temporaryPassword: string
@@ -143,15 +143,13 @@ export default function AccountsPage() {
   const filtered = useMemo(
     () =>
       accounts.filter((account) => {
-        const search = query.trim().toLocaleLowerCase('vi')
-        const matchesQuery =
-          !search ||
-          [
-            account.fullName,
-            account.username,
-            account.phone,
-            account.email,
-          ].some((value) => value?.toLocaleLowerCase('vi').includes(search))
+        const matchesQuery = matchesSearch(
+          query,
+          account.fullName,
+          account.username,
+          account.phone,
+          account.email,
+        )
         const matchesState =
           tab === 'ALL' ||
           (tab === 'ACTIVE'
@@ -577,7 +575,7 @@ export default function AccountsPage() {
                         </span>
                       </td>
                       <td>
-                        {/* Review T4: icon không chữ khó hiểu; một nút chữ + menu cho thao tác còn lại. */}
+                        {/* Mục 12 (PM 19/11): bỏ menu "Khác", mọi thao tác hiện ngay trên dòng. */}
                         <div className="mf-row-actions account-row-actions">
                           <button
                             type="button"
@@ -589,27 +587,31 @@ export default function AccountsPage() {
                           >
                             Phân quyền
                           </button>
-                          <RowMenu
-                            ariaLabel={'Thao tác khác với ' + account.fullName}
-                            items={[
-                              {
-                                label: 'Cấp lại mật khẩu',
-                                disabled: workingId === account.id,
-                                onSelect: () => void resetPassword(account),
-                              },
-                              {
-                                label:
-                                  account.state !== 'ACTIVE'
-                                    ? 'Mở khóa tài khoản'
-                                    : 'Khóa tài khoản',
-                                danger: account.state === 'ACTIVE',
-                                disabled:
-                                  workingId === account.id ||
-                                  account.id === user.id,
-                                onSelect: () => void setLocked(account),
-                              },
-                            ]}
-                          />
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--secondary mf-btn--sm"
+                            disabled={workingId === account.id}
+                            onClick={() => void resetPassword(account)}
+                          >
+                            Cấp lại mật khẩu
+                          </button>
+                          <button
+                            type="button"
+                            className={
+                              'mf-btn mf-btn--sm ' +
+                              (account.state === 'ACTIVE'
+                                ? 'mf-btn--danger'
+                                : 'mf-btn--secondary')
+                            }
+                            disabled={
+                              workingId === account.id || account.id === user.id
+                            }
+                            onClick={() => void setLocked(account)}
+                          >
+                            {account.state !== 'ACTIVE'
+                              ? 'Mở khóa tài khoản'
+                              : 'Khóa tài khoản'}
+                          </button>
                         </div>
                       </td>
                     </tr>

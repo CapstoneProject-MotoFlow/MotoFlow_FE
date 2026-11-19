@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import LocalizedFileInput from '../../../shared/ui/LocalizedFileInput'
 import { apiMessage } from '../supplierService'
 import { uploadAttachment as uploadReceiptDocument } from '../../../shared/api/upload'
@@ -24,12 +25,15 @@ import { supplierResolutionLabels } from '../../../shared/labels/status'
 type Case = HandlingCase & {
   id: number
   goodsReceiptNoteId: number
+  purchaseOrderId?: number
   sku: string
   partName: string
   status: string
   canHandle: boolean
   canRecordReturn: boolean
   canWaiveReplacement: boolean
+  /** BM của kho nhận còn phải nhận hàng giao bù cho hồ sơ này (BE tính). */
+  canCreateReplacement?: boolean
   outstandingReturnQty: number
   outstandingReplacementQty: number
   openReplacementQty: number
@@ -126,6 +130,42 @@ function CaseAction({
         </form>
       </FormDialog>
     )
+
+  // Mục 14 (PM 19/11): "Không cần giao bù" chỉ hỏi xác nhận lần 2, không bắt nhập số lượng và lý do.
+  // BE vẫn cần lý do nên FE gửi câu cố định và toàn bộ số còn phải giao bù.
+  if (mode === 'waive') {
+    const quantity = row?.openReplacementQty ?? selected.openReplacementQty
+    return (
+      <ConfirmDialog
+        title={'Không cần nhà cung cấp giao bù · ' + selected.sku}
+        message={
+          <>
+            <p>
+              Bạn có chắc chắn không cần nhà cung cấp giao bù {quantity}{' '}
+              {selected.partName}?
+            </p>
+            {error && <p role="alert">{error}</p>}
+          </>
+        }
+        onCancel={onClose}
+        onConfirm={async () => {
+          setError('')
+          try {
+            const { data } = await axiosClient.post<Case>(
+              '/discrepancy-cases/' + selected.id + '/waive-replacement',
+              {
+                quantity,
+                reason: 'Chủ cửa hàng xác nhận không cần nhà cung cấp giao bù.',
+              },
+            )
+            onSaved(data)
+          } catch (failure) {
+            setError(errorMessage(failure))
+          }
+        }}
+      />
+    )
+  }
 
   const allowed = returning ? row?.canRecordReturn : row?.canWaiveReplacement
   return (
@@ -515,6 +555,17 @@ function DiscrepancyForm({
                               Phiếu nhập{' '}
                               {documentCode('PN', row.goodsReceiptNoteId)}
                             </Link>
+                            {row.purchaseOrderId && (
+                              <>
+                                {' · '}
+                                <Link
+                                  to={'/purchase-orders/' + row.purchaseOrderId}
+                                >
+                                  Đơn nhập hàng{' '}
+                                  {documentCode('DNH', row.purchaseOrderId)}
+                                </Link>
+                              </>
+                            )}
                           </small>
                         </th>
                         <td>{row.shortQty}</td>
@@ -591,6 +642,17 @@ function DiscrepancyForm({
                         </td>
                         <td>
                           <div className="mf-row-actions receiving-case-actions">
+                            {/* Mục 13 (PM 19/11): còn phải giao bù thì có nút nhận hàng giao bù cho
+                                phiếu này. Mở đơn nhập hàng, ở đó BM giao việc nhận hàng giao bù (hoặc
+                                tự nhận) rồi lập phiếu nhập "Giao bù cho sai lệch". */}
+                            {row.canCreateReplacement && row.purchaseOrderId && (
+                              <Link
+                                className="mf-btn mf-btn--sm mf-btn--primary"
+                                to={'/purchase-orders/' + row.purchaseOrderId}
+                              >
+                                Nhập hàng giao bù
+                              </Link>
+                            )}
                             {row.canRecordReturn && (
                               <button
                                 type="button"

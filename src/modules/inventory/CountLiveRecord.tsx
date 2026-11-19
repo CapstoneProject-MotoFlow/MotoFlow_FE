@@ -8,7 +8,7 @@ import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
 import { countFromDto, type CountDto } from './countApi'
 import type { Assignment } from './countAssignment'
 import { validCountQuantity } from './stockCountModel'
-import { mapCountSheet, readCountFile } from './countImport'
+import { countTemplateRows, mapCountSheet, readCountFile } from './countImport'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
@@ -331,11 +331,9 @@ function Editor({
             type="button"
             disabled={busy || importing || rows.length === 0}
             onClick={() => {
-              const templateLines = countFromDto({ ...data, lines: rows }).lines
-              const sheetRows = [
-                ['SKU', 'Mã lô', 'Số đếm'],
-                ...templateLines.map((line) => [line.sku, line.lotCode ?? '', '']),
-              ]
+              const sheetRows = countTemplateRows(
+                countFromDto({ ...data, lines: rows }).lines,
+              )
               downloadBlob(
                 `Mau_${documentCode('KK', data.id)}.xlsx`,
                 createXlsx([{ name: 'So dem', rows: sheetRows }]),
@@ -368,9 +366,7 @@ function Editor({
                 setNotice(
                   'Đã điền ' +
                     mapped.length +
-                    ' dòng từ ' +
-                    file.name +
-                    '. Kiểm tra trước khi gửi.',
+                    ' dòng từ tệp Excel. Kiểm tra trước khi gửi.',
                 )
               } catch (err) {
                 setError(inventoryError(err))

@@ -287,33 +287,33 @@ function RelatedDocuments({
 }) {
   return (
     <section className="tf-replenishment-documents">
-      <h3>Chứng từ và lịch sử</h3>
-        <p className="tf-note">
-          Tạo yêu cầu · {dateTime(request.createdAt)} · {request.createdByName}
+      <h2>Chứng từ và lịch sử</h2>
+      <p className="tf-note">
+        Tạo yêu cầu · {dateTime(request.createdAt)} · {request.createdByName}
+      </p>
+      {request.transferOrders.map((order) => (
+        <p className="tf-note" key={order.id}>
+          <Link to={'/transfer-orders/' + order.id}>
+            {documentCode('DC', order.id)}
+          </Link>
+          {' · '}
+          {order.sourceStoreName} · {states[order.status] ?? order.status}
         </p>
-        {request.transferOrders.map((order) => (
-          <p className="tf-note" key={order.id}>
-            <Link to={'/transfer-orders/' + order.id}>
-              {documentCode('DC', order.id)}
+      ))}
+      {request.purchaseOrders.map((order) => (
+        <p className="tf-note" key={order.id}>
+          {canViewPurchases ? (
+            <Link to={'/purchase-orders/' + order.id}>
+              Đơn nhập hàng {documentCode('DNH', order.id)}
             </Link>
-            {' · '}
-            {order.sourceStoreName} · {states[order.status] ?? order.status}
-          </p>
-        ))}
-        {request.purchaseOrders.map((order) => (
-          <p className="tf-note" key={order.id}>
-            {canViewPurchases ? (
-              <Link to={'/purchase-orders/' + order.id}>
-                Đơn nhập hàng {documentCode('DNH', order.id)}
-              </Link>
-            ) : (
-              <span>Đơn nhập hàng {documentCode('DNH', order.id)}</span>
-            )}
-            {' · '}
-            {order.supplierName} ·{' '}
-            {purchaseStatuses[order.status] ?? order.status}
-          </p>
-        ))}
+          ) : (
+            <span>Đơn nhập hàng {documentCode('DNH', order.id)}</span>
+          )}
+          {' · '}
+          {order.supplierName} ·{' '}
+          {purchaseStatuses[order.status] ?? order.status}
+        </p>
+      ))}
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
 import { countFromDto, canCancelCount, type CountDto } from './countApi'
@@ -64,6 +64,29 @@ export default function CountLiveDetail() {
     revision,
     !!d && scope.owner && d.countType === 'OPENING',
   )
+  const navigate = useNavigate()
+  const [starting, setStarting] = useState(false)
+  const [startError, setStartError] = useState('')
+  // BE chốt số sổ sách khi bắt đầu đếm; trước đó số sổ sách của dòng chỉ là 0 mặc định.
+  const needsStart = !!d && (d.status === 'DRAFT' || d.awaitingBookQuantities)
+  /** Mục 6 (PM 19/11): bấm "Bắt đầu đếm" là bắt đầu luôn rồi mở màn ghi số, không phải bấm lần 2. */
+  async function startCounting() {
+    if (lock.current || !d) return
+    lock.current = true
+    setStarting(true)
+    setStartError('')
+    try {
+      await axiosClient.post(`/stock-counts/${d.id}/start`)
+      refreshNotifications()
+      navigate(`/stock-counts/${d.id}/record`)
+    } catch (e) {
+      setStartError(inventoryError(e))
+      setRevision((n) => n + 1)
+    } finally {
+      lock.current = false
+      setStarting(false)
+    }
+  }
   function choose(value: string) {
     setAction(value)
     setSelected([])
@@ -196,27 +219,40 @@ export default function CountLiveDetail() {
                   Giao / đổi người đếm
                 </button>
               )}
-              {open && own && !submitted && (
-                <Link
-                  className="mf-btn mf-btn--secondary count-record-action"
-                  to={`/stock-counts/${id}/record`}
-                >
-                  {d.status === 'DRAFT' || d.awaitingBookQuantities
-                    ? 'Bắt đầu đếm'
-                    : 'Ghi số đếm'}
-                </Link>
-              )}
+              {open &&
+                own &&
+                !submitted &&
+                (needsStart ? (
+                  <button
+                    type="button"
+                    className="count-primary"
+                    disabled={starting || d.countDate > today()}
+                    title={
+                      d.countDate > today() ? 'Chưa tới ngày kiểm kê' : undefined
+                    }
+                    onClick={() => void startCounting()}
+                  >
+                    {starting ? 'Đang bắt đầu…' : 'Bắt đầu đếm'}
+                  </button>
+                ) : (
+                  <Link
+                    className="count-primary"
+                    to={`/stock-counts/${id}/record`}
+                  >
+                    Ghi số đếm
+                  </Link>
+                ))}
               {manager && d.status === 'COUNTING' && submitted && (
                 <>
-                  {!own && (
-                    <button
-                      className="count-primary"
-                      disabled={d.countDate > today()}
-                      onClick={() => choose('confirm')}
-                    >
-                      Xác minh kết quả
-                    </button>
-                  )}
+                  {/* Mục 15 (PM 19/11, giữ K1): BM tự đếm vẫn được tự xác minh; BE báo cho chủ cửa hàng,
+                      còn chênh lệch thì chủ cửa hàng duyệt. Trước đây nút bị ẩn nên phiếu kẹt. */}
+                  <button
+                    className="count-primary"
+                    disabled={d.countDate > today()}
+                    onClick={() => choose('confirm')}
+                  >
+                    Xác minh kết quả
+                  </button>
                   <button onClick={() => choose('recount')}>
                     Yêu cầu đếm lại
                   </button>
@@ -240,9 +276,12 @@ export default function CountLiveDetail() {
                 </>
               )}
             </div>
+            <InventoryNotice error={startError} />
             {submitted && (
               <p className="stock-notice">
-                Người đếm đã gửi kết quả, đang chờ xác minh.
+                {manager && own
+                  ? 'Bạn đã gửi kết quả đếm. Khi bạn tự xác minh, chủ cửa hàng sẽ được thông báo; nếu có chênh lệch, chủ cửa hàng duyệt.'
+                  : 'Người đếm đã gửi kết quả, đang chờ xác minh.'}
               </p>
             )}
           </InventoryPanel>
@@ -280,12 +319,17 @@ export default function CountLiveDetail() {
                         </small>
                       </td>
                       <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
-                      {!staff && <td>{l.bookQty ?? '—'}</td>}
+                      {!staff && (
+                        <td>
+                          {/* Mục 6: chưa bắt đầu đếm thì BE chưa chốt sổ sách (đang là 0 mặc định). */}
+                          {d.status === 'DRAFT' ? 'Chưa chốt' : (l.bookQty ?? '—')}
+                        </td>
+                      )}
                       <td>{l.countedQty ?? 'Chưa đếm'}</td>
                       <td>{l.damagedQty ?? 0}</td>
                       {!staff && (
                         <td>
-                          {l.difference ?? '—'}
+                          {d.status === 'DRAFT' ? '—' : (l.difference ?? '—')}
                           <small>{l.reason}</small>
                         </td>
                       )}
