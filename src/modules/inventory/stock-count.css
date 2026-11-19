@@ -8,6 +8,12 @@
   font: inherit;
   white-space: nowrap;
 }
+/* Mục 6 (PM 19/11): "Ghi số đếm" là link dạng nút chính; đè màu chữ của .inventory-workspace a. */
+.count-workspace a.count-primary {
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+}
 .count-workspace button:disabled,
 .count-form button:disabled {
   cursor: not-allowed;
