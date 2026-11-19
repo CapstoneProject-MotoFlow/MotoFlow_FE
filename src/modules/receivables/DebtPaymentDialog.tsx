@@ -329,11 +329,11 @@ export default function DebtPaymentDialog({
             {files.map((file, i) => (
               <div className="rv-file" key={i}>
                 <span>
-                  {file.name} · {Math.ceil(file.size / 1024)} KB
+                  Tệp {i + 1} · {Math.ceil(file.size / 1024)} KB
                 </span>
                 <button
                   type="button"
-                  aria-label={'Bỏ ' + file.name}
+                  aria-label={'Bỏ tệp ' + (i + 1)}
                   onClick={() => {
                     setFiles(files.filter((_, index) => index !== i))
                     change()

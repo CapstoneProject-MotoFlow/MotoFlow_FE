@@ -87,9 +87,9 @@ export default function DeliveryDocumentFields({
                 setImages(
                   files
                     .filter((file) => file.type.startsWith('image/'))
-                    .map((file) => ({
+                    .map((file, index) => ({
                       src: URL.createObjectURL(file),
-                      name: file.name,
+                      name: 'Ảnh chứng từ ' + (index + 1),
                     })),
                 )
               }}

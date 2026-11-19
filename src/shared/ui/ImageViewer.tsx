@@ -8,7 +8,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import './image-viewer.css'
 
-export type ViewerImage = { src: string; name: string }
+/** Mục 8 (PM 19/11): không hiện tên tệp; name chỉ còn để tương thích, trình xem không in ra. */
+export type ViewerImage = { src: string; name?: string }
 
 export default function ImageViewer({
   images,
@@ -60,11 +61,11 @@ export default function ImageViewer({
       className="mf-viewer"
       role="dialog"
       aria-modal="true"
-      aria-label={'Xem ảnh ' + image.name}
+      aria-label={'Xem ảnh ' + (index + 1)}
       onMouseDown={backdrop}
     >
       <header className="mf-viewer-bar">
-        <span className="mf-viewer-name">{image.name}</span>
+        <span className="mf-viewer-name">Xem ảnh</span>
         {count > 1 && (
           <span className="mf-viewer-count">
             {index + 1} / {count}
@@ -108,7 +109,7 @@ export default function ImageViewer({
           <img
             key={image.src}
             src={image.src}
-            alt={image.name}
+            alt={'Ảnh ' + (index + 1)}
             onError={() =>
               setFailed((value) => ({ ...value, [image.src]: true }))
             }
@@ -132,7 +133,7 @@ export default function ImageViewer({
               key={item.src + position}
               type="button"
               className={position === index ? 'is-active' : undefined}
-              aria-label={`Ảnh ${position + 1}: ${item.name}`}
+              aria-label={`Ảnh ${position + 1}`}
               aria-current={position === index || undefined}
               onClick={() => setIndex(position)}
             >

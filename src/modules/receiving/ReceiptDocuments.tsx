@@ -1,7 +1,7 @@
 /**
  * File: modules/receiving/ReceiptDocuments.tsx
  * Loại: THÀNH PHẦN DÙNG CHUNG — không phải màn hình.
- * Công dụng: Một kiểu xem ảnh cho mọi màn phiếu nhận (PM 17/11, mở rộng G05): hiện tên ảnh và nút
+ * Công dụng: Một kiểu xem ảnh cho mọi màn phiếu nhận (PM 17/11, mở rộng G05): không hiện tên ảnh (mục 8, PM 19/11), chỉ nút
  * "Xem ảnh …", bấm mới tải link mới rồi mở trình xem ảnh nổi (mục E, PM 19/11). Tệp không phải ảnh hiện link.
  * Phiếu nhập NCC tải lại từ GET /goods-receipt-notes/{id}; màn khác (phiếu nhận điều chuyển) truyền reload.
  */
@@ -60,7 +60,7 @@ export default function ReceiptDocuments({
         .filter(isImage)
         .flatMap((file) =>
           file.downloadUrl
-            ? [{ src: file.downloadUrl, name: file.fileName }]
+            ? [{ src: file.downloadUrl }]
             : [],
         )
       if (shown.length) setImages(shown)
@@ -75,19 +75,19 @@ export default function ReceiptDocuments({
   return (
     <div className="receiving-receipt-documents">
       {imageFiles.length > 0 && (
+        // Mục 8 (PM 19/11): không hiện tên tệp, chỉ còn nút xem và số ảnh.
         <div className="receiving-image-document-actions">
-          <ul className="receiving-document-list" aria-label={'Tên ' + label}>
-            {imageFiles.map((file) => (
-              <li key={file.id}>{file.fileName}</li>
-            ))}
-          </ul>
           <button
             type="button"
             className="mf-btn mf-btn--secondary"
             disabled={loading}
             onClick={() => void openImages()}
           >
-            {loading ? 'Đang tải ảnh…' : 'Xem ' + label}
+            {loading
+              ? 'Đang tải ảnh…'
+              : 'Xem ' +
+                label +
+                (imageFiles.length > 1 ? ` (${imageFiles.length})` : '')}
           </button>
         </div>
       )}
@@ -97,14 +97,14 @@ export default function ReceiptDocuments({
       )}
       {files.length > 0 && (
         <ul className="receiving-document-list" aria-label="Tệp chứng từ">
-          {files.map((file) => (
+          {files.map((file, index) => (
             <li key={file.id}>
               {file.downloadUrl ? (
                 <a href={file.downloadUrl} target="_blank" rel="noreferrer">
-                  {file.fileName}
+                  Mở tệp {index + 1}
                 </a>
               ) : (
-                file.fileName
+                `Tệp ${index + 1} · chưa có liên kết tải`
               )}
             </li>
           ))}

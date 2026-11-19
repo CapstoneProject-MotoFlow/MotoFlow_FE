@@ -193,12 +193,12 @@ export default function OpeningDebtPicker({
               <div className="rv-file" key={index}>
                 <span className="rv-file-icon">▧</span>
                 <div>
-                  <strong>{file.name}</strong>
+                  <strong>Tệp {index + 1}</strong>
                   <small>{Math.ceil(file.size / 1024)} KB</small>
                 </div>
                 <button
                   type="button"
-                  aria-label={'Bỏ ' + file.name}
+                  aria-label={'Bỏ tệp ' + (index + 1)}
                   onClick={() => setFiles(files.filter((_, i) => i !== index))}
                 >
                   ×
