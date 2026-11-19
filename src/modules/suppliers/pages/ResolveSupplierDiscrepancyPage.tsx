@@ -256,6 +256,8 @@ function CaseAction({
                 max={
                   returning ? row.outstandingReturnQty : row.openReplacementQty
                 }
+                // Báo lỗi 20/11 (mục 4): điền sẵn số còn phải trả; vẫn sửa được nếu trả làm nhiều lần.
+                defaultValue={returning ? row.outstandingReturnQty : undefined}
                 disabled={!allowed || saving}
               />
             </label>
@@ -584,7 +586,15 @@ function DiscrepancyForm({
                                 row.rejectedExcessQty
                               }
                               required
-                              disabled={!row.canHandle || saving}
+                              // Báo lỗi 20/11 (mục 6): hết hàng giữ lại để trả thì không cho đổi số trả lại nữa.
+                              disabled={
+                                !row.canHandle ||
+                                row.returnRequiredQty >=
+                                  row.wrongItemQty +
+                                    row.damagedQty +
+                                    row.rejectedExcessQty ||
+                                saving
+                              }
                               value={draft.returned}
                               onChange={(event) =>
                                 setDrafts((previous) => ({
@@ -645,14 +655,20 @@ function DiscrepancyForm({
                             {/* Mục 13 (PM 19/11): còn phải giao bù thì có nút nhận hàng giao bù cho
                                 phiếu này. Mở đơn nhập hàng, ở đó BM giao việc nhận hàng giao bù (hoặc
                                 tự nhận) rồi lập phiếu nhập "Giao bù cho sai lệch". */}
-                            {row.canCreateReplacement && row.purchaseOrderId && (
-                              <Link
-                                className="mf-btn mf-btn--sm mf-btn--primary"
-                                to={'/purchase-orders/' + row.purchaseOrderId}
-                              >
-                                Nhập hàng giao bù
-                              </Link>
-                            )}
+                            {row.canCreateReplacement &&
+                              row.purchaseOrderId && (
+                                <Link
+                                  className="mf-btn mf-btn--sm mf-btn--primary"
+                                  to={
+                                    '/purchase-orders/' +
+                                    row.purchaseOrderId +
+                                    '?replacement=' +
+                                    row.id
+                                  }
+                                >
+                                  Nhập hàng giao bù
+                                </Link>
+                              )}
                             {row.canRecordReturn && (
                               <button
                                 type="button"
