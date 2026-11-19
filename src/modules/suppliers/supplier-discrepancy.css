@@ -133,6 +133,13 @@
 .supplier-discrepancy-page .receiving-case-actions button {
   white-space: nowrap;
 }
+/* Mục 13 (PM 19/11): link dạng nút "Nhập hàng giao bù" giữ chữ trắng, không gạch chân. */
+.supplier-discrepancy-page .receiving-case-actions a.mf-btn {
+  justify-content: center;
+  white-space: nowrap;
+  color: #fff;
+  text-decoration: none;
+}
 .supplier-case-status {
   display: inline-block;
   padding: 3px 8px;

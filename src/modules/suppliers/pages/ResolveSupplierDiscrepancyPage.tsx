@@ -555,6 +555,17 @@ function DiscrepancyForm({
                               Phiếu nhập{' '}
                               {documentCode('PN', row.goodsReceiptNoteId)}
                             </Link>
+                            {row.purchaseOrderId && (
+                              <>
+                                {' · '}
+                                <Link
+                                  to={'/purchase-orders/' + row.purchaseOrderId}
+                                >
+                                  Đơn nhập hàng{' '}
+                                  {documentCode('DNH', row.purchaseOrderId)}
+                                </Link>
+                              </>
+                            )}
                           </small>
                         </th>
                         <td>{row.shortQty}</td>
@@ -631,6 +642,17 @@ function DiscrepancyForm({
                         </td>
                         <td>
                           <div className="mf-row-actions receiving-case-actions">
+                            {/* Mục 13 (PM 19/11): còn phải giao bù thì có nút nhận hàng giao bù cho
+                                phiếu này. Mở đơn nhập hàng, ở đó BM giao việc nhận hàng giao bù (hoặc
+                                tự nhận) rồi lập phiếu nhập "Giao bù cho sai lệch". */}
+                            {row.canCreateReplacement && row.purchaseOrderId && (
+                              <Link
+                                className="mf-btn mf-btn--sm mf-btn--primary"
+                                to={'/purchase-orders/' + row.purchaseOrderId}
+                              >
+                                Nhập hàng giao bù
+                              </Link>
+                            )}
                             {row.canRecordReturn && (
                               <button
                                 type="button"
