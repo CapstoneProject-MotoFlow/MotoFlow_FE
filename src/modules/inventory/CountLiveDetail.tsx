@@ -244,15 +244,15 @@ export default function CountLiveDetail() {
                 ))}
               {manager && d.status === 'COUNTING' && submitted && (
                 <>
-                  {!own && (
-                    <button
-                      className="count-primary"
-                      disabled={d.countDate > today()}
-                      onClick={() => choose('confirm')}
-                    >
-                      Xác minh kết quả
-                    </button>
-                  )}
+                  {/* Mục 15 (PM 19/11, giữ K1): BM tự đếm vẫn được tự xác minh; BE báo cho chủ cửa hàng,
+                      còn chênh lệch thì chủ cửa hàng duyệt. Trước đây nút bị ẩn nên phiếu kẹt. */}
+                  <button
+                    className="count-primary"
+                    disabled={d.countDate > today()}
+                    onClick={() => choose('confirm')}
+                  >
+                    Xác minh kết quả
+                  </button>
                   <button onClick={() => choose('recount')}>
                     Yêu cầu đếm lại
                   </button>
@@ -279,7 +279,9 @@ export default function CountLiveDetail() {
             <InventoryNotice error={startError} />
             {submitted && (
               <p className="stock-notice">
-                Người đếm đã gửi kết quả, đang chờ xác minh.
+                {manager && own
+                  ? 'Bạn đã gửi kết quả đếm. Khi bạn tự xác minh, chủ cửa hàng sẽ được thông báo; nếu có chênh lệch, chủ cửa hàng duyệt.'
+                  : 'Người đếm đã gửi kết quả, đang chờ xác minh.'}
               </p>
             )}
           </InventoryPanel>
