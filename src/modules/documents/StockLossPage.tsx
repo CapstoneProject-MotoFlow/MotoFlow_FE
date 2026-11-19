@@ -48,7 +48,12 @@ export default function StockLossPage() {
   )
   const lotKey = (row: StockDetail['lots'][number]) =>
     row.lotId + ':' + row.stockStatus
-  const lots = (stock.data?.lots ?? [])
+  const allLots = stock.data?.lots ?? []
+  // Mục 7 (PM 19/11): phụ tùng có hạn sử dụng (hoặc báo hàng hết hạn) phải ghi giảm theo lô.
+  // Phụ tùng không có hạn chỉ chọn trạng thái tồn; lotId để trống, BE lấy lô FIFO khi áp dụng.
+  const byLot =
+    incident === 'EXPIRED' || allLots.some((row) => !!row.expiryDate)
+  const lots = allLots
     .filter(
       (row) =>
         row.quantity > 0 &&
@@ -63,7 +68,31 @@ export default function StockLossPage() {
         a.receivedDate.localeCompare(b.receivedDate) ||
         a.lotId - b.lotId,
     )
-  const lot = lots.find((row) => lotKey(row) === selected) ?? lots[0]
+  const choices: {
+    key: string
+    lotId: number | null
+    stockStatus: string
+    quantity: number
+    lot?: StockDetail['lots'][number]
+  }[] = byLot
+    ? lots.map((row) => ({
+        key: lotKey(row),
+        lotId: row.lotId,
+        stockStatus: row.stockStatus,
+        quantity: row.quantity,
+        lot: row,
+      }))
+    : eligible
+        .map((status) => ({
+          key: 'status:' + status,
+          lotId: null,
+          stockStatus: status,
+          quantity: lots
+            .filter((row) => row.stockStatus === status)
+            .reduce((sum, row) => sum + row.quantity, 0),
+        }))
+        .filter((choice) => choice.quantity > 0)
+  const lot = choices.find((row) => row.key === selected) ?? choices[0]
   const units = Number(quantity)
   const exceeds = !!lot && units > lot.quantity
   const storeName = owner
@@ -228,11 +257,11 @@ export default function StockLossPage() {
                   }}
                 />
                 <label>
-                  Lô và trạng thái tồn
+                  {byLot ? 'Lô và trạng thái tồn' : 'Trạng thái tồn'}
                   <select
                     required
-                    value={lot ? lotKey(lot) : ''}
-                    disabled={!lots.length}
+                    value={lot ? lot.key : ''}
+                    disabled={!choices.length}
                     onChange={(event) => {
                       selectLot(event.target.value)
                       clearPreview()
@@ -241,15 +270,18 @@ export default function StockLossPage() {
                     {!lot && (
                       <option value="">
                         {stock.loading
-                          ? 'Đang tải lô…'
+                          ? 'Đang tải tồn kho…'
                           : part
-                            ? 'Không có lô phù hợp'
+                            ? 'Không có tồn phù hợp'
                             : 'Chọn phụ tùng trước'}
                       </option>
                     )}
-                    {lots.map((row) => (
-                      <option key={lotKey(row)} value={lotKey(row)}>
-                        {row.manufacturerLotNo || '#' + row.lotId} ·{' '}
+                    {choices.map((row) => (
+                      <option key={row.key} value={row.key}>
+                        {row.lot
+                          ? (row.lot.manufacturerLotNo || '#' + row.lotId) +
+                            ' · '
+                          : ''}
                         {stockStatusLabels[row.stockStatus]} · còn{' '}
                         {row.quantity}
                       </option>
@@ -298,7 +330,9 @@ export default function StockLossPage() {
                   id="docs-quantity-error"
                   role="alert"
                 >
-                  Số lượng vượt tồn của lô.
+                  {byLot
+                    ? 'Số lượng vượt tồn của lô.'
+                    : 'Số lượng vượt tồn kho.'}
                   <button
                     type="button"
                     className="mf-btn mf-btn--secondary"
@@ -341,11 +375,16 @@ export default function StockLossPage() {
             </fieldset>
           </Card>
           <div>
-            <Card title={'Tồn của lô' + (storeName ? ' · ' + storeName : '')}>
-              {lot ? (
+            <Card
+              title={
+                (byLot ? 'Tồn của lô' : 'Tồn kho') +
+                (storeName ? ' · ' + storeName : '')
+              }
+            >
+              {lot?.lot ? (
                 <Facts
                   items={[
-                    ['Lô', lot.manufacturerLotNo || '#' + lot.lotId],
+                    ['Lô', lot.lot.manufacturerLotNo || '#' + lot.lot.lotId],
                     [
                       'Còn trong kho',
                       lot.quantity + ' ' + (stock.data?.stock.baseUnit ?? ''),
@@ -353,17 +392,29 @@ export default function StockLossPage() {
                     ['Trạng thái tồn', stockStatusLabels[lot.stockStatus]],
                     [
                       'Hạn dùng',
-                      lot.expiryDate
-                        ? formatDateTime(lot.expiryDate)
+                      lot.lot.expiryDate
+                        ? formatDateTime(lot.lot.expiryDate)
                         : 'Không có',
                     ],
-                    ['Ngày nhận', formatDateTime(lot.receivedDate)],
-                    ['Nhà cung cấp', lot.supplierName],
+                    ['Ngày nhận', formatDateTime(lot.lot.receivedDate)],
+                    ['Nhà cung cấp', lot.lot.supplierName],
+                  ]}
+                />
+              ) : lot ? (
+                <Facts
+                  items={[
+                    [
+                      'Còn trong kho',
+                      lot.quantity + ' ' + (stock.data?.stock.baseUnit ?? ''),
+                    ],
+                    ['Trạng thái tồn', stockStatusLabels[lot.stockStatus]],
+                    ['Hạn dùng', 'Không có'],
+                    ['Lô ghi giảm', 'Hệ thống lấy lô nhận trước (FIFO)'],
                   ]}
                 />
               ) : (
                 <p className="docs-muted">
-                  Chọn phụ tùng để xem lô còn trong kho.
+                  Chọn phụ tùng để xem tồn còn trong kho.
                 </p>
               )}
               <p className="docs-note">

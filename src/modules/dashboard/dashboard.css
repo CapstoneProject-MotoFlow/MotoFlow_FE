@@ -379,3 +379,21 @@
   color: #74849a;
   font-size: 12px;
 }
+/* Mục 11 (PM 19/11): tên thẻ nằm bên phải icon trên cùng một hàng. */
+.metric-card,
+.admin-role-dashboard .metric-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  align-content: start;
+  column-gap: 12px;
+  min-height: 0;
+}
+.metric-card > p,
+.admin-role-dashboard .metric-card > p {
+  margin: 0;
+}
+.metric-card > .metric-footer {
+  grid-column: 1 / -1;
+  margin-top: 14px;
+}

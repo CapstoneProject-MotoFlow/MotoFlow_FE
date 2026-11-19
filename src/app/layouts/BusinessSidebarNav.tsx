@@ -14,7 +14,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
   {
     label: 'Bán hàng',
     icon: 'receipt',
-    labels: ['Đơn bán', 'Đơn nháp', 'Đơn chưa đáp ứng đủ', 'Khách hàng'],
+    labels: ['Đơn bán', 'Đơn chưa đáp ứng đủ', 'Khách hàng'],
   },
   {
     label: 'Điều chuyển',
@@ -44,7 +44,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
     labels: [
       'Báo cáo bán hàng',
       'Báo cáo kho hàng',
-      'Lãi gộp',
+      'Lợi nhuận',
       'Xuất dữ liệu kế toán',
     ],
   },

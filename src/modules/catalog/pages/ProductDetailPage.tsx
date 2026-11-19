@@ -11,6 +11,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import axiosClient from '../../../shared/api/axiosClient'
 import { apiMessage } from '../../suppliers/supplierService'
+import ImageViewer from '../../../shared/ui/ImageViewer'
 import './product-detail.css'
 type Stock = {
   lowStockThreshold: number | null
@@ -90,6 +91,7 @@ export default function ProductDetailPage() {
   const [stockError, setStockError] = useState('')
   const [error, setError] = useState('')
   const [image, setImage] = useState(0)
+  const [viewing, setViewing] = useState(false)
   useEffect(() => {
     let active = true
     setData(null)
@@ -157,7 +159,14 @@ export default function ProductDetailPage() {
               <div className="product-gallery-body">
                 <div className="product-main-image">
                   {data.imageUrls[image] ? (
-                    <img src={data.imageUrls[image]} alt={data.partName} />
+                    <button
+                      type="button"
+                      className="product-main-image-open"
+                      aria-label="Phóng to ảnh"
+                      onClick={() => setViewing(true)}
+                    >
+                      <img src={data.imageUrls[image]} alt={data.partName} />
+                    </button>
                   ) : (
                     <span>Chưa có ảnh</span>
                   )}
@@ -175,6 +184,16 @@ export default function ProductDetailPage() {
                   ))}
                 </div>
               </div>
+              {viewing && (
+                <ImageViewer
+                  images={data.imageUrls.map((url, i) => ({
+                    src: url,
+                    name: `${data.partName} · ảnh ${i + 1}`,
+                  }))}
+                  start={image}
+                  onClose={() => setViewing(false)}
+                />
+              )}
             </section>
             {!owner && (
               <section className="product-detail-panel branch-product-stock">

@@ -1,5 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import DebtEvidence from './DebtEvidence'
+import DebtPaymentDetailDialog from './DebtPaymentDetailDialog'
 import OpeningDebtPicker from './OpeningDebtPicker'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -79,13 +80,17 @@ export function ReceivableListPage() {
           </span>
           <span>Tổng nợ</span>
           <strong>{shown(totals.data?.debt)}</strong>
-          <small>Khách đang nợ · {scope.warehouse}</small>
         </article>
         <button
           type="button"
           onClick={() => scope.filter({ overdueOnly: !overdue })}
           aria-pressed={overdue}
-          title={totals.error}
+          title={
+            totals.error ||
+            (overdue
+              ? 'Bấm để xem lại tất cả khách'
+              : 'Bấm để chỉ xem khách có nợ quá hạn')
+          }
         >
           <span className="rv-stat-icon rv-icon-error">
             <Icon name="alert" />
@@ -94,11 +99,6 @@ export function ReceivableListPage() {
           <strong className={totals.data?.overdueDebt ? 'rv-overdue' : ''}>
             {shown(totals.data?.overdueDebt)}
           </strong>
-          <small>
-            {overdue
-              ? 'Bấm để xem lại tất cả khách'
-              : 'Bấm để chỉ xem khách có nợ quá hạn'}
-          </small>
         </button>
         <article title={totals.error}>
           <span className="rv-stat-icon rv-icon-warning">
@@ -112,7 +112,6 @@ export function ReceivableListPage() {
                 ? '—'
                 : (totals.data?.dueSoonCustomers ?? 0) + ' khách'}
           </strong>
-          <small>Khách có khoản nợ gần nhất đến hạn trong 7 ngày</small>
         </article>
       </div>
       <section className="stock-panel">
@@ -250,6 +249,7 @@ export function ReceivableDetailPage() {
     ),
     [tab, setTab] = useState('open'),
     [allPayments, setAllPayments] = useState(false),
+    [paymentId, setPaymentId] = useState<number>(),
     [notice, setNotice] = useState('')
   const resource = useInventoryData<DebtDetail>(
     `/customers/${id}/debts`,
@@ -494,6 +494,7 @@ export function ReceivableDetailPage() {
                     <th>Số tiền</th>
                     <th>Trừ vào</th>
                     <th>Xác minh</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -510,28 +511,10 @@ export function ReceivableDetailPage() {
                           {p.paymentMethod === 'CASH'
                             ? 'Tiền mặt'
                             : 'Chuyển khoản'}
-                          <small>{p.transactionReference}</small>
-                          <DebtEvidence files={p.evidence} />
                         </td>
-                        <td
-                          title={
-                            p.tenderedAmount == null
-                              ? undefined
-                              : 'Khách đưa: ' +
-                                money.format(p.tenderedAmount) +
-                                '; tiền thối: ' +
-                                money.format(p.changeAmount ?? 0)
-                          }
-                        >
+                        <td>
                           {money.format(p.amount)}
                           <small>{p.storeName}</small>
-                          {p.tenderedAmount != null && (
-                            <small>
-                              Khách đưa: {money.format(p.tenderedAmount)}
-                              <br />
-                              Tiền thối: {money.format(p.changeAmount ?? 0)}
-                            </small>
-                          )}
                         </td>
                         <td>
                           {p.allocations.map((a) => (
@@ -554,6 +537,15 @@ export function ReceivableDetailPage() {
                                 : 'Chưa xác minh'}
                           </span>
                         </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--secondary"
+                            onClick={() => setPaymentId(p.id)}
+                          >
+                            Chi tiết
+                          </button>
+                        </td>
                       </tr>
                     ),
                   )}
@@ -574,6 +566,13 @@ export function ReceivableDetailPage() {
               <p className="rv-empty">Chưa có khoản thu nợ.</p>
             )}
           </section>
+          {d.payments.some((p) => p.id === paymentId) && (
+            <DebtPaymentDetailDialog
+              payment={d.payments.find((p) => p.id === paymentId)!}
+              source={(receivableId) => debtSource(d.debts, receivableId)}
+              onClose={() => setPaymentId(undefined)}
+            />
+          )}
           {action && (
             <DebtDialog
               key={action}

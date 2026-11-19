@@ -249,7 +249,7 @@ const ProfileChangePasswordPage = lazy(
   () => import('../../modules/profile/pages/ProfileChangePasswordPage'),
 )
 const SalesReportPage = lazy(() =>
-  import('../../modules/reports/ReportsPages').then((m) => ({
+  import('../../modules/reports/SalesReportPage').then((m) => ({
     default: m.SalesReportPage,
   })),
 )

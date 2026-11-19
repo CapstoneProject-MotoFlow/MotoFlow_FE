@@ -157,6 +157,16 @@
   color: #465fff;
   text-decoration: none;
 }
+/* Link dạng nút giữ màu của nút dùng chung; trước đây chữ xanh đè lên nút "Đóng kỳ" nền xanh. */
+.inventory-workspace a.mf-btn--primary {
+  color: #fff;
+}
+.inventory-workspace a.mf-btn--secondary {
+  color: var(--mf-text);
+}
+.inventory-workspace a.mf-btn--danger {
+  color: var(--mf-danger);
+}
 .stock-text {
   border: 0;
   background: none;
