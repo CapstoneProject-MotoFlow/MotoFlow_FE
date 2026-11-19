@@ -548,7 +548,7 @@ function OrderFormLayout({
                 defaultValue={source?.note ?? ''}
                 rows={2}
                 maxLength={500}
-                placeholder="Ví dụ: Nhập thêm cho mùa bảo dưỡng cuối năm, nhà cung cấp giao đủ một lần, kèm hóa đơn VAT."
+                placeholder="Ví dụ: Nhà cung cấp giao bằng xe biển số 30A-12345, người giao hàng liên hệ qua số 0123456789."
               />
             </label>
             {editing && (
@@ -856,11 +856,6 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       setError('Phiếu này chưa có phụ tùng chờ nhận.')
       return
     }
-    const fields = new FormData(form)
-    const documentLines = documentProducts.map(({ productId }) => ({
-      productId,
-      documentQty: Number(fields.get(`documentQty-${productId}`)),
-    }))
     saveLock.current = true
     setError('')
     setStage(receiptDocumentUploadEnabled ? 'uploading' : 'creating')
@@ -869,7 +864,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       setStage('creating')
       const { data } = await axiosClient.post<{ id: number }>(
         '/purchase-orders/' + orderId + '/goods-receipt-notes',
-        { ...read.body, replacementForCaseIds, documents, documentLines },
+        { ...read.body, replacementForCaseIds, documents },
       )
       // BE đã giao việc kiểm nhận của phiếu cho chính người lập: mở thẳng màn ghi kết quả kiểm.
       refreshNotifications()
@@ -999,43 +994,6 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
           </div>
         )}
       </Panel>
-      {documentProducts.length > 0 && (
-        <Panel title="Số lượng trên chứng từ">
-          <Hint>Nhập 0 nếu phụ tùng không có trên chứng từ giao hàng.</Hint>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Phụ tùng</th>
-                  <th scope="col">Số lượng trên chứng từ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documentProducts.map(({ productId, sku, partName }) => (
-                  <tr key={`${replacement}-${productId}`}>
-                    <td>
-                      <strong>{sku}</strong> {partName}
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        name={`documentQty-${productId}`}
-                        aria-label={`Số lượng trên chứng từ ${sku}`}
-                        data-label={`Số lượng trên chứng từ của ${sku}`}
-                        min={0}
-                        max={1_000_000}
-                        required
-                        disabled={saving}
-                      />
-                      <FieldError message={validation.errors[`documentQty-${productId}`]} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-      )}
       <ActionBar>
         {error && (
           <p className="receiving-receipt-submit-error" role="alert">

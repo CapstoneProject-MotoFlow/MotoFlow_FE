@@ -214,6 +214,9 @@
   align-items: center;
   flex-wrap: wrap;
 }
+.count-excel-tools > span {
+  flex-basis: 100%;
+}
 .count-buttons > .count-record-action {
   color: #465fff;
   border-color: #cbd2ff;

@@ -243,6 +243,7 @@
 }
 
 .receiving-status--awaiting_delivery,
+.receiving-status--awaiting_discrepancy,
 .receiving-status--assigned {
   background: #fff5de;
   color: #934600;

@@ -16,6 +16,7 @@ export function purchaseOrderSearch(query: string) {
 export const receiptStatusLabels: Record<string, string> = {
   ...purchaseOrderStatusLabels,
   ...goodsReceiptStatusLabels,
+  AWAITING_DISCREPANCY: 'Chờ xử lý sai lệch',
 }
 
 export const orderHistoryLabels: Record<string, string> = {

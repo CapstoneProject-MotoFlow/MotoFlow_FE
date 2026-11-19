@@ -812,7 +812,14 @@ export default function PurchaseOrdersPage() {
                               </>
                             )}
                             <td>
-                              <Status value={row.status} />
+                              <Status
+                                value={
+                                  row.status === 'FULLY_RECEIVED' &&
+                                  row.openDiscrepancies > 0
+                                    ? 'AWAITING_DISCREPANCY'
+                                    : row.status
+                                }
+                              />
                             </td>
                             <td>
                               {manager ? (

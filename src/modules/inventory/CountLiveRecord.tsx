@@ -11,6 +11,7 @@ import { validCountQuantity } from './stockCountModel'
 import { mapCountSheet, readCountFile } from './countImport'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
+import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
@@ -322,8 +323,27 @@ function Editor({
         </div>
       )}
       {editable && (
-        <div className="stock-notice">
-          Nhập số đếm từ Excel (.xlsx): cột SKU, Mã lô (ví dụ #12), Số đếm
+        <div className="stock-notice count-buttons count-excel-tools">
+          <span>
+            Nhập số đếm từ Excel (.xlsx): cột SKU, Mã lô (ví dụ #12), Số đếm
+          </span>
+          <button
+            type="button"
+            disabled={busy || importing || rows.length === 0}
+            onClick={() => {
+              const templateLines = countFromDto({ ...data, lines: rows }).lines
+              const sheetRows = [
+                ['SKU', 'Mã lô', 'Số đếm'],
+                ...templateLines.map((line) => [line.sku, line.lotCode ?? '', '']),
+              ]
+              downloadBlob(
+                `Mau_${documentCode('KK', data.id)}.xlsx`,
+                createXlsx([{ name: 'So dem', rows: sheetRows }]),
+              )
+            }}
+          >
+            Tải form Excel
+          </button>
           <LocalizedFileInput
             buttonText="Chọn tệp Excel"
             accept=".xlsx"
