@@ -86,6 +86,14 @@ export const inspectionCountFields = [
   ['damagedQty', 'Hư hỏng'],
 ] as const
 
+/**
+ * Mục 3 (PM 19/11): không còn ô "Số lượng trên chứng từ"; số này bằng số còn chờ nhận nên bảng
+ * kiểm nhận không hiện cột riêng. documentQty vẫn nằm trong inspectionCountFields để tính số thiếu.
+ */
+export const inspectionShownCountFields = inspectionCountFields.filter(
+  ([field]) => field !== 'documentQty',
+)
+
 export const inspectionResultFields = [
   ['passedQty', 'Đạt'],
   ['shortQty', 'Thiếu'],
