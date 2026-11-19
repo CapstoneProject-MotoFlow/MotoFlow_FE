@@ -8,13 +8,21 @@ import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
 import { countFromDto, type CountDto } from './countApi'
 import type { Assignment } from './countAssignment'
 import { validCountQuantity } from './stockCountModel'
-import { mapCountSheet, readCountFile } from './countImport'
+import { countTemplateRows, mapCountSheet, readCountFile } from './countImport'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
+import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
 import './stock-count.css'
+
+function normalizeQuantityInput(value: string) {
+  if (value === '') return ''
+  if (!/^\d+$/.test(value)) return null
+  return value.replace(/^0+(?=\d)/, '')
+}
+
 export default function CountLiveRecord() {
   const { id } = useParams(),
     scope = useInventoryScope(),
@@ -315,8 +323,25 @@ function Editor({
         </div>
       )}
       {editable && (
-        <div className="stock-notice">
-          Nhập số đếm từ Excel (.xlsx): cột SKU, Mã lô (ví dụ #12), Số đếm
+        <div className="stock-notice count-buttons count-excel-tools">
+          <span>
+            Nhập số đếm từ Excel (.xlsx): cột SKU, Mã lô (ví dụ #12), Số đếm
+          </span>
+          <button
+            type="button"
+            disabled={busy || importing || rows.length === 0}
+            onClick={() => {
+              const sheetRows = countTemplateRows(
+                countFromDto({ ...data, lines: rows }).lines,
+              )
+              downloadBlob(
+                `Mau_${documentCode('KK', data.id)}.xlsx`,
+                createXlsx([{ name: 'So dem', rows: sheetRows }]),
+              )
+            }}
+          >
+            Tải form Excel
+          </button>
           <LocalizedFileInput
             buttonText="Chọn tệp Excel"
             accept=".xlsx"
@@ -386,7 +411,12 @@ function Editor({
                     value={values[l.id]}
                     disabled={!editable || busy || importing}
                     onChange={(e) => {
-                      setValues((v) => ({ ...v, [l.id]: e.target.value }))
+                      const quantity = normalizeQuantityInput(e.target.value)
+                      if (quantity === null) return
+                      setValues((v) => ({
+                        ...v,
+                        [l.id]: quantity,
+                      }))
                       setConfirmed(false)
                     }}
                   />
@@ -401,7 +431,12 @@ function Editor({
                     value={damagedValues[l.id] ?? '0'}
                     disabled={!editable || busy || importing}
                     onChange={(e) => {
-                      setDamagedValues((v) => ({ ...v, [l.id]: e.target.value }))
+                      const quantity = normalizeQuantityInput(e.target.value)
+                      if (quantity === null) return
+                      setDamagedValues((v) => ({
+                        ...v,
+                        [l.id]: quantity,
+                      }))
                       setConfirmed(false)
                     }}
                   />

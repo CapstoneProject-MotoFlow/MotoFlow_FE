@@ -424,7 +424,7 @@ export default function CountLiveDetail() {
                       ))}
                   {action === 'recount' &&
                     d.lines.map((l) => (
-                      <label key={l.id}>
+                      <label key={l.id} className="count-recount-option">
                         <input
                           type="checkbox"
                           checked={selected.includes(l.id)}

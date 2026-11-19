@@ -14,7 +14,7 @@ const { outputText } = ts.transpileModule(
     },
   },
 )
-const { mapCountSheet } = await import(
+const { countTemplateRows, mapCountSheet } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
 const lines = [
@@ -164,4 +164,22 @@ test('R-20 opening cost imports reject zero while counts still allow zero', () =
       ),
     /Dòng 3: Giá vốn phải lớn hơn 0\./,
   )
+})
+
+test('the count template lists every SKU and lot, and a filled template maps back to its lines', () => {
+  const template = countTemplateRows(lines)
+  assert.deepEqual(template, [
+    ['SKU', 'Mã lô', 'Số đếm'],
+    ['A', 'L-1', ''],
+    ['A', 'L-2', ''],
+    ['B', '', ''],
+  ])
+  const filled = template.map((row, index) =>
+    index === 0 ? row : [row[0], row[1], String(index * 10)],
+  )
+  assert.deepEqual(mapCountSheet(filled, lines, 'quantity'), [
+    { id: 1, value: '10', note: '' },
+    { id: 2, value: '20', note: '' },
+    { id: 3, value: '30', note: '' },
+  ])
 })

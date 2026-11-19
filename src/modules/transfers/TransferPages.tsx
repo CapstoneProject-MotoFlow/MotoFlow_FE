@@ -223,6 +223,15 @@ function PurchaseHandoff({
       Number.isInteger(qty) && qty >= 0 && qty <= purchaseQuantityLimit(line)
     )
   })
+  const quantityError = (line: (typeof lines)[number]) => {
+    const qty = quantities[line.productId]
+    const limit = purchaseQuantityLimit(line)
+    if (!Number.isInteger(qty) || qty < 0)
+      return 'Số lượng phải là số nguyên không âm.'
+    if (qty > limit)
+      return `Số lượng không được vượt phần còn thiếu (${limit}).`
+    return ''
+  }
   const changed = lines.filter(
     (line) => quantities[line.productId] !== line.toPurchaseQty,
   )
@@ -246,7 +255,6 @@ function PurchaseHandoff({
           {line.partName} · {line.sku}
           <input
             type="number"
-            required
             min={0}
             max={purchaseQuantityLimit(line)}
             value={quantities[line.productId]}
@@ -257,6 +265,11 @@ function PurchaseHandoff({
               })
             }
           />
+          {quantityError(line) && (
+            <small className="tf-field-error" role="alert">
+              {quantityError(line)}
+            </small>
+          )}
         </label>
       ))}
     </TransferAction>

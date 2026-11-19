@@ -40,6 +40,7 @@ export default function TransferAction({
       <form
         id="transfer-action"
         className="tf-form"
+        noValidate
         onSubmit={async (e) => {
           e.preventDefault()
           if (lock.current || disabled || hideSubmit) return

@@ -5,7 +5,7 @@ import FormDialog from '../../shared/ui/FormDialog'
 import { apiMessage } from '../suppliers/supplierService'
 import { formatDate, formatDateTime } from '../../shared/utils/format'
 import {
-  inspectionShownCountFields,
+  inspectionCountFields,
   inspectionResultFields,
 } from './receivingRules'
 import ReceiptDocuments, { type ReceiptDocument } from './ReceiptDocuments'
@@ -44,7 +44,7 @@ type Receipt = {
 }
 
 const inspectionColumns = [
-  ...inspectionShownCountFields,
+  ...inspectionCountFields,
   ...inspectionResultFields,
 ]
 

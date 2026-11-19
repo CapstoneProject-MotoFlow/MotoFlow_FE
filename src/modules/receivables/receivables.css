@@ -123,7 +123,7 @@
   padding: 8px;
 }
 .rv-form input[type='checkbox'] {
-  width: auto;
+  width: 18px;
 }
 @media (max-width: 800px) {
   .rv-summary {
