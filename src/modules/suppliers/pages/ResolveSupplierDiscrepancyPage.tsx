@@ -34,6 +34,7 @@ type Case = HandlingCase & {
   canWaiveReplacement: boolean
   /** BM của kho nhận còn phải nhận hàng giao bù cho hồ sơ này (BE tính). */
   canCreateReplacement?: boolean
+  returnedQty: number
   outstandingReturnQty: number
   outstandingReplacementQty: number
   openReplacementQty: number
@@ -579,21 +580,17 @@ function DiscrepancyForm({
                             <input
                               type="number"
                               aria-label={'Số trả lại · ' + row.sku}
-                              min={row.returnRequiredQty}
+                              // Báo lỗi 20/11 (mục 6): chưa trả thật thì hạ được (kể cả về 0, giữ hàng lại bán);
+                              // hàng thừa đã từ chối vẫn phải trả. Đã "Ghi nhận đã trả" thì khóa.
+                              min={row.rejectedExcessQty}
                               max={
                                 row.wrongItemQty +
                                 row.damagedQty +
                                 row.rejectedExcessQty
                               }
                               required
-                              // Báo lỗi 20/11 (mục 6): hết hàng giữ lại để trả thì không cho đổi số trả lại nữa.
                               disabled={
-                                !row.canHandle ||
-                                row.returnRequiredQty >=
-                                  row.wrongItemQty +
-                                    row.damagedQty +
-                                    row.rejectedExcessQty ||
-                                saving
+                                !row.canHandle || row.returnedQty > 0 || saving
                               }
                               value={draft.returned}
                               onChange={(event) =>
