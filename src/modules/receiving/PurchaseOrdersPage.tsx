@@ -25,6 +25,7 @@ import ReceivingAssignment from '../operations/ReceivingAssignment'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingWork } from '../operations/receivingTaskModel'
 import { documentCode } from '../../shared/utils/documentCode'
+import { supplierDiscrepancyStatusLabels } from '../../shared/labels/status'
 import './receiving.css'
 
 /** GET /purchase-orders/drafts (Mạnh, việc D1 17/11): nháp của chính người dùng, mới nhất trước. */
@@ -88,19 +89,30 @@ type Detail = Order & {
     status: string
     replacement: boolean
     recordedByName?: string | null
+    submittedAt?: string | null
+    confirmedAt?: string | null
+    confirmedByName?: string | null
     lines: { excessDecision: string }[]
   }[]
   discrepancies: {
     id: number
     goodsReceiptNoteId: number
+    sku?: string
     partName: string
     shortQty: number
     wrongItemQty: number
     damagedQty: number
     rejectedExcessQty: number
+    outstandingReturnQty?: number
+    outstandingReplacementQty?: number
+    status?: string
+    openedAt?: string | null
+    closedAt?: string | null
   }[]
   history: {
     action: string
+    /** Bước do FE ghép từ phiếu nhập / sai lệch (mục 10): hiện đúng chữ này. */
+    label?: string
     actorName: string | null
     at: string
     reason: string | null
@@ -149,7 +161,47 @@ function purchaseOrderHistory(detail: Detail) {
       lineChanges: [],
     })
   }
+  // Mục 10 (PM 19/11): lịch sử BE chỉ có tạo/sửa/hủy đơn nên cột Lịch sử không đổi khi hàng về.
+  // Ghép thêm các bước của phiếu nhập và sai lệch NCC (giống "Lịch sử lệnh" của điều chuyển).
+  const step = (label: string, at: string, actorName?: string | null) =>
+    history.push({
+      action: 'STEP',
+      label,
+      actorName: actorName ?? null,
+      at,
+      reason: null,
+      delivery: null,
+      lineChanges: [],
+    })
+  for (const receipt of detail.receipts ?? []) {
+    const code =
+      documentCode('PN', receipt.id) + (receipt.replacement ? ' (giao bù)' : '')
+    if (receipt.arrivedAt)
+      step('Hàng về · phiếu nhập ' + code, receipt.arrivedAt)
+    if (receipt.submittedAt)
+      step(
+        'Đã gửi kết quả kiểm nhận ' + code,
+        receipt.submittedAt,
+        receipt.recordedByName,
+      )
+    if (receipt.confirmedAt)
+      step(
+        'Đã xác nhận phiếu nhập ' + code,
+        receipt.confirmedAt,
+        receipt.confirmedByName,
+      )
+  }
+  for (const row of detail.discrepancies ?? []) {
+    const part = (row.sku ? row.sku + ' · ' : '') + row.partName
+    if (row.openedAt) step('Phát sinh sai lệch NCC · ' + part, row.openedAt)
+    if (row.closedAt) step('Đã đóng sai lệch NCC · ' + part, row.closedAt)
+  }
+  const time = (value: string) => new Date(value).getTime() || 0
+  // Mới nhất trước, như thứ tự BE trả.
   return history
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => time(b.entry.at) - time(a.entry.at) || a.index - b.index)
+    .map(({ entry }) => entry)
 }
 
 const views = [
@@ -1130,6 +1182,72 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
               </dl>
             </section>
 
+            {detail.discrepancies.length > 0 && (
+              // Mục 10 (PM 19/11): có sai lệch thì đưa khối này lên ngay dưới Thông tin chung.
+              <section className="receiving-panel receiving-discrepancy-panel">
+                <h2>
+                  Sai lệch nhà cung cấp
+                  {detail.openDiscrepancies > 0 && (
+                    <span className="receiving-status receiving-status--discrepancy_open">
+                      {detail.openDiscrepancies} chưa đóng
+                    </span>
+                  )}
+                </h2>
+                <ul className="receiving-items">
+                  {detail.discrepancies.map((row) => (
+                    <li key={row.id}>
+                      <div>
+                        <strong>
+                          {row.sku ? row.sku + ' · ' : ''}
+                          {row.partName}
+                        </strong>
+                        <small>
+                          Phiếu nhập{' '}
+                          {documentCode('PN', row.goodsReceiptNoteId)} · Thiếu{' '}
+                          {row.shortQty} · Giao sai {row.wrongItemQty} · Hỏng{' '}
+                          {row.damagedQty} · Từ chối nhận thừa{' '}
+                          {row.rejectedExcessQty}
+                          {row.status !== 'CLOSED' &&
+                            Boolean(
+                              row.outstandingReturnQty ||
+                              row.outstandingReplacementQty,
+                            ) &&
+                            ' · Còn phải trả ' +
+                              (row.outstandingReturnQty ?? 0) +
+                              ' · Còn phải giao bù ' +
+                              (row.outstandingReplacementQty ?? 0)}
+                        </small>
+                      </div>
+                      {row.status && (
+                        <span
+                          className={
+                            'receiving-status ' +
+                            (row.status === 'CLOSED'
+                              ? 'receiving-status--confirmed'
+                              : 'receiving-status--discrepancy_open')
+                          }
+                        >
+                          {supplierDiscrepancyStatusLabels[row.status] ??
+                            row.status}
+                        </span>
+                      )}
+                      {(owner || manager) && (
+                        <Link
+                          className="mf-btn mf-btn--sm"
+                          to={
+                            '/supplier-discrepancies?receipt=' +
+                            row.goodsReceiptNoteId
+                          }
+                        >
+                          {row.status === 'CLOSED' ? 'Xem' : 'Xử lý sai lệch'}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <section className="receiving-panel">
               <h2>Phụ tùng nhập</h2>
               <div className="table-scroll">
@@ -1208,30 +1326,12 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
               )}
             </section>
 
-            <section className="receiving-panel">
-              <h2>Sai lệch nhà cung cấp</h2>
-              {!detail.discrepancies.length ? (
+            {!detail.discrepancies.length && (
+              <section className="receiving-panel">
+                <h2>Sai lệch nhà cung cấp</h2>
                 <p>Chưa có sai lệch.</p>
-              ) : (
-                <ul className="receiving-items">
-                  {detail.discrepancies.map((row) => (
-                    <li key={row.id}>
-                      <Link
-                        to={
-                          '/supplier-discrepancies?receipt=' +
-                          row.goodsReceiptNoteId
-                        }
-                      >
-                        {row.partName}
-                      </Link>
-                      Thiếu {row.shortQty} · Giao sai {row.wrongItemQty} · Hỏng{' '}
-                      {row.damagedQty} · Từ chối nhận thừa{' '}
-                      {row.rejectedExcessQty}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+              </section>
+            )}
           </div>
 
           <section className="receiving-panel">
@@ -1243,7 +1343,8 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 {history.map((entry, index) => (
                   <li key={index}>
                     <strong>
-                      {orderHistoryLabels[entry.action] ??
+                      {entry.label ??
+                        orderHistoryLabels[entry.action] ??
                         'Đã cập nhật đơn nhập hàng'}
                     </strong>
                     <small>

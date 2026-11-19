@@ -290,6 +290,39 @@
   margin-right: 0.65rem;
 }
 
+/* Mục 10 (PM 19/11): khối sai lệch NCC đặt ngay dưới Thông tin chung, mỗi sai lệch một dòng. */
+.receiving-discrepancy-panel {
+  border-color: #fecdca;
+}
+.receiving-discrepancy-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.receiving-panel.receiving-discrepancy-panel .receiving-items {
+  padding-left: 0;
+  list-style: none;
+}
+.receiving-discrepancy-panel .receiving-items li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid #f2f4f7;
+}
+.receiving-discrepancy-panel .receiving-items li > div {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 0.2rem;
+}
+.receiving-discrepancy-panel .receiving-items li > * {
+  margin-right: 0;
+}
+.receiving-discrepancy-panel small {
+  color: #667085;
+}
+
 .receiving-panel .receiving-receipt-cards {
   display: grid;
   gap: 0.65rem;
