@@ -991,9 +991,9 @@ p.tf-validation-hint {
 .tf-replenishment-detail .tf-table td {
   white-space: normal;
 }
-.tf-replenishment-documents summary {
+.tf-replenishment-documents h2 {
+  margin: 0;
   padding: 16px 20px;
-  cursor: pointer;
   font-size: 14px;
   font-weight: 600;
 }
