@@ -67,6 +67,7 @@ export type TransferRow = {
   totalPlannedQty: number
   dispatchedAt: string | null
   closedAt: string | null
+  awaitingReceiptConfirmation: boolean
 }
 /** UC73 detail response has people and lines rather than list aggregates. */
 export type Transfer = Omit<

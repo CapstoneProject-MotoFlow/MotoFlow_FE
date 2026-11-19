@@ -58,7 +58,7 @@ export default function WarehouseAssignmentDialog({
       formId="warehouse-assignment"
       busy={busy}
       submitLabel="Xác nhận giao việc"
-      submitDisabled={!valid || r.loading}
+      submitDisabled={r.loading || !r.data?.canAssign}
       onClose={onClose}
     >
       <form
@@ -66,7 +66,19 @@ export default function WarehouseAssignmentDialog({
         className="warehouse-assignment-form"
         onSubmit={async (e) => {
           e.preventDefault()
-          if (lock.current || !valid) return
+          if (lock.current) return
+          if (!choice) {
+            setError(
+              r.data?.eligibleAssignees.length
+                ? 'Vui lòng chọn nhân viên nhận hàng.'
+                : 'Không có nhân viên đủ điều kiện nhận việc.',
+            )
+            return
+          }
+          if (!valid) {
+            setError('Nhân viên được chọn không còn đủ điều kiện nhận việc. Vui lòng tải lại danh sách.')
+            return
+          }
           lock.current = true
           setBusy(true)
           setError('')
@@ -114,7 +126,10 @@ export default function WarehouseAssignmentDialog({
               <select
                 disabled={!r.data.canAssign || busy}
                 value={choice}
-                onChange={(e) => setChoice(e.target.value)}
+                onChange={(e) => {
+                  setChoice(e.target.value)
+                  setError('')
+                }}
               >
                 <option value="">Chọn nhân viên</option>
                 {r.data.eligibleAssignees.map((p) => (

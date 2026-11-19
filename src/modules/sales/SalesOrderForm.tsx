@@ -531,7 +531,7 @@ export function SalesOrderFormView({
               <table className="pos-table">
                 <thead>
                   <tr>
-                    <th className="pos-col-no">#</th>
+                    <th className="pos-col-no">STT</th>
                     <th>Phụ tùng</th>
                     <th className="pos-col-qty">Số lượng</th>
                     <th className="pos-col-money">Đơn giá</th>
@@ -596,6 +596,19 @@ export function SalesOrderFormView({
                                 ),
                               )
                             }
+                            onBlur={(e) => {
+                              const normalized = Number(e.currentTarget.value)
+                              if (Number.isFinite(normalized)) {
+                                e.currentTarget.value = String(normalized)
+                                setLines((previous) =>
+                                  previous.map((l) =>
+                                    l.product.id === product.id
+                                      ? { ...l, quantity: normalized }
+                                      : l,
+                                  ),
+                                )
+                              }
+                            }}
                           />
                           <FieldError
                             message={
@@ -951,26 +964,30 @@ export function SalesOrderFormView({
                   ? 'Quay lại danh sách nháp'
                   : 'Hủy đơn'}
             </button>
-            {!editing && (
-              <button
-                type="button"
-                className="mf-btn mf-btn--link pos-draft"
-                onClick={() => void saveDraft()}
-                disabled={busy}
-                title={draftBlocker || undefined}
-              >
-                Lưu nháp
-              </button>
-            )}
-            {draftOrder && (
-              <button
-                type="button"
-                className="mf-btn mf-btn--link pos-draft"
-                onClick={() => setConfirmDelete(true)}
-                disabled={busy}
-              >
-                Xóa nháp
-              </button>
+            {(!editing || draftOrder) && (
+              <div className="pos-draft-actions">
+                {!editing && (
+                  <button
+                    type="button"
+                    className="mf-btn mf-btn--secondary pos-draft-save"
+                    onClick={() => void saveDraft()}
+                    disabled={busy}
+                    title={draftBlocker || undefined}
+                  >
+                    Lưu nháp
+                  </button>
+                )}
+                {draftOrder && (
+                  <button
+                    type="button"
+                    className="mf-btn mf-btn--danger pos-draft-delete"
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={busy}
+                  >
+                    Xóa nháp
+                  </button>
+                )}
+              </div>
             )}
             {editing && (
               <Link

@@ -197,7 +197,10 @@ export default function CountLiveDetail() {
                 </button>
               )}
               {open && own && !submitted && (
-                <Link to={`/stock-counts/${id}/record`}>
+                <Link
+                  className="mf-btn mf-btn--secondary count-record-action"
+                  to={`/stock-counts/${id}/record`}
+                >
                   {d.status === 'DRAFT' || d.awaitingBookQuantities
                     ? 'Bắt đầu đếm'
                     : 'Ghi số đếm'}
@@ -377,7 +380,7 @@ export default function CountLiveDetail() {
                       ))}
                   {action === 'recount' &&
                     d.lines.map((l) => (
-                      <label key={l.id}>
+                      <label key={l.id} className="count-recount-option">
                         <input
                           type="checkbox"
                           checked={selected.includes(l.id)}

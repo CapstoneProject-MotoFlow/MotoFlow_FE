@@ -44,7 +44,6 @@ export default function ReplenishmentCoordinatePage() {
       <PageBackLink to={detailPath} />
       <header>
         <h1>Điều phối {documentCode('YBS', id)}</h1>
-        <p className="tf-note">Chọn kho gửi hàng cho yêu cầu bổ sung</p>
       </header>
       <InventoryNotice
         loading={r.loading || stock.loading}
@@ -114,38 +113,65 @@ function AllocationEditor({
       0,
     )
   const canHandOff = !hasExistingPurchase(request.purchaseOrders)
-  const valid =
-      (groups.size > 0 || canHandOff) &&
-      lines.every((l) => {
-        const allocations = values[l.productId]
-        const stores = allocations.map((v) => v.storeId).filter(Boolean)
-        return (
-          new Set(stores).size === stores.length &&
-          taken(l.productId) <= l.remainingQty &&
-          allocations.every((v) => {
-            const available = options(l).find((s) => s.storeId === v.storeId)
-            const qty = v.qty === '' ? 0 : Number(v.qty)
-            return (
-              Number.isInteger(qty) &&
-              qty >= 0 &&
-              (!qty || (!!available && qty <= available.sellableQty))
-            )
-          })
-        )
-      }),
-    remaining = lines.reduce(
+  const remaining = lines.reduce(
       (sum, l) => sum + Math.max(0, l.remainingQty - taken(l.productId)),
       0,
     ),
     partial = Object.keys(created).length > 0
   function update(productId: number, index: number, next: Allocation) {
+    setError('')
     setValues((old) => ({
       ...old,
       [productId]: old[productId].map((v, i) => (i === index ? next : v)),
     }))
   }
   async function save() {
-    if (lock.current || !valid) return
+    if (lock.current) return
+    for (const line of lines) {
+      const allocations = values[line.productId]
+      const seenStores = new Set<number>()
+      for (let index = 0; index < allocations.length; index += 1) {
+        const allocation = allocations[index]
+        const row = index + 1
+        if (!allocation.storeId) {
+          setError(`Dòng ${line.sku}: vui lòng chọn kho nguồn cho dòng ${row}.`)
+          return
+        }
+        if (allocation.qty === '') {
+          setError(`Dòng ${line.sku}: vui lòng nhập số lượng lấy cho dòng ${row}.`)
+          return
+        }
+        const qty = Number(allocation.qty)
+        const source = options(line).find((item) => item.storeId === allocation.storeId)
+        if (!Number.isInteger(qty) || qty < 1) {
+          setError(`Dòng ${line.sku}: số lượng lấy phải là số nguyên lớn hơn 0.`)
+          return
+        }
+        if (qty > line.remainingQty) {
+          setError(`Dòng ${line.sku}: số lượng lấy không được vượt phần còn thiếu (${line.remainingQty}).`)
+          return
+        }
+        if (!source || qty > source.sellableQty) {
+          setError(`Dòng ${line.sku}: số lượng lấy vượt tồn có thể bán tại kho nguồn.`)
+          return
+        }
+        if (seenStores.has(allocation.storeId)) {
+          setError(`Dòng ${line.sku}: mỗi kho nguồn chỉ được chọn một lần.`)
+          return
+        }
+        seenStores.add(allocation.storeId)
+      }
+      if (taken(line.productId) > line.remainingQty) {
+        setError(`Dòng ${line.sku}: tổng số lượng lấy vượt phần còn thiếu (${line.remainingQty}).`)
+        return
+      }
+    }
+    if (groups.size === 0) {
+      setError(
+        'Chưa có phụ tùng nào được điều phối. Hãy chọn kho nguồn và nhập số lượng lấy.',
+      )
+      return
+    }
     lock.current = true
     setBusy(true)
     setError('')
@@ -198,9 +224,6 @@ function AllocationEditor({
               ' (' + [...groups.keys()].map(storeName).join(', ') + ')'}{' '}
             · còn thiếu {remaining} phụ tùng
           </span>
-          <span className="tf-head-meta tf-coord-manager-note">
-            Quản lý kho nguồn điều phối hàng cho kho nhận {request.storeName}
-          </span>
           <HeadButton
             action={{
               key: 'cancel',
@@ -219,13 +242,14 @@ function AllocationEditor({
               icon: 'check',
               primary: true,
               form: 'coordinate-form',
-              disabled: !valid || busy,
+              disabled: busy,
             }}
           />
         </CardHead>
         {request.note && <p className="tf-note">{request.note}</p>}
         <form
           id="coordinate-form"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault()
             void save()

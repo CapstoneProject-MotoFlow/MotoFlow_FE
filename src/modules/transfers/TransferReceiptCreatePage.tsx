@@ -66,6 +66,14 @@ export default function TransferReceiptCreatePage() {
       docs.refreshDateLimits()
       return
     }
+    if (
+      arrivedAt &&
+      d?.dispatchedAt &&
+      new Date(arrivedAt).getTime() < new Date(d.dispatchedAt).getTime()
+    ) {
+      setError('Thời điểm hàng đến không được trước thời điểm xuất kho.')
+      return
+    }
     const files = form.getAll('photos').filter(
       (file): file is File => file instanceof File && file.size > 0,
     )
@@ -224,6 +232,8 @@ export default function TransferReceiptCreatePage() {
                   name="arrivedAt"
                   type="datetime-local"
                   max={docs.dateLimits.dateTime}
+                  min={d.dispatchedAt?.slice(0, 19)}
+                  step={1}
                   onFocus={docs.refreshDateLimits}
                   disabled={saving || !open}
                 />

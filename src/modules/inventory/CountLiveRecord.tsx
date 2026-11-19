@@ -15,6 +15,13 @@ import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
 import './stock-count.css'
+
+function normalizeQuantityInput(value: string) {
+  if (value === '') return ''
+  if (!/^\d+$/.test(value)) return null
+  return value.replace(/^0+(?=\d)/, '')
+}
+
 export default function CountLiveRecord() {
   const { id } = useParams(),
     scope = useInventoryScope(),
@@ -388,7 +395,12 @@ function Editor({
                     value={values[l.id]}
                     disabled={!editable || busy || importing}
                     onChange={(e) => {
-                      setValues((v) => ({ ...v, [l.id]: e.target.value }))
+                      const quantity = normalizeQuantityInput(e.target.value)
+                      if (quantity === null) return
+                      setValues((v) => ({
+                        ...v,
+                        [l.id]: quantity,
+                      }))
                       setConfirmed(false)
                     }}
                   />
@@ -403,7 +415,12 @@ function Editor({
                     value={damagedValues[l.id] ?? '0'}
                     disabled={!editable || busy || importing}
                     onChange={(e) => {
-                      setDamagedValues((v) => ({ ...v, [l.id]: e.target.value }))
+                      const quantity = normalizeQuantityInput(e.target.value)
+                      if (quantity === null) return
+                      setDamagedValues((v) => ({
+                        ...v,
+                        [l.id]: quantity,
+                      }))
                       setConfirmed(false)
                     }}
                   />

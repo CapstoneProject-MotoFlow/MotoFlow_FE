@@ -1,5 +1,5 @@
 import { useOpenTransfers } from './useOpenTransfers'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import { InventoryNotice, Pagination } from '../inventory/components'
@@ -13,6 +13,7 @@ export default function ManagerTransferListPage() {
   const scope = useInventoryScope(),
     [search, setSearch] = useState(''),
     [success, setSuccess] = useState(''),
+    [receivingAssigned, setReceivingAssigned] = useState<Record<number, boolean>>({}),
     page = Math.max(0, Number(scope.params.get('page')) || 0),
     status = scope.params.get('status') ?? 'OPEN',
     base = useInventoryData<Page<TransferRow>>(
@@ -37,6 +38,15 @@ export default function ManagerTransferListPage() {
   )
   const r = status === 'OPEN' ? open : base
   const coordinator = canCoordinateTransfers(scope.user)
+  const handleAssignmentChange = useCallback(
+    (documentId: number, assigned: boolean) =>
+      setReceivingAssigned((current) =>
+        current[documentId] === assigned
+          ? current
+          : { ...current, [documentId]: assigned },
+      ),
+    [],
+  )
   const rows =
     r.data?.items.filter((row) =>
       [
@@ -192,8 +202,21 @@ export default function ManagerTransferListPage() {
                     {row.lineCount} mã · {row.totalPlannedQty} phụ tùng
                   </td>
                   <td>
-                    <span className={'tf-badge tf-status-' + row.status}>
-                      {states[row.status]}
+                    <span
+                      className={'tf-badge tf-status-' + row.status}
+                      title={
+                        row.awaitingReceiptConfirmation
+                          ? 'Nhân viên đã gửi kết quả kiểm nhận; đang chờ quản lý xác nhận.'
+                          : receivingAssigned[row.id]
+                          ? 'Hàng đang điều chuyển; nhân viên nhận hàng đã được phân công.'
+                          : undefined
+                      }
+                    >
+                      {row.awaitingReceiptConfirmation
+                        ? 'Chờ xác nhận'
+                        : row.status === 'IN_TRANSIT' && receivingAssigned[row.id]
+                          ? 'Chờ nhân viên nhận hàng'
+                          : states[row.status]}
                     </span>
                   </td>
                   <td>
@@ -201,6 +224,7 @@ export default function ManagerTransferListPage() {
                       <RowAction
                         row={row}
                         coordinator={coordinator}
+                        onAssignmentChange={handleAssignmentChange}
                         onAssigned={(name) =>
                           setSuccess(
                             'Đã giao việc nhận hàng ' +
@@ -247,10 +271,12 @@ export default function ManagerTransferListPage() {
 function RowAction({
   row,
   coordinator,
+  onAssignmentChange,
   onAssigned,
 }: {
   row: TransferRow
   coordinator: boolean
+  onAssignmentChange: (documentId: number, assigned: boolean) => void
   onAssigned: (name: string) => void
 }) {
   const { user } = useInventoryScope(),
@@ -278,6 +304,7 @@ function RowAction({
         taskType="TRANSFER_RECEIVING"
         documentId={row.id}
         fallback={view}
+        onCurrentChange={onAssignmentChange}
         onSaved={onAssigned}
       />
     )

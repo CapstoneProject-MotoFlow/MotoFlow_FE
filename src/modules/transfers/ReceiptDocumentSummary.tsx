@@ -19,6 +19,25 @@ export default function ReceiptDocumentSummary({
 }) {
   const creator = receipt.createdBy?.fullName ?? receipt.createdByName ?? null
   const files = receipt.documents ?? []
+  const fields = [
+    receipt.deliveryDocumentNo && {
+      label: 'Số chứng từ',
+      value: receipt.deliveryDocumentNo,
+    },
+    receipt.deliveryDocumentDate && {
+      label: 'Ngày chứng từ',
+      value: date(receipt.deliveryDocumentDate),
+    },
+    receipt.delivererName && {
+      label: 'Người giao hàng',
+      value: receipt.delivererName,
+    },
+    receipt.vehiclePlateNo && {
+      label: 'Biển số xe',
+      value: receipt.vehiclePlateNo,
+    },
+    creator && { label: 'Người lập phiếu', value: creator },
+  ].filter((field): field is { label: string; value: string } => !!field)
   if (compact) {
     const parts = [
       receipt.deliveryDocumentNo && 'Chứng từ ' + receipt.deliveryDocumentNo,
@@ -29,36 +48,16 @@ export default function ReceiptDocumentSummary({
       <span className="tf-receipt-card-docs">{parts.join(' · ')}</span>
     ) : null
   }
-  if (
-    !receipt.deliveryDocumentNo &&
-    !receipt.deliveryDocumentDate &&
-    !creator &&
-    !files.length
-  )
-    return null
+  if (!fields.length && !files.length) return null
   return (
     <div className="tf-receipt-docs">
       <dl className="tf-detail-meta">
-        <div>
-          <dt>Số chứng từ</dt>
-          <dd>{receipt.deliveryDocumentNo || '—'}</dd>
-        </div>
-        <div>
-          <dt>Ngày chứng từ</dt>
-          <dd>{date(receipt.deliveryDocumentDate)}</dd>
-        </div>
-        <div>
-          <dt>Người giao hàng</dt>
-          <dd>{receipt.delivererName || '—'}</dd>
-        </div>
-        <div>
-          <dt>Biển số xe</dt>
-          <dd>{receipt.vehiclePlateNo || '—'}</dd>
-        </div>
-        <div>
-          <dt>Người lập phiếu</dt>
-          <dd>{creator || '—'}</dd>
-        </div>
+        {fields.map((field) => (
+          <div key={field.label}>
+            <dt>{field.label}</dt>
+            <dd>{field.value}</dd>
+          </div>
+        ))}
       </dl>
       {files.length > 0 && (
         <div className="tf-receipt-doc-files">

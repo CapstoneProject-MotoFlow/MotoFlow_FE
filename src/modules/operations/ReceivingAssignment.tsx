@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../shared/ui/Icon'
 import { useAuth } from '../../shared/hooks/useAuth'
@@ -20,12 +20,14 @@ export default function ReceivingAssignment({
   variant = 'head',
   fallback = null,
   onSaved,
+  onCurrentChange,
 }: {
   taskType: ReceivingTaskType
   documentId: number
   variant?: 'row' | 'head'
   fallback?: ReactNode
   onSaved?: (name: string) => void
+  onCurrentChange?: (documentId: number, assigned: boolean) => void
 }) {
   const { user } = useAuth()
   const [revision, setRevision] = useState(0),
@@ -37,6 +39,9 @@ export default function ReceivingAssignment({
     Number.isSafeInteger(documentId) && documentId > 0,
   )
   const current = r.data?.current
+  useEffect(() => {
+    if (r.data) onCurrentChange?.(documentId, !!current)
+  }, [current, documentId, onCurrentChange, r.data])
   if (r.loading && !r.data)
     return variant === 'row' ? (
       <small className="mf-row-note">Đang tải…</small>

@@ -50,6 +50,11 @@
   gap: 8px;
   font-size: 14px;
 }
+.tf-field-error {
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 500;
+}
 .tf-page input,
 .tf-page select,
 .tf-page textarea,
@@ -919,6 +924,22 @@ p.tf-validation-hint {
   margin: 0;
   min-width: 0;
 }
+.tf-coordinate > section {
+  overflow: visible;
+}
+.tf-coordinate .tf-table {
+  overflow: visible;
+}
+.tf-coordinate .tf-table td {
+  overflow: visible;
+}
+.tf-coordinate .tf-coord-source {
+  position: relative;
+  z-index: 1;
+}
+.tf-coordinate .tf-coord-source:has(.searchable-filter input[aria-expanded='true']) {
+  z-index: 20;
+}
 .tf-coordinate .tf-table td:first-child {
   white-space: normal;
   min-width: 180px;
@@ -930,9 +951,9 @@ p.tf-validation-hint {
   top: 21px;
 }
 .tf-coordinate .tf-table .searchable-filter-menu {
-  position: relative;
-  inset: auto;
-  margin-top: 4px;
+  position: absolute;
+  z-index: 30;
+  inset: calc(100% + 4px) 0 auto;
   white-space: normal;
 }
 .tf-coordinate .tf-table input[type='number'] {
@@ -991,9 +1012,9 @@ p.tf-validation-hint {
 .tf-replenishment-detail .tf-table td {
   white-space: normal;
 }
-.tf-replenishment-documents summary {
+.tf-replenishment-documents h3 {
+  margin: 0;
   padding: 16px 20px;
-  cursor: pointer;
   font-size: 14px;
   font-weight: 600;
 }
@@ -1012,6 +1033,152 @@ p.tf-validation-hint {
 }
 .tf-branch-list .tf-table td {
   padding: 14px 16px;
+}
+
+/* Compact, balanced layout for transfer receipt inspection. */
+.tf-page--receipt {
+  gap: 18px;
+}
+.admin-dashboard > .dashboard-main > main.dashboard-content.tf-page--receipt {
+  box-sizing: border-box;
+  width: min(100% - 56px, 1320px);
+  max-width: 1320px;
+  padding-inline: 0;
+}
+.tf-work-card--receipt {
+  box-shadow: none;
+}
+.tf-work-card--receipt .tf-receipt-docs {
+  background: #fff;
+}
+.tf-work-card--receipt .tf-receipt-docs .tf-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 32px;
+  padding: 12px 20px;
+}
+.tf-work-card--receipt .tf-detail-meta > div {
+  gap: 5px;
+  min-width: 0;
+  flex: 0 1 180px;
+}
+.tf-work-card--receipt .tf-receipt-timing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  align-items: center;
+  margin: 0;
+  padding: 9px 20px;
+  border-bottom: 1px solid #edf0f5;
+  background: #fff;
+  color: #475467;
+  font-size: 13px;
+}
+.tf-work-table--receipt th,
+.tf-work-table--receipt tfoot th,
+.tf-work-table--receipt tfoot td {
+  background: #fff;
+}
+.tf-work-table--receipt {
+  padding: 0 20px;
+}
+.tf-work-table--receipt table {
+  border: 1px solid #e7ebf2;
+  border-radius: 10px;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.tf-work-table--receipt table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+.tf-work-table--receipt th,
+.tf-work-table--receipt td {
+  padding: 12px 10px;
+  vertical-align: middle;
+}
+.tf-work-table--receipt th:first-child,
+.tf-work-table--receipt td:first-child {
+  width: 25%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tf-work-table--receipt th:nth-child(2),
+.tf-work-table--receipt td:nth-child(2) {
+  width: 8%;
+}
+.tf-work-table--receipt th:nth-child(3),
+.tf-work-table--receipt td:nth-child(3),
+.tf-work-table--receipt th:nth-child(4),
+.tf-work-table--receipt td:nth-child(4),
+.tf-work-table--receipt th:nth-child(5),
+.tf-work-table--receipt td:nth-child(5) {
+  width: 12%;
+}
+.tf-work-table--receipt th:nth-child(6),
+.tf-work-table--receipt td:nth-child(6),
+.tf-work-table--receipt th:nth-child(7),
+.tf-work-table--receipt td:nth-child(7) {
+  width: 8%;
+}
+.tf-work-table--receipt th:last-child,
+.tf-work-table--receipt td:last-child {
+  width: 15%;
+}
+.tf-work-table--receipt th:not(:first-child),
+.tf-work-table--receipt td:not(:first-child) {
+  text-align: center;
+}
+.tf-work-table--receipt input[type='number'] {
+  width: min(100%, 112px);
+  min-height: 40px;
+  margin: 0 auto;
+  text-align: center;
+}
+.tf-work-table--receipt td:first-child small {
+  white-space: normal;
+}
+.tf-work-table--receipt.tf-work-table--readonly th:first-child,
+.tf-work-table--receipt.tf-work-table--readonly td:first-child {
+  width: 28%;
+}
+.tf-work-table--receipt.tf-work-table--readonly th:nth-child(2),
+.tf-work-table--receipt.tf-work-table--readonly td:nth-child(2) {
+  width: 8%;
+}
+.tf-work-table--receipt.tf-work-table--readonly th:nth-child(3),
+.tf-work-table--receipt.tf-work-table--readonly td:nth-child(3),
+.tf-work-table--receipt.tf-work-table--readonly th:nth-child(4),
+.tf-work-table--receipt.tf-work-table--readonly td:nth-child(4),
+.tf-work-table--receipt.tf-work-table--readonly th:nth-child(5),
+.tf-work-table--receipt.tf-work-table--readonly td:nth-child(5) {
+  width: 13%;
+}
+.tf-work-table--receipt.tf-work-table--readonly th:nth-child(6),
+.tf-work-table--receipt.tf-work-table--readonly td:nth-child(6),
+.tf-work-table--receipt.tf-work-table--readonly th:nth-child(7),
+.tf-work-table--receipt.tf-work-table--readonly td:nth-child(7) {
+  width: 12%;
+}
+.tf-inspection-note {
+  margin: 0;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #edf0f5;
+  background: #fff;
+}
+.tf-inspection-note textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+@media (max-width: 760px) {
+  .tf-work-card--receipt .tf-detail-meta > div {
+    flex-basis: 140px;
+  }
+  .tf-work-table--receipt {
+    padding: 0 12px;
+  }
 }
 .tf-branch-list .tf-status-tabs button {
   font-size: 13px;

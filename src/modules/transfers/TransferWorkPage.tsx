@@ -109,7 +109,12 @@ export default function TransferWorkPage({
     />
   ) : null
   return (
-    <main className="dashboard-content tf-page">
+    <main
+      className={
+        'dashboard-content tf-page' +
+        (mode === 'receipt' ? ' tf-page--receipt' : '')
+      }
+    >
       <PageBackLink to={'/transfer-orders/' + id} />
       <header>
         <div>
@@ -272,7 +277,14 @@ function WorkEditor({
                     : 0,
             damaged: 'damagedQty' in l ? l.damagedQty : 0,
             wrong: 'wrongItemQty' in l ? (l.wrongItemQty ?? 0) : 0,
-            reason: 'shortReason' in l ? (l.shortReason ?? '') : '',
+            reason:
+              mode === 'prepare' &&
+              'plannedQty' in l &&
+              ('preparedQty' in l ? (l.preparedQty ?? 0) : 0) >= l.plannedQty
+                ? ''
+                : 'shortReason' in l
+                  ? (l.shortReason ?? '')
+                  : '',
           },
         ]),
       ),
@@ -368,8 +380,7 @@ function WorkEditor({
           receivedQty(l.productId) <= l.documentQty) &&
         (mode !== 'prepare' ||
           !('plannedQty' in l) ||
-          v.qty >= l.plannedQty ||
-          !!v.reason.trim())
+          (v.qty < l.plannedQty ? !!v.reason.trim() : !v.reason.trim()))
       )
     })
   async function save() {
@@ -442,7 +453,7 @@ function WorkEditor({
   }
   return (
     <>
-      <section>
+      <section className={mode === 'receipt' ? 'tf-work-card tf-work-card--receipt' : 'tf-work-card'}>
         <CardHead
           title={receipt ? 'Phiếu nhận điều chuyển' : 'Kết quả thực tế'}
           status={
@@ -574,7 +585,7 @@ function WorkEditor({
         )}
         {receipt && <ReceiptDocumentSummary receipt={receipt} />}
         {receipt && (
-          <p className="tf-note">
+          <p className={mode === 'receipt' ? 'tf-note tf-receipt-timing' : 'tf-note'}>
             Đến: {dateTime(receipt.arrivedAt)}
             {!canRecord && (
               <span>
@@ -613,8 +624,15 @@ function WorkEditor({
           }}
         >
           <fieldset disabled={busy || !canRecord}>
-            <div className="tf-table">
-              <table>
+          <div
+            className={
+              mode === 'receipt'
+                ? 'tf-table tf-work-table tf-work-table--receipt' +
+                  (!canRecord ? ' tf-work-table--readonly' : '')
+                : 'tf-table tf-work-table'
+            }
+          >
+            <table>
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
@@ -674,10 +692,7 @@ function WorkEditor({
                       </td>
                       <td>
                         {'documentQty' in l ? (
-                          <>
-                            {l.documentQty}
-                            <small>Thực nhận: {deliveredOf(l)}</small>
-                          </>
+                          l.documentQty
                         ) : 'plannedQty' in l ? (
                           l.plannedQty
                         ) : (
@@ -702,15 +717,22 @@ function WorkEditor({
                             values[l.productId].qty > l.sellableQty
                           }
                           value={values[l.productId].qty}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const qty = Number(e.target.value)
                             setValues({
                               ...values,
                               [l.productId]: {
                                 ...values[l.productId],
-                                qty: Number(e.target.value),
+                                qty,
+                                reason:
+                                  mode === 'prepare' &&
+                                  'plannedQty' in l &&
+                                  qty >= l.plannedQty
+                                    ? ''
+                                    : values[l.productId].reason,
                               },
                             })
-                          }
+                          }}
                         />
                       </td>
                       <td>
@@ -737,6 +759,18 @@ function WorkEditor({
                             aria-label={'Lý do ' + l.sku}
                             maxLength={255}
                             value={values[l.productId].reason}
+                            disabled={
+                              mode === 'prepare' &&
+                              'plannedQty' in l &&
+                              values[l.productId].qty >= l.plannedQty
+                            }
+                            placeholder={
+                              mode === 'prepare' &&
+                              'plannedQty' in l &&
+                              values[l.productId].qty >= l.plannedQty
+                                ? 'Chỉ cần nhập khi số đã soạn còn thiếu'
+                                : undefined
+                            }
                             onChange={(e) =>
                               setValues({
                                 ...values,
@@ -822,7 +856,7 @@ function WorkEditor({
               </table>
             </div>
             {receipt && canRecord && (
-              <div className="tf-note">
+              <div className={mode === 'receipt' ? 'tf-note tf-inspection-note' : 'tf-note'}>
                 <InspectionNoteField
                   value={inspectionNote}
                   onChange={setInspectionNote}

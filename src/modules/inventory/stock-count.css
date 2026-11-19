@@ -24,6 +24,19 @@
   color: #344054;
   font-size: 14px;
 }
+.count-form .count-recount-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  margin: 2px 0;
+}
+.count-form .count-recount-option input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+}
 .count-product-picker .searchable-filter-caret {
   top: 21px;
 }
@@ -201,20 +214,18 @@
   align-items: center;
   flex-wrap: wrap;
 }
+.count-buttons > .count-record-action {
+  color: #465fff;
+  border-color: #cbd2ff;
+  background: #fff;
+}
+.count-buttons > .count-record-action:hover:not(:disabled) {
+  border-color: #465fff;
+  background: #f7f8ff;
+}
 .count-disabled-link {
   opacity: 0.5;
   cursor: not-allowed;
-}
-.count-record-grid {
-  width: 100%;
-}
-.count-record-head,
-.count-record-row {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) 100px 130px minmax(180px, 260px);
-  gap: 16px;
-  align-items: center;
-  padding: 16px 24px;
 }
 .count-record-head {
   background: #f9fafb;
@@ -224,6 +235,10 @@
 }
 .count-record-row {
   border-bottom: 1px solid #eaecf0;
+}
+.count-workspace .stock-table td:nth-child(3) input,
+.count-workspace .stock-table td:nth-child(4) input {
+  max-width: 300px;
 }
 .count-record-row small {
   display: block;
@@ -250,18 +265,6 @@
 @media (max-width: 1100px) {
   .count-detail-grid {
     grid-template-columns: 1fr;
-  }
-  .count-record-head {
-    display: none;
-  }
-  .count-record-row {
-    grid-template-columns: 1fr 1fr;
-  }
-  .count-record-row > div:first-child {
-    grid-column: 1/-1;
-  }
-  .count-record-row > div:last-child {
-    grid-column: 1/-1;
   }
   .count-mobile-label {
     display: block;
@@ -291,9 +294,6 @@
   .count-pick {
     align-items: stretch;
     flex-direction: column;
-  }
-  .count-record-row {
-    padding: 16px;
   }
   .count-workspace .count-primary {
     white-space: normal;
@@ -332,7 +332,7 @@
   white-space: normal;
 }
 .count-form .stock-check input[type='checkbox'] {
-  width: 16px;
+  width: 18px;
   flex-shrink: 0;
 }
 .count-form .stock-table td {
@@ -383,7 +383,8 @@
   gap: 12px;
 }
 .count-form input[type='checkbox'] {
-  width: auto;
+  width: 18px;
+  height: 18px;
   accent-color: #465fff;
 }
 .count-workspace .stock-filters > label {
