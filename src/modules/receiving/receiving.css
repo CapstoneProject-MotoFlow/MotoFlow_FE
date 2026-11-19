@@ -740,6 +740,19 @@
   min-width: 180px;
 }
 
+.receiving-confirm-table td small,
+.receiving-lot-dates {
+  display: block;
+  color: #667085;
+  font-size: 0.75rem;
+}
+
+/* Mục 9 (PM 19/11): nút "Có HSD" dưới tên phụ tùng ở bảng kiểm nhận. */
+.receiving-lot-button {
+  display: block;
+  margin-top: 0.35rem;
+}
+
 .receiving-confirm-dialog .receiving-confirm-table :is(th, td):nth-last-child(-n + 2) {
   min-width: 7.5rem;
   white-space: nowrap;
