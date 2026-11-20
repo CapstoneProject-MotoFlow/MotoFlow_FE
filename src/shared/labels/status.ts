@@ -100,6 +100,7 @@ export const supplierDiscrepancyStatusLabels: Record<string, string> = {
 /** Sai lệch hàng nhà cung cấp giao: các bước xử lý. */
 export const supplierResolutionLabels: Record<string, string> = {
   MOVED_TO_AWAITING_RETURN: 'Chuyển sang chờ trả nhà cung cấp',
+  RELEASED_FROM_AWAITING_RETURN: 'Giữ lại, không trả nhà cung cấp',
   RETURNED_TO_SUPPLIER: 'Đã trả nhà cung cấp',
   LATE_DELIVERY_RECEIVED: 'Đã nhận hàng đến muộn',
   RECEIVED_BACK_AT_SOURCE: 'Đã nhận lại tại kho nguồn',

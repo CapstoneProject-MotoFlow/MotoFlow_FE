@@ -7,6 +7,7 @@ export const movementNames: Record<string, string> = {
   EXCESS_ACCEPTED: 'Nhận hàng thừa',
   EXCESS_REJECTED: 'Từ chối hàng thừa',
   RETURN_HOLD: 'Chuyển chờ trả nhà cung cấp',
+  RETURN_RELEASE: 'Bỏ chờ trả nhà cung cấp',
   SUPPLIER_RETURN: 'Trả nhà cung cấp',
   TRANSFER_DISPATCH: 'Xuất điều chuyển',
   TRANSFER_EXTRA_DISPATCH: 'Hàng gửi dư',

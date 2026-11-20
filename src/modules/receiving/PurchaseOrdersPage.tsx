@@ -206,6 +206,8 @@ function purchaseOrderHistory(detail: Detail) {
 
 const views = [
   ['OPEN', 'Đang mở'],
+  // Báo lỗi 20/11 (mục 2): đơn còn hồ sơ sai lệch nhà cung cấp chưa đóng.
+  ['DISCREPANCY_OPEN', 'Sai lệch'],
   ['FULLY_RECEIVED', 'Đã nhận đủ'],
   ['CANCELLED', 'Đã hủy'],
   ['ALL', 'Tất cả'],
@@ -1006,6 +1008,8 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
   const navigate = useNavigate()
   const owner = user?.role === 'OWNER'
   const manager = user?.role === 'BRANCH_MANAGER'
+  // Báo lỗi 20/11 (mục 3): đến từ nút "Nhập hàng giao bù" của màn sai lệch thì nói rõ bước tiếp theo.
+  const fromReplacement = useSearchParams()[0].has('replacement')
   const [assigned, setAssigned] = useState('')
   const [detail, setDetail] = useState<Detail>()
   const [assignedNames, setAssignedNames] = useState<
@@ -1094,6 +1098,14 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
               )}
           </div>
         )}
+      {fromReplacement && manager && detail?.canCreateReplacement && (
+        <p className="receiving-replacement-hint" role="status">
+          Nhà cung cấp còn phải giao bù hàng cho đơn này. Bấm “Giao việc” để
+          giao người nhận hàng giao bù (có thể giao cho chính bạn). Khi hàng
+          tới, người được giao bấm “Lập phiếu nhập” và chọn “Giao bù cho sai
+          lệch”.
+        </p>
+      )}
       {assigned && (
         <p className="mf-success-notice" role="status">
           {assigned}

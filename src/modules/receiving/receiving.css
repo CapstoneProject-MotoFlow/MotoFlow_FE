@@ -966,8 +966,35 @@
 }
 
 .receiving-staff-summary {
+  /* Báo lỗi 20/11 (mục 1): thẳng lề với ô đầu của bảng. */
+  padding: 0.5rem 0.75rem;
   color: #536078;
   font-size: 0.875rem;
+}
+
+/* Báo lỗi 20/11 (mục 7): ô tick và tên phụ tùng của phiếu giao bù to, dễ bấm. */
+.receiving-case-option {
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.receiving-case-option input[type='checkbox'] {
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  accent-color: #4658f3;
+  cursor: pointer;
+}
+
+.receiving-replacement-hint {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #4658f3;
+  border-radius: 0.5rem;
+  background: #eef0ff;
+  color: #1f2a44;
 }
 
 @media (max-width: 700px) {

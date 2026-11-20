@@ -975,7 +975,10 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         {replacement && (
           <div className="receiving-layout-fields">
             {replacementCases.map((item) => (
-              <label key={item.id} className="receiving-inline">
+              <label
+                key={item.id}
+                className="receiving-inline receiving-case-option"
+              >
                 <input
                   type="checkbox"
                   checked={selectedCases.includes(item.id)}

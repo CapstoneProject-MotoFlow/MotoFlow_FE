@@ -34,6 +34,7 @@ type Case = HandlingCase & {
   canWaiveReplacement: boolean
   /** BM của kho nhận còn phải nhận hàng giao bù cho hồ sơ này (BE tính). */
   canCreateReplacement?: boolean
+  returnedQty: number
   outstandingReturnQty: number
   outstandingReplacementQty: number
   openReplacementQty: number
@@ -256,6 +257,8 @@ function CaseAction({
                 max={
                   returning ? row.outstandingReturnQty : row.openReplacementQty
                 }
+                // Báo lỗi 20/11 (mục 4): điền sẵn số còn phải trả; vẫn sửa được nếu trả làm nhiều lần.
+                defaultValue={returning ? row.outstandingReturnQty : undefined}
                 disabled={!allowed || saving}
               />
             </label>
@@ -577,14 +580,18 @@ function DiscrepancyForm({
                             <input
                               type="number"
                               aria-label={'Số trả lại · ' + row.sku}
-                              min={row.returnRequiredQty}
+                              // Báo lỗi 20/11 (mục 6): chưa trả thật thì hạ được (kể cả về 0, giữ hàng lại bán);
+                              // hàng thừa đã từ chối vẫn phải trả. Đã "Ghi nhận đã trả" thì khóa.
+                              min={row.rejectedExcessQty}
                               max={
                                 row.wrongItemQty +
                                 row.damagedQty +
                                 row.rejectedExcessQty
                               }
                               required
-                              disabled={!row.canHandle || saving}
+                              disabled={
+                                !row.canHandle || row.returnedQty > 0 || saving
+                              }
                               value={draft.returned}
                               onChange={(event) =>
                                 setDrafts((previous) => ({
@@ -645,14 +652,20 @@ function DiscrepancyForm({
                             {/* Mục 13 (PM 19/11): còn phải giao bù thì có nút nhận hàng giao bù cho
                                 phiếu này. Mở đơn nhập hàng, ở đó BM giao việc nhận hàng giao bù (hoặc
                                 tự nhận) rồi lập phiếu nhập "Giao bù cho sai lệch". */}
-                            {row.canCreateReplacement && row.purchaseOrderId && (
-                              <Link
-                                className="mf-btn mf-btn--sm mf-btn--primary"
-                                to={'/purchase-orders/' + row.purchaseOrderId}
-                              >
-                                Nhập hàng giao bù
-                              </Link>
-                            )}
+                            {row.canCreateReplacement &&
+                              row.purchaseOrderId && (
+                                <Link
+                                  className="mf-btn mf-btn--sm mf-btn--primary"
+                                  to={
+                                    '/purchase-orders/' +
+                                    row.purchaseOrderId +
+                                    '?replacement=' +
+                                    row.id
+                                  }
+                                >
+                                  Nhập hàng giao bù
+                                </Link>
+                              )}
                             {row.canRecordReturn && (
                               <button
                                 type="button"

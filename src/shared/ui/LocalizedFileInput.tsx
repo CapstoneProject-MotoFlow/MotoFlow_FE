@@ -1,4 +1,10 @@
-import { useId, useState, type ChangeEvent, type InputHTMLAttributes } from 'react'
+import {
+  useEffect,
+  useId,
+  useState,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+} from 'react'
 import './localized-file-input.css'
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> & {
@@ -15,6 +21,15 @@ export default function LocalizedFileInput({
   const generatedId = useId()
   const inputId = id ?? generatedId
   const [names, setNames] = useState('')
+  // Báo lỗi 20/11 (mục 5): xem trước ảnh đã chọn; tệp khác (PDF) chỉ hiện nhãn.
+  const [previews, setPreviews] = useState<
+    { key: string; url: string | null; name: string }[]
+  >([])
+  useEffect(
+    () => () =>
+      previews.forEach((item) => item.url && URL.revokeObjectURL(item.url)),
+    [previews],
+  )
   return (
     <div className="localized-file-input">
       <input
@@ -24,8 +39,17 @@ export default function LocalizedFileInput({
         className="localized-file-input-native"
         onChange={(event) => {
           // Mục 8 (PM 19/11): không hiện tên tệp, chỉ báo số tệp đã chọn.
-          const count = event.currentTarget.files?.length ?? 0
-          setNames(count ? 'Đã chọn ' + count + ' tệp' : '')
+          const files = Array.from(event.currentTarget.files ?? [])
+          setNames(files.length ? 'Đã chọn ' + files.length + ' tệp' : '')
+          setPreviews(
+            files.map((file, index) => ({
+              key: index + ':' + file.name,
+              url: file.type.startsWith('image/')
+                ? URL.createObjectURL(file)
+                : null,
+              name: file.name,
+            })),
+          )
           onChange?.(event)
         }}
       />
@@ -33,6 +57,21 @@ export default function LocalizedFileInput({
         <span>{buttonText}</span>
         <small>{names || 'Chưa chọn tệp'}</small>
       </label>
+      {previews.length > 0 && (
+        <ul className="localized-file-input-previews">
+          {previews.map((item) => (
+            <li key={item.key}>
+              {item.url ? (
+                <a href={item.url} target="_blank" rel="noreferrer">
+                  <img src={item.url} alt={item.name} />
+                </a>
+              ) : (
+                <span title={item.name}>PDF</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
