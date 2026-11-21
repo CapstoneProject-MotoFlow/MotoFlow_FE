@@ -16,6 +16,7 @@ import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
 import './stock-count.css'
+import CountLineTags from './CountLineTags'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 
 function normalizeQuantityInput(value: string) {
@@ -145,7 +146,7 @@ function OpeningEditor({
       <button className="count-primary" disabled={busy || data.countDate > today()} onClick={() => void act('start')}>Bắt đầu đếm</button>
     </div>}
     {editable && <div className="opening-count-add">
-      <ProductPicker selected={selected} excludedIds={[]} label="Thêm phụ tùng" disabled={busy} onSelect={(product) => {
+      <ProductPicker selected={selected} excludedIds={[]} label="Thêm phụ tùng" excludeDamagedVariants disabled={busy} onSelect={(product) => {
         setSelected(product)
         setRows((previous) => [...previous, { key: `${product.id}-${Date.now()}`, product, expiryDate: '', countedQty: '', damagedQty: '0' }])
         setConfirmed(false)
@@ -400,6 +401,7 @@ function Editor({
                     partName={l.partName}
                     blindCount
                   />
+                  <CountLineTags line={l} blind />
                   {l.lotId != null && (
                     <small className="count-line-lot-details">
                       Lô {documentCode('L', l.lotId)} · Hạn sử dụng:{' '}

@@ -9,6 +9,7 @@ import type { Page, StockRow } from './types'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { documentCode } from '../../shared/utils/documentCode'
+import { isDamagedVariant } from '../../shared/utils/damagedVariant'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
 import './stock-count.css'
 type Product = { id: number; sku: string; partName: string }
@@ -49,7 +50,7 @@ export function StockCountFormDialog({
     [groupError, setGroupError] = useState(''),
     [countCheckLoading, setCountCheckLoading] = useState(false),
     [countCheckError, setCountCheckError] = useState(''),
-    [duplicateProducts, setDuplicateProducts] = useState<Record<number, string[]>>({}),
+    [countLines, setCountLines] = useState<Record<number, number[]>>({}),
     [openingCount, setOpeningCount] = useState<CountRow | null>(null),
     [activeCounts, setActiveCounts] = useState<CountRow[]>([]),
     [busy, setBusy] = useState(false),
@@ -81,7 +82,7 @@ export function StockCountFormDialog({
     if (owner || !actualStore) {
       setCountCheckLoading(false)
       setCountCheckError('')
-      setDuplicateProducts({})
+      setCountLines({})
       setOpeningCount(null)
       setActiveCounts([])
       return
@@ -89,7 +90,7 @@ export function StockCountFormDialog({
     const controller = new AbortController()
     setCountCheckLoading(true)
     setCountCheckError('')
-    setDuplicateProducts({})
+    setCountLines({})
     setOpeningCount(null)
     setActiveCounts([])
     void (async () => {
@@ -127,25 +128,7 @@ export function StockCountFormDialog({
         const activeRows = rows.filter((row) =>
           ['DRAFT', 'COUNTING', 'AWAITING_APPROVAL'].includes(row.status),
         )
-        const details = await Promise.all(
-          activeRows.map((row) =>
-            axiosClient.get<CountDto>(`/stock-counts/${row.id}`, {
-              signal: controller.signal,
-            }),
-          ),
-        )
         if (controller.signal.aborted) return
-        const productCounts: Record<number, string[]> = {}
-        details.forEach(({ data }) => {
-          const code = 'KK-' + String(data.id).padStart(4, '0')
-          data.lines.forEach((line) => {
-            productCounts[line.productId] = [
-              ...(productCounts[line.productId] ?? []),
-              code,
-            ]
-          })
-        })
-        setDuplicateProducts(productCounts)
         setOpeningCount(existingOpening ?? null)
         setActiveCounts(activeRows)
       } catch (cause) {
@@ -156,6 +139,47 @@ export function StockCountFormDialog({
     })()
     return () => controller.abort()
   }, [owner, actualStore])
+  // R-10: chỉ đọc chi tiết phiếu đang mở khi đã chọn phụ tùng (phạm vi theo phụ tùng / nhóm), mỗi phiếu đọc
+  // một lần rồi nhớ lại; phạm vi toàn kho / theo khu đã so ở scopeConflicts nên không cần đọc dòng.
+  const needsLineCheck = !owner && actualProducts.length > 0
+  const missingCountIds = needsLineCheck
+    ? activeCounts.filter((row) => !(row.id in countLines)).map((row) => row.id)
+    : []
+  const missingKey = missingCountIds.join(',')
+  // Còn phiếu chưa đọc dòng thì chưa biết có trùng phụ tùng hay không: khóa nút tạo cho đến khi đọc xong.
+  const lineCheckLoading = !!missingKey && !countCheckError
+  useEffect(() => {
+    if (!missingKey) return
+    const controller = new AbortController()
+    void Promise.all(
+      missingKey.split(',').map((id) =>
+        axiosClient.get<CountDto>(`/stock-counts/${id}`, {
+          signal: controller.signal,
+        }),
+      ),
+    )
+      .then((details) => {
+        if (controller.signal.aborted) return
+        setCountLines((previous) => {
+          const next = { ...previous }
+          details.forEach(({ data }) => {
+            next[data.id] = data.lines.map((line) => line.productId)
+          })
+          return next
+        })
+      })
+      .catch((cause) => {
+        if (!controller.signal.aborted) setCountCheckError(inventoryError(cause))
+      })
+    return () => controller.abort()
+  }, [missingKey])
+  const duplicateProducts: Record<number, string[]> = {}
+  activeCounts.forEach((row) => {
+    const code = 'KK-' + String(row.id).padStart(4, '0')
+    ;(countLines[row.id] ?? []).forEach((productId) => {
+      duplicateProducts[productId] = [...(duplicateProducts[productId] ?? []), code]
+    })
+  })
   const duplicateSelection = actualProducts.flatMap((productId) =>
     (duplicateProducts[productId] ?? []).map((code) => ({ productId, code })),
   )
@@ -188,7 +212,12 @@ export function StockCountFormDialog({
     )
   const categories = useInventoryData<Category[]>('/part-categories')
   const productOptions =
-    products.data?.items.filter((p) => !actualProducts.includes(p.id)) ?? []
+    products.data?.items.filter(
+      (p) =>
+        !actualProducts.includes(p.id) &&
+        // BH8: phiếu tồn đầu kỳ không nhập mã hàng móp.
+        !(countType === 'OPENING' && isDamagedVariant(p)),
+    ) ?? []
   useEffect(() => {
     if (scope !== 'GROUP' || !groupId) {
       setGroupProducts([])
@@ -256,7 +285,7 @@ export function StockCountFormDialog({
     (scope !== 'GROUP' || (!!groupId && groupProducts.length > 0 && !groupLoading)) &&
     !!date &&
     (owner || date <= monthEnd()) &&
-    (owner || (!!actualStore && !countCheckLoading && !countCheckError)) &&
+    (owner || (!!actualStore && !countCheckLoading && !lineCheckLoading && !countCheckError)) &&
     (owner || duplicateSelection.length === 0) &&
     (owner || scopeConflicts.length === 0) &&
     !openingBlocked
@@ -316,7 +345,7 @@ export function StockCountFormDialog({
           loading={stores.loading || prefill.loading}
           error={error || stores.error || prefill.error}
         />
-        {!owner && countCheckLoading && <p role="status">Kiểm tra phiếu kiểm kê đang mở…</p>}
+        {!owner && (countCheckLoading || lineCheckLoading) && <p role="status">Kiểm tra phiếu kiểm kê đang mở…</p>}
         {!owner && countCheckError && (
           <p role="alert">Chưa kiểm tra được phiếu đang mở. Tải lại hoặc thử lại trước khi tạo: {countCheckError}</p>
         )}

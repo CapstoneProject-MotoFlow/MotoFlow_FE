@@ -2092,3 +2092,45 @@
   color: #667085;
   font-size: 13px;
 }
+
+/* GVHD 20/11 (PR #54 sửa review) */
+.sales-split-from {
+  font-size: 12px;
+  color: var(--mf-text-2);
+  white-space: nowrap;
+}
+.pos-variant-hint {
+  display: block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: 1px dashed var(--mf-border);
+  border-radius: 6px;
+  background: var(--mf-primary-soft);
+  color: var(--mf-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sales-settle-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sales-settle-choice button {
+  padding: 6px 14px;
+  border: 1px solid var(--mf-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mf-text);
+  cursor: pointer;
+}
+.sales-settle-choice button[aria-pressed='true'] {
+  border-color: var(--mf-primary);
+  background: var(--mf-primary-soft);
+  color: var(--mf-primary);
+  font-weight: 600;
+}
+.sales-settle-choice small {
+  color: var(--mf-muted);
+}

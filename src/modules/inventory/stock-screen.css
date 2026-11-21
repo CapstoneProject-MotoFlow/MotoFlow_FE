@@ -494,3 +494,14 @@
 .stock-screen .stock-panel > .mf-hint {
   margin: 0 20px 12px;
 }
+
+/* KH1 + BH7 (GVHD 20/11) */
+.stock-variant-label,
+.stock-defective-note {
+  display: block;
+  font-size: 12px;
+  color: var(--mf-text-2);
+}
+.stock-defective-note {
+  color: var(--mf-warning);
+}

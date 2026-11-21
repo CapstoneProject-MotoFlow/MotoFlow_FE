@@ -579,6 +579,14 @@ export function SalesOrderDetailView({
                 <span className="sales-version">
                   Phiên bản {order?.version ?? '—'}
                 </span>
+                {order?.splitFromOrderId != null && (
+                  <span className="sales-split-from">
+                    Tách từ{' '}
+                    <Link to={'/sales-orders/' + order.splitFromOrderId}>
+                      {documentCode('SO', order.splitFromOrderId)}
+                    </Link>
+                  </span>
+                )}
               </div>
               <div className="sales-detail-actions">
                 {order && (bm || role === 'OWNER') && (
@@ -669,8 +677,7 @@ export function SalesOrderDetailView({
                   </>
                 )}
                 {order?.status === 'AWAITING_STOCK' &&
-                  (order.actions?.canReleasePending ??
-                    order.actions?.canRecordPicking) && (
+                  order.actions?.canRelease && (
                     <button
                       type="button"
                       className="sales-action-primary"
@@ -969,6 +976,7 @@ export function SalesOrderDetailView({
           action={action}
           initialRefundAmount={refundAmount}
           onCredit={() => setAction('credit')}
+          onPayment={() => setAction('payment')}
           order={order}
           onClose={(nextAction) => {
             if (nextAction === 'payment') setPendingPayment(true)
@@ -1548,7 +1556,9 @@ export function UnmetDemandPage() {
           />
           <p className="sales-unmet-description">
             Nhu cầu được tổng hợp tự động từ đơn hoàn tất giao thiếu và đơn đã
-            hủy; mặc định 30 ngày gần nhất.
+            hủy; mặc định 30 ngày gần nhất.{' '}
+            {/* BC1 (GVHD 20/11): đơn đang chờ hàng xem ở danh sách đơn bán, không gộp vào báo cáo này. */}
+            <Link to="/sales-orders?status=AWAITING_STOCK">Xem đơn chờ hàng</Link>
           </p>
           <div className="stock-table-scroll">
             <table className="stock-table">

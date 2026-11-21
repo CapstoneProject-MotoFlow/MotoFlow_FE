@@ -499,7 +499,7 @@ function WorkEditor({
         {receipt?.recountReason && (
           <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
         )}
-        {receipt && receipt.recordedBy === scope.user?.id && (
+        {receipt?.submittedAt && receipt.recordedBy === scope.user?.id && (
           <p className="tf-note" role="status">
             Bạn tự kiểm nhận; Owner sẽ được báo để xác nhận kết quả.
           </p>
@@ -605,7 +605,10 @@ function WorkEditor({
               <>
                 {' '}
                 · Gửi kết quả: {dateTime(receipt.submittedAt)}
-                {receipt.recordedByName && ' · Người ghi: ' + receipt.recordedByName}
+                {/* R-08: BE thêm recordedByName; khi chưa có thì giữ mã người ghi như trước. */}
+                {(receipt.recordedByName || receipt.recordedBy != null) &&
+                  ' · Người ghi: ' +
+                    (receipt.recordedByName ?? '#' + receipt.recordedBy)}
               </>
             )}
             {receipt.confirmedAt && (

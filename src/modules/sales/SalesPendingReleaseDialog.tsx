@@ -4,11 +4,7 @@ import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import { number } from '../inventory/presentation'
 import type { SalesOrder } from './salesModel'
-
-type ReleaseResult = {
-  order?: { id: number; code?: string } | null
-  pendingOrder?: { id: number; code?: string } | null
-}
+import type { OrderDto } from './salesApi'
 
 export default function SalesPendingReleaseDialog({
   order,
@@ -43,13 +39,15 @@ export default function SalesPendingReleaseDialog({
       })),
     [order.lines, quantities],
   )
+  // MSG305: không vượt số đang chờ; BE cũng chỉ bán tối đa số còn bán được nên chặn luôn ở đây.
   const valid =
     order.lines.length > 0 &&
     order.lines.every(
       (line, index) =>
         Number.isSafeInteger(releaseLines[index].nowQty) &&
         releaseLines[index].nowQty >= 0 &&
-        releaseLines[index].nowQty <= line.requested,
+        releaseLines[index].nowQty <=
+          Math.min(line.requested, line.sellableQty ?? line.requested),
     ) && releaseLines.some((line) => line.nowQty > 0)
   const missingLineIds = order.lines.some((line) => line.lineId == null)
 
@@ -59,25 +57,27 @@ export default function SalesPendingReleaseDialog({
     setBusy(true)
     setError('')
     try {
-      const { data } = await axiosClient.post<ReleaseResult>(
+      const { data } = await axiosClient.post<OrderDto>(
         `/sales-orders/${order.id}/release`,
         {
           lines: releaseLines.map(({ lineId, nowQty }) => ({ lineId, nowQty })),
         },
       )
-      const orderCode = data.order?.code ?? (data.order && `SO-${data.order.id}`)
-      const pendingCode =
-        data.pendingOrder?.code ??
-        (data.pendingOrder && `SO-${data.pendingOrder.id}`)
+      // BE #79: nhả một phần → split.salesOrderId là đơn bán mới, đơn này vẫn chờ phần còn lại.
+      const soldId = data.split?.salesOrderId ?? null
+      const waitingId = data.split?.waitingOrderId ?? null
       const message = [
-        orderCode ? `Đơn bán ${orderCode}` : '',
-        pendingCode ? `còn chờ ${pendingCode}` : '',
+        soldId != null ? `đơn bán SO-${soldId}` : '',
+        waitingId != null ? `còn chờ SO-${waitingId}` : '',
       ]
         .filter(Boolean)
         .join(' · ')
       onSaved(
-        message ? `Đã chuyển hàng: ${message}.` : 'Đã chuyển đơn sang soạn.',
-        { orderId: data.order?.id, pendingOrderId: data.pendingOrder?.id },
+        message ? `Đã chuyển sang soạn: ${message}.` : 'Đã chuyển đơn sang soạn.',
+        {
+          orderId: soldId ?? data.id,
+          pendingOrderId: waitingId ?? undefined,
+        },
       )
     } catch (cause) {
       setError(inventoryError(cause))
@@ -133,12 +133,17 @@ export default function SalesPendingReleaseDialog({
                       {line.sellableQty == null
                         ? 'Chưa có dữ liệu'
                         : number.format(line.sellableQty)}
+                      {!!line.heldByOthersQty && (
+                        <small>
+                          đã trừ {number.format(line.heldByOthersQty)} đang giữ
+                        </small>
+                      )}
                     </td>
                     <td>
                       <input
                         type="number"
                         min="0"
-                        max={line.requested}
+                        max={Math.min(line.requested, line.sellableQty ?? line.requested)}
                         step="1"
                         aria-label={'Lấy ngay ' + line.sku}
                         value={quantities[line.productId] ?? ''}

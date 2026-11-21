@@ -499,3 +499,18 @@
   background: #f2f4f7;
   color: #475467;
 }
+
+/* KH2 (GVHD 20/11): nhãn dòng ở phiếu Khu hàng lỗi */
+.count-line-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.count-tag {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--mf-border-soft);
+  color: var(--mf-text-2);
+  font-size: 11px;
+}

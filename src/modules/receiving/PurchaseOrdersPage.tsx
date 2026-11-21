@@ -1,6 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { isAxiosError } from 'axios'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
@@ -50,6 +50,26 @@ type Order = {
   overdue: boolean
   lineCount: number
   openDiscrepancies: number
+  /** BE #78: chỉ có ở tab DISCREPANCY_OPEN, null ở các tab khác. */
+  discrepancy?: {
+    discrepancyProductCount: number
+    openCaseCount: number
+    lastDeliveredAt: string | null
+    shortQty: number
+    wrongItemQty: number
+    damagedQty: number
+  } | null
+}
+/** Một hồ sơ sai lệch của PO, dùng khi mở rộng dòng ở tab Sai lệch. */
+type PoCase = {
+  id: number
+  goodsReceiptNoteId: number
+  sku: string
+  partName: string
+  shortQty: number
+  wrongItemQty: number
+  damagedQty: number
+  status: string
 }
 type Assignment = {
   goodsReceiptNoteId: number
@@ -280,6 +300,32 @@ export default function PurchaseOrdersPage() {
     setSearchParams(value === 'OPEN' ? {} : { tab: value }, { replace: true })
   }
   const drafts = view === 'DRAFT'
+  const discrepancyView = view === 'DISCREPANCY_OPEN'
+  const [expandedOrder, setExpandedOrder] = useState<number | null>(null)
+  const [orderCases, setOrderCases] = useState<
+    Record<number, PoCase[] | 'loading' | { error: string }>
+  >({})
+  async function toggleOrderCases(orderId: number) {
+    if (expandedOrder === orderId) {
+      setExpandedOrder(null)
+      return
+    }
+    setExpandedOrder(orderId)
+    if (Array.isArray(orderCases[orderId])) return
+    setOrderCases((previous) => ({ ...previous, [orderId]: 'loading' }))
+    try {
+      const { data } = await axiosClient.get<Page<PoCase>>(
+        '/discrepancy-cases',
+        { params: { purchaseOrderId: orderId, status: 'OPEN', size: 100 } },
+      )
+      setOrderCases((previous) => ({ ...previous, [orderId]: data.items }))
+    } catch (failure) {
+      setOrderCases((previous) => ({
+        ...previous,
+        [orderId]: { error: receivingError(failure) },
+      }))
+    }
+  }
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [supplierId, setSupplierId] = useState('')
@@ -405,8 +451,20 @@ export default function PurchaseOrdersPage() {
                 supplierId: supplierId || undefined,
                 storeId: owner ? storeId || undefined : undefined,
                 createdFrom:
-                  view !== 'OPEN' ? createdFrom || undefined : undefined,
-                createdTo: view !== 'OPEN' ? createdTo || undefined : undefined,
+                  view !== 'OPEN' && !discrepancyView
+                    ? createdFrom || undefined
+                    : undefined,
+                createdTo:
+                  view !== 'OPEN' && !discrepancyView
+                    ? createdTo || undefined
+                    : undefined,
+                // BE #78: tab Sai lệch lọc theo ngày giao gần nhất.
+                deliveredFrom: discrepancyView
+                  ? createdFrom || undefined
+                  : undefined,
+                deliveredTo: discrepancyView
+                  ? createdTo || undefined
+                  : undefined,
               },
               signal: controller.signal,
             },
@@ -469,6 +527,7 @@ export default function PurchaseOrdersPage() {
     createdTo,
     dateRangeError,
     drafts,
+    discrepancyView,
   ])
 
   const total = dateRangeError
@@ -667,7 +726,7 @@ export default function PurchaseOrdersPage() {
               {view !== 'OPEN' && (
                 <>
                   <label>
-                    Từ ngày{' '}
+                    {discrepancyView ? 'Giao từ ngày' : 'Từ ngày'}{' '}
                     <input
                       type="date"
                       value={createdFrom}
@@ -799,6 +858,121 @@ export default function PurchaseOrdersPage() {
                       <tr>
                         <td colSpan={7} className="receiving-empty-cell">
                           Bạn chưa có phiếu được giao kiểm nhận.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : discrepancyView ? (
+                // NH3 (GVHD 20/11): danh sách sai lệch theo PO lấy số đếm từ BE #78, FE không tự nhóm.
+                <table className="receiving-discrepancy-orders">
+                  <thead>
+                    <tr>
+                      <th>Mã đơn nhập hàng</th>
+                      <th>Nhà cung cấp</th>
+                      <th>Cửa hàng</th>
+                      <th>Giao gần nhất</th>
+                      <th>Mặt hàng lệch</th>
+                      <th>Hồ sơ còn mở</th>
+                      <th>Thiếu / Sai / Hỏng</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!dateRangeError &&
+                      !loading &&
+                      !error &&
+                      orders?.items.map((row) => {
+                        const summary = row.discrepancy
+                        const expanded = expandedOrder === row.id
+                        const cases = orderCases[row.id]
+                        return (
+                          <Fragment key={row.id}>
+                            <tr>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="receiving-request-link"
+                                  aria-expanded={expanded}
+                                  onClick={() => void toggleOrderCases(row.id)}
+                                >
+                                  {purchaseOrderCode(row.id)}
+                                </button>
+                              </td>
+                              <td>{row.supplierName}</td>
+                              <td>{row.storeName}</td>
+                              <td className="mf-nowrap">
+                                {summary?.lastDeliveredAt
+                                  ? day(summary.lastDeliveredAt)
+                                  : '—'}
+                              </td>
+                              <td>{summary?.discrepancyProductCount ?? '—'}</td>
+                              <td>
+                                {summary?.openCaseCount ?? row.openDiscrepancies}
+                              </td>
+                              <td className="mf-nowrap">
+                                {summary
+                                  ? `${summary.shortQty} / ${summary.wrongItemQty} / ${summary.damagedQty}`
+                                  : '—'}
+                              </td>
+                              <td>
+                                <Link
+                                  className="mf-btn mf-btn--sm mf-btn--primary"
+                                  to={
+                                    '/supplier-discrepancies?purchaseOrder=' +
+                                    row.id
+                                  }
+                                >
+                                  Xử lý
+                                </Link>
+                              </td>
+                            </tr>
+                            {expanded && (
+                              <tr className="receiving-discrepancy-expanded">
+                                <td colSpan={8}>
+                                  {cases === 'loading' || cases === undefined ? (
+                                    <p role="status">Đang tải hồ sơ…</p>
+                                  ) : !Array.isArray(cases) ? (
+                                    <p role="alert">{cases.error}</p>
+                                  ) : !cases.length ? (
+                                    <p>Không còn hồ sơ đang mở.</p>
+                                  ) : (
+                                    <ul className="supplier-receipt-items">
+                                      {cases.map((item) => (
+                                        <li key={item.id}>
+                                          <strong>{item.sku}</strong> ·{' '}
+                                          {item.partName}
+                                          <span>
+                                            Thiếu {item.shortQty} · Sai{' '}
+                                            {item.wrongItemQty} · Hỏng{' '}
+                                            {item.damagedQty}
+                                          </span>
+                                          <Link
+                                            to={
+                                              '/supplier-discrepancies?receipt=' +
+                                              item.goodsReceiptNoteId
+                                            }
+                                          >
+                                            {documentCode(
+                                              'PN',
+                                              item.goodsReceiptNoteId,
+                                            )}{' '}
+                                            · Xử lý
+                                          </Link>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        )
+                      })}
+                    {!total && (
+                      <tr>
+                        <td colSpan={8} className="receiving-empty-cell">
+                          Không có đơn nhập hàng còn sai lệch.
                         </td>
                       </tr>
                     )}

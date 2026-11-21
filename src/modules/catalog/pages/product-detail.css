@@ -357,3 +357,10 @@
   background: none;
   cursor: zoom-in;
 }
+
+/* BH7 (GVHD 20/11): mã hàng móp */
+.product-variant-label {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--mf-text-2);
+}

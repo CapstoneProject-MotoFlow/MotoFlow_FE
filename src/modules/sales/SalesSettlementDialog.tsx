@@ -18,11 +18,14 @@ export default function SalesSettlementDialog({
   initialRefundAmount,
   onClose,
   onCredit,
+  onPayment,
 }: {
   action: string
   order: SalesOrder
   initialRefundAmount?: number
   onCredit?: () => void
+  /** BH3: chuyển từ hộp ghi nợ về thanh toán. */
+  onPayment?: () => void
   onClose: (nextAction?: string) => void
 }) {
   const [busy, setBusy] = useState(false),
@@ -129,24 +132,6 @@ export default function SalesSettlementDialog({
           : action === 'payment'
             ? 'Ghi khoản thu'
             : titles[action]
-      }
-      footerExtra={
-        action === 'payment' && order.actions?.canRecordCredit && onCredit ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={busy}
-            onClick={onCredit}
-          >
-            Ghi nợ {money.format(order.remainingPayable ?? 0)}
-          </button>
-        ) : action === 'payment' && !order.actions?.canRecordCredit ? (
-          <small>
-            {order.customerId
-              ? 'Khách hàng hiện chưa đủ điều kiện mua chịu.'
-              : 'Khách lẻ không được mua chịu.'}
-          </small>
-        ) : undefined
       }
       onClose={onClose}
     >
@@ -270,14 +255,12 @@ export default function SalesSettlementDialog({
               '/sales-orders/' + order.id + '/' + path,
               body,
             )
-            const pendingOrder =
-              action === 'confirm' &&
-              shortLines.some((line) => waitForRest[line.productId])
-                ? data?.pendingOrder
-                : null
+            // R-07: BE #79 trả split.waitingOrderId khi giao thiếu có tích "Tạo đơn chờ phần còn lại".
+            const waitingOrderId: number | null =
+              action === 'confirm' ? (data?.split?.waitingOrderId ?? null) : null
             refreshSales(
-              pendingOrder?.id
-                ? `Đã xác nhận giao hàng. Đã tạo đơn chờ hàng SO-${pendingOrder.id}.`
+              waitingOrderId != null
+                ? `Đã xác nhận giao hàng. Đã tạo đơn chờ hàng SO-${waitingOrderId}.`
                 : data.completionBlockedMessage
                   ? 'Đã ghi nhận tiền. Chưa hoàn tất: ' +
                     data.completionBlockedMessage
@@ -292,6 +275,35 @@ export default function SalesSettlementDialog({
           }
         }}
       >
+        {(action === 'payment' || action === 'credit') && (
+          // BH3 (GVHD 20/11): xác nhận xong mở thẳng hộp này; đầu hộp chọn Thanh toán hoặc Ghi nợ.
+          <div className="sales-settle-choice" role="group" aria-label="Cách khách trả">
+            <button
+              type="button"
+              aria-pressed={action === 'payment'}
+              disabled={busy}
+              onClick={() => action !== 'payment' && onPayment?.()}
+            >
+              Thanh toán
+            </button>
+            {order.actions?.canRecordCredit || action === 'credit' ? (
+              <button
+                type="button"
+                aria-pressed={action === 'credit'}
+                disabled={busy}
+                onClick={() => action !== 'credit' && onCredit?.()}
+              >
+                Ghi nợ {money.format(order.remainingPayable ?? 0)}
+              </button>
+            ) : (
+              <small>
+                {order.customerId
+                  ? 'Không thể ghi nợ: khách hàng hiện chưa đủ điều kiện mua chịu.'
+                  : 'Không thể ghi nợ: khách lẻ không được mua chịu.'}
+              </small>
+            )}
+          </div>
+        )}
         {error && (
           <div role="alert" className="stock-error">
             {error}

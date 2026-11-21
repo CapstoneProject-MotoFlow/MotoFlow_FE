@@ -27,6 +27,8 @@ export type StockRow = {
   expiredQty: number
   lowStock: boolean
   stockValue: number | null
+  /** BE #81: "Khu hàng lỗi" khi hàng hỏng / sai / chờ trả của dòng này để ở khu đó, ngược lại null. */
+  defectiveArea?: string | null
 }
 export type StockSummary = {
   withStock: number

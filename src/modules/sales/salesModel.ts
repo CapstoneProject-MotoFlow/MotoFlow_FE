@@ -11,7 +11,7 @@ export type SalesStatus =
 export type SalesLine = {
   lineId?: number
   sellableQty?: number
-  reservedQty?: number | null
+  heldByOthersQty?: number | null
   shortReason?: string
   barcodes?: string[]
   actualUnitPrice?: number | null
@@ -28,6 +28,8 @@ export type SalesLine = {
   short?: boolean
 }
 export type SalesOrder = {
+  /** BE #79: đơn gốc khi đơn này được tách ra (đơn chờ hàng hoặc đơn bán nhả từ đơn chờ). */
+  splitFromOrderId?: number | null
   nextAction?: string | null
   payments?: {
     id: number
@@ -131,4 +133,40 @@ export function cashCollection(input: string, payable: number) {
     return null
   const amount = Math.min(cash, payable)
   return { amount, tenderedAmount: cash, changeGiven: cash - amount }
+}
+
+/**
+ * BH2 (GVHD 20/11): chia một dòng thành "lấy ngay" và "lấy sau". Mặc định lấy ngay = số BE gợi ý
+ * (suggestedNowQty) hoặc min(cần, còn bán được); không vượt số còn bán được vì BE chỉ bán ngay tối đa số đó.
+ * waitForRest mặc định bật; bỏ tích thì phần lấy sau là khách bỏ.
+ */
+export function splitLine(input: {
+  requested: number
+  sellable?: number | null
+  suggestedNow?: number | null
+  nowQty?: number | null
+  waitForRest?: boolean
+}) {
+  const requested = Number.isFinite(input.requested)
+    ? Math.max(0, input.requested)
+    : 0
+  const sellable =
+    input.sellable == null || !Number.isFinite(input.sellable)
+      ? null
+      : Math.max(0, input.sellable)
+  const nowLimit = sellable == null ? requested : Math.min(requested, sellable)
+  const defaultNow =
+    input.suggestedNow != null
+      ? Math.min(requested, Math.max(0, input.suggestedNow))
+      : nowLimit
+  const wanted =
+    input.nowQty != null && Number.isFinite(input.nowQty)
+      ? input.nowQty
+      : defaultNow
+  const takeNow = Math.min(nowLimit, Math.max(0, wanted))
+  return {
+    takeNow,
+    later: requested - takeNow,
+    waitForRest: input.waitForRest ?? true,
+  }
 }

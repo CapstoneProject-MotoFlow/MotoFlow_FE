@@ -365,3 +365,41 @@
   gap: 8px;
   margin-left: 8px;
 }
+
+/* NH3b / NH7 (GVHD 20/11) */
+.supplier-list-hint {
+  margin: 0 0 8px;
+  color: var(--mf-muted);
+  font-size: 13px;
+}
+.supplier-pending-badge,
+.supplier-pending-requests li strong {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--mf-warning-soft);
+  color: var(--mf-text);
+  font-size: 12px;
+}
+.supplier-pending-requests {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--mf-text-2);
+}
+.supplier-request-block {
+  padding: 8px 12px;
+  border: 1px solid var(--mf-border);
+  border-radius: 8px;
+}
+.supplier-request-block h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.supplier-variant-note {
+  margin: 0;
+  color: var(--mf-text-2);
+  font-size: 13px;
+}

@@ -17,6 +17,7 @@ import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 import type { OpeningCostsResponse } from './openingBalanceApi'
+import CountLineTags from './CountLineTags'
 import './stock-count.css'
 export default function CountLiveDetail() {
   const { id } = useParams(),
@@ -320,6 +321,7 @@ export default function CountLiveDetail() {
                           partName={l.partName}
                           blindCount={staff}
                         />
+                        <CountLineTags line={l} blind={staff} />
                         <small>
                           {l.sku}
                         </small>

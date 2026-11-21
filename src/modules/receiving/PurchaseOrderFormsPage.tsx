@@ -644,6 +644,7 @@ function OrderFormLayout({
                   <td>
                     <ProductPicker
                       label={'Phụ tùng dòng ' + (index + 1)}
+                      excludeDamagedVariants
                       disabled={!owner || saving}
                       selected={selectedProducts[Number(line.productId)]}
                       excludedIds={draft.lines

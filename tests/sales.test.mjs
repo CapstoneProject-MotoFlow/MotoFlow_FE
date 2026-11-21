@@ -18,7 +18,7 @@ const { outputText } = ts.transpileModule(
     },
   },
 )
-const { salesTotal, discountedPrice, mayCancel, pickedReady, suggestedPickingQty } = await import(
+const { salesTotal, discountedPrice, mayCancel, pickedReady, suggestedPickingQty, splitLine } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
 test('sales pricing rounds each discounted unit before multiplying quantity', () => {
@@ -54,6 +54,25 @@ test('picking suggestion is limited by sellable quantity and defaults to request
   assert.equal(suggestedPickingQty(10, 0), 0)
   assert.equal(suggestedPickingQty(10, 12), 10)
   assert.equal(suggestedPickingQty(10, null), 10)
+})
+test('split line: take now defaults to the BE suggestion, never exceeds sellable, and the rest waits by default', () => {
+  // GVHD: bán 10 đèn khi tồn 5 → lấy ngay 5, chờ 5.
+  assert.deepEqual(splitLine({ requested: 10, sellable: 5, suggestedNow: 5 }), {
+    takeNow: 5,
+    later: 5,
+    waitForRest: true,
+  })
+  // Không có gợi ý thì lấy min(cần, còn bán được).
+  assert.equal(splitLine({ requested: 3, sellable: 5 }).takeNow, 3)
+  // Người bán nhập vượt số còn bán được: chặn ở số còn bán được.
+  assert.equal(splitLine({ requested: 10, sellable: 5, nowQty: 8 }).takeNow, 5)
+  // Lấy ngay 0, bỏ tích: cả dòng là khách bỏ.
+  assert.deepEqual(
+    splitLine({ requested: 4, sellable: 0, nowQty: 0, waitForRest: false }),
+    { takeNow: 0, later: 4, waitForRest: false },
+  )
+  // Chưa biết tồn: lấy đủ.
+  assert.equal(splitLine({ requested: 7, sellable: null }).later, 0)
 })
 test('the sales form shows chain prices before a warehouse is selected', async () => {
   const server = await createServer({
