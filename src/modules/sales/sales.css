@@ -2134,3 +2134,60 @@
 .sales-settle-choice small {
   color: var(--mf-muted);
 }
+
+/* Thanh tab đơn bán (SalesTabBar) */
+.pos-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.pos-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pos-tab {
+  padding: 6px 12px;
+  border: 1px solid var(--mf-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mf-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pos-tab--active {
+  border-color: var(--mf-primary);
+  background: var(--mf-primary-soft);
+  color: var(--mf-primary);
+  font-weight: 600;
+}
+.pos-tab-close {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mf-muted);
+  line-height: 1;
+  cursor: pointer;
+}
+.pos-tab-close:hover {
+  color: var(--mf-danger);
+}
+.pos-tab-add {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--mf-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mf-text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pos-tab-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
