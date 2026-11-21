@@ -317,14 +317,12 @@ export default function CountLiveDetail() {
                         <small>
                           {l.sku}
                         </small>
-                        <details className="count-line-lot-details">
-                          <summary>
-                            {l.lotId == null
-                              ? 'Không theo lô'
-                              : 'Lô ' + documentCode('L', l.lotId)}
-                          </summary>
-                          <small>Hạn sử dụng: {l.expiryDate ? date(l.expiryDate) : 'Không có'}</small>
-                        </details>
+                        {l.lotId != null && (
+                          <small className="count-line-lot-details">
+                            Lô {documentCode('L', l.lotId)} · Hạn sử dụng:{' '}
+                            {l.expiryDate ? date(l.expiryDate) : 'Không có'}
+                          </small>
+                        )}
                       </td>
                       <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
                       {!staff && (

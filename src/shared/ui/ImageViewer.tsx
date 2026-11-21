@@ -25,6 +25,7 @@ export default function ImageViewer({
     Math.min(Math.max(start, 0), Math.max(count - 1, 0)),
   )
   const [failed, setFailed] = useState<Record<string, boolean>>({})
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({})
   const closeButton = useRef<HTMLButtonElement>(null)
   const close = useRef(onClose)
   useEffect(() => {
@@ -106,14 +107,24 @@ export default function ImageViewer({
             bấm Xem lại.
           </p>
         ) : (
-          <img
-            key={image.src}
-            src={image.src}
-            alt={'Ảnh ' + (index + 1)}
-            onError={() =>
-              setFailed((value) => ({ ...value, [image.src]: true }))
-            }
-          />
+          <>
+            {!loaded[image.src] && (
+              <p className="mf-viewer-loading" role="status">
+                Đang tải ảnh…
+              </p>
+            )}
+            <img
+              key={image.src}
+              src={image.src}
+              alt={'Ảnh ' + (index + 1)}
+              onLoad={() =>
+                setLoaded((value) => ({ ...value, [image.src]: true }))
+              }
+              onError={() =>
+                setFailed((value) => ({ ...value, [image.src]: true }))
+              }
+            />
+          </>
         )}
         {count > 1 && (
           <button

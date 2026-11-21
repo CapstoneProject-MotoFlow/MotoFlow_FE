@@ -321,18 +321,6 @@ export function ReceivableDetailPage() {
                 )}
               </div>
             </div>
-            <details className="rv-scope-control">
-              <summary>{scope.warehouse} · Đổi phạm vi</summary>{' '}
-              <WarehouseFilter
-                owner={scope.owner}
-                stores={scope.stores}
-                value={scope.storeId}
-                onChange={(v) => {
-                  setAction('')
-                  scope.filter({ storeId: v })
-                }}
-              />
-            </details>
             <dl>
               <div>
                 <dt>Điện thoại</dt>
@@ -398,8 +386,18 @@ export function ReceivableDetailPage() {
                 </button>
               ))}
             </div>
-            <div className="rv-table">
+            <div className="rv-table rv-debt-list-table">
               <table>
+                <colgroup>
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '7%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Cửa hàng</th>
@@ -484,8 +482,17 @@ export function ReceivableDetailPage() {
             <p className="rv-ledger-note">
               Số còn nợ trong phân bổ là số dư hiện tại, sau tất cả các lần thu.
             </p>
-            <div className="rv-table">
+            <div className="rv-table rv-payment-list-table">
               <table>
+                <colgroup>
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '25%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '11%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Phiếu thu</th>

@@ -10,8 +10,8 @@ export default function DebtEvidence({ files }: { files?: Evidence[] }) {
     (file) => isHttpUrl(file.downloadUrl) && isImageFile(file.fileName),
   )
   return (
-    <details className="rv-evidence-list">
-      <summary>Chứng từ ({files.length})</summary>
+    <div className="rv-evidence-list">
+      <strong className="rv-evidence-title">Chứng từ ({files.length})</strong>
       {images.length > 0 && (
         <PhotoButton
           label="Xem ảnh"
@@ -36,6 +36,6 @@ export default function DebtEvidence({ files }: { files?: Evidence[] }) {
       <small>
         Liên kết tải có thời hạn. Tải lại dữ liệu nếu liên kết hết hạn.
       </small>
-    </details>
+    </div>
   )
 }

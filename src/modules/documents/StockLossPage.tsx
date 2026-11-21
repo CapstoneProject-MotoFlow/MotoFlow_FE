@@ -261,17 +261,20 @@ export default function StockLossPage() {
                 ))}
               </div>
               <div className="docs-form-grid">
-                <ProductPicker
-                  label="Phụ tùng"
-                  selected={selectedPart}
-                  excludedIds={[]}
-                  disabled={!storeId || !!busy}
-                  onSelect={(product) => {
-                    setPart(product)
-                    selectLot('')
-                    clearPreview()
-                  }}
-                />
+                <label>
+                  Phụ tùng
+                  <ProductPicker
+                    label="Phụ tùng"
+                    selected={selectedPart}
+                    excludedIds={[]}
+                    disabled={!storeId || !!busy}
+                    onSelect={(product) => {
+                      setPart(product)
+                      selectLot('')
+                      clearPreview()
+                    }}
+                  />
+                </label>
                 <label>
                   {byLot ? 'Lô và trạng thái tồn' : 'Trạng thái tồn'}
                   <select

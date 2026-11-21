@@ -116,6 +116,21 @@
   font: inherit;
   white-space: nowrap;
 }
+.count-excel-tools .localized-file-input-label > span {
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: #101828;
+  font: inherit;
+  white-space: nowrap;
+}
+.count-excel-tools .localized-file-input-label > small {
+  color: #667085;
+}
+.count-excel-tools button:disabled {
+  color: #667085;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 .count-chips {
   display: flex;
   flex-wrap: wrap;
@@ -472,17 +487,10 @@
   }
 }
 .count-line-lot-details {
+  display: block;
   margin-top: 4px;
   color: #667085;
   font-size: 12px;
-}
-.count-line-lot-details summary {
-  cursor: pointer;
-  width: fit-content;
-}
-.count-line-lot-details small {
-  display: block;
-  margin-top: 4px;
 }
 .count-reason-badge {
   display: inline-block;

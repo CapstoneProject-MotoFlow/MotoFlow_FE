@@ -326,7 +326,7 @@ function Editor({
       {editable && (
         <div className="stock-notice count-buttons count-excel-tools">
           <span>
-            Nhập số đếm từ Excel (.xlsx): cột SKU, Mã lô (ví dụ #12), Số đếm
+            Tải mẫu để điền số đếm, sau đó chọn tệp Excel đã điền để nhập vào phiếu.
           </span>
           <button
             type="button"
@@ -341,10 +341,10 @@ function Editor({
               )
             }}
           >
-            Tải form Excel
+            Tải mẫu Excel
           </button>
           <LocalizedFileInput
-            buttonText="Chọn tệp Excel"
+            buttonText="Chọn tệp đã điền"
             accept=".xlsx"
             disabled={busy || importing}
             onChange={async (e) => {
@@ -398,17 +398,12 @@ function Editor({
                     partName={l.partName}
                     blindCount
                   />
-                  <small>
-                    {l.sku}
-                  </small>
-                  <details className="count-line-lot-details">
-                    <summary>
-                      {l.lotId == null
-                        ? 'Không theo lô'
-                        : 'Lô ' + documentCode('L', l.lotId)}
-                    </summary>
-                    <small>Hạn sử dụng: {l.expiryDate ? date(l.expiryDate) : 'Không có'}</small>
-                  </details>
+                  {l.lotId != null && (
+                    <small className="count-line-lot-details">
+                      Lô {documentCode('L', l.lotId)} · Hạn sử dụng:{' '}
+                      {l.expiryDate ? date(l.expiryDate) : 'Không có'}
+                    </small>
+                  )}
                   {l.recountReason && <small>Đếm lại: {l.recountReason}</small>}
                 </td>
                 <td>{l.binLocation ?? l.storageArea ?? '—'}</td>

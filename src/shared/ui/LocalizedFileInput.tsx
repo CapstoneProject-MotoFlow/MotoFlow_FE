@@ -4,6 +4,7 @@ import {
   useState,
   type ChangeEvent,
   type InputHTMLAttributes,
+  type ReactNode,
 } from 'react'
 import './localized-file-input.css'
 import PhotoButton from './PhotoButton'
@@ -11,12 +12,14 @@ import PhotoButton from './PhotoButton'
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> & {
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void
   buttonText?: string
+  children?: ReactNode
 }
 
 export default function LocalizedFileInput({
   id,
   onChange,
   buttonText = 'Chọn tệp',
+  children,
   ...props
 }: Props) {
   const generatedId = useId()
@@ -58,6 +61,7 @@ export default function LocalizedFileInput({
         <span>{buttonText}</span>
         <small>{names || 'Chưa chọn tệp'}</small>
       </label>
+      {children}
       {previews.some((item) => item.url) && (
         <PhotoButton
           label="Xem ảnh"

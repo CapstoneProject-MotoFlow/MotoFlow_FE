@@ -34,6 +34,7 @@ import { salesDraftsPath, type OrderDto } from './salesApi'
 
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 export type SalesProduct = {
   id: number
   sku: string
@@ -41,6 +42,7 @@ export type SalesProduct = {
   baseUnit: string
   retailPrice: number | null
   status: string
+  imageUrl?: string | null
   availableQty?: number | null
 }
 type DraftLine = { product: SalesProduct; quantity: number }
@@ -504,6 +506,16 @@ export function SalesOrderFormView({
                       }}
                       onMouseEnter={() => setHighlight(index)}
                     >
+                      {product.imageUrl ? (
+                        <img
+                          className="pos-result-image"
+                          src={product.imageUrl}
+                          alt=""
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="pos-result-image pos-result-image--empty" aria-hidden="true" />
+                      )}
                       <span className="pos-result-name">
                         {product.partName}
                         <small>
@@ -563,9 +575,12 @@ export function SalesOrderFormView({
                       <tr key={product.id}>
                         <td className="pos-col-no">{index + 1}</td>
                         <td>
-                          <span className="pos-line-name">
-                            {product.partName}
-                          </span>
+                          <ProductQuickView
+                            productId={product.id}
+                            sku={product.sku}
+                            partName={product.partName}
+                            className="pos-line-name"
+                          />
                           <small className="pos-line-meta">
                             <code>{product.sku}</code>
                             {sellable != null &&

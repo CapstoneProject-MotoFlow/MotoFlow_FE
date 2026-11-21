@@ -1155,6 +1155,19 @@ p.tf-validation-hint {
   margin: 0 auto;
   text-align: center;
 }
+.tf-page .tf-work-table .product-quick-view-trigger {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.tf-page .tf-work-table .product-quick-view-trigger:hover {
+  color: #465fff;
+  text-decoration: underline;
+}
 .tf-work-table--receipt td:first-child small {
   white-space: normal;
 }

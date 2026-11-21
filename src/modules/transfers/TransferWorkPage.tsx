@@ -629,7 +629,6 @@ function WorkEditor({
             void save()
           }}
         >
-          <fieldset disabled={busy || !canRecord}>
           <div
             className={
               mode === 'receipt'
@@ -712,6 +711,7 @@ function WorkEditor({
                       <td>
                         <input
                           aria-label={'Số lượng ' + l.sku}
+                          disabled={busy || !canRecord}
                           required
                           type="number"
                           min={0}
@@ -749,6 +749,7 @@ function WorkEditor({
                         {mode === 'receipt' ? (
                           <input
                             aria-label={'Giao sai ' + l.sku}
+                            disabled={busy || !canRecord}
                             type="number"
                             required
                             min={0}
@@ -770,9 +771,11 @@ function WorkEditor({
                             maxLength={255}
                             value={values[l.productId].reason}
                             disabled={
-                              mode === 'prepare' &&
-                              'plannedQty' in l &&
-                              values[l.productId].qty >= l.plannedQty
+                              busy ||
+                              !canRecord ||
+                              (mode === 'prepare' &&
+                                'plannedQty' in l &&
+                                values[l.productId].qty >= l.plannedQty)
                             }
                             placeholder={
                               mode === 'prepare' &&
@@ -797,6 +800,7 @@ function WorkEditor({
                         <td>
                           <input
                             aria-label={'Hư hỏng ' + l.sku}
+                            disabled={busy || !canRecord}
                             type="number"
                             required
                             min={0}
@@ -830,6 +834,7 @@ function WorkEditor({
                               <PassAllButton
                                 sku={l.sku}
                                 pressed={passedAll(l)}
+                                disabled={busy || !canRecord}
                                 onToggle={(full) =>
                                   setValues({
                                     ...values,
@@ -879,6 +884,7 @@ function WorkEditor({
               <label className="tf-note">
                 Lý do (bắt buộc nếu xác nhận 0)
                 <textarea
+                  disabled={busy || !canRecord}
                   required={lines.some((l) => values[l.productId].qty === 0)}
                   maxLength={500}
                   value={reason}
@@ -886,7 +892,6 @@ function WorkEditor({
                 />
               </label>
             )}
-          </fieldset>
         </form>
       </section>
       {action && (
