@@ -135,12 +135,6 @@
 .suppliers-table td strong {
   font-weight: 500;
 }
-.suppliers-table small {
-  display: block;
-  margin-top: 5px;
-  color: #52627b;
-  font-size: 0.875rem;
-}
 .suppliers-number {
   text-align: right;
   font-variant-numeric: tabular-nums;
