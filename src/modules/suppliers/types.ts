@@ -5,7 +5,6 @@
  */
 export type Supplier = {
   id: number
-  supplierCode: string
   supplierName: string
   contactName: string | null
   phone: string | null

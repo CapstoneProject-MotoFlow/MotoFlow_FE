@@ -89,7 +89,7 @@ export default function SuppliersPage() {
         <div className="suppliers-toolbar">
           <input
             aria-label="Tìm nhà cung cấp"
-            placeholder="Tìm theo mã, tên hoặc số điện thoại"
+            placeholder="Tìm theo tên hoặc số điện thoại"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
@@ -158,7 +158,6 @@ export default function SuppliersPage() {
                       >
                         {s.supplierName}
                       </Link>
-                      <small>{s.supplierCode}</small>
                     </td>
                     <td>{s.contactName || '—'}</td>
                     <td>{s.phone || '—'}</td>
