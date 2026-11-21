@@ -584,7 +584,9 @@ export default function AppRoutes() {
               />
             </Route>
             <Route
-              element={<RequireRole roles={['STAFF', 'BRANCH_MANAGER']} />}
+              element={
+                <RequireRole roles={['OWNER', 'STAFF', 'BRANCH_MANAGER']} />
+              }
             >
               <Route
                 path="/sales-orders/:id/pick"

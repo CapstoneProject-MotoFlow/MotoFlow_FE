@@ -10,7 +10,8 @@ import { searchProducts } from '../api/searchProducts'
 import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { damagedVariantBaseSku } from '../../../shared/utils/damagedVariant'
 import axiosClient from '../../../shared/api/axiosClient'
 import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import Icon from '../../../shared/ui/Icon'
@@ -26,7 +27,9 @@ export default function PartsSearchPage() {
   const [vehicleText, setVehicleText] = useState('')
   const [modelText, setModelText] = useState('')
   const [categoryText, setCategoryText] = useState('')
-  const [q, setQ] = useState('')
+  const [searchParams] = useSearchParams()
+  // BH7: link "Hàng móp của <SKU gốc>" mở danh mục với ?q=<SKU gốc>.
+  const [q, setQ] = useState(() => searchParams.get('q') ?? '')
   const [filters, setFilters] = useState({
     vehicleType: '',
     categoryId: '',
@@ -258,6 +261,14 @@ export default function PartsSearchPage() {
                         <td>
                           <Link to={`${base}/${item.id}`}>{item.partName}</Link>
                           <small>{item.sku}</small>
+                          {damagedVariantBaseSku(item) && (
+                            <small className="product-variant-label">
+                              Hàng móp của{' '}
+                              <Link to={`${base}?q=${encodeURIComponent(damagedVariantBaseSku(item)!)}`}>
+                                {damagedVariantBaseSku(item)}
+                              </Link>
+                            </small>
+                          )}
                         </td>
                         <td>{item.categoryName || '—'}</td>
                         <td>{item.brand || '—'}</td>

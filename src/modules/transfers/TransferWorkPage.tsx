@@ -19,6 +19,7 @@ import type { Assignment } from '../inventory/countAssignment'
 import TransferAction from './TransferAction'
 import CardHead, { HeadButton } from './CardHead'
 import ReceiptDocumentSummary from './ReceiptDocumentSummary'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 import PassAllButton from '../receiving/PassAllButton'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
@@ -471,7 +472,7 @@ function WorkEditor({
               }}
             />
           )}
-          {approver && receipt.recordedBy !== scope.user?.id && (
+          {approver && (
             <HeadButton
               action={{
                 key: 'confirm',
@@ -497,6 +498,11 @@ function WorkEditor({
         </CardHead>
         {receipt?.recountReason && (
           <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
+        )}
+        {receipt?.submittedAt && receipt.recordedBy === scope.user?.id && (
+          <p className="tf-note" role="status">
+            Bạn tự kiểm nhận; Owner sẽ được báo để xác nhận kết quả.
+          </p>
         )}
         {preparation && !preparedByOther && (
           <div className="tf-preparation-notice" role="status">
@@ -598,8 +604,11 @@ function WorkEditor({
             {receipt.submittedAt && (
               <>
                 {' '}
-                · Gửi kết quả: {dateTime(receipt.submittedAt)} · Người ghi #
-                {receipt.recordedBy}
+                · Gửi kết quả: {dateTime(receipt.submittedAt)}
+                {/* R-08: BE thêm recordedByName; khi chưa có thì giữ mã người ghi như trước. */}
+                {(receipt.recordedByName || receipt.recordedBy != null) &&
+                  ' · Người ghi: ' +
+                    (receipt.recordedByName ?? '#' + receipt.recordedBy)}
               </>
             )}
             {receipt.confirmedAt && (
@@ -623,7 +632,6 @@ function WorkEditor({
             void save()
           }}
         >
-          <fieldset disabled={busy || !canRecord}>
           <div
             className={
               mode === 'receipt'
@@ -665,8 +673,12 @@ function WorkEditor({
                   {lines.map((l) => (
                     <tr key={l.productId}>
                       <td>
-                        {l.sku}
-                        <small>{l.partName}</small>
+                        <small>{l.sku}</small>
+                        <ProductQuickView
+                          productId={l.productId}
+                          sku={l.sku}
+                          partName={l.partName}
+                        />
                         {preparation && 'storageArea' in l && (
                           <small>
                             {l.storageArea} / {l.binLocation} · Tồn kho{' '}
@@ -702,6 +714,7 @@ function WorkEditor({
                       <td>
                         <input
                           aria-label={'Số lượng ' + l.sku}
+                          disabled={busy || !canRecord}
                           required
                           type="number"
                           min={0}
@@ -739,6 +752,7 @@ function WorkEditor({
                         {mode === 'receipt' ? (
                           <input
                             aria-label={'Giao sai ' + l.sku}
+                            disabled={busy || !canRecord}
                             type="number"
                             required
                             min={0}
@@ -760,9 +774,11 @@ function WorkEditor({
                             maxLength={255}
                             value={values[l.productId].reason}
                             disabled={
-                              mode === 'prepare' &&
-                              'plannedQty' in l &&
-                              values[l.productId].qty >= l.plannedQty
+                              busy ||
+                              !canRecord ||
+                              (mode === 'prepare' &&
+                                'plannedQty' in l &&
+                                values[l.productId].qty >= l.plannedQty)
                             }
                             placeholder={
                               mode === 'prepare' &&
@@ -787,6 +803,7 @@ function WorkEditor({
                         <td>
                           <input
                             aria-label={'Hư hỏng ' + l.sku}
+                            disabled={busy || !canRecord}
                             type="number"
                             required
                             min={0}
@@ -820,6 +837,7 @@ function WorkEditor({
                               <PassAllButton
                                 sku={l.sku}
                                 pressed={passedAll(l)}
+                                disabled={busy || !canRecord}
                                 onToggle={(full) =>
                                   setValues({
                                     ...values,
@@ -869,6 +887,7 @@ function WorkEditor({
               <label className="tf-note">
                 Lý do (bắt buộc nếu xác nhận 0)
                 <textarea
+                  disabled={busy || !canRecord}
                   required={lines.some((l) => values[l.productId].qty === 0)}
                   maxLength={500}
                   value={reason}
@@ -876,7 +895,6 @@ function WorkEditor({
                 />
               </label>
             )}
-          </fieldset>
         </form>
       </section>
       {action && (

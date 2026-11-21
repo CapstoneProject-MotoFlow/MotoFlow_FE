@@ -14,7 +14,7 @@ const { outputText } = ts.transpileModule(
     },
   },
 )
-const { orderFromDto } = await import(
+const { orderFromDto, splitNotice } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
 test('sales adapter retains BE status, version, permissions, quantities and authoritative money', () => {
@@ -68,4 +68,23 @@ test('sales adapter retains BE status, version, permissions, quantities and auth
   assert.equal(order.lines[0].picked, 7)
   assert.equal(order.lines[0].actualUnitPrice, 195)
   assert.match(order.lines[0].lotHint, /Lô 8/)
+})
+
+test('split notice names the sales order, the waiting order and what the customer declined', () => {
+  const lines = [
+    { productId: 1, sku: 'DEN-01' },
+    { productId: 2, sku: 'AQ-02' },
+  ]
+  assert.equal(
+    splitNotice(
+      { salesOrderId: 10, waitingOrderId: 11, declinedOrderId: 12, declined: [{ productId: 2, quantity: 1 }] },
+      lines,
+    ),
+    'Đã tạo đơn bán SO-10 và đơn chờ hàng SO-11. Khách bỏ: AQ-02 × 1.',
+  )
+  assert.equal(
+    splitNotice({ salesOrderId: null, waitingOrderId: 11, declinedOrderId: null, declined: [] }, lines),
+    'Đã tạo đơn chờ hàng SO-11.',
+  )
+  assert.equal(splitNotice(null, lines), undefined)
 })

@@ -4,7 +4,6 @@
  * Công dụng: Bộ trường "Chứng từ giao hàng" của phiếu nhận (Số chứng từ, Ngày chứng từ, Thời điểm hàng đến, Người giao hàng,
  * Biển số xe, tệp chứng từ). Dùng cho phiếu nhập từ PO và phiếu nhận hàng điều chuyển; kiểm tra và tải tệp ở useDeliveryDocuments.
  */
-import ReceiptImage from './ReceiptImage'
 import {
   receiptDocumentUploadEnabled,
   type DeliveryDocuments,
@@ -28,7 +27,7 @@ export default function DeliveryDocumentFields({
   /** Lỗi tiếng Việt theo tên ô (từ useFormValidation) để hiện ngay dưới ô. */
   errors?: FieldErrors
 }) {
-  const { dateLimits, refreshDateLimits, images, setImages } = state
+  const { dateLimits, refreshDateLimits } = state
   return (
     <div className="receiving-layout-fields">
       {/* PM 17/11: số và ngày chứng từ của phiếu nhập NCC không bắt buộc; ảnh chứng từ vẫn bắt buộc. */}
@@ -82,17 +81,6 @@ export default function DeliveryDocumentFields({
               multiple
               required
               disabled={disabled}
-              onChange={(event) => {
-                const files = Array.from(event.currentTarget.files ?? [])
-                setImages(
-                  files
-                    .filter((file) => file.type.startsWith('image/'))
-                    .map((file, index) => ({
-                      src: URL.createObjectURL(file),
-                      name: 'Ảnh chứng từ ' + (index + 1),
-                    })),
-                )
-              }}
             />
             <FieldError message={errors?.documents} />
           </>
@@ -100,18 +88,6 @@ export default function DeliveryDocumentFields({
           <span>Tải tệp tạm thời được tắt trong môi trường dev.</span>
         )}
       </div>
-      {!!images.length && (
-        <ul
-          className="receiving-layout-wide receiving-document-list"
-          aria-label="Ảnh chứng từ đã chọn"
-        >
-          {images.map(({ src, name }) => (
-            <li key={src}>
-              <ReceiptImage src={src} name={name} />
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   )
 }

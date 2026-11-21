@@ -17,6 +17,7 @@ import AdjustmentEffects from './AdjustmentEffects'
 import { Card, Facts } from './DocumentUi'
 import { adjustmentPath } from './model'
 import type { AdjustmentDetail, AdjustmentEffects as Effects } from './types'
+import { documentCode } from '../../shared/utils/documentCode'
 
 const eligible = ['AVAILABLE', 'DAMAGED', 'WRONG_ITEM']
 const formats = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
@@ -25,13 +26,15 @@ const stockLossPath = '/adjustment-requests/stock-loss'
 export default function StockLossPage() {
   const { owner, stores, storesError, user } = useInventoryScope()
   const [params] = useSearchParams()
+  const sourceReceiptId = Number(params.get('goodsReceiptNoteId') ?? 0) || undefined
+  const sourceProductId = Number(params.get('productId') ?? 0) || undefined
   const navigate = useNavigate()
   const [warehouse, setWarehouse] = useState(() => params.get('storeId') ?? '')
   const storeId = owner ? Number(warehouse) : user?.storeId
   const [incident, setIncident] = useState('LOSS')
   const [part, setPart] = useState<ProductOption>()
   const [selected, selectLot] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [quantity, setQuantity] = useState(() => params.get('quantity') ?? '')
   const [reason, setReason] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const uploaded = useRef(
@@ -40,11 +43,18 @@ export default function StockLossPage() {
   const [preview, setPreview] = useState<Effects>()
   const [busy, setBusy] = useState<'preview' | 'send'>()
   const [error, setError] = useState('')
-  const stock = useInventoryData<StockDetail>(
-    '/inventory/stock/' + storeId + '/' + part?.id,
+  const sourceProduct = useInventoryData<ProductOption>(
+    '/products/' + sourceProductId,
     {},
     0,
-    !!storeId && !!part,
+    !!sourceReceiptId && !!sourceProductId,
+  )
+  const selectedPart = part ?? sourceProduct.data
+  const stock = useInventoryData<StockDetail>(
+    '/inventory/stock/' + storeId + '/' + selectedPart?.id,
+    {},
+    0,
+    !!storeId && !!selectedPart,
   )
   const lotKey = (row: StockDetail['lots'][number]) =>
     row.lotId + ':' + row.stockStatus
@@ -57,7 +67,9 @@ export default function StockLossPage() {
     .filter(
       (row) =>
         row.quantity > 0 &&
-        eligible.includes(row.stockStatus) &&
+        (sourceReceiptId ? ['DAMAGED', 'WRONG_ITEM'] : eligible).includes(
+          row.stockStatus,
+        ) &&
         (incident === 'EXPIRED'
           ? row.expiryState === 'EXPIRED'
           : row.expiryState !== 'EXPIRED'),
@@ -106,7 +118,7 @@ export default function StockLossPage() {
 
   async function execute(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (busy || !lot || !part || !storeId || exceeds) return
+    if (busy || !lot || !selectedPart || !storeId || exceeds) return
     if (!Number.isSafeInteger(units) || units <= 0 || !reason.trim()) {
       setError('Nhập số lượng và mô tả sự việc.')
       return
@@ -129,10 +141,11 @@ export default function StockLossPage() {
     }
     const body = {
       storeId: owner ? storeId : undefined,
+      goodsReceiptNoteId: sourceReceiptId,
       reason: reason.trim(),
       lines: [
         {
-          productId: part.id,
+          productId: selectedPart.id,
           lotId: lot.lotId,
           stockStatus: lot.stockStatus,
           quantity: units,
@@ -190,6 +203,12 @@ export default function StockLossPage() {
           >
             <fieldset disabled={!!busy} className="docs-form">
               <legend className="docs-sr-only">Thông tin hàng ghi giảm</legend>
+              {sourceReceiptId && (
+                <p className="docs-note">
+                  Ghi giảm hàng đang giữ từ phiếu nhập{' '}
+                  {documentCode('PN', sourceReceiptId)}.
+                </p>
+              )}
               {owner && (
                 <label>
                   Cửa hàng
@@ -230,6 +249,7 @@ export default function StockLossPage() {
                       type="radio"
                       name="incident"
                       checked={incident === value}
+                      disabled={!!sourceReceiptId && value !== 'LOSS'}
                       onChange={() => {
                         setIncident(value)
                         selectLot('')
@@ -239,23 +259,22 @@ export default function StockLossPage() {
                     {label}
                   </label>
                 ))}
-                <label title="Báo mất trên đường tại màn xử lý sai lệch điều chuyển">
-                  <input type="radio" name="incident" disabled />
-                  Mất trên đường
-                </label>
               </div>
               <div className="docs-form-grid">
-                <ProductPicker
-                  label="Phụ tùng"
-                  selected={part}
-                  excludedIds={[]}
-                  disabled={!storeId || !!busy}
-                  onSelect={(product) => {
-                    setPart(product)
-                    selectLot('')
-                    clearPreview()
-                  }}
-                />
+                <label>
+                  Phụ tùng
+                  <ProductPicker
+                    label="Phụ tùng"
+                    selected={selectedPart}
+                    excludedIds={[]}
+                    disabled={!storeId || !!busy}
+                    onSelect={(product) => {
+                      setPart(product)
+                      selectLot('')
+                      clearPreview()
+                    }}
+                  />
+                </label>
                 <label>
                   {byLot ? 'Lô và trạng thái tồn' : 'Trạng thái tồn'}
                   <select
@@ -271,7 +290,7 @@ export default function StockLossPage() {
                       <option value="">
                         {stock.loading
                           ? 'Đang tải tồn kho…'
-                          : part
+                          : selectedPart
                             ? 'Không có tồn phù hợp'
                             : 'Chọn phụ tùng trước'}
                       </option>
@@ -428,7 +447,10 @@ export default function StockLossPage() {
             <AdjustmentEffects data={preview} />
           </Card>
         )}
-        {error && (
+          {sourceProduct.error && (
+            <p className="docs-alert" role="alert">{sourceProduct.error}</p>
+          )}
+          {error && (
           <p className="docs-alert" role="alert">
             {error}
           </p>

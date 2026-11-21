@@ -4,7 +4,7 @@
  * Công dụng: Kiểm tra và tải tệp cho bộ trường "Chứng từ giao hàng" (DeliveryDocumentFields) của phiếu nhận,
  * dùng chung cho phiếu nhập từ PO và phiếu nhận hàng điều chuyển.
  */
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { uploadAttachment } from '../../shared/api/upload'
 import { receiptDateLimits, receiptDatesInFuture } from './receivingRules'
 
@@ -36,11 +36,6 @@ type ReadResult =
  */
 export function useDeliveryDocuments(submitLabel: string) {
   const [dateLimits, setDateLimits] = useState(receiptDateLimits)
-  const [images, setImages] = useState<{ src: string; name: string }[]>([])
-  useEffect(
-    () => () => images.forEach(({ src }) => URL.revokeObjectURL(src)),
-    [images],
-  )
   const uploads = useRef(new WeakMap<File, UploadedDocument>())
   const refreshDateLimits = () => setDateLimits(receiptDateLimits())
 
@@ -117,8 +112,6 @@ export function useDeliveryDocuments(submitLabel: string) {
   return {
     dateLimits,
     refreshDateLimits,
-    images,
-    setImages,
     invalidMessage,
     read,
     upload,

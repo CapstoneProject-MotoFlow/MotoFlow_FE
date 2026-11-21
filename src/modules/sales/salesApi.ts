@@ -12,12 +12,14 @@ export type OrderActions = {
   canRecordCredit: boolean
   canComplete: boolean
   canCancel: boolean
+  canRelease?: boolean
 }
 export type OrderDto = {
   id: number
   version: number
   status:
     | 'DRAFT'
+    | 'AWAITING_STOCK'
     | 'AWAITING_PICKING'
     | 'PICKED'
     | 'CONFIRMED'
@@ -53,12 +55,17 @@ export type OrderDto = {
   } | null
   actions: OrderActions
   history: { action: string; actorName: string | null; occurredAt: string }[]
+  /** BE #79: đơn này tách từ đơn nào ("Tách từ BH-xxx"). */
+  splitFromOrderId?: number | null
+  split?: OrderSplit | null
   lines: {
+    id?: number
     productId: number
     sku: string
     partName: string
     baseUnit: string
     sellableQty?: number
+    heldByOthersQty?: number | null
     requestedQty: number
     pickedQty: number | null
     deliveredQty: number | null
@@ -81,12 +88,56 @@ export type SummaryDto = {
   total: number | null
   pickerName: string | null
   nextAction:
-    'ASSIGN_PICKER' | 'RECORD_PICKING' | 'CONFIRM' | 'COLLECT_PAYMENT' | null
+    | 'ASSIGN_PICKER'
+    | 'RECORD_PICKING'
+    | 'CONFIRM'
+    | 'COLLECT_PAYMENT'
+    | null
 }
+
+/**
+ * BE #79 (GVHD 20/11): `split` chỉ có trong kết quả của lần gọi tách đơn (tạo đơn, xác nhận giao thiếu,
+ * nhả đơn chờ). Mã đơn null khi không có phần nào vào đơn đó; `declined` là phần khách bỏ.
+ */
+export type OrderSplit = {
+  salesOrderId: number | null
+  waitingOrderId: number | null
+  declinedOrderId: number | null
+  declined: { productId: number; quantity: number }[]
+}
+
+/** Thông báo sau khi tách đơn: mã đơn bán và đơn chờ (có link ở màn chi tiết), phần khách bỏ báo một lần. */
+export function splitNotice(
+  split: OrderSplit | null | undefined,
+  lines: { productId: number; sku: string }[],
+) {
+  if (!split) return undefined
+  const parts: string[] = []
+  if (split.salesOrderId != null)
+    parts.push('đơn bán SO-' + split.salesOrderId)
+  if (split.waitingOrderId != null)
+    parts.push('đơn chờ hàng SO-' + split.waitingOrderId)
+  const declined = split.declined
+    .filter((item) => item.quantity > 0)
+    .map(
+      (item) =>
+        (lines.find((line) => line.productId === item.productId)?.sku ??
+          '#' + item.productId) +
+        ' × ' +
+        item.quantity,
+    )
+  if (!parts.length && !declined.length) return undefined
+  return (
+    (parts.length ? 'Đã tạo ' + parts.join(' và ') + '.' : '') +
+    (declined.length ? ' Khách bỏ: ' + declined.join(', ') + '.' : '')
+  ).trim()
+}
+
 export function orderFromDto(dto: OrderDto): SalesOrder {
   return {
     id: dto.id,
     code: 'SO-' + dto.id,
+    splitFromOrderId: dto.splitFromOrderId ?? null,
     version: dto.version,
     status: dto.status,
     storeId: dto.storeId,
@@ -110,11 +161,13 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     actions: dto.actions,
     lines: dto.lines.map((l) => ({
       productId: l.productId,
+      lineId: l.id,
       sku: l.sku,
       partName: l.partName,
       baseUnit: l.baseUnit,
       requested: l.requestedQty,
       sellableQty: l.sellableQty,
+      heldByOthersQty: l.heldByOthersQty,
       picked: l.pickedQty,
       delivered: l.deliveredQty,
       retailPrice: l.referencePrice,

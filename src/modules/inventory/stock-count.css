@@ -116,6 +116,21 @@
   font: inherit;
   white-space: nowrap;
 }
+.count-excel-tools .localized-file-input-label > span {
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: #101828;
+  font: inherit;
+  white-space: nowrap;
+}
+.count-excel-tools .localized-file-input-label > small {
+  color: #667085;
+}
+.count-excel-tools button:disabled {
+  color: #667085;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 .count-chips {
   display: flex;
   flex-wrap: wrap;
@@ -470,4 +485,32 @@
     flex-wrap: wrap;
     justify-content: flex-start;
   }
+}
+.count-line-lot-details {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 12px;
+}
+.count-reason-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
+}
+
+/* KH2 (GVHD 20/11): nhãn dòng ở phiếu Khu hàng lỗi */
+.count-line-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.count-tag {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--mf-border-soft);
+  color: var(--mf-text-2);
+  font-size: 11px;
 }

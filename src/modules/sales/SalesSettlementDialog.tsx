@@ -15,13 +15,18 @@ function refreshSales(message = 'Đã lưu thay đổi.') {
 export default function SalesSettlementDialog({
   action,
   order,
+  initialRefundAmount,
   onClose,
   onCredit,
+  onPayment,
 }: {
   action: string
   order: SalesOrder
+  initialRefundAmount?: number
   onCredit?: () => void
-  onClose: () => void
+  /** BH3: chuyển từ hộp ghi nợ về thanh toán. */
+  onPayment?: () => void
+  onClose: (nextAction?: string) => void
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -29,12 +34,13 @@ export default function SalesSettlementDialog({
     [amount, setAmount] = useState(
       String(
         action === 'refund'
-          ? (order.refundable ?? 0)
+          ? Math.min(initialRefundAmount ?? order.refundable ?? 0, order.refundable ?? 0)
           : (order.payableNow ?? order.remainingPayable ?? 0),
       ),
     ),
     [verified, setVerified] = useState(false),
-    [agreed, setAgreed] = useState(false)
+    [agreed, setAgreed] = useState(false),
+    [waitForRest, setWaitForRest] = useState<Record<number, boolean>>({})
   const [cashGiven, setCashGiven] = useState(
     String(order.payableNow ?? order.remainingPayable ?? 0),
   )
@@ -127,18 +133,6 @@ export default function SalesSettlementDialog({
             ? 'Ghi khoản thu'
             : titles[action]
       }
-      footerExtra={
-        action === 'payment' && order.actions?.canRecordCredit && onCredit ? (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={busy}
-            onClick={onCredit}
-          >
-            Ghi nợ {money.format(order.remainingPayable ?? 0)}
-          </button>
-        ) : undefined
-      }
       onClose={onClose}
     >
       <form
@@ -162,6 +156,7 @@ export default function SalesSettlementDialog({
             const lines = order.lines.map((l) => ({
               productId: l.productId,
               deliveredQty: Number(delivered[l.productId]),
+              waitForRest: !!waitForRest[l.productId],
             }))
             if (
               lines.some(
@@ -179,7 +174,11 @@ export default function SalesSettlementDialog({
               setError('Số giao phải là số nguyên từ 0 đến số đã nhặt/yêu cầu.')
               return
             }
-            body = { version: order.version, customerAgreed: agreed, lines }
+            body = {
+              version: order.version,
+              customerAgreed: agreed,
+              lines,
+            }
           } else if (action === 'payment' || action === 'refund') {
             const value = action === 'payment' ? recorded : Number(amount),
               limit = action === 'payment' ? order.payableNow : order.refundable
@@ -256,13 +255,18 @@ export default function SalesSettlementDialog({
               '/sales-orders/' + order.id + '/' + path,
               body,
             )
+            // R-07: BE #79 trả split.waitingOrderId khi giao thiếu có tích "Tạo đơn chờ phần còn lại".
+            const waitingOrderId: number | null =
+              action === 'confirm' ? (data?.split?.waitingOrderId ?? null) : null
             refreshSales(
-              data.completionBlockedMessage
-                ? 'Đã ghi nhận tiền. Chưa hoàn tất: ' +
+              waitingOrderId != null
+                ? `Đã xác nhận giao hàng. Đã tạo đơn chờ hàng SO-${waitingOrderId}.`
+                : data.completionBlockedMessage
+                  ? 'Đã ghi nhận tiền. Chưa hoàn tất: ' +
                     data.completionBlockedMessage
-                : 'Đã lưu ' + titles[action].toLowerCase() + '.',
+                  : 'Đã lưu ' + titles[action].toLowerCase() + '.',
             )
-            onClose()
+            onClose(action === 'confirm' ? 'payment' : undefined)
           } catch (error) {
             setError(inventoryError(error))
           } finally {
@@ -271,6 +275,35 @@ export default function SalesSettlementDialog({
           }
         }}
       >
+        {(action === 'payment' || action === 'credit') && (
+          // BH3 (GVHD 20/11): xác nhận xong mở thẳng hộp này; đầu hộp chọn Thanh toán hoặc Ghi nợ.
+          <div className="sales-settle-choice" role="group" aria-label="Cách khách trả">
+            <button
+              type="button"
+              aria-pressed={action === 'payment'}
+              disabled={busy}
+              onClick={() => action !== 'payment' && onPayment?.()}
+            >
+              Thanh toán
+            </button>
+            {order.actions?.canRecordCredit || action === 'credit' ? (
+              <button
+                type="button"
+                aria-pressed={action === 'credit'}
+                disabled={busy}
+                onClick={() => action !== 'credit' && onCredit?.()}
+              >
+                Ghi nợ {money.format(order.remainingPayable ?? 0)}
+              </button>
+            ) : (
+              <small>
+                {order.customerId
+                  ? 'Không thể ghi nợ: khách hàng hiện chưa đủ điều kiện mua chịu.'
+                  : 'Không thể ghi nợ: khách lẻ không được mua chịu.'}
+              </small>
+            )}
+          </div>
+        )}
         {error && (
           <div role="alert" className="stock-error">
             {error}
@@ -297,6 +330,7 @@ export default function SalesSettlementDialog({
                     <th>Yêu cầu</th>
                     <th>Đã lấy</th>
                     <th>Giao</th>
+                    {shortLines.length > 0 && <th>Chờ hàng</th>}
                     <th>Thành tiền</th>
                   </tr>
                 </thead>
@@ -340,6 +374,28 @@ export default function SalesSettlementDialog({
                           message={validation.errors['Số giao ' + l.sku]}
                         />
                       </td>
+                      {shortLines.length > 0 && (
+                        <td>
+                          {Number(delivered[l.productId]) < l.requested ? (
+                            <label className="sales-pending-remainder-option">
+                              <input
+                                type="checkbox"
+                                aria-label={'Tạo đơn chờ ' + l.sku}
+                                checked={!!waitForRest[l.productId]}
+                                onChange={(event) =>
+                                  setWaitForRest((current) => ({
+                                    ...current,
+                                    [l.productId]: event.target.checked,
+                                  }))
+                                }
+                              />
+                              Chờ {l.requested - Number(delivered[l.productId])}
+                            </label>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      )}
                       <td>
                         {l.retailPrice == null ||
                         !Number.isInteger(Number(delivered[l.productId]))
@@ -411,20 +467,24 @@ export default function SalesSettlementDialog({
               </dl>
             </div>
             {shortLines.length > 0 && (
-              <p className="sales-confirm-warning">
-                {shortLines
-                  .map(
-                    (l) =>
-                      l.partName +
-                      ' giao ' +
-                      delivered[l.productId] +
-                      '/' +
-                      l.requested,
-                  )
-                  .join('; ')}
-                . Số giao ít hơn yêu cầu sẽ tạo phiên bản mới. Phần khách còn
-                thiếu sẽ được hệ thống ghi lại khi đơn hoàn tất.
-              </p>
+              <div className="sales-confirm-shortage">
+                <p className="sales-confirm-warning">
+                  {shortLines
+                    .map(
+                      (l) =>
+                        l.partName +
+                        ' giao ' +
+                        delivered[l.productId] +
+                        '/' +
+                        l.requested,
+                    )
+                    .join('; ')}
+                </p>
+                <p className="sales-pending-remainder-hint" role="status">
+                  Tích “Chờ hàng” ở từng dòng khách sẽ đến lấy sau. Phần không tích
+                  được ghi nhận là khách bỏ.
+                </p>
+              </div>
             )}
             <label className="sales-confirm-agreement">
               <input
@@ -640,7 +700,7 @@ export default function SalesSettlementDialog({
         )}
         {action === 'cancel' && order.netPaid > 0 && (
           <p>
-            Cần hoàn {money.format(order.netPaid)} cho khách trong thao tác hủy.
+            Hủy đơn sẽ hoàn toàn bộ {money.format(order.netPaid)} đã thu cho khách.
           </p>
         )}
         {action === 'complete' && (

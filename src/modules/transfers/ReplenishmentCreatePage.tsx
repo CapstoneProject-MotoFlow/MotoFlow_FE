@@ -16,6 +16,7 @@ import { InventoryNotice } from '../inventory/components'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { transferQuantitiesValid } from './transferRules'
 import type { Page } from '../inventory/types'
+import { isDamagedVariant } from '../../shared/utils/damagedVariant'
 import './transfers.css'
 type Row = {
   key: number
@@ -472,7 +473,10 @@ export function PartChoice({
     Page<{ id: number; sku: string; partName: string }>
   >('/products', { q: query?.trim(), page: 0, size: 10 }, 0, query !== null)
   const parts =
-    choices.data?.items.filter((part) => !excluded.includes(part.id)) ?? []
+    // BH8 (GVHD 20/11): yêu cầu bổ sung không xin mã hàng móp.
+    choices.data?.items.filter(
+      (part) => !excluded.includes(part.id) && !isDamagedVariant(part),
+    ) ?? []
   const options = parts.map((part) => ({
     value: String(part.id),
     label: part.partName + ' · ' + part.sku,

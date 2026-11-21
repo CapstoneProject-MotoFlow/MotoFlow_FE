@@ -15,7 +15,9 @@ import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 import type { OpeningCostsResponse } from './openingBalanceApi'
+import CountLineTags from './CountLineTags'
 import './stock-count.css'
 export default function CountLiveDetail() {
   const { id } = useParams(),
@@ -304,7 +306,8 @@ export default function CountLiveDetail() {
                     {!staff && <th>Sổ sách</th>}
                     <th>Số đếm</th>
                     <th>Hư hỏng</th>
-                    {!staff && <th>Chênh lệch / Lý do</th>}
+                    {!staff && <th>Chênh lệch</th>}
+                    {!staff && <th>Lý do</th>}
                     {scope.owner && <th>Giá trị chênh lệch</th>}
                   </tr>
                 </thead>
@@ -312,11 +315,22 @@ export default function CountLiveDetail() {
                   {d.lines.map((l) => (
                     <tr key={l.id}>
                       <td>
-                        {l.partName}
+                        <ProductQuickView
+                          productId={l.productId}
+                          sku={l.sku}
+                          partName={l.partName}
+                          blindCount={staff}
+                        />
+                        <CountLineTags line={l} blind={staff} />
                         <small>
-                          {l.sku} ·{' '}
-                          {l.lotId == null ? 'Không lô' : 'Lô #' + l.lotId}
+                          {l.sku}
                         </small>
+                        {l.lotId != null && (
+                          <small className="count-line-lot-details">
+                            Lô {documentCode('L', l.lotId)} · Hạn sử dụng:{' '}
+                            {l.expiryDate ? date(l.expiryDate) : 'Không có'}
+                          </small>
+                        )}
                       </td>
                       <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
                       {!staff && (
@@ -330,9 +344,15 @@ export default function CountLiveDetail() {
                       {!staff && (
                         <td>
                           {d.status === 'DRAFT' ? '—' : (l.difference ?? '—')}
-                          <small>{l.reason}</small>
                         </td>
                       )}
+                        {!staff && (
+                          <td>
+                            {l.reason ? (
+                              <span className="count-reason-badge">{l.reason}</span>
+                            ) : '—'}
+                          </td>
+                        )}
                       {scope.owner && (
                         <td>
                           {l.differenceValue == null

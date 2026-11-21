@@ -12,6 +12,7 @@ import { useAuth } from '../../../shared/hooks/useAuth'
 import axiosClient from '../../../shared/api/axiosClient'
 import { apiMessage } from '../../suppliers/supplierService'
 import ImageViewer from '../../../shared/ui/ImageViewer'
+import { damagedVariantBaseSku } from '../../../shared/utils/damagedVariant'
 import './product-detail.css'
 type Stock = {
   lowStockThreshold: number | null
@@ -147,6 +148,14 @@ export default function ProductDetailPage() {
           <Link to="/dashboard">Trang chủ</Link> ›{' '}
           <Link to={base}>Phụ tùng</Link> › {data?.sku}
         </nav>
+        {data && damagedVariantBaseSku(data) && (
+          <p className="product-variant-label">
+            Hàng móp của{' '}
+            <Link to={`${base}?q=${encodeURIComponent(damagedVariantBaseSku(data)!)}`}>
+              {damagedVariantBaseSku(data)}
+            </Link>
+          </p>
+        )}
       </header>
       {error && <p role="alert">{error}</p>}
       {!data ? (

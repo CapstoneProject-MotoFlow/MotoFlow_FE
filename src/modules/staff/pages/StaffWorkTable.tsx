@@ -34,6 +34,7 @@ type Task = {
 }
 export default function StaffWorkTable() {
   const [page, setPage] = useState(0)
+  const [sortMode, setSortMode] = useState<'due' | 'recent'>('due')
   const { user } = useInventoryScope()
   const sales = useInventoryData<Page<SummaryDto>>('/sales-orders', {
       view: 'OPEN',
@@ -126,15 +127,25 @@ export default function StaffWorkTable() {
         code: documentCode('KK', c.id),
         description: c.storeName,
         assignedAt: null,
-        due: 'Ngày đếm ' + date(c.countDate),
+        due: c.countDate,
         status: c.status === 'DRAFT' ? 'Chưa bắt đầu' : 'Đang kiểm kê',
         action: c.status === 'DRAFT' ? 'Bắt đầu đếm' : 'Mở phiếu kiểm kê',
         href: '/stock-counts/' + c.id + (c.status === 'DRAFT' ? '/record' : ''),
         submitted: false,
       })),
   ]
-  const active = tasks.filter((t) => !t.submitted),
-    submitted = tasks.filter((t) => t.submitted),
+  const byDueThenAssignment = (a: Task, b: Task) => {
+      if (sortMode === 'due') {
+        const dueA = a.due ?? ''
+        const dueB = b.due ?? ''
+        if (dueA !== dueB) return dueA ? (dueB ? dueA.localeCompare(dueB) : -1) : 1
+      }
+      return sortMode === 'recent'
+        ? (b.assignedAt ?? '').localeCompare(a.assignedAt ?? '')
+        : (a.assignedAt ?? '\uffff').localeCompare(b.assignedAt ?? '\uffff')
+    },
+    active = tasks.filter((t) => !t.submitted).sort(byDueThenAssignment),
+    submitted = tasks.filter((t) => t.submitted).sort(byDueThenAssignment),
     sources = [sales, receipts, transfers, counts],
     loading = sources.some((s) => s.loading) || receiving.loading,
     error = sources
@@ -180,7 +191,7 @@ export default function StaffWorkTable() {
                 >
                   {t.assignedAt ? dateTime(t.assignedAt) : '—'}
                 </td>
-                <td>{t.due ?? '—'}</td>
+                <td>{t.due ? 'Ngày đếm ' + date(t.due) : '—'}</td>
                 <td>
                   <span
                     className={
@@ -215,6 +226,22 @@ export default function StaffWorkTable() {
   return (
     <section className="staff-task-panel" aria-busy={loading}>
       <h2>Việc của tôi{!loading ? ' (' + active.length + ')' : ''}</h2>
+      <div className="staff-work-sort" role="group" aria-label="Sắp xếp công việc">
+        <button
+          type="button"
+          aria-pressed={sortMode === 'due'}
+          onClick={() => setSortMode('due')}
+        >
+          Hạn gần nhất
+        </button>
+        <button
+          type="button"
+          aria-pressed={sortMode === 'recent'}
+          onClick={() => setSortMode('recent')}
+        >
+          Mới giao
+        </button>
+      </div>
       <InventoryNotice loading={loading} error={error} />
       {table(active)}
       {!loading && !error && !active.length && (

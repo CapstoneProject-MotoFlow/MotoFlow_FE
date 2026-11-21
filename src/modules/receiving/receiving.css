@@ -1085,3 +1085,16 @@
   border-color: #039855;
   background: #d1fadf;
 }
+
+/* NH3 (GVHD 20/11): tab Sai lệch của danh sách đơn nhập hàng */
+.receiving-discrepancy-orders button.receiving-request-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--mf-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.receiving-discrepancy-expanded td {
+  background: var(--mf-border-soft);
+}

@@ -165,7 +165,7 @@ export function purchaseOrderFormError(form: {
     if (line.quantity.trim() === '')
       return `Vui lòng nhập số lượng ${line.label}.`
     const min = line.allowZero ? 0 : 1
-    const max = Math.min(line.maxQuantity ?? 1_000_000, 1_000_000)
+    const max = line.maxQuantity ?? 1_000_000
     const quantity = Number(line.quantity)
     if (!Number.isInteger(quantity) || quantity < min || quantity > max)
       return `Số lượng ${line.label} phải là số nguyên từ ${min} đến ${purchaseNumber.format(max)}.`

@@ -68,12 +68,19 @@
   padding: 8px 80px;
 }
 .mf-viewer-stage img {
-  max-width: 100%;
-  max-height: 100%;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: calc(100vw - 160px);
+  max-height: calc(100vh - 112px);
   object-fit: contain;
   border-radius: 4px;
   background: #fff;
   box-shadow: 0 12px 40px rgb(0 0 0 / 50%);
+}
+.mf-viewer-loading {
+  position: absolute;
+  color: #d0d5dd;
 }
 .mf-viewer-nav {
   position: absolute;
@@ -124,6 +131,10 @@
 @media (max-width: 640px) {
   .mf-viewer-stage {
     padding: 8px 12px;
+  }
+  .mf-viewer-stage img {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 112px);
   }
   .mf-viewer-nav {
     width: 40px;

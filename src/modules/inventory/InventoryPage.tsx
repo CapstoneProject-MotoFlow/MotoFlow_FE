@@ -25,6 +25,7 @@ import {
 } from './stockGrouping'
 import { useCompleteStock } from './useCompleteStock'
 import type { StockRow, StockSummary, Page } from './types'
+import DefectiveAreaNote from './DefectiveAreaNote'
 import './stock-screen.css'
 
 /** Mức "sắp hết" theo ví dụ của cô Hoài (còn dưới 20-30 sản phẩm); người dùng vẫn tự nhập khoảng khác. */
@@ -713,6 +714,7 @@ export default function InventoryPage() {
                               {group.product.partName}
                             </Link>
                             <small>{group.product.sku}</small>
+                            <DefectiveAreaNote rows={group.rows} />
                           </div>
                         </div>
                       </td>
@@ -773,6 +775,7 @@ export default function InventoryPage() {
                           {row.partName}
                         </Link>
                         <small>{row.sku}</small>
+                        <DefectiveAreaNote rows={[row]} />
                       </td>
                       <td>{row.binLocation ?? '—'}</td>
                       {quantities([row])}

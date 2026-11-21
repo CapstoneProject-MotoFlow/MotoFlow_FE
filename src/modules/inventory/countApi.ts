@@ -63,6 +63,7 @@ export type CountDto = CountRow & {
     bookQty: number | null
     countedQty: number | null
     damagedQty?: number
+    bookDamagedQty?: number | null
     difference: number | null
     differenceValue: number | null
     reason: string | null

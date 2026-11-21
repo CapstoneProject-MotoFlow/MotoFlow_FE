@@ -2,6 +2,7 @@ import { useState } from 'react'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData } from '../inventory/api'
 import type { Page } from '../inventory/types'
+import { isDamagedVariant } from '../../shared/utils/damagedVariant'
 
 export type ProductOption = { id: number; sku: string; partName: string }
 
@@ -10,12 +11,15 @@ export default function ProductPicker({
   excludedIds,
   label,
   disabled,
+  excludeDamagedVariants = false,
   onSelect,
 }: {
   selected?: ProductOption
   excludedIds: number[]
   label: string
   disabled: boolean
+  /** BH8 (GVHD 20/11): ô chọn ở đơn nhập hàng, yêu cầu bổ sung, nhập đầu kỳ không hiện mã hàng móp. */
+  excludeDamagedVariants?: boolean
   onSelect: (product: ProductOption) => void
 }) {
   const [query, setQuery] = useState<string | null>(null)
@@ -29,7 +33,9 @@ export default function ProductPicker({
     query === null && selected
       ? [selected]
       : (products.data?.items.filter(
-          (part) => !excludedIds.includes(part.id),
+          (part) =>
+            !excludedIds.includes(part.id) &&
+            !(excludeDamagedVariants && isDamagedVariant(part)),
         ) ?? [])
 
   return (

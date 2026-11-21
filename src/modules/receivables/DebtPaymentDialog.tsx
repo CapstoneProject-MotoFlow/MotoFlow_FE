@@ -325,24 +325,25 @@ export default function DebtPaymentDialog({
                 e.target.value = ''
                 change()
               }}
-            />
-            {files.map((file, i) => (
-              <div className="rv-file" key={i}>
-                <span>
-                  Tệp {i + 1} · {Math.ceil(file.size / 1024)} KB
-                </span>
-                <button
-                  type="button"
-                  aria-label={'Bỏ tệp ' + (i + 1)}
-                  onClick={() => {
-                    setFiles(files.filter((_, index) => index !== i))
-                    change()
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+            >
+              {files.map((file, i) => (
+                <div className="rv-file" key={i}>
+                  <span>
+                    Tệp {i + 1} · {Math.ceil(file.size / 1024)} KB
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={'Bỏ tệp ' + (i + 1)}
+                    onClick={() => {
+                      setFiles(files.filter((_, index) => index !== i))
+                      change()
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </LocalizedFileInput>
             <small>JPG, PNG, WebP hoặc PDF, tối đa 10 MB/tệp.</small>
           </div>
           <label className="rv-full rv-received">

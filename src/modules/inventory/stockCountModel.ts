@@ -11,6 +11,8 @@ export type CountLine = {
   bookQty: number | null
   countedQty: number | null
   damagedQty?: number
+  /** BE #81: số hỏng theo sổ (chỉ khác 0 ở phiếu Khu hàng lỗi). */
+  bookDamagedQty?: number | null
   note: string | null
   reason: string | null
   recount: boolean
