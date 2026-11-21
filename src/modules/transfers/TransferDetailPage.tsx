@@ -241,8 +241,6 @@ export default function TransferDetailPage() {
                   inHead
                   canDecide={coordinator}
                   canReturn={source && !!returns.data?.length}
-                  canReportTransitLoss={(coordinator || dest) && unresolvedLines.length > 0}
-                  lossStoreId={d.destStoreId}
                   returnLines={returns.data ?? []}
                   id={d.id}
                   lines={unresolvedLines}

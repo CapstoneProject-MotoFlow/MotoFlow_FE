@@ -101,6 +101,44 @@
   font-size: 16px;
   padding: 18px 20px;
 }
+.staff-work-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 12px 20px;
+  padding: 4px;
+  background: #f2f4f7;
+  border: 1px solid #e6eaf0;
+  border-radius: 9px;
+}
+.staff-work-sort button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #526681;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease,
+    color 120ms ease, box-shadow 120ms ease;
+}
+.staff-work-sort button:hover:not([aria-pressed='true']) {
+  background: #fff;
+  color: #27364b;
+}
+.staff-work-sort button[aria-pressed='true'] {
+  background: #fff;
+  border-color: #dce2eb;
+  color: #4f56ff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 8%);
+}
+.staff-work-sort button:focus-visible {
+  outline: 2px solid #858bff;
+  outline-offset: 2px;
+}
 .staff-task-table td {
   padding: 16px 20px;
   border-bottom: 1px solid #edf0f4;

@@ -15,6 +15,7 @@ import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 import type { OpeningCostsResponse } from './openingBalanceApi'
 import './stock-count.css'
 export default function CountLiveDetail() {
@@ -313,7 +314,12 @@ export default function CountLiveDetail() {
                   {d.lines.map((l) => (
                     <tr key={l.id}>
                       <td>
-                        {l.partName}
+                        <ProductQuickView
+                          productId={l.productId}
+                          sku={l.sku}
+                          partName={l.partName}
+                          blindCount={staff}
+                        />
                         <small>
                           {l.sku}
                         </small>

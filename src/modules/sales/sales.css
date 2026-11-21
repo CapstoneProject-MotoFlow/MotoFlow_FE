@@ -251,6 +251,20 @@
   background: #fef3f2;
   color: #b42318;
 }
+.sales-status-AWAITING_STOCK {
+  background: #fffaeb;
+  color: #b54708;
+}
+.sales-awaiting-stock-note {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #fedf89;
+  border-radius: 8px;
+  background: #fffaeb;
+  color: #93370d;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .sales-detail-actions {
   display: flex;
   align-items: center;
@@ -274,6 +288,17 @@
 .sales-detail-actions button[data-danger='true'] {
   border-color: #fecdca;
   color: #d92d20;
+  margin-left: auto;
+}
+.sales-detail-actions .sales-action-primary {
+  border-color: #465fff;
+  background: #465fff;
+  color: #fff;
+  font-weight: 600;
+}
+.sales-detail-actions .sales-action-primary:hover {
+  border-color: #3547d4;
+  background: #3547d4;
 }
 .sales-payment-row-actions {
   display: flex;
@@ -930,7 +955,7 @@
   font-size: 11px;
   margin-top: 4px;
 }
-.sales-confirm-table input {
+.sales-confirm-table input:not([type='checkbox']) {
   width: 78px !important;
   text-align: right;
   min-height: 38px !important;
@@ -997,6 +1022,32 @@
   color: #b54708;
   font-size: 12px;
   line-height: 1.6;
+}
+.sales-confirm-shortage {
+  margin: 0 24px 18px;
+}
+.sales-confirm-shortage .sales-confirm-warning {
+  margin: 0 0 10px !important;
+}
+.sales-pending-remainder-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sales-pending-remainder-option input {
+  flex: 0 0 18px;
+  width: 18px !important;
+  height: 18px;
+  min-height: 18px !important;
+  margin: 0;
+  accent-color: #465fff;
+}
+.sales-pending-remainder-hint {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 12px;
 }
 .sales-confirm-agreement {
   padding: 0 24px 20px;
@@ -1571,19 +1622,51 @@
 .pos-table td {
   padding: 14px 8px;
   border-bottom: 1px solid #eef1f5;
-  vertical-align: top;
+  vertical-align: middle;
 }
 .pos-table .pos-col-no {
   width: 40px;
   padding-left: 16px;
   color: var(--mf-muted);
 }
-.pos-table td.pos-col-no {
-  padding-top: 26px;
-}
 .pos-table .pos-col-qty {
   width: 92px;
   text-align: right;
+}
+.pos-table .pos-col-split-qty {
+  width: 84px;
+  text-align: right;
+  white-space: nowrap;
+}
+.pos-table .pos-col-split-check {
+  width: 136px;
+  text-align: left;
+  white-space: nowrap;
+}
+.pos-table td.pos-col-split-qty {
+  color: var(--mf-text-2);
+  font-variant-numeric: tabular-nums;
+}
+.pos-table td.pos-col-split-check {
+  vertical-align: middle;
+}
+.sales-workspace .pos-table td.pos-col-split-check label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--mf-text-2);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.sales-workspace .pos-table td.pos-col-split-check input[type='checkbox'] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #465fff;
 }
 .pos-table .pos-col-money {
   width: 116px;
@@ -1591,7 +1674,6 @@
   white-space: nowrap;
 }
 .pos-table td.pos-col-money {
-  padding-top: 24px;
   color: var(--mf-text);
   font-size: 15px;
 }
@@ -1599,9 +1681,6 @@
   width: 64px;
   padding-right: 16px;
   text-align: right;
-}
-.pos-table td.pos-col-action {
-  padding-top: 18px;
 }
 .admin-dashboard.admin-dashboard .dashboard-main .pos-table td.pos-line-total {
   font-size: 17px;
@@ -1646,6 +1725,29 @@
 }
 .pos-muted {
   color: var(--mf-muted);
+}
+.pos-stock-split {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #dbe4ff;
+  border-radius: 8px;
+  background: #f5f7ff;
+}
+.pos-stock-split label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mf-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pos-stock-split input {
+  accent-color: #465fff;
+}
+.pos-stock-split p {
+  margin: 8px 0 0;
+  color: #465fff;
+  font-size: 13px;
 }
 .pos-empty {
   display: grid;

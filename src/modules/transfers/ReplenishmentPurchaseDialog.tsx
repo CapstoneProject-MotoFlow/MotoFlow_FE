@@ -69,7 +69,7 @@ export default function ReplenishmentPurchaseDialog({
           l.quantity !== '' &&
           Number.isInteger(Number(l.quantity)) &&
           Number(l.quantity) >= 0 &&
-          Number(l.quantity) <= Math.min(l.availableQty, 1000000),
+          Number.isSafeInteger(Number(l.quantity)),
       ) &&
       orderedLines.every(
         (l) =>
@@ -81,7 +81,10 @@ export default function ReplenishmentPurchaseDialog({
       (n, l) => n + Number(l.quantity) * Number(prices[l.productId] || 0),
       0,
     )
-  const shortage = lines.reduce((sum, line) => sum + line.availableQty, 0)
+  const purchaseQtyTotal = orderedLines.reduce(
+    (sum, line) => sum + Number(line.quantity),
+    0,
+  )
 
   async function saveEditedAllocation() {
     const path = '/replenishment-requests/' + request.id
@@ -166,7 +169,7 @@ export default function ReplenishmentPurchaseDialog({
               quantity: l.quantity,
               price: prices[l.productId] ?? '',
               allowZero: true,
-              maxQuantity: l.availableQty,
+              maxQuantity: Number.MAX_SAFE_INTEGER,
             })),
           })
           if (formError) {
@@ -288,8 +291,8 @@ export default function ReplenishmentPurchaseDialog({
           <fieldset disabled={busy}>
             <p role="status" className="tf-purchase-reason">
               Lý do lập đơn: còn thiếu{' '}
-              <strong>{shortage} phụ tùng</strong> thuộc{' '}
-              <strong>{lines.length} mã phụ tùng</strong>.
+              <strong>{purchaseQtyTotal} phụ tùng</strong> thuộc{' '}
+              <strong>{orderedLines.length} mã phụ tùng</strong>.
             </p>
             <div className="tf-purchase-fields">
               <div className="tf-purchase-supplier">
@@ -364,7 +367,6 @@ export default function ReplenishmentPurchaseDialog({
                           type="number"
                           aria-label={'Số lượng mua ' + l.sku}
                           min={0}
-                          max={Math.min(l.availableQty, 1000000)}
                           step={1}
                           required
                           value={l.quantity}
@@ -375,9 +377,15 @@ export default function ReplenishmentPurchaseDialog({
                             })
                           }
                         />
-                        <small>
-                          Tối đa {l.availableQty} {l.baseUnit}
-                        </small>
+                        {Number(l.quantity) > l.availableQty ? (
+                          <small role="status">
+                            Đang nhập vượt mức cần mua {l.availableQty} {l.baseUnit}; vẫn có thể lập đơn mua dư.
+                          </small>
+                        ) : (
+                          <small>
+                            Cần mua {l.availableQty} {l.baseUnit}; có thể nhập thêm nếu dự kiến mua dư.
+                          </small>
+                        )}
                       </td>
                       <td>
                         <MoneyInput

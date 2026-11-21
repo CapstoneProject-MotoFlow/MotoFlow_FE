@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useInventoryData } from '../inventory/api'
 import type { Page } from '../inventory/types'
 import { formatDateTime } from '../../shared/utils/format'
-import ImageViewer from '../../shared/ui/ImageViewer'
 import { isHttpUrl, isImageFile } from '../../shared/utils/imageFile'
+import PhotoButton from '../../shared/ui/PhotoButton'
 import { historyLabels } from './model'
 import type { Evidence, HistoryItem } from './types'
 import './documents.css'
@@ -171,13 +171,21 @@ export function History({ items }: { items: HistoryItem[] }) {
 
 /** Mục E (PM 19/11): ảnh mở trong trình xem ảnh nổi, chuyển qua lại giữa các ảnh; tệp khác (PDF) mở tab mới. */
 export function EvidenceList({ files }: { files: Evidence[] }) {
-  const [viewing, setViewing] = useState<number>()
   const images = files.filter(
     (file) => isHttpUrl(file.downloadUrl) && isImageFile(file.fileName),
   )
   return files.length ? (
     <>
       <ul className="docs-files">
+        {images.length > 0 && (
+          <li className="docs-files-view-all">
+            <span>{images.length} ảnh</span>
+            <PhotoButton
+              label="Xem ảnh"
+              images={images.map((file) => ({ src: file.downloadUrl! }))}
+            />
+          </li>
+        )}
         {files.map((file, index) => {
           // Mục 8 (PM 19/11): không hiện tên tệp, gọi theo thứ tự "Ảnh 1", "Tệp 2".
           const name =
@@ -185,16 +193,7 @@ export function EvidenceList({ files }: { files: Evidence[] }) {
           return (
             <li key={file.id}>
               <span>{name}</span>
-              {images.includes(file) ? (
-                <button
-                  type="button"
-                  className="mf-btn mf-btn--secondary"
-                  aria-label={'Xem ' + name}
-                  onClick={() => setViewing(images.indexOf(file))}
-                >
-                  Xem
-                </button>
-              ) : (
+              {!images.includes(file) && (
                 isHttpUrl(file.downloadUrl) && (
                   <a
                     href={file.downloadUrl}
@@ -211,15 +210,6 @@ export function EvidenceList({ files }: { files: Evidence[] }) {
           )
         })}
       </ul>
-      {viewing !== undefined && (
-        <ImageViewer
-          images={images.map((file) => ({
-            src: file.downloadUrl ?? '',
-          }))}
-          start={viewing}
-          onClose={() => setViewing(undefined)}
-        />
-      )}
     </>
   ) : (
     <p className="docs-muted">Chưa có tệp đính kèm.</p>

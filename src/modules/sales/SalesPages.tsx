@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useParams,
+  useSearchParams,
+  useNavigate,
+} from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import {
   InventoryNotice,
@@ -26,6 +32,7 @@ import SalesAssignmentDialog from './SalesAssignmentDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { orderFromDto, type OrderDto, type UnmetRow } from './salesApi'
 import SalesSettlementDialog from './SalesSettlementDialog'
+import SalesPendingReleaseDialog from './SalesPendingReleaseDialog'
 import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
 import DemandReplenishment from './DemandReplenishment'
@@ -206,13 +213,18 @@ export function SalesOrderListPage({
                 onChange={(e) => scope.filter({ status: e.target.value })}
               >
                 <option value="">Mọi trạng thái</option>
-                {(['AWAITING_PICKING', 'PICKED', 'CONFIRMED'] as const).map(
-                  (s) => (
-                    <option key={s} value={s}>
-                      {salesStates[s]}
-                    </option>
-                  ),
-                )}
+                {(
+                  [
+                    'AWAITING_STOCK',
+                    'AWAITING_PICKING',
+                    'PICKED',
+                    'CONFIRMED',
+                  ] as const
+                ).map((s) => (
+                  <option key={s} value={s}>
+                    {salesStates[s]}
+                  </option>
+                ))}
               </select>
             </label>
           )}
@@ -413,12 +425,28 @@ export function SalesOrderFormPage() {
 }
 export function SalesOrderDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
   const scope = useInventoryScope()
+  const initialNotice = location.state as {
+    notice?: string
+    primaryOrderId?: number
+    pendingOrderId?: number
+  } | null
   const [revision, setRevision] = useState(0),
-    [notice, setNotice] = useState('')
+    [notice, setNotice] = useState(initialNotice?.notice ?? ''),
+    [linkedOrders, setLinkedOrders] = useState({
+      primaryOrderId: initialNotice?.primaryOrderId,
+      pendingOrderId: initialNotice?.pendingOrderId,
+    })
   useEffect(() => {
     const changed = (event: Event) => {
-      setNotice((event as CustomEvent<string>).detail)
+      const detail = (event as CustomEvent<{
+        message: string
+        orderId?: number
+        pendingOrderId?: number
+      }>).detail
+      setNotice(detail.message)
+      setLinkedOrders({ primaryOrderId: detail.orderId, pendingOrderId: detail.pendingOrderId })
       setRevision((n) => n + 1)
     }
     window.addEventListener('sales-changed', changed)
@@ -434,7 +462,13 @@ export function SalesOrderDetailPage() {
     <>
       {notice && (
         <p role="status" className="stock-notice">
-          {notice}
+          {notice}{' '}
+          {linkedOrders.primaryOrderId && (
+            <Link to={'/sales-orders/' + linkedOrders.primaryOrderId}>Mở đơn bán {documentCode('SO', linkedOrders.primaryOrderId)}</Link>
+          )}
+          {linkedOrders.pendingOrderId && (
+            <> · <Link to={'/sales-orders/' + linkedOrders.pendingOrderId}>Mở đơn chờ {documentCode('SO', linkedOrders.pendingOrderId)}</Link></>
+          )}
         </p>
       )}
       <InventoryNotice loading={resource.loading} error={resource.error} />
@@ -460,6 +494,7 @@ export function SalesOrderDetailView({
     bm = role === 'BRANCH_MANAGER'
   const [params, setParams] = useSearchParams()
   const [refundAmount, setRefundAmount] = useState<number | undefined>()
+  const [releaseOpen, setReleaseOpen] = useState(false)
   const [pendingPayment, setPendingPayment] = useState(false)
   const [action, setAction] = useState<string | undefined>(() =>
     params.get('action') === 'assign' && order?.actions?.canAssignPicker
@@ -553,20 +588,34 @@ export function SalesOrderDetailView({
                         Sửa đơn
                       </Link>
                     )}
-                    {order.actions?.canAssignPicker && (
-                      <button onClick={() => setAction('assign')}>
-                        Giao lấy hàng
-                      </button>
-                    )}
-                    {order.actions?.canConfirm && (
-                      <button onClick={() => setAction('confirm')}>
-                        Xác nhận đơn
-                      </button>
-                    )}
-                    {(order.actions?.canRecordPayment ||
-                      order.actions?.canRecordCredit) && (
-                      <>
+                    {order.status !== 'AWAITING_STOCK' &&
+                      order.actions?.canAssignPicker && (
                         <button
+                          className="sales-action-primary"
+                          onClick={() => setAction('assign')}
+                        >
+                          Giao lấy hàng
+                        </button>
+                    )}
+                    {order.status !== 'AWAITING_STOCK' &&
+                      order.actions?.canConfirm && (
+                        <button
+                          className="sales-action-primary"
+                          onClick={() => setAction('confirm')}
+                        >
+                          Xác nhận đơn
+                        </button>
+                    )}
+                    {order.status !== 'AWAITING_STOCK' &&
+                      (order.actions?.canRecordPayment ||
+                        order.actions?.canRecordCredit) && (
+                        <>
+                        <button
+                          className={
+                            order.actions?.canRecordPayment
+                              ? 'sales-action-primary'
+                              : undefined
+                          }
                           disabled={!order.actions?.canRecordPayment}
                           onClick={() => setAction('payment')}
                         >
@@ -589,19 +638,24 @@ export function SalesOrderDetailView({
                               Khách lẻ không được mua chịu
                             </small>
                           )}
-                      </>
-                    )}
+                        </>
+                      )}
                     {(order.actions?.canCancel ?? mayCancel(order)) && (
                       <button data-danger="true" onClick={() => setAction('cancel')}>
                         Hủy đơn
                       </button>
                     )}
-                    {order.actions?.canComplete && (
-                      <button onClick={() => setAction('complete')}>
-                        Hoàn tất đơn
-                      </button>
+                    {order.status !== 'AWAITING_STOCK' &&
+                      order.actions?.canComplete && (
+                        <button
+                          className="sales-action-primary"
+                          onClick={() => setAction('complete')}
+                        >
+                          Hoàn tất đơn
+                        </button>
                     )}
-                    {order.payments?.some((p) => p.status === 'UNVERIFIED') &&
+                    {order.status !== 'AWAITING_STOCK' &&
+                      order.payments?.some((p) => p.status === 'UNVERIFIED') &&
                       !['COMPLETED', 'CANCELLED'].includes(order.status) && (
                         <>
                           <button onClick={() => setAction('verify')}>
@@ -614,27 +668,49 @@ export function SalesOrderDetailView({
                       )}
                   </>
                 )}
-                {order?.actions?.canRecordPicking && (
-                  <Link to={'/sales-orders/' + order.id + '/pick'}>
+                {order?.status === 'AWAITING_STOCK' &&
+                  (order.actions?.canReleasePending ??
+                    order.actions?.canRecordPicking) && (
+                    <button
+                      type="button"
+                      className="sales-action-primary"
+                      onClick={() => setReleaseOpen(true)}
+                    >
+                      Chuyển sang soạn
+                    </button>
+                  )}
+                {order?.status !== 'AWAITING_STOCK' &&
+                  order?.actions?.canRecordPicking && (
+                  <Link
+                    className="sales-action-primary"
+                    to={'/sales-orders/' + order.id + '/pick'}
+                  >
                     Ghi số đã nhặt
                   </Link>
                 )}
               </div>
             </div>
-            {order && order.status !== 'CANCELLED' && (
-              <ol className="sales-progress">
-                {[
-                  'Chờ lấy hàng',
-                  'Chờ xác nhận',
-                  'Chờ thanh toán',
-                  'Hoàn tất',
-                ].map((label, index) => (
-                  <li key={label} className={index <= stage ? 'reached' : ''}>
-                    {label}
-                  </li>
-                ))}
-              </ol>
+            {order?.status === 'AWAITING_STOCK' && (
+              <p className="sales-awaiting-stock-note" role="status">
+                Đơn đang chờ phần hàng còn thiếu. Khi có hàng, chuyển sang soạn
+                để tiếp tục.
+              </p>
             )}
+            {order &&
+              !['CANCELLED', 'AWAITING_STOCK'].includes(order.status) && (
+                <ol className="sales-progress">
+                  {[
+                    'Chờ lấy hàng',
+                    'Chờ xác nhận',
+                    'Chờ thanh toán',
+                    'Hoàn tất',
+                  ].map((label, index) => (
+                    <li key={label} className={index <= stage ? 'reached' : ''}>
+                      {label}
+                    </li>
+                  ))}
+                </ol>
+              )}
             <dl className="sales-detail-facts">
               <div>
                 <dt>Khách hàng</dt>
@@ -900,6 +976,18 @@ export function SalesOrderDetailView({
           }}
         />
       )}
+      {releaseOpen && order && (
+        <SalesPendingReleaseDialog
+          order={order}
+          onClose={() => setReleaseOpen(false)}
+          onSaved={(message, linked) => {
+            window.dispatchEvent(new CustomEvent('sales-changed', {
+              detail: { message, orderId: linked.orderId, pendingOrderId: linked.pendingOrderId },
+            }))
+            setReleaseOpen(false)
+          }}
+        />
+      )}
     </Shell>
   )
 }
@@ -930,7 +1018,8 @@ export function RecordPickedView({
   id?: string
 }) {
   const navigate = useNavigate(),
-    lock = useRef(false)
+    lock = useRef(false),
+    awaitingStock = order?.status === 'AWAITING_STOCK'
   const [busy, setBusy] = useState(false),
     [saved, setSaved] = useState('')
   const [lines, setLines] = useState<SalesLine[]>(() =>
@@ -1034,7 +1123,8 @@ export function RecordPickedView({
                 <tr>
                   <th>Phụ tùng</th>
                   <th>Số yêu cầu</th>
-                  <th>Đã lấy</th>
+                  <th>{awaitingStock ? 'Lấy ngay' : 'Đã lấy'}</th>
+                  {awaitingStock && <th>Lấy sau</th>}
                   <th>Lấy đủ</th>
                   <th>Ghi chú</th>
                 </tr>
@@ -1068,7 +1158,9 @@ export function RecordPickedView({
                       <td>
                         <input
                           disabled={!editable}
-                          aria-label={'Đã nhặt ' + l.sku}
+                          aria-label={
+                            (awaitingStock ? 'Lấy ngay ' : 'Đã nhặt ') + l.sku
+                          }
                           type="number"
                           min="0"
                           max={l.requested}
@@ -1096,6 +1188,11 @@ export function RecordPickedView({
                           }
                         />
                       </td>
+                      {awaitingStock && (
+                        <td>
+                          {Math.max(0, l.requested - (l.picked ?? 0))}
+                        </td>
+                      )}
                       <td>
                         <input
                           disabled={!editable}
@@ -1161,7 +1258,7 @@ export function RecordPickedView({
                   ))}
                 {!lines.length && (
                   <tr>
-                    <td colSpan={5} className="stock-empty">
+                    <td colSpan={awaitingStock ? 6 : 5} className="stock-empty">
                       Chưa có dòng được giao để lấy hàng.
                     </td>
                   </tr>

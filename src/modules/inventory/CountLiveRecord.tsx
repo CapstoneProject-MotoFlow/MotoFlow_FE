@@ -185,6 +185,7 @@ function Editor({
   const rows = data.lines.some((l) => l.recountRequested)
     ? data.lines.filter((l) => l.recountRequested)
     : data.lines
+  const recountMode = rows.some((line) => line.recountRequested)
   const [values, setValues] = useState<Record<number, string>>(() =>
       Object.fromEntries(
         rows.map((l) => [
@@ -384,6 +385,7 @@ function Editor({
             <tr>
               <th>Phụ tùng / Lô</th>
               <th>Vị trí (khu – kệ)</th>
+              {recountMode && <th>Lý do đếm lại</th>}
               <th>Số đếm thực tế</th>
               <th>Hư hỏng</th>
             </tr>
@@ -404,9 +406,15 @@ function Editor({
                       {l.expiryDate ? date(l.expiryDate) : 'Không có'}
                     </small>
                   )}
-                  {l.recountReason && <small>Đếm lại: {l.recountReason}</small>}
                 </td>
                 <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
+                {recountMode && (
+                  <td>
+                    {l.recountReason ? (
+                      <span className="count-reason-badge">{l.recountReason}</span>
+                    ) : '—'}
+                  </td>
+                )}
                 <td>
                   <input
                     aria-label={

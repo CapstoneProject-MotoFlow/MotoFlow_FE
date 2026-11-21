@@ -2,13 +2,16 @@ import type { OrderActions } from './salesApi'
 /** UI model mapped from the BE sales DTO. */
 export type SalesStatus =
   | 'DRAFT'
+  | 'AWAITING_STOCK'
   | 'AWAITING_PICKING'
   | 'PICKED'
   | 'CONFIRMED'
   | 'COMPLETED'
   | 'CANCELLED'
 export type SalesLine = {
+  lineId?: number
   sellableQty?: number
+  reservedQty?: number | null
   shortReason?: string
   barcodes?: string[]
   actualUnitPrice?: number | null

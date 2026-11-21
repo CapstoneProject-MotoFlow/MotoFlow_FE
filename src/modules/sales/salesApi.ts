@@ -12,12 +12,14 @@ export type OrderActions = {
   canRecordCredit: boolean
   canComplete: boolean
   canCancel: boolean
+  canReleasePending?: boolean
 }
 export type OrderDto = {
   id: number
   version: number
   status:
     | 'DRAFT'
+    | 'AWAITING_STOCK'
     | 'AWAITING_PICKING'
     | 'PICKED'
     | 'CONFIRMED'
@@ -54,11 +56,13 @@ export type OrderDto = {
   actions: OrderActions
   history: { action: string; actorName: string | null; occurredAt: string }[]
   lines: {
+    id?: number
     productId: number
     sku: string
     partName: string
     baseUnit: string
     sellableQty?: number
+    reservedQty?: number | null
     requestedQty: number
     pickedQty: number | null
     deliveredQty: number | null
@@ -81,8 +85,25 @@ export type SummaryDto = {
   total: number | null
   pickerName: string | null
   nextAction:
-    'ASSIGN_PICKER' | 'RECORD_PICKING' | 'CONFIRM' | 'COLLECT_PAYMENT' | null
+    | 'ASSIGN_PICKER'
+    | 'RECORD_PICKING'
+    | 'CONFIRM'
+    | 'COLLECT_PAYMENT'
+    | null
 }
+
+/**
+ * Proposed FE/BE contract for split sales: createPendingOrderForRemainder asks
+ * BE to split the requested quantities using current sellable stock. The active
+ * order is returned as `order`; `pendingOrder` is the order waiting for stock.
+ */
+export type CreateSalesOrderResult =
+  | OrderDto
+  | {
+      order: OrderDto | null
+      pendingOrder: { id: number; code?: string } | null
+    }
+
 export function orderFromDto(dto: OrderDto): SalesOrder {
   return {
     id: dto.id,
@@ -110,11 +131,13 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     actions: dto.actions,
     lines: dto.lines.map((l) => ({
       productId: l.productId,
+      lineId: l.id,
       sku: l.sku,
       partName: l.partName,
       baseUnit: l.baseUnit,
       requested: l.requestedQty,
       sellableQty: l.sellableQty,
+      reservedQty: l.reservedQty,
       picked: l.pickedQty,
       delivered: l.deliveredQty,
       retailPrice: l.referencePrice,

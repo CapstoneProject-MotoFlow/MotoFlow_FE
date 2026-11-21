@@ -28,8 +28,6 @@ export default function CoordinationAction({
   canReturn?: boolean
   /** Đặt nút trên dòng tiêu đề thẻ (CardHead) thay vì một khối riêng. */
   inHead?: boolean
-  canReportTransitLoss?: boolean
-  lossStoreId?: number
   /** Hàng trả về nguồn: nhận id phiếu nhận vừa mở để chuyển ngay sang bước giao việc kiểm nhận. */
   onSaved: (receiptId?: number) => void
 }) {

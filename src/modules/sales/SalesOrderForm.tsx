@@ -30,11 +30,16 @@ import {
   validQuantity,
   type SalesOrder,
 } from './salesModel'
-import { salesDraftsPath, type OrderDto } from './salesApi'
+import {
+  salesDraftsPath,
+  type CreateSalesOrderResult,
+  type OrderDto,
+} from './salesApi'
 
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
 import ProductQuickView from '../catalog/components/ProductQuickView'
+import { documentCode } from '../../shared/utils/documentCode'
 export type SalesProduct = {
   id: number
   sku: string
@@ -44,8 +49,15 @@ export type SalesProduct = {
   status: string
   imageUrl?: string | null
   availableQty?: number | null
+  sellableQty?: number | null
+  reservedQty?: number | null
 }
-type DraftLine = { product: SalesProduct; quantity: number }
+type DraftLine = {
+  product: SalesProduct
+  quantity: number
+  nowQty?: number
+  waitForRest?: boolean
+}
 type SalesCustomer = Pick<
   Customer,
   'id' | 'customerName' | 'phone' | 'creditStatus' | 'totalDebt'
@@ -61,6 +73,7 @@ type Preview = {
   lines: {
     productId: number
     sellableQty: number
+    reservedQty?: number | null
     shortQty: number
     retailPrice: number | null
     actualUnitPrice: number | null
@@ -131,6 +144,8 @@ export function SalesOrderFormView({
           partName: l.partName,
           baseUnit: l.baseUnit,
           retailPrice: l.retailPrice,
+          sellableQty: l.sellableQty,
+          reservedQty: l.reservedQty,
           status: 'ACTIVE',
         },
         quantity: l.requested,
@@ -249,10 +264,83 @@ export function SalesOrderFormView({
       : null
   const lineOf = (productId: number) =>
     pricePreview?.lines.find((l) => l.productId === productId)
+  const sellableOf = (productId: number) => {
+    const product = lines.find((line) => line.product.id === productId)?.product
+    const value =
+      lineOf(productId)?.sellableQty ??
+      product?.sellableQty ??
+      product?.availableQty
+    return value == null || !Number.isFinite(Number(value))
+      ? null
+      : Math.max(0, Number(value))
+  }
   const totalQty = lines.reduce(
     (sum, l) => sum + (Number.isFinite(l.quantity) ? l.quantity : 0),
     0,
   )
+  const stockSplit = lines.map(({ product, quantity, nowQty, waitForRest }) => {
+    const sellable = sellableOf(product.id)
+    const requested = Number.isFinite(quantity) ? Math.max(0, quantity) : 0
+    const defaultNow =
+      sellable == null ? requested : Math.min(requested, Math.max(0, sellable))
+    const takeNow = Math.min(
+      requested,
+      Math.max(0, Number.isFinite(nowQty) ? Number(nowQty) : defaultNow),
+    )
+    return {
+      productId: product.id,
+      takeNow,
+      later: Math.max(0, requested - takeNow),
+      // Phải chọn rõ đơn chờ cho phần thiếu; nếu chưa tích thì khóa tạo đơn.
+      waitForRest: waitForRest ?? false,
+    }
+  })
+  const stockSplitByProduct = new Map(
+    stockSplit.map((line) => [line.productId, line]),
+  )
+  const immediateQty = stockSplit.reduce((sum, line) => sum + line.takeNow, 0)
+  const pendingQty = stockSplit.reduce(
+    (sum, line) => sum + (line.waitForRest ? line.later : 0),
+    0,
+  )
+  const pendingLineCount = stockSplit.filter(
+    (line) => line.waitForRest && line.later > 0,
+  ).length
+  const immediateLineCount = stockSplit.filter((line) => line.takeNow > 0).length
+  const stockShortages = lines.filter(({ product, quantity }) => {
+    const sellable = sellableOf(product.id)
+    return sellable != null && quantity > sellable
+  })
+  const unhandledShortage =
+    stockSplit.some((line) => line.later > 0 && !line.waitForRest) ||
+    stockShortages.some(
+      ({ product }) =>
+        !stockSplitByProduct.get(product.id)?.waitForRest,
+    )
+  const canCreatePendingRemainder =
+    !editing &&
+    (stockSplit.some((line) => line.later > 0) || stockShortages.length > 0)
+  const splitActive = canCreatePendingRemainder
+  const saleReferenceTotal = splitActive
+    ? salesTotal(
+        stockSplit.map((line) => ({
+          quantity: line.takeNow,
+          price: lineOf(line.productId)?.retailPrice ??
+            lines.find((item) => item.product.id === line.productId)?.product.retailPrice ?? null,
+        })),
+        0,
+      )
+    : referenceTotal
+  const saleTotal = splitActive
+    ? salesTotal(
+        stockSplit.map((line) => ({
+          quantity: line.takeNow,
+          price: lineOf(line.productId)?.retailPrice ??
+            lines.find((item) => item.product.id === line.productId)?.product.retailPrice ?? null,
+        })),
+        discountRate,
+      )
+    : total
   const storeName = editing
     ? editing.storeName
     : scope.owner
@@ -334,17 +422,19 @@ export function SalesOrderFormView({
         ? 'Số lượng mỗi dòng phải là số nguyên từ 1 đến 100.000.'
         : !validDiscount
           ? 'Nhập chiết khấu từ 0 đến 99,99%.'
-          : previewError
-            ? previewError
-            : !pricePreview
-              ? 'Đang tính giá…'
-              : unpriced
-                ? `Phụ tùng ${unpriced.product.sku} chưa có giá bán lẻ đang áp dụng.`
-                : !pricePreview.priced
-                  ? 'Có phụ tùng chưa có giá bán.'
-                  : !pricePreview.withinThreshold
-                    ? `Chiết khấu phải nhỏ hơn ngưỡng ${pricePreview.discountThreshold ?? 0}% đang áp dụng.`
-                    : ''
+          : canCreatePendingRemainder && unhandledShortage
+            ? 'Tồn kho không đủ. Chọn tạo đơn chờ cho từng dòng còn thiếu để tiếp tục.'
+            : previewError
+              ? previewError
+              : !pricePreview
+                ? 'Đang tính giá…'
+                : unpriced
+                  ? `Phụ tùng ${unpriced.product.sku} chưa có giá bán lẻ đang áp dụng.`
+                  : !pricePreview.priced
+                    ? 'Có phụ tùng chưa có giá bán.'
+                    : !pricePreview.withinThreshold
+                      ? `Chiết khấu phải nhỏ hơn ngưỡng ${pricePreview.discountThreshold ?? 0}% đang áp dụng.`
+                      : ''
 
   /** Khóa nút trong lúc gọi API; lỗi BE hiện ngay trên form. */
   async function run(action: () => Promise<void>) {
@@ -364,6 +454,21 @@ export function SalesOrderFormView({
   function body() {
     return { ...JSON.parse(previewBody), note: note.trim() || null }
   }
+  function splitBody() {
+    const request = body()
+    return {
+      ...request,
+      lines: lines.map((line) => {
+        const split = stockSplitByProduct.get(line.product.id)
+        return {
+          productId: line.product.id,
+          requestedQty: line.quantity,
+          nowQty: split?.takeNow ?? line.quantity,
+          waitForRest: !!split?.waitForRest,
+        }
+      }),
+    }
+  }
 
   function submit() {
     if (blocker) {
@@ -371,20 +476,62 @@ export function SalesOrderFormView({
       return
     }
     return run(async () => {
-      const result = editing
-        ? await axiosClient.put<OrderDto>('/sales-orders/' + editing.id, {
+      let orderId: number
+      let pendingOrder: { id: number; code?: string } | null = null
+      let salesOrderCreated = true
+      if (editing) {
+        const result = await axiosClient.put<OrderDto>(
+          '/sales-orders/' + editing.id,
+          {
             ...body(),
             storeId: undefined,
             version: editing.version,
-          })
-        : draftOrder
-          ? // Chốt nháp: BE kiểm như tạo đơn mới, lấy giá đang áp dụng và chuyển sang Chờ lấy hàng.
-            await axiosClient.post<OrderDto>(
-              '/sales-orders/drafts/' + draftOrder.id + '/submit',
-              body(),
-            )
-          : await axiosClient.post<OrderDto>('/sales-orders', body())
-      navigate('/sales-orders/' + result.data.id)
+          },
+        )
+        orderId = result.data.id
+      } else if (draftOrder) {
+        const result = await axiosClient.post<CreateSalesOrderResult>(
+          '/sales-orders/drafts/' + draftOrder.id + '/submit',
+          {
+            ...(canCreatePendingRemainder ? splitBody() : body()),
+          },
+        )
+        if ('order' in result.data) {
+          pendingOrder = result.data.pendingOrder
+          const firstOrder = result.data.order ?? result.data.pendingOrder
+          if (!firstOrder) throw new Error('BE chưa trả về đơn bán đã tạo.')
+          salesOrderCreated = result.data.order != null
+          orderId = firstOrder.id
+        } else {
+          orderId = result.data.id
+        }
+      } else {
+        const result = await axiosClient.post<CreateSalesOrderResult>(
+          '/sales-orders',
+          {
+            ...(canCreatePendingRemainder ? splitBody() : body()),
+          },
+        )
+        if ('order' in result.data) {
+          pendingOrder = result.data.pendingOrder
+          const firstOrder = result.data.order ?? result.data.pendingOrder
+          if (!firstOrder) throw new Error('BE chưa trả về đơn bán đã tạo.')
+          salesOrderCreated = result.data.order != null
+          orderId = firstOrder.id
+        } else {
+          orderId = result.data.id
+        }
+      }
+      const notice = pendingOrder
+        ? salesOrderCreated
+          ? `Đã tạo đơn bán ${documentCode('SO', orderId)} và đơn chờ hàng ${pendingOrder.code ?? documentCode('SO', pendingOrder.id)}.`
+          : `Đã tạo đơn chờ hàng ${pendingOrder.code ?? documentCode('SO', pendingOrder.id)}.`
+        : undefined
+      navigate('/sales-orders/' + orderId, {
+        state: notice
+          ? { notice, primaryOrderId: salesOrderCreated ? orderId : undefined, pendingOrderId: pendingOrder.id }
+          : undefined,
+      })
     })
   }
   function saveDraft() {
@@ -520,8 +667,8 @@ export function SalesOrderFormView({
                         {product.partName}
                         <small>
                           {product.sku}
-                          {product.availableQty != null &&
-                            ` · có thể bán ${number.format(product.availableQty)} ${product.baseUnit}`}
+                          {(product.sellableQty ?? product.availableQty) != null &&
+                            ` · còn bán được ${number.format(product.sellableQty ?? product.availableQty!)} ${product.baseUnit}${product.reservedQty != null ? ` (đã trừ ${number.format(product.reservedQty)} đang giữ)` : ''}`}
                         </small>
                       </span>
                       <span className="pos-result-price">
@@ -546,6 +693,13 @@ export function SalesOrderFormView({
                     <th className="pos-col-no">STT</th>
                     <th>Phụ tùng</th>
                     <th className="pos-col-qty">Số lượng</th>
+                    {canCreatePendingRemainder && (
+                      <>
+                        <th className="pos-col-split-qty">Lấy ngay</th>
+                        <th className="pos-col-split-qty">Lấy sau</th>
+                        <th className="pos-col-split-check">Chờ phần còn lại</th>
+                      </>
+                    )}
                     <th className="pos-col-money">Đơn giá</th>
                     <th className="pos-col-money">Thành tiền</th>
                     <th className="pos-col-action" aria-label="Thao tác" />
@@ -554,7 +708,12 @@ export function SalesOrderFormView({
                 <tbody>
                   {lines.map(({ product, quantity }, index) => {
                     const priced = lineOf(product.id)
-                    const sellable = priced?.sellableQty ?? product.availableQty
+                    const sellable =
+                      priced?.sellableQty ??
+                      product.sellableQty ??
+                      product.availableQty
+                    const reservedQty =
+                      priced?.reservedQty ?? product.reservedQty
                     const over = sellable != null && quantity > sellable
                     const retailPrice = priced
                       ? priced.retailPrice
@@ -564,7 +723,12 @@ export function SalesOrderFormView({
                       : retailPrice != null && validDiscount
                         ? discountedPrice(retailPrice, discountRate)
                         : null
-                    const lineTotal = priced
+                    const split = stockSplitByProduct.get(product.id)
+                    const lineTotal = splitActive
+                      ? unitPrice != null
+                        ? unitPrice * (split?.takeNow ?? quantity)
+                        : null
+                      : priced
                       ? priced.lineTotal
                       : unitPrice != null &&
                           validQuantity(quantity) &&
@@ -584,11 +748,17 @@ export function SalesOrderFormView({
                           <small className="pos-line-meta">
                             <code>{product.sku}</code>
                             {sellable != null &&
-                              ` · có thể bán ${number.format(sellable)} ${product.baseUnit}`}
+                              ` · còn bán được ${number.format(sellable)} ${product.baseUnit}${reservedQty != null ? ` (đã trừ ${number.format(reservedQty)} đang giữ)` : ''}`}
                           </small>
-                          {over && (
+                          {splitActive && (split?.later ?? 0) > 0 ? (
                             <small className="pos-line-warn">
-                              Vượt số có thể bán, vẫn tạo được đơn
+                              {split?.waitForRest
+                                ? `Chờ hàng ${number.format(split?.later ?? 0)} ${product.baseUnit}`
+                                : 'Chọn “Chờ hàng” hoặc tăng số lấy ngay để tiếp tục'}
+                            </small>
+                          ) : over && (
+                            <small className="pos-line-warn">
+                              Tồn kho không đủ; giảm số lấy ngay hoặc tạo đơn chờ phần còn lại.
                             </small>
                           )}
                         </td>
@@ -631,6 +801,66 @@ export function SalesOrderFormView({
                             }
                           />
                         </td>
+                        {canCreatePendingRemainder && (
+                          <>
+                            <td className="pos-col-split-qty">
+                              <input
+                                className="pos-qty"
+                                aria-label={'Lấy ngay ' + product.sku}
+                                type="number"
+                                min="0"
+                                max={quantity}
+                                step="1"
+                                value={split?.takeNow ?? quantity}
+                                onChange={(event) =>
+                                  setLines((previous) =>
+                                    previous.map((line) =>
+                                      line.product.id === product.id
+                                        ? {
+                                            ...line,
+                                            nowQty:
+                                              event.target.value === ''
+                                                ? 0
+                                                : Number(event.target.value),
+                                          }
+                                        : line,
+                                    ),
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="pos-col-split-qty">
+                              {number.format(split?.later ?? 0)}
+                            </td>
+                            <td className="pos-col-split-check">
+                              {(split?.later ?? 0) > 0 || over ? (
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={'Chờ hàng ' + product.sku}
+                                    checked={!!split?.waitForRest}
+                                    onChange={(event) =>
+                                      setLines((previous) =>
+                                        previous.map((line) =>
+                                          line.product.id === product.id
+                                            ? {
+                                                ...line,
+                                                waitForRest:
+                                                  event.target.checked,
+                                              }
+                                            : line,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                  Chờ hàng
+                                </label>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                          </>
+                        )}
                         <td className="pos-col-money">
                           {unitPrice == null ? (
                             <span className="pos-muted">
@@ -891,10 +1121,14 @@ export function SalesOrderFormView({
           <dl className="pos-totals">
             <div>
               <dt>
-                Tổng tiền hàng{' '}
-                <span className="pos-count">{number.format(totalQty)}</span>
+                {splitActive ? 'Tiền hàng lấy ngay' : 'Tổng tiền hàng'}{' '}
+                <span className="pos-count">
+                  {number.format(splitActive ? immediateQty : totalQty)}
+                </span>
               </dt>
-              <dd>{referenceTotal == null ? '—' : vnd(referenceTotal)}</dd>
+              <dd>
+                {saleReferenceTotal == null ? '—' : vnd(saleReferenceTotal)}
+              </dd>
             </div>
             {type === 'WHOLESALE' && (
               <div className="pos-discount-row">
@@ -914,7 +1148,13 @@ export function SalesOrderFormView({
                 </dt>
                 <dd>
                   <span className="pos-discount-amount">
-                    {discountAmount == null ? '—' : '− ' + vnd(discountAmount)}
+                    {splitActive && saleReferenceTotal != null && saleTotal != null
+                      ? saleReferenceTotal > saleTotal
+                        ? '− ' + vnd(saleReferenceTotal - saleTotal)
+                        : '—'
+                      : discountAmount == null
+                        ? '—'
+                        : '− ' + vnd(discountAmount)}
                   </span>
                   <span className="pos-discount-input">
                     <input
@@ -942,10 +1182,27 @@ export function SalesOrderFormView({
               </p>
             )}
             <div className="pos-grand">
-              <dt>Khách cần trả</dt>
-              <dd>{total == null ? '—' : vnd(total)}</dd>
+              <dt>{splitActive ? 'Khách cần trả (lấy ngay)' : 'Khách cần trả'}</dt>
+              <dd>{saleTotal == null ? '—' : vnd(saleTotal)}</dd>
             </div>
           </dl>
+
+          {canCreatePendingRemainder && (
+            <div className="pos-stock-split">
+              <strong>Tách đơn theo số lượng lấy ngay</strong>
+              <p role="status">
+                {unhandledShortage
+                  ? 'Chọn “Chờ hàng” ở từng dòng còn thiếu để mở nút Tạo đơn.'
+                  : `Sẽ tạo: đơn bán ${immediateLineCount} dòng · đơn chờ ${pendingLineCount} dòng.`}
+              </p>
+              {pendingQty > 0 && (
+                <small>
+                  Số lượng chờ hàng: {number.format(pendingQty)}; chưa tính vào
+                  số tiền khách cần trả lúc này.
+                </small>
+              )}
+            </div>
+          )}
 
           <div className="pos-actions">
             {error && error !== blocker && (

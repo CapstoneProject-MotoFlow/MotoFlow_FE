@@ -4,7 +4,7 @@ import FormDialog from '../../shared/ui/FormDialog'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, inventoryError } from './api'
 import { InventoryNotice } from './components'
-import type { CountRequest, CountDto } from './countApi'
+import type { CountRequest, CountDto, CountList, CountRow } from './countApi'
 import type { Page, StockRow } from './types'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
@@ -47,6 +47,11 @@ export function StockCountFormDialog({
     [groupProducts, setGroupProducts] = useState<Product[]>([]),
     [groupLoading, setGroupLoading] = useState(false),
     [groupError, setGroupError] = useState(''),
+    [countCheckLoading, setCountCheckLoading] = useState(false),
+    [countCheckError, setCountCheckError] = useState(''),
+    [duplicateProducts, setDuplicateProducts] = useState<Record<number, string[]>>({}),
+    [openingCount, setOpeningCount] = useState<CountRow | null>(null),
+    [activeCounts, setActiveCounts] = useState<CountRow[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('')
   const lock = useRef(false),
@@ -71,6 +76,104 @@ export function StockCountFormDialog({
         ? groupProducts.map((p) => p.id)
         : picked.map((p) => p.id),
     actualStore = source?.storeId ?? Number(warehouse)
+
+  useEffect(() => {
+    if (owner || !actualStore) {
+      setCountCheckLoading(false)
+      setCountCheckError('')
+      setDuplicateProducts({})
+      setOpeningCount(null)
+      setActiveCounts([])
+      return
+    }
+    const controller = new AbortController()
+    setCountCheckLoading(true)
+    setCountCheckError('')
+    setDuplicateProducts({})
+    setOpeningCount(null)
+    setActiveCounts([])
+    void (async () => {
+      try {
+        const rowsById = new Map<number, CountRow>()
+        const fetchRows = async (params: Record<string, string | number>) => {
+          const first = await axiosClient.get<CountList>('/stock-counts', {
+            params: { storeId: actualStore, size: 100, page: 0, ...params },
+            signal: controller.signal,
+          })
+          const rows = [...first.data.counts.items]
+          const pages = Math.ceil(first.data.counts.totalItems / 100)
+          const rest = await Promise.all(
+            Array.from({ length: Math.max(0, pages - 1) }, (_, index) =>
+              axiosClient.get<CountList>('/stock-counts', {
+                params: { storeId: actualStore, size: 100, page: index + 1, ...params },
+                signal: controller.signal,
+              }),
+            ),
+          )
+          rest.forEach((response) => rows.push(...response.data.counts.items))
+          return rows
+        }
+        const [drafts, counting, awaiting, openingRows] = await Promise.all([
+          fetchRows({ status: 'DRAFT' }),
+          fetchRows({ status: 'COUNTING' }),
+          fetchRows({ status: 'AWAITING_APPROVAL' }),
+          fetchRows({ countType: 'OPENING' }),
+        ])
+        ;[...drafts, ...counting, ...awaiting, ...openingRows].forEach((row) => rowsById.set(row.id, row))
+        const rows = [...rowsById.values()]
+        const existingOpening = rows
+          .filter((row) => row.countType === 'OPENING' && row.status !== 'CANCELLED')
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+        const activeRows = rows.filter((row) =>
+          ['DRAFT', 'COUNTING', 'AWAITING_APPROVAL'].includes(row.status),
+        )
+        const details = await Promise.all(
+          activeRows.map((row) =>
+            axiosClient.get<CountDto>(`/stock-counts/${row.id}`, {
+              signal: controller.signal,
+            }),
+          ),
+        )
+        if (controller.signal.aborted) return
+        const productCounts: Record<number, string[]> = {}
+        details.forEach(({ data }) => {
+          const code = 'KK-' + String(data.id).padStart(4, '0')
+          data.lines.forEach((line) => {
+            productCounts[line.productId] = [
+              ...(productCounts[line.productId] ?? []),
+              code,
+            ]
+          })
+        })
+        setDuplicateProducts(productCounts)
+        setOpeningCount(existingOpening ?? null)
+        setActiveCounts(activeRows)
+      } catch (cause) {
+        if (!controller.signal.aborted) setCountCheckError(inventoryError(cause))
+      } finally {
+        if (!controller.signal.aborted) setCountCheckLoading(false)
+      }
+    })()
+    return () => controller.abort()
+  }, [owner, actualStore])
+  const duplicateSelection = actualProducts.flatMap((productId) =>
+    (duplicateProducts[productId] ?? []).map((code) => ({ productId, code })),
+  )
+  const scopeConflicts = activeCounts.filter((row) => {
+    if (actualScope === 'WHOLE') return true
+    if (actualScope === 'AREA')
+      return row.scopeType === 'WHOLE' || (row.scopeType === 'AREA' && row.scopeNote === actualArea)
+    return false
+  })
+  const selectedProducts = new Map<number, string>([
+    ...(source?.products.map((product) => [product.productId, product.sku] as const) ?? []),
+    ...picked.map((product) => [product.id, product.sku] as const),
+    ...groupProducts.map((product) => [product.id, product.sku] as const),
+  ])
+  const openingPending =
+    openingCount != null &&
+    ['DRAFT', 'COUNTING', 'AWAITING_APPROVAL'].includes(openingCount.status)
+  const openingBlocked = !requestId && !!openingCount && (countType === 'OPENING' || openingPending)
   const areas = useInventoryData<string[]>(
       '/inventory/stock/storage-areas',
       { storeId: owner ? warehouse : undefined },
@@ -122,8 +225,7 @@ export function StockCountFormDialog({
           setGroupProducts(
             [
               ...new Map(
-                [...first.data.items, ...remaining.flatMap((response) => response.data.items)]
-                  .filter((row) => row.onHandQty > 0)
+                  [...first.data.items, ...remaining.flatMap((response) => response.data.items)]
                   .map((row) => [
                     row.productId,
                     {
@@ -153,7 +255,11 @@ export function StockCountFormDialog({
       actualProducts.length > 0) &&
     (scope !== 'GROUP' || (!!groupId && groupProducts.length > 0 && !groupLoading)) &&
     !!date &&
-    (owner || date <= monthEnd())
+    (owner || date <= monthEnd()) &&
+    (owner || (!!actualStore && !countCheckLoading && !countCheckError)) &&
+    (owner || duplicateSelection.length === 0) &&
+    (owner || scopeConflicts.length === 0) &&
+    !openingBlocked
   async function save() {
     if (lock.current || !valid) return
     lock.current = true
@@ -210,6 +316,30 @@ export function StockCountFormDialog({
           loading={stores.loading || prefill.loading}
           error={error || stores.error || prefill.error}
         />
+        {!owner && countCheckLoading && <p role="status">Kiểm tra phiếu kiểm kê đang mở…</p>}
+        {!owner && countCheckError && (
+          <p role="alert">Chưa kiểm tra được phiếu đang mở. Tải lại hoặc thử lại trước khi tạo: {countCheckError}</p>
+        )}
+        {duplicateSelection.length > 0 && (
+          <p role="alert">
+            Phụ tùng đã có trong phiếu đang mở:{' '}
+            {duplicateSelection.map(({ productId, code }, index) => {
+              return <span key={`${productId}-${code}`}>{index > 0 ? ', ' : ''}{selectedProducts.get(productId) ?? `Phụ tùng #${productId}`} · {code}</span>
+            })}
+          </p>
+        )}
+        {scopeConflicts.length > 0 && (
+          <p role="alert">
+            Phạm vi này đang trùng phiếu kiểm kê đang mở: {scopeConflicts.map((row) => 'KK-' + String(row.id).padStart(4, '0')).join(', ')}. Vui lòng xử lý phiếu đó trước.
+          </p>
+        )}
+        {openingBlocked && openingCount && (
+          <p role="alert">
+            {openingPending
+              ? `Phiếu tồn đầu kỳ KK-${String(openingCount.id).padStart(4, '0')} chưa hoàn tất; cần xử lý xong trước khi tạo phiếu kiểm kê.`
+              : `Kho này đã có phiếu tồn đầu kỳ KK-${String(openingCount.id).padStart(4, '0')}; không thể tạo thêm phiếu tồn đầu kỳ.`}
+          </p>
+        )}
         <fieldset disabled={busy}>
           {owner && (
             <label>
@@ -263,6 +393,9 @@ export function StockCountFormDialog({
               Yêu cầu {documentCode('YCKK', source.id)} · {source.storeName} ·{' '}
               {source.reason}
             </p>
+          )}
+          {!owner && countType === 'OPENING' && !openingCount && !countCheckLoading && !countCheckError && (
+            <p role="status">Chưa có phiếu tồn đầu kỳ ở kho này.</p>
           )}
           <label>
             Phạm vi

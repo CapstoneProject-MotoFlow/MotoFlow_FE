@@ -108,6 +108,98 @@
   font-size: 13px;
   min-width: 1080px;
 }
+.supplier-discrepancy-page table.supplier-discrepancy-lines {
+  min-width: 1360px;
+  table-layout: fixed;
+}
+.supplier-discrepancy-lines th:nth-child(1) { width: 255px; }
+.supplier-discrepancy-lines th:nth-child(2) { width: 220px; }
+.supplier-discrepancy-lines th:nth-child(3) { width: 200px; }
+.supplier-discrepancy-lines th:nth-child(4) { width: 260px; }
+.supplier-discrepancy-lines th:nth-child(5) { width: 180px; }
+.supplier-discrepancy-lines th:nth-child(6) { width: 245px; }
+.supplier-discrepancy-lines thead th {
+  white-space: nowrap;
+  padding-block: 0.8rem;
+}
+.supplier-discrepancy-lines tbody > tr > th,
+.supplier-discrepancy-lines tbody > tr > td {
+  padding: 0.9rem 0.65rem;
+}
+.supplier-metric-grid {
+  display: grid;
+  gap: 0.45rem 0.7rem;
+}
+.supplier-metric-grid--initial,
+.supplier-metric-grid--processed {
+  grid-template-columns: repeat(2, max-content);
+  align-content: center;
+  gap: 0.55rem 0.9rem;
+}
+.supplier-metric-grid span {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.supplier-outstanding-list span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+.supplier-metric-grid small,
+.supplier-outstanding-list small {
+  color: #667085;
+  font-size: 11px;
+}
+.supplier-metric-grid b,
+.supplier-outstanding-list b {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 600;
+}
+.supplier-no-metrics {
+  color: #667085;
+  font-size: 12px;
+}
+.supplier-edit-fields {
+  display: grid;
+  gap: 0.55rem;
+}
+.supplier-edit-fields label {
+  display: grid;
+  grid-template-columns: 75px minmax(70px, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+  color: #667085;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.supplier-discrepancy-lines .supplier-edit-fields input[type='number'] {
+  width: 100%;
+  min-width: 0;
+}
+.supplier-outstanding-list {
+  display: grid;
+  gap: 0.6rem;
+}
+.supplier-discrepancy-lines .receiving-case-actions {
+  flex-direction: row;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 0.4rem;
+}
+.supplier-discrepancy-lines .receiving-case-actions .mf-btn {
+  flex: 1 1 100%;
+  justify-content: center;
+  white-space: normal;
+  min-height: 34px;
+  padding: 0.4rem 0.5rem;
+  line-height: 1.25;
+}
 .supplier-discrepancy-page :is(th, td) {
   padding: 0.65rem;
   border-bottom: 1px solid #eef1f5;
@@ -124,6 +216,45 @@
   min-width: 215px;
   line-height: 1.6;
 }
+.supplier-discrepancy-page .supplier-receipt-code {
+  display: inline-block;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #4f56ee;
+  font-weight: 600;
+  cursor: pointer;
+}
+.supplier-discrepancy-page .supplier-receipt-code:hover {
+  text-decoration: underline;
+}
+.supplier-discrepancy-page .supplier-receipt-expanded-row > td {
+  padding: 0.35rem 1rem 0.75rem;
+  background: #fbfcff;
+}
+.supplier-receipt-items {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.supplier-receipt-items li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  color: #344054;
+}
+.supplier-receipt-items li span {
+  color: #667085;
+  margin-left: 0.5rem;
+}
+.supplier-discrepancy-page .receiving-panel .supplier-receipt-groups .mf-btn--secondary {
+  color: #344054;
+  text-decoration: none;
+}
 .supplier-discrepancy-page .receiving-case-actions {
   flex-direction: column;
   align-items: stretch;
@@ -133,27 +264,20 @@
 .supplier-discrepancy-page .receiving-case-actions button {
   white-space: nowrap;
 }
+.supplier-discrepancy-page .receiving-case-actions .mf-btn:disabled {
+  background: #f2f4f7;
+  border-color: #e4e7ec;
+  color: #98a2b3;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
 /* Mục 13 (PM 19/11): link dạng nút "Nhập hàng giao bù" giữ chữ trắng, không gạch chân. */
 .supplier-discrepancy-page .receiving-case-actions a.mf-btn {
   justify-content: center;
   white-space: nowrap;
   color: #fff;
   text-decoration: none;
-}
-.supplier-case-status {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 11px;
-  white-space: nowrap;
-}
-.supplier-case-status.is-open {
-  background: #fffaeb;
-  color: #b54708;
-}
-.supplier-case-status.is-closed {
-  background: #f2f4f7;
-  color: #475467;
 }
 .supplier-discrepancy-page .receiving-pagination {
   justify-content: flex-end;
@@ -170,15 +294,12 @@
   width: 6rem;
 }
 .supplier-handling-footer {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 1rem;
+  display: grid;
+  gap: 0.75rem;
   padding: 1rem 1.25rem;
   border-top: 1px solid #eef1f5;
 }
 .supplier-handling-footer label {
-  flex: 1 1 20rem;
   min-width: 0;
   display: grid;
   gap: 0.35rem;
@@ -191,7 +312,7 @@
   display: grid;
   justify-items: end;
   gap: 0.4rem;
-  margin-inline-start: auto;
+  margin-inline-start: 0;
 }
 .supplier-handling-save small {
   color: #52627a;

@@ -36,7 +36,8 @@ export default function SalesSettlementDialog({
       ),
     ),
     [verified, setVerified] = useState(false),
-    [agreed, setAgreed] = useState(false)
+    [agreed, setAgreed] = useState(false),
+    [waitForRest, setWaitForRest] = useState<Record<number, boolean>>({})
   const [cashGiven, setCashGiven] = useState(
     String(order.payableNow ?? order.remainingPayable ?? 0),
   )
@@ -139,8 +140,12 @@ export default function SalesSettlementDialog({
           >
             Ghi nợ {money.format(order.remainingPayable ?? 0)}
           </button>
-        ) : action === 'payment' && !order.customerId ? (
-          <small>Khách lẻ không được mua chịu.</small>
+        ) : action === 'payment' && !order.actions?.canRecordCredit ? (
+          <small>
+            {order.customerId
+              ? 'Khách hàng hiện chưa đủ điều kiện mua chịu.'
+              : 'Khách lẻ không được mua chịu.'}
+          </small>
         ) : undefined
       }
       onClose={onClose}
@@ -166,6 +171,7 @@ export default function SalesSettlementDialog({
             const lines = order.lines.map((l) => ({
               productId: l.productId,
               deliveredQty: Number(delivered[l.productId]),
+              waitForRest: !!waitForRest[l.productId],
             }))
             if (
               lines.some(
@@ -183,7 +189,11 @@ export default function SalesSettlementDialog({
               setError('Số giao phải là số nguyên từ 0 đến số đã nhặt/yêu cầu.')
               return
             }
-            body = { version: order.version, customerAgreed: agreed, lines }
+            body = {
+              version: order.version,
+              customerAgreed: agreed,
+              lines,
+            }
           } else if (action === 'payment' || action === 'refund') {
             const value = action === 'payment' ? recorded : Number(amount),
               limit = action === 'payment' ? order.payableNow : order.refundable
@@ -260,11 +270,18 @@ export default function SalesSettlementDialog({
               '/sales-orders/' + order.id + '/' + path,
               body,
             )
+            const pendingOrder =
+              action === 'confirm' &&
+              shortLines.some((line) => waitForRest[line.productId])
+                ? data?.pendingOrder
+                : null
             refreshSales(
-              data.completionBlockedMessage
-                ? 'Đã ghi nhận tiền. Chưa hoàn tất: ' +
+              pendingOrder?.id
+                ? `Đã xác nhận giao hàng. Đã tạo đơn chờ hàng SO-${pendingOrder.id}.`
+                : data.completionBlockedMessage
+                  ? 'Đã ghi nhận tiền. Chưa hoàn tất: ' +
                     data.completionBlockedMessage
-                : 'Đã lưu ' + titles[action].toLowerCase() + '.',
+                  : 'Đã lưu ' + titles[action].toLowerCase() + '.',
             )
             onClose(action === 'confirm' ? 'payment' : undefined)
           } catch (error) {
@@ -301,6 +318,7 @@ export default function SalesSettlementDialog({
                     <th>Yêu cầu</th>
                     <th>Đã lấy</th>
                     <th>Giao</th>
+                    {shortLines.length > 0 && <th>Chờ hàng</th>}
                     <th>Thành tiền</th>
                   </tr>
                 </thead>
@@ -344,6 +362,28 @@ export default function SalesSettlementDialog({
                           message={validation.errors['Số giao ' + l.sku]}
                         />
                       </td>
+                      {shortLines.length > 0 && (
+                        <td>
+                          {Number(delivered[l.productId]) < l.requested ? (
+                            <label className="sales-pending-remainder-option">
+                              <input
+                                type="checkbox"
+                                aria-label={'Tạo đơn chờ ' + l.sku}
+                                checked={!!waitForRest[l.productId]}
+                                onChange={(event) =>
+                                  setWaitForRest((current) => ({
+                                    ...current,
+                                    [l.productId]: event.target.checked,
+                                  }))
+                                }
+                              />
+                              Chờ {l.requested - Number(delivered[l.productId])}
+                            </label>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      )}
                       <td>
                         {l.retailPrice == null ||
                         !Number.isInteger(Number(delivered[l.productId]))
@@ -415,20 +455,24 @@ export default function SalesSettlementDialog({
               </dl>
             </div>
             {shortLines.length > 0 && (
-              <p className="sales-confirm-warning">
-                {shortLines
-                  .map(
-                    (l) =>
-                      l.partName +
-                      ' giao ' +
-                      delivered[l.productId] +
-                      '/' +
-                      l.requested,
-                  )
-                  .join('; ')}
-                . Số giao ít hơn yêu cầu sẽ tạo phiên bản mới. Phần khách còn
-                thiếu sẽ được hệ thống ghi lại khi đơn hoàn tất.
-              </p>
+              <div className="sales-confirm-shortage">
+                <p className="sales-confirm-warning">
+                  {shortLines
+                    .map(
+                      (l) =>
+                        l.partName +
+                        ' giao ' +
+                        delivered[l.productId] +
+                        '/' +
+                        l.requested,
+                    )
+                    .join('; ')}
+                </p>
+                <p className="sales-pending-remainder-hint" role="status">
+                  Tích “Chờ hàng” ở từng dòng khách sẽ đến lấy sau. Phần không tích
+                  được ghi nhận là khách bỏ.
+                </p>
+              </div>
             )}
             <label className="sales-confirm-agreement">
               <input

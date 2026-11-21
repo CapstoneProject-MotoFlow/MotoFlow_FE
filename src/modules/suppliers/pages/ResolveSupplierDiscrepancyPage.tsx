@@ -1,7 +1,7 @@
 import PageBackLink from '../../../shared/ui/PageBackLink'
 import { isAxiosError } from 'axios'
 import { useInventoryScope } from '../../inventory/api'
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
@@ -28,7 +28,11 @@ type Case = HandlingCase & {
   id: number
   goodsReceiptNoteId: number
   storeId?: number
+  storeName?: string
   purchaseOrderId?: number
+  supplierName?: string
+  openedAt?: string
+  deliveryDate?: string
   productId: number
   sku: string
   partName: string
@@ -342,8 +346,13 @@ function DiscrepancyForm({
 }) {
   const scope = useInventoryScope()
   const [status, setStatus] = useState('OPEN'),
-    [purchaseOrderQuery, setPurchaseOrderQuery] = useState('')
+    [purchaseOrderQuery, setPurchaseOrderQuery] = useState(''),
+    [supplierQuery, setSupplierQuery] = useState(''),
+    [productQuery, setProductQuery] = useState(''),
+    [fromDate, setFromDate] = useState(''),
+    [toDate, setToDate] = useState('')
   const [rows, setRows] = useState<Case[]>([])
+  const [expandedReceiptId, setExpandedReceiptId] = useState<number | null>(null)
   const [drafts, setDrafts] = useState<Record<number, HandlingDraft>>({})
   const purchaseOrderId = purchaseOrderSearch(purchaseOrderQuery)
   const invalidOrder = !!purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)
@@ -400,22 +409,47 @@ function DiscrepancyForm({
             setTotal(cases.length)
           }
         } else {
-          const { data } = await axiosClient.get<{
-            items: Case[]
-            totalItems: number
-          }>('/discrepancy-cases', {
-            params: {
-              status: status || undefined,
-              storeId: scope.storeId || undefined,
-              purchaseOrderId: purchaseOrderId || undefined,
-              page,
-              size: 20,
-            },
-            signal: controller.signal,
-          })
+          const cases: Case[] = []
+          for (let current = 0; ; current++) {
+            const { data } = await axiosClient.get<{
+              items: Case[]
+              totalItems: number
+            }>('/discrepancy-cases', {
+              params: {
+                status: status || undefined,
+                storeId: scope.storeId || undefined,
+                purchaseOrderId: purchaseOrderId || undefined,
+                supplierQuery: supplierQuery.trim() || undefined,
+                productQuery: productQuery.trim() || undefined,
+                from: fromDate || undefined,
+                to: toDate || undefined,
+                page: current,
+                size: 100,
+              },
+              signal: controller.signal,
+            })
+            cases.push(...data.items)
+            if (!data.items.length || cases.length >= data.totalItems) break
+          }
           if (!controller.signal.aborted) {
-            setRows(data.items)
-            setTotal(data.totalItems)
+            const supplierNeedle = supplierQuery.trim().toLocaleLowerCase()
+            const productNeedle = productQuery.trim().toLocaleLowerCase()
+            const filtered = cases.filter((row) => {
+              const date = (row.deliveryDate ?? row.openedAt ?? '').slice(0, 10)
+              return (
+                (!supplierNeedle ||
+                  row.supplierName?.toLocaleLowerCase().includes(supplierNeedle)) &&
+                (!productNeedle ||
+                  `${row.sku} ${row.partName}`
+                    .toLocaleLowerCase()
+                    .includes(productNeedle)) &&
+                (!fromDate || (!!date && date >= fromDate)) &&
+                (!toDate || (!!date && date <= toDate))
+              )
+            })
+            setRows(filtered)
+            setTotal(filtered.length)
+            setPage(0)
           }
         }
         if (!controller.signal.aborted) setError('')
@@ -430,7 +464,30 @@ function DiscrepancyForm({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [receiptId, valid, page, status, scope.storeId, purchaseOrderId, invalidOrder])
+  }, [receiptId, valid, status, scope.storeId, purchaseOrderId, invalidOrder, supplierQuery, productQuery, fromDate, toDate])
+
+  const receiptGroups = Array.from(
+    rows.reduce((groups, row) => {
+      const group = groups.get(row.goodsReceiptNoteId) ?? []
+      group.push(row)
+      groups.set(row.goodsReceiptNoteId, group)
+      return groups
+    }, new Map<number, Case[]>()),
+    ([goodsReceiptNoteId, cases]) => ({
+      goodsReceiptNoteId,
+      cases,
+      first: cases[0],
+      discrepancyCount: cases.filter(
+        (row) => row.shortQty + row.wrongItemQty + row.damagedQty > 0,
+      ).length,
+      isOpen: cases.some((row) => row.status === 'OPEN'),
+    }),
+  )
+  const receiptPageSize = 10
+  const visibleReceiptGroups = receiptGroups.slice(
+    page * receiptPageSize,
+    (page + 1) * receiptPageSize,
+  )
 
   return (
     <main className="dashboard-content supplier-discrepancy-page">
@@ -473,6 +530,40 @@ function DiscrepancyForm({
               </select>
             </label>
           )}
+          <label>
+            Nhà cung cấp
+            <input
+              value={supplierQuery}
+              placeholder="Tìm nhà cung cấp"
+              onChange={(event) => setSupplierQuery(event.target.value)}
+            />
+          </label>
+          <label>
+            Phụ tùng
+            <input
+              value={productQuery}
+              placeholder="Tên hoặc SKU"
+              onChange={(event) => setProductQuery(event.target.value)}
+            />
+          </label>
+          <label>
+            Giao từ ngày
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(event) => setFromDate(event.target.value)}
+            />
+          </label>
+          <label>
+            Đến ngày
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(event) => setToDate(event.target.value)}
+            />
+          </label>
           <label>
             Mã đơn nhập hàng
             <input
@@ -526,7 +617,87 @@ function DiscrepancyForm({
       {!loading && !error && !rows.length && (
         <p>Không có hồ sơ sai lệch phù hợp.</p>
       )}
-      {!loading && rows.length > 0 && (
+      {!receiptId && !loading && rows.length > 0 && (
+        <section className="receiving-panel">
+          <div className="table-scroll">
+            <table className="supplier-receipt-groups">
+              <thead>
+                <tr>
+                  <th>Phiếu nhập</th>
+                  <th>Nhà cung cấp</th>
+                  <th>Cửa hàng</th>
+                  <th>Ngày giao</th>
+                  <th>Mặt hàng lệch</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleReceiptGroups.map((group) => {
+                  const expanded = expandedReceiptId === group.goodsReceiptNoteId
+                  return (
+                    <Fragment key={group.goodsReceiptNoteId}>
+                      <tr>
+                        <td>
+                          <button
+                            type="button"
+                            className="supplier-receipt-code"
+                            aria-expanded={expanded}
+                            aria-controls={'supplier-receipt-items-' + group.goodsReceiptNoteId}
+                            onClick={() =>
+                              setExpandedReceiptId(expanded ? null : group.goodsReceiptNoteId)
+                            }
+                          >
+                            {documentCode('PN', group.goodsReceiptNoteId)}
+                          </button>
+                          <small>{group.cases.length} phụ tùng · bấm mã phiếu để xem</small>
+                        </td>
+                        <td>{group.first.supplierName ?? '—'}</td>
+                        <td>{group.first.storeName ?? '—'}</td>
+                        <td>
+                          {group.first.deliveryDate || group.first.openedAt
+                            ? formatDateTime(
+                                group.first.deliveryDate ?? group.first.openedAt!,
+                              )
+                            : '—'}
+                        </td>
+                        <td>{group.discrepancyCount}</td>
+                        <td>{group.isOpen ? 'Đang mở' : 'Đã đóng'}</td>
+                        <td>
+                          <Link
+                            className="mf-btn mf-btn--sm mf-btn--secondary"
+                            to={'/supplier-discrepancies?receipt=' + group.goodsReceiptNoteId}
+                          >
+                            Xử lý
+                          </Link>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr className="supplier-receipt-expanded-row">
+                          <td colSpan={7}>
+                            <ul
+                              id={'supplier-receipt-items-' + group.goodsReceiptNoteId}
+                              className="supplier-receipt-items"
+                            >
+                              {group.cases.map((row) => (
+                                <li key={row.id}>
+                                  <strong>{row.sku}</strong> · {row.partName}
+                                  <span>Thiếu {row.shortQty} · Sai {row.wrongItemQty} · Hỏng {row.damagedQty}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {receiptId && !loading && rows.length > 0 && (
         <section className="receiving-panel">
           <form
             onSubmit={async (event) => {
@@ -554,25 +725,14 @@ function DiscrepancyForm({
             }}
           >
             <div className="table-scroll">
-              <table>
+              <table className={receiptId ? 'supplier-discrepancy-lines' : undefined}>
                 <thead>
                   <tr>
                     <th>Phụ tùng / Phiếu nhập</th>
-                    <th>Thiếu</th>
-                    <th>Giao sai</th>
-                    <th>Hỏng</th>
-                    <th>Thừa từ chối</th>
-                    <th>Đã giao bù</th>
-                    <th>Bỏ giao bù</th>
-                    <th>Đã trả</th>
-                    <th>Đã hủy</th>
-                    <th>Đang giữ</th>
-                    <th>Số trả lại</th>
-                    <th>Số giao bù</th>
-                    <th>Còn phải trả</th>
-                    <th>Còn phải giao bù</th>
-                    <th>Trạng thái</th>
-                    <th>Người quyết định</th>
+                    <th>Sai lệch ban đầu</th>
+                    <th>Đã xử lý</th>
+                    <th>Hướng xử lý</th>
+                    <th>Còn lại</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -583,6 +743,23 @@ function DiscrepancyForm({
                       (row.events ?? [])
                         .filter((event) => event.type === type)
                         .reduce((sum, event) => sum + event.quantity, 0)
+                    const initialMetrics: Array<[string, number]> = [
+                      ['Thiếu', row.shortQty],
+                      ['Giao sai', row.wrongItemQty],
+                      ['Hỏng', row.damagedQty],
+                      ['Thừa từ chối', row.rejectedExcessQty],
+                    ].filter(([, quantity]) => quantity > 0)
+                    const processedMetrics: Array<[string, number]> = [
+                      ['Giao bù', row.replacedQty ?? eventTotal('REPLACEMENT_RECEIVED')],
+                      ['Bỏ giao bù', row.waivedQty ?? eventTotal('REPLACEMENT_WAIVED')],
+                      ['Đã trả', row.returnedQty],
+                      ['Đã hủy', row.writtenOffQty ?? eventTotal('WRITE_OFF') + eventTotal('APPROVED_LOSS')],
+                      ['Đang giữ', row.heldUndecidedQty ?? row.outstandingReturnQty],
+                    ].filter(([, quantity]) => quantity > 0)
+                    const remainingMetrics: Array<[string, number]> = [
+                      ['Còn phải trả', row.outstandingReturnQty],
+                      ['Còn phải giao bù', row.outstandingReplacementQty],
+                    ].filter(([, quantity]) => quantity > 0)
                     return (
                       <tr key={row.id}>
                         <th scope="row">
@@ -594,7 +771,6 @@ function DiscrepancyForm({
                                 row.goodsReceiptNoteId
                               }
                             >
-                              Phiếu nhập{' '}
                               {documentCode('PN', row.goodsReceiptNoteId)}
                             </Link>
                             {row.purchaseOrderId && (
@@ -603,112 +779,80 @@ function DiscrepancyForm({
                                 <Link
                                   to={'/purchase-orders/' + row.purchaseOrderId}
                                 >
-                                  Đơn nhập hàng{' '}
                                   {documentCode('DNH', row.purchaseOrderId)}
                                 </Link>
                               </>
                             )}
                           </small>
                         </th>
-                        <td>{row.shortQty}</td>
-                        <td>{row.wrongItemQty}</td>
-                        <td>{row.damagedQty}</td>
-                        <td>{row.rejectedExcessQty}</td>
-                        <td>{row.replacedQty ?? eventTotal('REPLACEMENT_RECEIVED')}</td>
-                        <td>{row.waivedQty ?? eventTotal('REPLACEMENT_WAIVED')}</td>
-                        <td>{row.returnedQty}</td>
-                        <td>{row.writtenOffQty ?? eventTotal('WRITE_OFF') + eventTotal('APPROVED_LOSS')}</td>
-                        <td>{row.heldUndecidedQty ?? row.outstandingReturnQty}</td>
                         <td>
-                          {receiptId ? (
-                            <input
-                              type="number"
-                              aria-label={'Số trả lại · ' + row.sku}
-                              // Có thể giảm lượng hẹn trả khi hàng chưa bàn giao NCC; không thấp hơn
-                              // lượng đã trả thật và lượng thừa Owner đã từ chối.
-                              min={Math.max(row.rejectedExcessQty, row.returnedQty)}
-                              max={
-                                row.wrongItemQty +
-                                row.damagedQty +
-                                row.rejectedExcessQty
-                              }
-                              required
-                              disabled={!row.canHandle || saving}
-                              value={draft.returned}
-                              onChange={(event) =>
-                                setDrafts((previous) => ({
-                                  ...previous,
-                                  [row.id]: {
-                                    ...draft,
-                                    returned: event.target.value,
-                                  },
-                                }))
-                              }
-                            />
-                          ) : (
-                            row.returnRequiredQty
-                          )}
+                          <div className="supplier-metric-grid supplier-metric-grid--initial">
+                            {initialMetrics.map(([label, quantity]) => (
+                              <span key={label}><small>{label}</small><b>{quantity}</b></span>
+                            ))}
+                          </div>
                         </td>
                         <td>
-                          {receiptId ? (
-                            <input
-                              type="number"
-                              aria-label={'Số giao bù · ' + row.sku}
-                              min={0}
-                              max={replacementLimit(row)}
-                              required
-                              disabled={
-                                !row.canHandle ||
-                                row.replacementDelivery ||
-                                saving
-                              }
-                              value={replacementValue(row, draft)}
-                              onChange={(event) =>
-                                setDrafts((previous) => ({
-                                  ...previous,
-                                  [row.id]: {
-                                    ...draft,
-                                    replacement: event.target.value,
-                                  },
-                                }))
-                              }
-                            />
-                          ) : (
-                            row.replacementRequiredQty
-                          )}
-                        </td>
-                        <td className="supplier-outstanding-cell">{row.outstandingReturnQty}</td>
-                        <td className="supplier-outstanding-cell">{row.outstandingReplacementQty}</td>
-                        <td>
-                          <span
-                            className={
-                              'supplier-case-status ' +
-                              (row.status === 'OPEN' ? 'is-open' : 'is-closed')
-                            }
-                          >
-                            {row.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
-                          </span>
+                          <div className="supplier-metric-grid supplier-metric-grid--processed">
+                            {processedMetrics.length ? processedMetrics.map(([label, quantity]) => (
+                              <span key={label}><small>{label}</small><b>{quantity}</b></span>
+                            )) : <small className="supplier-no-metrics">Chưa xử lý</small>}
+                          </div>
                         </td>
                         <td>
-                          {row.status === 'CLOSED'
-                            ? 'Đã xử lý'
-                            : scope.owner
-                              ? row.canWaiveReplacement
-                                ? 'Bạn · Chủ cửa hàng'
-                                : 'Quản lý cửa hàng'
-                              : row.canHandle ||
-                                  row.canRecordReturn ||
-                                  row.canCreateReplacement
-                                ? 'Bạn · Quản lý cửa hàng'
-                                : 'Chủ cửa hàng'}
+                          <div className="supplier-edit-fields">
+                            <label>
+                              <span>Số trả lại</span>
+                              {receiptId ? (
+                                <input
+                                  type="number"
+                                  aria-label={'Số trả lại · ' + row.sku}
+                                  min={Math.max(row.rejectedExcessQty, row.returnedQty)}
+                                  max={row.wrongItemQty + row.damagedQty + row.rejectedExcessQty}
+                                  required
+                                  disabled={!row.canHandle || saving}
+                                  value={draft.returned}
+                                  onChange={(event) => setDrafts((previous) => ({
+                                    ...previous,
+                                    [row.id]: { ...draft, returned: event.target.value },
+                                  }))}
+                                />
+                              ) : row.returnRequiredQty}
+                            </label>
+                            <label>
+                              <span>Số giao bù</span>
+                              {receiptId ? (
+                                <input
+                                  type="number"
+                                  aria-label={'Số giao bù · ' + row.sku}
+                                  min={0}
+                                  max={replacementLimit(row)}
+                                  required
+                                  disabled={!row.canHandle || row.replacementDelivery || saving}
+                                  value={replacementValue(row, draft)}
+                                  onChange={(event) => setDrafts((previous) => ({
+                                    ...previous,
+                                    [row.id]: { ...draft, replacement: event.target.value },
+                                  }))}
+                                />
+                              ) : row.replacementRequiredQty}
+                            </label>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="supplier-outstanding-list">
+                            {remainingMetrics.length ? remainingMetrics.map(([label, quantity]) => (
+                              <span key={label}><small>{label}</small><b>{quantity}</b></span>
+                            )) : <small className="supplier-no-metrics">Đã xử lý đủ</small>}
+                          </div>
                         </td>
                         <td>
                           <div className="mf-row-actions receiving-case-actions">
                             {/* Mục 13 (PM 19/11): còn phải giao bù thì có nút nhận hàng giao bù cho
                                 phiếu này. Mở đơn nhập hàng, ở đó BM giao việc nhận hàng giao bù (hoặc
                                 tự nhận) rồi lập phiếu nhập "Giao bù cho sai lệch". */}
-                            {row.canCreateReplacement &&
-                              row.purchaseOrderId && (
+                            {row.openReplacementQty > 0 && row.purchaseOrderId && (
+                              row.canCreateReplacement ? (
                                 <Link
                                   className="mf-btn mf-btn--sm mf-btn--primary"
                                   to={
@@ -720,8 +864,19 @@ function DiscrepancyForm({
                                 >
                                   Nhập hàng giao bù
                                 </Link>
-                              )}
-                            {row.canRecordReturn && (
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="mf-btn mf-btn--sm mf-btn--primary"
+                                  disabled
+                                  title="BM thực hiện nhận hàng giao bù."
+                                >
+                                  Nhập hàng giao bù · BM
+                                </button>
+                              )
+                            )}
+                            {row.outstandingReturnQty > 0 && (
+                              row.canRecordReturn ? (
                               <button
                                 type="button"
                                 className="mf-btn mf-btn--sm mf-btn--primary"
@@ -732,6 +887,16 @@ function DiscrepancyForm({
                               >
                                 Ghi nhận đã trả
                               </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="mf-btn mf-btn--sm mf-btn--primary"
+                                  disabled
+                                  title="BM ghi nhận hàng đã trả nhà cung cấp."
+                                >
+                                  Ghi nhận đã trả · BM
+                                </button>
+                              )
                             )}
                             {(scope.owner || row.canHandle) &&
                               (row.heldUndecidedQty ?? 0) > 0 && (
@@ -751,7 +916,8 @@ function DiscrepancyForm({
                                 Báo hủy
                               </Link>
                             )}
-                            {row.canWaiveReplacement && (
+                            {row.openReplacementQty > 0 && (
+                              row.canWaiveReplacement ? (
                               <button
                                 type="button"
                                 className="mf-btn mf-btn--sm mf-btn--secondary"
@@ -762,6 +928,16 @@ function DiscrepancyForm({
                               >
                                 Không cần giao bù
                               </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="mf-btn mf-btn--sm mf-btn--secondary"
+                                  disabled
+                                  title="Owner quyết định bỏ giao bù."
+                                >
+                                  Không cần giao bù · Owner
+                                </button>
+                              )
                             )}
                             <button
                               type="button"
@@ -809,7 +985,7 @@ function DiscrepancyForm({
           </form>
         </section>
       )}
-      {!receiptId && total > 20 && (
+      {!receiptId && receiptGroups.length > receiptPageSize && (
         <div className="receiving-pagination">
           <button
             type="button"
@@ -818,10 +994,12 @@ function DiscrepancyForm({
           >
             Trang trước
           </button>
-          <span>Trang {page + 1}</span>
+          <span>
+            Trang {page + 1} / {Math.ceil(receiptGroups.length / receiptPageSize)}
+          </span>
           <button
             type="button"
-            disabled={(page + 1) * 20 >= total || loading}
+            disabled={(page + 1) * receiptPageSize >= receiptGroups.length || loading}
             onClick={() => setPage(page + 1)}
           >
             Trang sau
