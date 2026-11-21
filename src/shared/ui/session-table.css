@@ -1,0 +1,37 @@
+/**
+ * File: shared/ui/session-table.css
+ * Loại: ĐỊNH DẠNG CSS — không phải màn hình.
+ * Công dụng: CSS bảng thiết bị đang đăng nhập (SessionTable).
+ */
+.session-table-scroll {
+  overflow-x: auto;
+}
+.session-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.session-table th,
+.session-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #edf0f4;
+  color: #25344c;
+  text-align: left;
+  vertical-align: middle;
+}
+.session-table th {
+  background: #f8fafc;
+  color: #65748c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.session-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.session-table .mf-badge {
+  margin-left: 8px;
+}
+.session-table-action {
+  text-align: right;
+  white-space: nowrap;
+}

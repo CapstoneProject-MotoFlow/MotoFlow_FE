@@ -2,7 +2,8 @@
  * File: modules/profile/pages/ProfilePage.tsx
  * Loại: MÀN HÌNH — Thông tin cá nhân.
  * Đường dẫn: /profile.
- * Công dụng: Đọc thông tin tài khoản hiện tại, vai trò/quyền, tên cửa hàng; mở đổi mật khẩu.
+ * Công dụng: Đọc thông tin tài khoản hiện tại, vai trò/quyền, tên cửa hàng; mở đổi mật khẩu; xem và đăng xuất
+ * các thiết bị đang đăng nhập.
  */
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
@@ -11,6 +12,7 @@ import axiosClient from '../../../shared/api/axiosClient'
 import type { AuthUser } from '../../../shared/types/auth'
 import { roleNames } from '../../../shared/utils/roles'
 import { managerPermissionLabel } from '../../owner/managerPermissions'
+import MySessionsPanel from '../components/MySessionsPanel'
 import '../profile.css'
 
 /** ProfilePage: Đọc thông tin tài khoản hiện tại, vai trò/quyền, tên cửa hàng; mở đổi mật khẩu. */
@@ -125,6 +127,7 @@ export default function ProfilePage() {
           Đổi mật khẩu
         </Link>
       </section>
+      <MySessionsPanel />
     </main>
   )
 }
