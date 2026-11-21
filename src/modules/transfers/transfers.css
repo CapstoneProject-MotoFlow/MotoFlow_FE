@@ -974,8 +974,13 @@ p.tf-validation-hint {
   width: 80px;
   text-align: right;
 }
-.tf-shortage {
-  color: #b54708;
+.tf-purchase-reason {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #c7d7fe;
+  border-radius: 8px;
+  background: #eff4ff;
+  color: #344054;
 }
 .tf-replenishment-store,
 .tf-replenishment-note {

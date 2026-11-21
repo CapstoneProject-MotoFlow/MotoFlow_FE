@@ -1,6 +1,5 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import TransferAction from './TransferAction'
-import TransitLossAction from './TransitLossAction'
 export default function CoordinationAction({
   id,
   lines,
@@ -10,8 +9,6 @@ export default function CoordinationAction({
   canReturn = false,
   returnLines,
   inHead = false,
-  canReportTransitLoss = false,
-  lossStoreId,
 }: {
   id: number
   lines: {
@@ -40,8 +37,7 @@ export default function CoordinationAction({
     [product, setProduct] = useState(String(lines[0]?.productId ?? '')),
     [qty, setQty] = useState(1),
     [decision, setDecision] = useState('LATE_DELIVERY'),
-    [reason, setReason] = useState(''),
-    [adjustment, setAdjustment] = useState('')
+    [reason, setReason] = useState('')
   const options = action === 'return' ? (returnLines ?? lines) : lines
   const chosen = options.find((l) => l.productId === Number(product)),
     valid =
@@ -60,7 +56,6 @@ export default function CoordinationAction({
         : 1,
     )
     setReason('')
-    setAdjustment('')
     setAction(next)
   }
   const buttons = (
@@ -83,33 +78,13 @@ export default function CoordinationAction({
           Ghi nhận hàng trả về nguồn
         </button>
       )}
-      {!replenishment && canReportTransitLoss && lines.length > 0 && (
-        <button
-          type="button"
-          className={inHead ? 'mf-btn mf-btn--secondary' : undefined}
-          onClick={() => open('transit-loss')}
-        >
-          Báo mất trên đường
-        </button>
-      )}
     </>
   )
   const Wrapper = inHead ? Fragment : NoteBlock
   return (
     <Wrapper>
       {inHead ? buttons : <div className="tf-filters">{buttons}</div>}
-      {action === 'transit-loss' && lossStoreId ? (
-        <TransitLossAction
-          transferOrderId={id}
-          storeId={lossStoreId}
-          lines={lines}
-          onClose={() => setAction('')}
-          onSaved={() => {
-            setAction('')
-            onSaved()
-          }}
-        />
-      ) : action ? (
+      {action ? (
         <TransferAction
           title={
             action === 'purchase'
@@ -124,10 +99,7 @@ export default function CoordinationAction({
               ? `/replenishment-requests/${id}/to-purchase`
               : `/transfer-orders/${id}/${action === 'return' ? 'returns' : 'discrepancy/decisions'}`
           }
-          disabled={
-            !valid ||
-            (action === 'decision' && decision === 'LOSS' && !adjustment)
-          }
+          disabled={!valid}
           payload={() =>
             action === 'purchase'
               ? { lines: [{ productId: Number(product), toPurchaseQty: qty }] }
@@ -138,8 +110,6 @@ export default function CoordinationAction({
                     decision,
                     quantity: qty,
                     reason,
-                    adjustmentRequestId:
-                      decision === 'LOSS' ? Number(adjustment) : undefined,
                   }
           }
           onClose={() => setAction('')}
@@ -204,22 +174,8 @@ export default function CoordinationAction({
                 >
                   <option value="LATE_DELIVERY">Nhận sau</option>
                   <option value="RETURN_TO_SOURCE">Trả về kho nguồn</option>
-                  <option value="LOSS">Mất/hỏng</option>
                 </select>
               </label>
-              {decision === 'LOSS' && (
-                <label>
-                  Mã yêu cầu điều chỉnh mất tồn
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={adjustment}
-                    onChange={(e) => setAdjustment(e.target.value)}
-                  />
-                  <small>Nhập mã yêu cầu điều chỉnh do quản lý lập</small>
-                </label>
-              )}
               <label>
                 Lý do
                 <textarea

@@ -304,7 +304,8 @@ export default function CountLiveDetail() {
                     {!staff && <th>Sổ sách</th>}
                     <th>Số đếm</th>
                     <th>Hư hỏng</th>
-                    {!staff && <th>Chênh lệch / Lý do</th>}
+                    {!staff && <th>Chênh lệch</th>}
+                    {!staff && <th>Lý do</th>}
                     {scope.owner && <th>Giá trị chênh lệch</th>}
                   </tr>
                 </thead>
@@ -314,9 +315,16 @@ export default function CountLiveDetail() {
                       <td>
                         {l.partName}
                         <small>
-                          {l.sku} ·{' '}
-                          {l.lotId == null ? 'Không lô' : 'Lô #' + l.lotId}
+                          {l.sku}
                         </small>
+                        <details className="count-line-lot-details">
+                          <summary>
+                            {l.lotId == null
+                              ? 'Không theo lô'
+                              : 'Lô ' + documentCode('L', l.lotId)}
+                          </summary>
+                          <small>Hạn sử dụng: {l.expiryDate ? date(l.expiryDate) : 'Không có'}</small>
+                        </details>
                       </td>
                       <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
                       {!staff && (
@@ -330,9 +338,15 @@ export default function CountLiveDetail() {
                       {!staff && (
                         <td>
                           {d.status === 'DRAFT' ? '—' : (l.difference ?? '—')}
-                          <small>{l.reason}</small>
                         </td>
                       )}
+                        {!staff && (
+                          <td>
+                            {l.reason ? (
+                              <span className="count-reason-badge">{l.reason}</span>
+                            ) : '—'}
+                          </td>
+                        )}
                       {scope.owner && (
                         <td>
                           {l.differenceValue == null

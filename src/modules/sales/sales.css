@@ -271,9 +271,28 @@
 .sales-detail-actions button:has(+ a) {
   color: #344054;
 }
-.sales-detail-actions button:last-of-type {
+.sales-detail-actions button[data-danger='true'] {
   border-color: #fecdca;
   color: #d92d20;
+}
+.sales-payment-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sales-payment-row-actions button {
+  border: 0;
+  background: transparent;
+  color: #465fff;
+  font: inherit;
+  cursor: pointer;
+}
+.sales-pick-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .sales-progress {
   list-style: none;

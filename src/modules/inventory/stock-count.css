@@ -471,3 +471,23 @@
     justify-content: flex-start;
   }
 }
+.count-line-lot-details {
+  margin-top: 4px;
+  color: #667085;
+  font-size: 12px;
+}
+.count-line-lot-details summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.count-line-lot-details small {
+  display: block;
+  margin-top: 4px;
+}
+.count-reason-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
+}

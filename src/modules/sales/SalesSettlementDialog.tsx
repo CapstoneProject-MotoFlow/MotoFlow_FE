@@ -15,13 +15,15 @@ function refreshSales(message = 'Đã lưu thay đổi.') {
 export default function SalesSettlementDialog({
   action,
   order,
+  initialRefundAmount,
   onClose,
   onCredit,
 }: {
   action: string
   order: SalesOrder
+  initialRefundAmount?: number
   onCredit?: () => void
-  onClose: () => void
+  onClose: (nextAction?: string) => void
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -29,7 +31,7 @@ export default function SalesSettlementDialog({
     [amount, setAmount] = useState(
       String(
         action === 'refund'
-          ? (order.refundable ?? 0)
+          ? Math.min(initialRefundAmount ?? order.refundable ?? 0, order.refundable ?? 0)
           : (order.payableNow ?? order.remainingPayable ?? 0),
       ),
     ),
@@ -137,6 +139,8 @@ export default function SalesSettlementDialog({
           >
             Ghi nợ {money.format(order.remainingPayable ?? 0)}
           </button>
+        ) : action === 'payment' && !order.customerId ? (
+          <small>Khách lẻ không được mua chịu.</small>
         ) : undefined
       }
       onClose={onClose}
@@ -262,7 +266,7 @@ export default function SalesSettlementDialog({
                     data.completionBlockedMessage
                 : 'Đã lưu ' + titles[action].toLowerCase() + '.',
             )
-            onClose()
+            onClose(action === 'confirm' ? 'payment' : undefined)
           } catch (error) {
             setError(inventoryError(error))
           } finally {
@@ -640,7 +644,7 @@ export default function SalesSettlementDialog({
         )}
         {action === 'cancel' && order.netPaid > 0 && (
           <p>
-            Cần hoàn {money.format(order.netPaid)} cho khách trong thao tác hủy.
+            Hủy đơn sẽ hoàn toàn bộ {money.format(order.netPaid)} đã thu cho khách.
           </p>
         )}
         {action === 'complete' && (

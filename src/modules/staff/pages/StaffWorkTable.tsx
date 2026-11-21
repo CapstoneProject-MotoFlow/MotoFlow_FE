@@ -133,8 +133,14 @@ export default function StaffWorkTable() {
         submitted: false,
       })),
   ]
-  const active = tasks.filter((t) => !t.submitted),
-    submitted = tasks.filter((t) => t.submitted),
+  const byDueThenAssignment = (a: Task, b: Task) => {
+      const dueA = a.due && /^\d{4}-\d{2}-\d{2}$/.test(a.due) ? a.due : ''
+      const dueB = b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due) ? b.due : ''
+      if (dueA !== dueB) return dueA ? -1 : 1
+      return (b.assignedAt ?? '').localeCompare(a.assignedAt ?? '')
+    },
+    active = tasks.filter((t) => !t.submitted).sort(byDueThenAssignment),
+    submitted = tasks.filter((t) => t.submitted).sort(byDueThenAssignment),
     sources = [sales, receipts, transfers, counts],
     loading = sources.some((s) => s.loading) || receiving.loading,
     error = sources

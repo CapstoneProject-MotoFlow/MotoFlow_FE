@@ -286,9 +286,10 @@ export default function ReplenishmentPurchaseDialog({
           </div>
         ) : (
           <fieldset disabled={busy}>
-            <p role="status" className="tf-shortage">
-              Còn thiếu <strong>{shortage} phụ tùng</strong> thuộc{' '}
-              {lines.length} mã phụ tùng.
+            <p role="status" className="tf-purchase-reason">
+              Lý do lập đơn: còn thiếu{' '}
+              <strong>{shortage} phụ tùng</strong> thuộc{' '}
+              <strong>{lines.length} mã phụ tùng</strong>.
             </p>
             <div className="tf-purchase-fields">
               <div className="tf-purchase-supplier">

@@ -491,18 +491,62 @@ export default function TransferDetailPage() {
                 loading={returns.loading}
                 error={returns.error}
               />
-              {d.discrepancies.map((c) => (
-                <div className="tf-note" key={c.id}>
-                  {d.lines.find((l) => l.productId === c.productId)?.sku} ·
-                  Thiếu {c.shortQty} · {states[c.status] ?? c.status}
-                  {c.events.map((e) => (
-                    <p key={e.id}>
-                      {resolutionNames[e.resolutionType] ?? e.resolutionType} ·{' '}
-                      {e.quantity} · {e.reason}
-                    </p>
-                  ))}
-                </div>
-              ))}
+              <div className="stock-table-scroll">
+                <table className="tf-table tf-discrepancy-table">
+                  <thead>
+                    <tr>
+                      <th>Phụ tùng</th>
+                      <th>Đã xuất</th>
+                      <th>Đã nhận</th>
+                      <th>Thiếu</th>
+                      <th>Thừa</th>
+                      <th>Đã xử lý</th>
+                      <th>Còn lại</th>
+                      <th>Trạng thái</th>
+                      <th>Chi tiết</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.discrepancies.map((c) => {
+                      const line = d.lines.find(
+                        (item) => item.productId === c.productId,
+                      )
+                      const resolved = c.events.reduce(
+                        (total, event) => total + event.quantity,
+                        0,
+                      )
+                      return (
+                        <tr key={c.id}>
+                          <td>{line?.sku ?? '—'} · {line?.partName ?? 'Phụ tùng'}</td>
+                          <td>{line?.dispatchedQty ?? '—'}</td>
+                          <td>{line?.receivedQty ?? '—'}</td>
+                          <td>{c.shortQty}</td>
+                          <td>{line?.extraReceivedQty ?? '—'}</td>
+                          <td>{resolved}</td>
+                          <td><strong>{Math.max(0, c.shortQty - resolved)}</strong></td>
+                          <td>{states[c.status] ?? c.status}</td>
+                          <td>
+                            {c.events.length ? (
+                              <details>
+                                <summary>{c.events.length} lần xử lý</summary>
+                                <ul>
+                                  {c.events.map((event) => (
+                                    <li key={event.id}>
+                                      {resolutionNames[event.resolutionType] ?? event.resolutionType}
+                                      {' · '}{event.quantity}
+                                      {event.reason ? ' · ' + event.reason : ''}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            ) : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </section>
           )}
           {action && (

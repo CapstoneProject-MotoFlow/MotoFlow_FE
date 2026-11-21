@@ -9,13 +9,14 @@ import { countFromDto, type CountDto } from './countApi'
 import type { Assignment } from './countAssignment'
 import { validCountQuantity } from './stockCountModel'
 import { countTemplateRows, mapCountSheet, readCountFile } from './countImport'
-import { today } from './presentation'
+import { date, today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
 import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
 import './stock-count.css'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 
 function normalizeQuantityInput(value: string) {
   if (value === '') return ''
@@ -154,7 +155,7 @@ function OpeningEditor({
     <div className="stock-table-scroll"><table className="stock-table">
       <thead><tr><th>Phụ tùng</th><th>Hạn sử dụng</th><th>Số đếm thực tế</th><th>Hư hỏng</th>{editable && <th />}</tr></thead>
       <tbody>{rows.map((row) => <tr key={row.key}>
-        <td><strong>{row.product.partName}</strong><small>{row.product.sku}</small></td>
+        <td><strong><ProductQuickView productId={row.product.id} sku={row.product.sku} partName={row.product.partName} blindCount /></strong><small>{row.product.sku}</small></td>
         <td><input aria-label={`Hạn sử dụng ${row.product.sku}`} type="date" value={row.expiryDate} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, expiryDate: event.target.value} : item)); setConfirmed(false)}} /></td>
         <td><input aria-label={`Số đếm ${row.product.sku}`} type="number" min="0" step="1" value={row.countedQty} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, countedQty: event.target.value} : item)); setConfirmed(false)}} /></td>
         <td><input aria-label={`Số hư hỏng ${row.product.sku}`} type="number" min="0" step="1" value={row.damagedQty} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, damagedQty: event.target.value} : item)); setConfirmed(false)}} /></td>
@@ -391,11 +392,23 @@ function Editor({
             {rows.map((l) => (
               <tr key={l.id} className="count-record-row">
                 <td>
-                  {l.partName}
+                  <ProductQuickView
+                    productId={l.productId}
+                    sku={l.sku}
+                    partName={l.partName}
+                    blindCount
+                  />
                   <small>
-                    {l.sku} ·{' '}
-                    {l.lotId == null ? 'Không lô' : documentCode('L', l.lotId)}
+                    {l.sku}
                   </small>
+                  <details className="count-line-lot-details">
+                    <summary>
+                      {l.lotId == null
+                        ? 'Không theo lô'
+                        : 'Lô ' + documentCode('L', l.lotId)}
+                    </summary>
+                    <small>Hạn sử dụng: {l.expiryDate ? date(l.expiryDate) : 'Không có'}</small>
+                  </details>
                   {l.recountReason && <small>Đếm lại: {l.recountReason}</small>}
                 </td>
                 <td>{l.binLocation ?? l.storageArea ?? '—'}</td>

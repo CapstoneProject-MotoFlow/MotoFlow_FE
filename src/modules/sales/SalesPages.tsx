@@ -18,6 +18,7 @@ import {
   discountedPrice,
   mayCancel,
   pickedReady,
+  suggestedPickingQty,
   type SalesOrder,
   type SalesLine,
 } from './salesModel'
@@ -32,6 +33,7 @@ import { SalesOrderFormView, type SalesProduct } from './SalesOrderForm'
 import { SalesDraftTab } from './SalesDraftPages'
 import { documentCode } from '../../shared/utils/documentCode'
 import { salesOrderStatusLabels as salesStates } from '../../shared/labels/status'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 export { SalesOrderFormView }
 import './sales.css'
 function Header({
@@ -457,6 +459,8 @@ export function SalesOrderDetailView({
   const staff = role === 'STAFF',
     bm = role === 'BRANCH_MANAGER'
   const [params, setParams] = useSearchParams()
+  const [refundAmount, setRefundAmount] = useState<number | undefined>()
+  const [pendingPayment, setPendingPayment] = useState(false)
   const [action, setAction] = useState<string | undefined>(() =>
     params.get('action') === 'assign' && order?.actions?.canAssignPicker
       ? 'assign'
@@ -472,6 +476,14 @@ export function SalesOrderDetailView({
     next.delete('action')
     setParams(next, { replace: true })
   }, [order, params, setParams])
+  useEffect(() => {
+    if (!pendingPayment || order?.status !== 'CONFIRMED') return
+    const timer = window.setTimeout(() => {
+      setPendingPayment(false)
+      setAction('payment')
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [order?.status, pendingPayment])
   const steps = ['AWAITING_PICKING', 'PICKED', 'CONFIRMED', 'COMPLETED']
   const stage = order ? steps.indexOf(order.status) : -1
   const financial =
@@ -580,13 +592,8 @@ export function SalesOrderDetailView({
                       </>
                     )}
                     {(order.actions?.canCancel ?? mayCancel(order)) && (
-                      <button onClick={() => setAction('cancel')}>
+                      <button data-danger="true" onClick={() => setAction('cancel')}>
                         Hủy đơn
-                      </button>
-                    )}
-                    {order.actions?.canRefund && (
-                      <button onClick={() => setAction('refund')}>
-                        Hoàn tiền
                       </button>
                     )}
                     {order.actions?.canComplete && (
@@ -817,13 +824,28 @@ export function SalesOrderDetailView({
                           {payment.recordedBy ?? ''}
                         </small>
                       </div>
-                      <span className="sales-version">
-                        {payment.status === 'VERIFIED'
-                          ? 'Đã xác minh'
-                          : payment.status === 'REJECTED'
-                            ? 'Đã từ chối'
-                            : 'Chờ xác minh'}
-                      </span>
+                      <div className="sales-payment-row-actions">
+                        <span className="sales-version">
+                          {payment.status === 'VERIFIED'
+                            ? 'Đã xác minh'
+                            : payment.status === 'REJECTED'
+                              ? 'Đã từ chối'
+                              : 'Chờ xác minh'}
+                        </span>
+                        {order.actions?.canRefund &&
+                          payment.type !== 'REFUND' &&
+                          payment.status === 'VERIFIED' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRefundAmount(payment.amount)
+                                setAction('refund')
+                              }}
+                            >
+                              Hoàn khoản này
+                            </button>
+                          )}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -869,9 +891,13 @@ export function SalesOrderDetailView({
         <SalesSettlementDialog
           key={action}
           action={action}
+          initialRefundAmount={refundAmount}
           onCredit={() => setAction('credit')}
           order={order}
-          onClose={() => setAction(undefined)}
+          onClose={(nextAction) => {
+            if (nextAction === 'payment') setPendingPayment(true)
+            setAction(undefined)
+          }}
         />
       )}
     </Shell>
@@ -908,7 +934,17 @@ export function RecordPickedView({
   const [busy, setBusy] = useState(false),
     [saved, setSaved] = useState('')
   const [lines, setLines] = useState<SalesLine[]>(() =>
-      [...(order?.lines ?? [])].sort((a, b) =>
+      [...(order?.lines ?? [])].map((line) => ({
+        ...line,
+        picked:
+          line.picked ??
+          suggestedPickingQty(line.requested, line.sellableQty),
+        shortReason:
+          line.shortReason ??
+          (line.sellableQty != null && line.sellableQty < line.requested
+            ? 'Hết hàng'
+            : ''),
+      })).sort((a, b) =>
         (a.binLocation ?? '').localeCompare(b.binLocation ?? '', 'vi'),
       ),
     ),
@@ -957,14 +993,38 @@ export function RecordPickedView({
         <InventoryPanel
           title="Lấy từng phụ tùng"
           action={
-            <label className="sales-pick-filter">
-              <input
-                type="checkbox"
-                checked={onlyMissing}
-                onChange={(e) => setOnlyMissing(e.target.checked)}
-              />
-              Chỉ dòng chưa ghi
-            </label>
+            <div className="sales-pick-controls">
+              <label className="sales-pick-filter">
+                <input
+                  type="checkbox"
+                  checked={onlyMissing}
+                  onChange={(e) => setOnlyMissing(e.target.checked)}
+                />
+                Chỉ dòng chưa ghi
+              </label>
+              <button
+                type="button"
+                disabled={!editable || busy}
+                onClick={() =>
+                  setLines((previous) =>
+                    previous.map((line) => ({
+                      ...line,
+                      picked: suggestedPickingQty(
+                        line.requested,
+                        line.sellableQty,
+                      ),
+                      shortReason:
+                        line.sellableQty != null &&
+                        line.sellableQty < line.requested
+                          ? line.shortReason?.trim() || 'Hết hàng'
+                          : line.shortReason,
+                    })),
+                  )
+                }
+              >
+                Lấy đủ tất cả
+              </button>
+            </div>
           }
         >
           {error && <p role="alert">{error}</p>}
@@ -990,7 +1050,11 @@ export function RecordPickedView({
                       }
                     >
                       <td>
-                        {l.partName}
+                        <ProductQuickView
+                          productId={l.productId}
+                          sku={l.sku}
+                          partName={l.partName}
+                        />
                         <small>
                           {l.sku} · kệ {l.binLocation ?? 'chưa có vị trí'}
                         </small>

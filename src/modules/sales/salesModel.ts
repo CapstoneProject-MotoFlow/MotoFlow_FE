@@ -64,6 +64,9 @@ export type SalesOrder = {
 export function validQuantity(value: number) {
   return Number.isSafeInteger(value) && value >= 0 && value <= 100000
 }
+export function suggestedPickingQty(requested: number, sellableQty?: number | null) {
+  return Math.max(0, Math.min(requested, sellableQty ?? requested))
+}
 export function discountedPrice(price: number, discount: number) {
   return Math.round(price * (1 - discount / 100))
 }

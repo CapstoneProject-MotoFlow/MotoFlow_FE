@@ -5,10 +5,9 @@
  * "Xem ảnh …", bấm mới tải link mới rồi mở trình xem ảnh nổi (mục E, PM 19/11). Tệp không phải ảnh hiện link.
  * Phiếu nhập NCC tải lại từ GET /goods-receipt-notes/{id}; màn khác (phiếu nhận điều chuyển) truyền reload.
  */
-import { useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
-import ImageViewer, { type ViewerImage } from '../../shared/ui/ImageViewer'
-import { apiMessage } from '../suppliers/supplierService'
+import PhotoButton from '../../shared/ui/PhotoButton'
+import type { ViewerImage } from '../../shared/ui/ImageViewer'
 import './receiving.css'
 
 export type ReceiptDocument = {
@@ -42,34 +41,17 @@ export default function ReceiptDocuments({
   /** Tên loại ảnh trên nút, ví dụ "ảnh nhận hàng" cho phiếu nhận điều chuyển. */
   label?: string
 }) {
-  const [images, setImages] = useState<ViewerImage[]>()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const files = documents.filter((file) => !isImage(file))
   const imageFiles = documents.filter(isImage)
   if (!documents.length) return null
 
   // Mục E (PM 19/11): ảnh mở trong trình xem ảnh nổi, chuyển qua lại giữa các ảnh.
-  async function openImages() {
-    setError('')
-    setLoading(true)
-    try {
-      // The download URLs expire, so request fresh ones when opening the viewer.
-      const fresh = await (reload ? reload() : reloadGoodsReceipt(receiptId))
-      const shown = fresh
-        .filter(isImage)
-        .flatMap((file) =>
-          file.downloadUrl
-            ? [{ src: file.downloadUrl }]
-            : [],
-        )
-      if (shown.length) setImages(shown)
-      else setError('Ảnh chưa có liên kết tải.')
-    } catch (error) {
-      setError(apiMessage(error))
-    } finally {
-      setLoading(false)
-    }
+  async function loadImages(): Promise<ViewerImage[]> {
+    // The download URLs expire, so request fresh ones when opening the viewer.
+    const fresh = await (reload ? reload() : reloadGoodsReceipt(receiptId))
+    return fresh
+      .filter(isImage)
+      .flatMap((file) => (file.downloadUrl ? [{ src: file.downloadUrl }] : []))
   }
 
   return (
@@ -77,23 +59,12 @@ export default function ReceiptDocuments({
       {imageFiles.length > 0 && (
         // Mục 8 (PM 19/11): không hiện tên tệp, chỉ còn nút xem và số ảnh.
         <div className="receiving-image-document-actions">
-          <button
-            type="button"
-            className="mf-btn mf-btn--secondary"
-            disabled={loading}
-            onClick={() => void openImages()}
-          >
-            {loading
-              ? 'Đang tải ảnh…'
-              : 'Xem ' +
-                label +
-                (imageFiles.length > 1 ? ` (${imageFiles.length})` : '')}
-          </button>
+          <PhotoButton
+            label={'Xem ' + label}
+            images={imageFiles.map((file) => ({ src: file.downloadUrl ?? '' }))}
+            loadImages={loadImages}
+          />
         </div>
-      )}
-      {error && <p role="alert">{error}</p>}
-      {images && (
-        <ImageViewer images={images} onClose={() => setImages(undefined)} />
       )}
       {files.length > 0 && (
         <ul className="receiving-document-list" aria-label="Tệp chứng từ">

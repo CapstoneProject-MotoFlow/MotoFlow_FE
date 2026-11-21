@@ -6,6 +6,7 @@ import {
   type InputHTMLAttributes,
 } from 'react'
 import './localized-file-input.css'
+import PhotoButton from './PhotoButton'
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> & {
   onChange?: (event: ChangeEvent<HTMLInputElement>) => void
@@ -57,20 +58,13 @@ export default function LocalizedFileInput({
         <span>{buttonText}</span>
         <small>{names || 'Chưa chọn tệp'}</small>
       </label>
-      {previews.length > 0 && (
-        <ul className="localized-file-input-previews">
-          {previews.map((item) => (
-            <li key={item.key}>
-              {item.url ? (
-                <a href={item.url} target="_blank" rel="noreferrer">
-                  <img src={item.url} alt={item.name} />
-                </a>
-              ) : (
-                <span title={item.name}>PDF</span>
-              )}
-            </li>
-          ))}
-        </ul>
+      {previews.some((item) => item.url) && (
+        <PhotoButton
+          label="Xem ảnh"
+          images={previews.flatMap((item) =>
+            item.url ? [{ src: item.url }] : [],
+          )}
+        />
       )}
     </div>
   )

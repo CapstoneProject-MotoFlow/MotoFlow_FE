@@ -22,10 +22,14 @@ import { formatDateTime } from '../../../shared/utils/format'
 import { purchaseOrderSearch } from '../../receiving/receivingPresentation'
 import { documentCode } from '../../../shared/utils/documentCode'
 import { supplierResolutionLabels } from '../../../shared/labels/status'
+import PhotoButton from '../../../shared/ui/PhotoButton'
+import { isImageFile } from '../../../shared/utils/imageFile'
 type Case = HandlingCase & {
   id: number
   goodsReceiptNoteId: number
+  storeId?: number
   purchaseOrderId?: number
+  productId: number
   sku: string
   partName: string
   status: string
@@ -35,16 +39,22 @@ type Case = HandlingCase & {
   /** BM của kho nhận còn phải nhận hàng giao bù cho hồ sơ này (BE tính). */
   canCreateReplacement?: boolean
   returnedQty: number
+  replacedQty?: number
+  waivedQty?: number
+  writtenOffQty?: number
+  pendingReplacementQty?: number
+  heldUndecidedQty?: number
   outstandingReturnQty: number
   outstandingReplacementQty: number
   openReplacementQty: number
-  events: {
+  events?: {
     id: number
     type: string
     quantity: number
     reason: string | null
     recordedByName: string | null
     occurredAt: string
+    evidence?: { id: number; fileName: string; downloadUrl: string | null }[]
   }[]
 }
 
@@ -101,6 +111,25 @@ function CaseAction({
               {event.recordedByName ?? 'Hệ thống'} ·{' '}
               {eventNames[event.type] ?? event.type} · {event.quantity}
               {event.reason ? ' · ' + event.reason : ''}
+              {!!event.evidence?.length && (
+                <span className="supplier-event-evidence">
+                  <PhotoButton
+                    label="Xem ảnh"
+                    images={event.evidence
+                      .filter((file) =>
+                        isImageFile(file.fileName) && !!file.downloadUrl,
+                      )
+                      .map((file) => ({ src: file.downloadUrl! }))}
+                  />
+                  {event.evidence
+                    .filter((file) => !isImageFile(file.fileName) && file.downloadUrl)
+                    .map((file, index) => (
+                      <a key={file.id} href={file.downloadUrl!} target="_blank" rel="noreferrer">
+                        Mở tệp {index + 1}
+                      </a>
+                    ))}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -533,17 +562,27 @@ function DiscrepancyForm({
                     <th>Giao sai</th>
                     <th>Hỏng</th>
                     <th>Thừa từ chối</th>
+                    <th>Đã giao bù</th>
+                    <th>Bỏ giao bù</th>
+                    <th>Đã trả</th>
+                    <th>Đã hủy</th>
+                    <th>Đang giữ</th>
                     <th>Số trả lại</th>
                     <th>Số giao bù</th>
                     <th>Còn phải trả</th>
                     <th>Còn phải giao bù</th>
                     <th>Trạng thái</th>
+                    <th>Người quyết định</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => {
                     const draft = drafts[row.id] ?? handlingDraft(row)
+                    const eventTotal = (type: string) =>
+                      (row.events ?? [])
+                        .filter((event) => event.type === type)
+                        .reduce((sum, event) => sum + event.quantity, 0)
                     return (
                       <tr key={row.id}>
                         <th scope="row">
@@ -575,23 +614,26 @@ function DiscrepancyForm({
                         <td>{row.wrongItemQty}</td>
                         <td>{row.damagedQty}</td>
                         <td>{row.rejectedExcessQty}</td>
+                        <td>{row.replacedQty ?? eventTotal('REPLACEMENT_RECEIVED')}</td>
+                        <td>{row.waivedQty ?? eventTotal('REPLACEMENT_WAIVED')}</td>
+                        <td>{row.returnedQty}</td>
+                        <td>{row.writtenOffQty ?? eventTotal('WRITE_OFF') + eventTotal('APPROVED_LOSS')}</td>
+                        <td>{row.heldUndecidedQty ?? row.outstandingReturnQty}</td>
                         <td>
                           {receiptId ? (
                             <input
                               type="number"
                               aria-label={'Số trả lại · ' + row.sku}
-                              // Báo lỗi 20/11 (mục 6): chưa trả thật thì hạ được (kể cả về 0, giữ hàng lại bán);
-                              // hàng thừa đã từ chối vẫn phải trả. Đã "Ghi nhận đã trả" thì khóa.
-                              min={row.rejectedExcessQty}
+                              // Có thể giảm lượng hẹn trả khi hàng chưa bàn giao NCC; không thấp hơn
+                              // lượng đã trả thật và lượng thừa Owner đã từ chối.
+                              min={Math.max(row.rejectedExcessQty, row.returnedQty)}
                               max={
                                 row.wrongItemQty +
                                 row.damagedQty +
                                 row.rejectedExcessQty
                               }
                               required
-                              disabled={
-                                !row.canHandle || row.returnedQty > 0 || saving
-                              }
+                              disabled={!row.canHandle || saving}
                               value={draft.returned}
                               onChange={(event) =>
                                 setDrafts((previous) => ({
@@ -635,8 +677,8 @@ function DiscrepancyForm({
                             row.replacementRequiredQty
                           )}
                         </td>
-                        <td>{row.outstandingReturnQty}</td>
-                        <td>{row.outstandingReplacementQty}</td>
+                        <td className="supplier-outstanding-cell">{row.outstandingReturnQty}</td>
+                        <td className="supplier-outstanding-cell">{row.outstandingReplacementQty}</td>
                         <td>
                           <span
                             className={
@@ -646,6 +688,19 @@ function DiscrepancyForm({
                           >
                             {row.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
                           </span>
+                        </td>
+                        <td>
+                          {row.status === 'CLOSED'
+                            ? 'Đã xử lý'
+                            : scope.owner
+                              ? row.canWaiveReplacement
+                                ? 'Bạn · Chủ cửa hàng'
+                                : 'Quản lý cửa hàng'
+                              : row.canHandle ||
+                                  row.canRecordReturn ||
+                                  row.canCreateReplacement
+                                ? 'Bạn · Quản lý cửa hàng'
+                                : 'Chủ cửa hàng'}
                         </td>
                         <td>
                           <div className="mf-row-actions receiving-case-actions">
@@ -677,6 +732,24 @@ function DiscrepancyForm({
                               >
                                 Ghi nhận đã trả
                               </button>
+                            )}
+                            {(scope.owner || row.canHandle) &&
+                              (row.heldUndecidedQty ?? 0) > 0 && (
+                              <Link
+                                className="mf-btn mf-btn--sm mf-btn--secondary"
+                                to={
+                                  '/adjustments/new?goodsReceiptNoteId=' +
+                                  row.goodsReceiptNoteId +
+                                  '&productId=' +
+                                  row.productId +
+                                  '&quantity=' +
+                                  row.heldUndecidedQty +
+                                  '&storeId=' +
+                                  (row.storeId ?? '')
+                                }
+                              >
+                                Báo hủy
+                              </Link>
                             )}
                             {row.canWaiveReplacement && (
                               <button

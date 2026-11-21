@@ -19,6 +19,7 @@ import type { Assignment } from '../inventory/countAssignment'
 import TransferAction from './TransferAction'
 import CardHead, { HeadButton } from './CardHead'
 import ReceiptDocumentSummary from './ReceiptDocumentSummary'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 import PassAllButton from '../receiving/PassAllButton'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
@@ -471,7 +472,7 @@ function WorkEditor({
               }}
             />
           )}
-          {approver && receipt.recordedBy !== scope.user?.id && (
+          {approver && (
             <HeadButton
               action={{
                 key: 'confirm',
@@ -497,6 +498,11 @@ function WorkEditor({
         </CardHead>
         {receipt?.recountReason && (
           <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
+        )}
+        {receipt && receipt.recordedBy === scope.user?.id && (
+          <p className="tf-note" role="status">
+            Bạn tự kiểm nhận; Owner sẽ được báo để xác nhận kết quả.
+          </p>
         )}
         {preparation && !preparedByOther && (
           <div className="tf-preparation-notice" role="status">
@@ -598,8 +604,8 @@ function WorkEditor({
             {receipt.submittedAt && (
               <>
                 {' '}
-                · Gửi kết quả: {dateTime(receipt.submittedAt)} · Người ghi #
-                {receipt.recordedBy}
+                · Gửi kết quả: {dateTime(receipt.submittedAt)}
+                {receipt.recordedByName && ' · Người ghi: ' + receipt.recordedByName}
               </>
             )}
             {receipt.confirmedAt && (
@@ -665,8 +671,12 @@ function WorkEditor({
                   {lines.map((l) => (
                     <tr key={l.productId}>
                       <td>
-                        {l.sku}
-                        <small>{l.partName}</small>
+                        <small>{l.sku}</small>
+                        <ProductQuickView
+                          productId={l.productId}
+                          sku={l.sku}
+                          partName={l.partName}
+                        />
                         {preparation && 'storageArea' in l && (
                           <small>
                             {l.storageArea} / {l.binLocation} · Tồn kho{' '}

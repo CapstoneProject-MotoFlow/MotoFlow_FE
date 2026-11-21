@@ -17,6 +17,7 @@ import PassAllButton from './PassAllButton'
 import InspectionNoteField from './InspectionNoteField'
 import { documentCode } from '../../shared/utils/documentCode'
 import { formatDate } from '../../shared/utils/format'
+import ProductQuickView from '../catalog/components/ProductQuickView'
 import './receiving.css'
 
 type Line = {
@@ -547,7 +548,11 @@ function ReceiptForm({
                     }
                   >
                     <td>
-                      {line.partName}
+                      <ProductQuickView
+                        productId={line.productId}
+                        sku={line.sku}
+                        partName={line.partName}
+                      />
                       <small>
                         {line.sku}
                         {editing && line.binLocation

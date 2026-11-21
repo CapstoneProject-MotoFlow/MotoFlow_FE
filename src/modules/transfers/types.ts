@@ -135,6 +135,7 @@ export type Receipt = ReceiptDocumentInfo & {
   receiptType: string
   status: string
   recordedBy: number | null
+  recordedByName?: string | null
   confirmedAt: string | null
   submittedAt: string | null
   confirmedBy: number | null

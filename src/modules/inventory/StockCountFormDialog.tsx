@@ -120,13 +120,20 @@ export function StockCountFormDialog({
         )
         if (!controller.signal.aborted)
           setGroupProducts(
-            [...first.data.items, ...remaining.flatMap((response) => response.data.items)]
-              .filter((row) => row.onHandQty > 0)
-              .map((row) => ({
-                id: row.productId,
-                sku: row.sku,
-                partName: row.partName,
-              })),
+            [
+              ...new Map(
+                [...first.data.items, ...remaining.flatMap((response) => response.data.items)]
+                  .filter((row) => row.onHandQty > 0)
+                  .map((row) => [
+                    row.productId,
+                    {
+                      id: row.productId,
+                      sku: row.sku,
+                      partName: row.partName,
+                    },
+                  ]),
+              ).values(),
+            ],
           )
       } catch (e) {
         if (!controller.signal.aborted) setGroupError(inventoryError(e))
@@ -140,6 +147,7 @@ export function StockCountFormDialog({
     !!actualStore &&
     (!requestId || !!source) &&
     (!owner || !!reason.trim()) &&
+    new Set(actualProducts).size === actualProducts.length &&
     (actualScope !== 'AREA' || !!actualArea.trim()) &&
     ((scope !== 'PRODUCTS' && actualScope !== 'PRODUCTS') ||
       actualProducts.length > 0) &&

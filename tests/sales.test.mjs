@@ -18,7 +18,7 @@ const { outputText } = ts.transpileModule(
     },
   },
 )
-const { salesTotal, discountedPrice, mayCancel, pickedReady } = await import(
+const { salesTotal, discountedPrice, mayCancel, pickedReady, suggestedPickingQty } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
 test('sales pricing rounds each discounted unit before multiplying quantity', () => {
@@ -47,6 +47,13 @@ test('picking requires a quantity for every line and explicit shortage marks', (
   assert.equal(pickedReady([{ requested: 10, picked: 0, short: true }]), true)
   assert.equal(pickedReady([{ requested: 10, picked: 9 }]), false)
   assert.equal(pickedReady([{ requested: 10, picked: 10 }]), true)
+})
+
+test('picking suggestion is limited by sellable quantity and defaults to requested quantity when stock is unknown', () => {
+  assert.equal(suggestedPickingQty(10, 5), 5)
+  assert.equal(suggestedPickingQty(10, 0), 0)
+  assert.equal(suggestedPickingQty(10, 12), 10)
+  assert.equal(suggestedPickingQty(10, null), 10)
 })
 test('the sales form shows chain prices before a warehouse is selected', async () => {
   const server = await createServer({
