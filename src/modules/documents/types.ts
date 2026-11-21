@@ -142,17 +142,21 @@ export type DocumentPrint = {
     total: number | null
     paid: number | null
     credit: number | null
+    deposit?: number | null
+    amountDue?: number | null
   } | null
   payment: {
-    paymentType: 'ORDER_PAYMENT' | 'REFUND' | 'DEBT_PAYMENT'
+    paymentType: 'ORDER_PAYMENT' | 'REFUND' | 'DEBT_PAYMENT' | 'DEPOSIT' | 'DEPOSIT_REFUND'
     paymentMethod: string
     amount: number
     tenderedAmount: number | null
     changeGiven: number | null
     transactionReference: string | null
     allocations: { receivableId: number; salesOrderId: number | null; amount: number }[]
+    depositExpiresOn?: string | null
   } | null
   note: string | null
+  title?: string | null
 }
 
 type Person = { id: number; fullName: string }

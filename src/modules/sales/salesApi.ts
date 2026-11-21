@@ -13,6 +13,8 @@ export type OrderActions = {
   canComplete: boolean
   canCancel: boolean
   canRelease?: boolean
+  /** Hủy mà không hoàn thì cửa hàng giữ tiền cọc còn lại. */
+  cancelForfeitsDeposit?: boolean
 }
 export type OrderDto = {
   id: number
@@ -54,6 +56,7 @@ export type OrderDto = {
     credit: { amount: number | null } | null
   } | null
   actions: OrderActions
+  deposit?: { remaining: number } | null
   history: { action: string; actorName: string | null; occurredAt: string }[]
   /** BE #79: đơn này tách từ đơn nào ("Tách từ BH-xxx"). */
   splitFromOrderId?: number | null
@@ -159,6 +162,7 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     refundable: dto.money?.refundable,
     remainingPayable: dto.money?.remainingPayable,
     actions: dto.actions,
+    depositRemaining: dto.deposit?.remaining ?? 0,
     lines: dto.lines.map((l) => ({
       productId: l.productId,
       lineId: l.id,

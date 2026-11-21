@@ -61,6 +61,8 @@ export type SalesOrder = {
   createdAt: string
   assigneeName: string | null
   netPaid: number
+  /** Tiền cọc còn giữ. Hủy mà không hoàn thì mất số này khi actions.cancelForfeitsDeposit. */
+  depositRemaining?: number
   credit: number
   lines: SalesLine[]
   versions: { version: number; at: string; by: string }[]

@@ -39,6 +39,7 @@ export default function SalesSettlementDialog({
       ),
     ),
     [verified, setVerified] = useState(false),
+    [returnDeposit, setReturnDeposit] = useState(false),
     [agreed, setAgreed] = useState(false),
     [waitForRest, setWaitForRest] = useState<Record<number, boolean>>({})
   const [cashGiven, setCashGiven] = useState(
@@ -222,7 +223,9 @@ export default function SalesSettlementDialog({
               customerAgreed: agreed,
             }
           } else if (action === 'cancel') {
-            if (order.netPaid > 0 && !verified) {
+            const depositLeft = order.actions?.cancelForfeitsDeposit ? (order.depositRemaining ?? 0) : 0
+            const refundDeposit = depositLeft > 0 && returnDeposit
+            if ((order.netPaid > 0 || refundDeposit) && !verified) {
               setError('Xác nhận đã hoàn tiền cho khách trước khi hủy.')
               return
             }
@@ -236,7 +239,14 @@ export default function SalesSettlementDialog({
                       transactionReference: text('reference') || null,
                       paidToCustomer: verified,
                     }
-                  : null,
+                  : refundDeposit
+                    ? {
+                        amount: depositLeft,
+                        paymentMethod: method,
+                        transactionReference: text('reference') || null,
+                        paidToCustomer: verified,
+                      }
+                    : null,
             }
           } else if (action === 'complete') body = { version: order.version }
           else {
@@ -618,7 +628,7 @@ export default function SalesSettlementDialog({
         )}
         {(action === 'payment' ||
           action === 'refund' ||
-          (action === 'cancel' && order.netPaid > 0)) && (
+          (action === 'cancel' && (order.netPaid > 0 || returnDeposit))) && (
           <>
             {action !== 'payment' && (
               <label>
@@ -702,6 +712,21 @@ export default function SalesSettlementDialog({
           <p>
             Hủy đơn sẽ hoàn toàn bộ {money.format(order.netPaid)} đã thu cho khách.
           </p>
+        )}
+        {action === 'cancel' && order.actions?.cancelForfeitsDeposit && (order.depositRemaining ?? 0) > 0 && (
+          <>
+            <p>
+              Hủy mà không hoàn sẽ giữ {money.format(order.depositRemaining ?? 0)} tiền cọc của khách.
+            </p>
+            <label>
+              <input
+                type="checkbox"
+                checked={returnDeposit}
+                onChange={(e) => setReturnDeposit(e.target.checked)}
+              />
+              Hoàn toàn bộ tiền cọc cho khách
+            </label>
+          </>
         )}
         {action === 'complete' && (
           <p>

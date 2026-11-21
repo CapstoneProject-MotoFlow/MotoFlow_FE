@@ -2,7 +2,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useInventoryData } from '../inventory/api'
 import PageHeader from '../../shared/ui/PageHeader'
 import { paymentMethodLabels } from '../../shared/labels/status'
-import { formatDateTime, formatMoney } from '../../shared/utils/format'
+import { formatDate, formatDateTime, formatMoney } from '../../shared/utils/format'
 import { Facts, Result, Table } from './DocumentUi'
 import {
   documentPath,
@@ -36,10 +36,13 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
   )
   const payment = data.payment
   const totals = data.totals
+  const deposit = totals?.deposit
   const amounts: [string, number | null | undefined][] = [
     ['Tổng theo giá tham chiếu', totals?.referenceTotal],
     ['Chiết khấu', totals?.discountAmount],
     ['Tổng tiền', totals?.total],
+    ['Tiền cọc', deposit ? deposit : null],
+    ['Còn phải trả', deposit ? totals?.amountDue : null],
     ['Đã thu', totals?.paid],
     ['Ghi nợ', totals?.credit],
   ]
@@ -56,9 +59,11 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
         </div>
       </div>
       <h2>
-        {data.form === 'PAYMENT_RECEIPT' && data.payment?.paymentType === 'REFUND'
-          ? 'Phiếu chi hoàn tiền'
-          : printForms[data.form]}
+        {data.title
+          ? data.title
+          : data.form === 'PAYMENT_RECEIPT' && data.payment?.paymentType === 'REFUND'
+            ? 'Phiếu chi hoàn tiền'
+            : printForms[data.form]}
       </h2>
       <div className="docs-print-parties">
         <Party title="Đơn vị lập" party={data.store} />
@@ -116,9 +121,13 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
               'Loại phiếu',
               payment.paymentType === 'REFUND'
                 ? 'Hoàn tiền'
-                : payment.paymentType === 'DEBT_PAYMENT'
-                  ? 'Thu nợ'
-                  : 'Thu tiền đơn bán',
+                : payment.paymentType === 'DEPOSIT_REFUND'
+                  ? 'Hoàn cọc'
+                  : payment.paymentType === 'DEPOSIT'
+                    ? 'Thu tiền cọc'
+                    : payment.paymentType === 'DEBT_PAYMENT'
+                      ? 'Thu nợ'
+                      : 'Thu tiền đơn bán',
             ],
             [
               'Hình thức thanh toán',
@@ -127,7 +136,11 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
             ],
             [
               'Số tiền',
-              formatMoney(payment.paymentType === 'REFUND' ? -payment.amount : payment.amount),
+              formatMoney(
+                payment.paymentType === 'REFUND' || payment.paymentType === 'DEPOSIT_REFUND'
+                  ? -payment.amount
+                  : payment.amount,
+              ),
             ],
             [
               'Khách đưa',
@@ -142,6 +155,7 @@ function PrintSheet({ data }: { data: DocumentPrint }) {
                 : null,
             ],
             ['Mã giao dịch', payment.transactionReference],
+            ['Hạn cọc', payment.depositExpiresOn ? formatDate(payment.depositExpiresOn) : null],
           ]}
         />
       )}
