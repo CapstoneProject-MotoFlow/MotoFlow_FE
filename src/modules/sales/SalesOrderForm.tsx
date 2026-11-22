@@ -1534,7 +1534,9 @@ export function SalesOrderFormView({
                     walkPhone.trim() ||
                     note.trim() ||
                     type === 'WHOLESALE' ||
-                    (discount.trim() !== '' && discount.trim() !== '0')
+                    (discount.trim() !== '' && discount.trim() !== '0') ||
+                    deposit.amount.trim() ||
+                    preorder
                   : lines.length) && !order
                   ? setConfirmLeave(true)
                   : discard()

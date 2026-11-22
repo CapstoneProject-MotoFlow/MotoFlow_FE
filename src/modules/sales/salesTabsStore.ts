@@ -190,7 +190,8 @@ export function isTabDirty(tab: SalesTab): boolean {
     draft.note.trim() !== '' ||
     (draft.deposit?.amount ?? '').trim() !== '' ||
     draft.type === 'WHOLESALE' ||
-    hasDiscountInput(draft.discount)
+    hasDiscountInput(draft.discount) ||
+    draft.preorder === true
   )
 }
 

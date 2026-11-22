@@ -297,6 +297,12 @@ test('isTabDirty is true for a wholesale-only tab', () => {
   assert.equal(isTabDirty(wholesale), true)
 })
 
+test('isTabDirty is true for a preorder-only tab', () => {
+  const empty = createState().tabs[0]
+  const preorder = { ...empty, draft: { ...empty.draft, preorder: true } }
+  assert.equal(isTabDirty(preorder), true)
+})
+
 test('isTabDirty is true for a tab with only a discount typed in', () => {
   const empty = createState().tabs[0]
   const withDiscount = (discount) => ({
