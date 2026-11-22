@@ -24,6 +24,15 @@ export type SaleWork = {
   action: string
 }
 
+/** Việc mới nhất lên đầu; cùng thời điểm thì sắp theo key để thứ tự ổn định. */
+export function sortNewestFirst<T extends { at: string; key: string }>(
+  rows: T[],
+): T[] {
+  return [...rows].sort(
+    (a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key),
+  )
+}
+
 /** `formatCode` nhận id đơn và trả mã hiển thị (thường là documentCode('DB', id)). */
 export function saleWork(
   items: SummaryDto[],

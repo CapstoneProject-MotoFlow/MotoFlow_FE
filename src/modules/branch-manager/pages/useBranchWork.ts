@@ -7,7 +7,7 @@ import type { TransferRow, ReplenishmentRow } from '../../transfers/types'
 
 import { documentCode } from '../../../shared/utils/documentCode'
 import { purchaseOrderCode } from '../../receiving/receivingPresentation'
-import { saleWork } from './branchSaleWork'
+import { saleWork, sortNewestFirst } from './branchSaleWork'
 type PurchaseOrderRow = {
   id: number
   supplierName: string
@@ -164,9 +164,9 @@ export function useBranchWork(coordinator: boolean) {
       action: 'Điều phối',
     })),
   ]
-  const rows = [...new Map(work.map((w) => [w.key, w])).values()].sort(
-    (a, b) => a.at.localeCompare(b.at) || a.key.localeCompare(b.key),
-  )
+  const rows = sortNewestFirst([
+    ...new Map(work.map((w) => [w.key, w])).values(),
+  ])
   const sources = [
     sales,
     purchaseOrders,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
@@ -50,6 +51,9 @@ export default function PriceListPage() {
     revision,
   )
   const cats = useInventoryData<Category[]>('/part-categories')
+  const search = useSearchBox(params.get('q') ?? '', (value) =>
+    filter('q', value),
+  )
   useEffect(() => {
     if (prices.error) window.dispatchEvent(new Event('auth-user-refresh'))
   }, [prices.error])
@@ -96,8 +100,7 @@ export default function PriceListPage() {
             Tìm phụ tùng
             <input
               placeholder="Tên phụ tùng hoặc SKU"
-              value={params.get('q') ?? ''}
-              onChange={(e) => filter('q', e.target.value)}
+              {...search}
             />
           </label>
           <div className="pricing-filter-choice">

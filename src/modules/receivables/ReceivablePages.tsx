@@ -1,4 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import DebtEvidence from './DebtEvidence'
 import DebtPaymentDetailDialog from './DebtPaymentDetailDialog'
 import OpeningDebtPicker from './OpeningDebtPicker'
@@ -40,6 +41,7 @@ export function ReceivableListPage() {
     page = Math.max(0, Number(scope.params.get('page')) || 0)
   const q = scope.params.get('q') ?? '',
     overdue = scope.params.get('overdueOnly') === 'true'
+  const search = useSearchBox(q, (value) => scope.filter({ q: value }, true))
   const resource = useInventoryData<Page<Debtor>>(
     '/receivables/customers',
     {
@@ -120,9 +122,8 @@ export function ReceivableListPage() {
           <label>
             <input
               aria-label="Tìm khách hàng"
-              value={q}
+              {...search}
               placeholder="Tìm tên hoặc số điện thoại khách"
-              onChange={(e) => scope.filter({ q: e.target.value }, true)}
             />
           </label>
           <WarehouseFilter

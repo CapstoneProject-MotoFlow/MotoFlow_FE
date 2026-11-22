@@ -11,6 +11,7 @@ import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import PageBackLink from '../../shared/ui/PageBackLink'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import {
   inventoryError,
   useInventoryData,
@@ -47,6 +48,9 @@ export function SalesDraftTab({
 }) {
   const p = scope.params,
     page = Math.max(0, Number(p.get('page')) || 0)
+  const search = useSearchBox(p.get('q') ?? '', (value) =>
+    scope.filter({ q: value }, true),
+  )
   const location = useLocation()
   const [notice, setNotice] = useState(
     (location.state as { notice?: string } | null)?.notice ?? '',
@@ -85,9 +89,8 @@ export function SalesDraftTab({
         <label>
           Tìm đơn nháp
           <input
+            {...search}
             placeholder="Mã đơn, tên hoặc số điện thoại khách…"
-            value={p.get('q') ?? ''}
-            onChange={(e) => scope.filter({ q: e.target.value }, true)}
           />
         </label>
       </div>

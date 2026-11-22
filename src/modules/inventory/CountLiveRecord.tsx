@@ -156,7 +156,7 @@ function OpeningEditor({
     <div className="stock-table-scroll"><table className="stock-table">
       <thead><tr><th>Phụ tùng</th><th>Hạn sử dụng</th><th>Số đếm thực tế</th><th>Hư hỏng</th>{editable && <th />}</tr></thead>
       <tbody>{rows.map((row) => <tr key={row.key}>
-        <td><strong><ProductQuickView productId={row.product.id} sku={row.product.sku} partName={row.product.partName} blindCount /></strong><small>{row.product.sku}</small></td>
+        <td><strong><ProductQuickView productId={row.product.id} sku={row.product.sku} partName={row.product.partName} blindCount /></strong></td>
         <td><input aria-label={`Hạn sử dụng ${row.product.sku}`} type="date" value={row.expiryDate} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, expiryDate: event.target.value} : item)); setConfirmed(false)}} /></td>
         <td><input aria-label={`Số đếm ${row.product.sku}`} type="number" min="0" step="1" value={row.countedQty} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, countedQty: event.target.value} : item)); setConfirmed(false)}} /></td>
         <td><input aria-label={`Số hư hỏng ${row.product.sku}`} type="number" min="0" step="1" value={row.damagedQty} disabled={!editable || busy} onChange={(event) => {setRows((items) => items.map((item) => item.key === row.key ? {...item, damagedQty: event.target.value} : item)); setConfirmed(false)}} /></td>
@@ -400,14 +400,21 @@ function Editor({
                     sku={l.sku}
                     partName={l.partName}
                     blindCount
+                    extraFacts={
+                      l.lotId != null
+                        ? [
+                            ['Lô', documentCode('L', l.lotId)],
+                            ['Hạn sử dụng', l.expiryDate ? date(l.expiryDate) : 'Không có'],
+                          ]
+                        : undefined
+                    }
                   />
-                  <CountLineTags line={l} blind />
                   {l.lotId != null && (
-                    <small className="count-line-lot-details">
-                      Lô {documentCode('L', l.lotId)} · Hạn sử dụng:{' '}
-                      {l.expiryDate ? date(l.expiryDate) : 'Không có'}
+                    <small className="count-line-lot-code">
+                      Lô {documentCode('L', l.lotId)}
                     </small>
                   )}
+                  <CountLineTags line={l} blind />
                 </td>
                 <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
                 {recountMode && (

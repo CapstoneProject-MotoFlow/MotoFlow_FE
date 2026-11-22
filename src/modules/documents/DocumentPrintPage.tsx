@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useInventoryData } from '../inventory/api'
 import PageHeader from '../../shared/ui/PageHeader'
+import { useBackClick } from '../../shared/hooks/useBackClick'
 import { Result } from './DocumentUi'
 import {
   documentPath,
@@ -50,6 +51,7 @@ function PrintBody({ data }: { data: DocumentPrint }) {
 }
 
 export default function DocumentPrintPage() {
+  const onBackClick = useBackClick()
   const { type, id } = useParams()
   const valid = isDocumentType(type) && validId(id)
   const path = valid ? documentPath(type, id!) : ''
@@ -121,7 +123,11 @@ export default function DocumentPrintPage() {
                   </select>
                 </label>
               )}
-              <Link className="mf-btn mf-btn--secondary" to={path}>
+              <Link
+                className="mf-btn mf-btn--secondary"
+                to={path}
+                onClick={onBackClick}
+              >
                 Quay lại
               </Link>
               {print.data && (

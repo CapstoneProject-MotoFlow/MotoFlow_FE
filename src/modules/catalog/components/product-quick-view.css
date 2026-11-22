@@ -3,14 +3,19 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: inherit;
+  color: #175cd3;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 .product-quick-view-trigger:hover {
-  color: #465fff;
-  text-decoration: none;
+  color: #1849a9;
+  text-decoration: underline;
+}
+.product-quick-view-trigger:focus-visible {
+  outline: 2px solid #465fff;
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 .product-quick-view-facts {
   display: grid;

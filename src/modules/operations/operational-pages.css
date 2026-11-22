@@ -162,7 +162,7 @@
 .count-workspace .stock-empty {
   padding: 42px 20px;
 }
-.count-workspace .stock-table button {
+.count-workspace .stock-table button:not(.product-quick-view-trigger) {
   border: 1px solid #d0d5dd;
   border-radius: 6px;
   background: #fff;

@@ -673,11 +673,21 @@ function WorkEditor({
                   {lines.map((l) => (
                     <tr key={l.productId}>
                       <td>
-                        <small>{l.sku}</small>
                         <ProductQuickView
                           productId={l.productId}
                           sku={l.sku}
                           partName={l.partName}
+                          extraFacts={
+                            preparation && 'storageArea' in l
+                              ? (l.pickFirst ?? []).map(
+                                  (lot) =>
+                                    [
+                                      'Lô gợi ý lấy',
+                                      `${lot.manufacturerLotNo ?? lot.lotId} · Lấy ${lot.takeQty} · Hạn ${lot.expiryDate ?? 'Không có'}`,
+                                    ] as [string, string],
+                                )
+                              : undefined
+                          }
                         />
                         {preparation && 'storageArea' in l && (
                           <small>
@@ -686,13 +696,6 @@ function WorkEditor({
                             {l.barcodes?.length
                               ? ' · Mã vạch: ' + l.barcodes.join(', ')
                               : ''}
-                            {l.pickFirst?.map((lot) => (
-                              <small key={lot.lotId}>
-                                Lô {lot.manufacturerLotNo ?? lot.lotId} · Lấy{' '}
-                                {lot.takeQty} · Hạn{' '}
-                                {lot.expiryDate ?? 'Không có'}
-                              </small>
-                            ))}
                             {l.sellableQty < l.plannedQty && (
                               <small className="tf-validation-hint">
                                 Kho nguồn thiếu {l.plannedQty - l.sellableQty}{' '}

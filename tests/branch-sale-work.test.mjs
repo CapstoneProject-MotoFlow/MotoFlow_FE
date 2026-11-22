@@ -17,7 +17,7 @@ const { outputText } = ts.transpileModule(
     },
   },
 )
-const { saleWork, saleActions } = await import(
+const { saleWork, saleActions, sortNewestFirst } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
 const formatCode = (id) => 'DB-' + String(id).padStart(4, '0')
@@ -89,4 +89,22 @@ test('the four existing sale actions are unchanged', () => {
 
 test('prototype keys such as toString are not treated as actions', () => {
   assert.deepEqual(saleWork([row(4, 'toString')], formatCode), [])
+})
+
+test('sortNewestFirst puts the latest work first and keeps ties stable', () => {
+  const rows = [
+    { key: 'c1', at: '2026-11-18T09:00:00' },
+    { key: 's9', at: '2026-11-21T14:30:00' },
+    { key: 'r2', at: '2026-11-20T08:00:00' },
+    { key: 'b3', at: '2026-11-21T14:30:00' },
+  ]
+  assert.deepEqual(
+    sortNewestFirst(rows).map((r) => r.key),
+    ['b3', 's9', 'r2', 'c1'],
+  )
+  assert.deepEqual(
+    rows.map((r) => r.key),
+    ['c1', 's9', 'r2', 'b3'],
+    'input array must not be mutated',
+  )
 })

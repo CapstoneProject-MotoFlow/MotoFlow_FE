@@ -398,22 +398,6 @@ function ReceiptForm({
                   onChange={(event) => setArrivedAt(event.target.value)}
                 />
               </label>
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Intl.DateTimeFormat('sv-SE', {
-                    timeZone: 'Asia/Ho_Chi_Minh',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }).format(new Date())
-                  setArrivedAt(now.replace(' ', 'T'))
-                }}
-              >
-                Bây giờ
-              </button>
             </div>
           </div>
         )}
@@ -442,26 +426,6 @@ function ReceiptForm({
           />
         )}
       </section>
-      {editing && (
-        <section
-          className="receiving-panel receiving-staff-delivery-type"
-          aria-label="Loại phiếu nhập"
-        >
-          <header className="receiving-panel-head">
-            <h2>Loại phiếu nhập</h2>
-          </header>
-          <div className="receiving-staff-type-options">
-            <label className={!receipt.replacement ? 'is-selected' : ''}>
-              <input type="radio" checked={!receipt.replacement} readOnly />
-              Giao theo đơn nhập hàng
-            </label>
-            <label className={receipt.replacement ? 'is-selected' : ''}>
-              <input type="radio" checked={receipt.replacement} readOnly />
-              Giao bù cho sai lệch
-            </label>
-          </div>
-        </section>
-      )}
       <section className="receiving-panel">
         <header className="receiving-panel-head">
           <h2>
@@ -548,24 +512,23 @@ function ReceiptForm({
                     }
                   >
                     <td>
+                      {/* Mục 9 (PM 19/11): tạm ẩn cột NSX/HSD; nhập qua nút "Có HSD", ghi ngày trong cửa sổ chi tiết. */}
                       <ProductQuickView
                         productId={line.productId}
                         sku={line.sku}
                         partName={line.partName}
+                        extraFacts={[
+                          ...(editing && line.binLocation
+                            ? [['Kệ', line.binLocation] as [string, string]]
+                            : []),
+                          ...(dates?.manufactureDate
+                            ? [['NSX', formatDate(dates.manufactureDate)] as [string, string]]
+                            : []),
+                          ...(dates?.expiryDate
+                            ? [['HSD', formatDate(dates.expiryDate)] as [string, string]]
+                            : []),
+                        ]}
                       />
-                      <small>
-                        {line.sku}
-                        {editing && line.binLocation
-                          ? ` · kệ ${line.binLocation}`
-                          : ''}
-                      </small>
-                      {/* Mục 9 (PM 19/11): tạm ẩn cột NSX/HSD; nhập qua nút "Có HSD", ghi ngày dưới tên. */}
-                      {(dates?.manufactureDate || dates?.expiryDate) && (
-                        <small className="receiving-lot-dates">
-                          NSX {formatDate(dates.manufactureDate)} · HSD{' '}
-                          {formatDate(dates.expiryDate)}
-                        </small>
-                      )}
                       {editing && hasInvalidLotDates(line) && (
                         <small className="receiving-field-error" role="alert">
                           Hạn dùng không được trước ngày sản xuất.

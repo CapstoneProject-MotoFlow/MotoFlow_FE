@@ -51,6 +51,7 @@ import { SalesDraftTab } from './SalesDraftPages'
 import { documentCode } from '../../shared/utils/documentCode'
 import { salesOrderStatusLabels as salesStates } from '../../shared/labels/status'
 import ProductQuickView from '../catalog/components/ProductQuickView'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 export { SalesOrderFormView }
 import './sales.css'
 
@@ -108,6 +109,9 @@ export function SalesOrderListPage({
     staff = scope.user?.role === 'STAFF',
     p = scope.params
   // Tab "Chờ hàng" theo role: BE không có cờ riêng cho tab này, nên dùng role như scope.owner/staff trong file.
+  const search = useSearchBox(p.get('q') ?? '', (value) =>
+    scope.filter({ q: value }, true),
+  )
   const canWait = ['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '')
   const tab = p.get('tab') ?? 'OPEN',
     closed = ['COMPLETED', 'CANCELLED'].includes(tab),
@@ -230,8 +234,7 @@ export function SalesOrderListPage({
           <label>
             Tìm đơn, khách hàng
             <input
-              value={p.get('q') ?? ''}
-              onChange={(e) => scope.filter({ q: e.target.value }, true)}
+              {...search}
               placeholder="Mã đơn, tên hoặc số điện thoại…"
             />
           </label>
@@ -1165,7 +1168,6 @@ export function RecordPickedView({
       ),
     ),
     [error, setError] = useState('')
-  const [onlyMissing, setOnlyMissing] = useState(false)
   const recorded = lines.filter(
     (l) =>
       l.picked != null &&
@@ -1208,40 +1210,6 @@ export function RecordPickedView({
         />
         <InventoryPanel
           title="Lấy từng phụ tùng"
-          action={
-            <div className="sales-pick-controls">
-              <label className="sales-pick-filter">
-                <input
-                  type="checkbox"
-                  checked={onlyMissing}
-                  onChange={(e) => setOnlyMissing(e.target.checked)}
-                />
-                Chỉ dòng chưa ghi
-              </label>
-              <button
-                type="button"
-                disabled={!editable || busy}
-                onClick={() =>
-                  setLines((previous) =>
-                    previous.map((line) => ({
-                      ...line,
-                      picked: suggestedPickingQty(
-                        line.requested,
-                        line.sellableQty,
-                      ),
-                      shortReason:
-                        line.sellableQty != null &&
-                        line.sellableQty < line.requested
-                          ? line.shortReason?.trim() || 'Hết hàng'
-                          : line.shortReason,
-                    })),
-                  )
-                }
-              >
-                Lấy đủ tất cả
-              </button>
-            </div>
-          }
         >
           {error && <p role="alert">{error}</p>}
           <div className="stock-table-scroll">
@@ -1257,9 +1225,7 @@ export function RecordPickedView({
                 </tr>
               </thead>
               <tbody>
-                {lines
-                  .filter((l) => !onlyMissing || l.picked == null)
-                  .map((l) => (
+                {lines.map((l) => (
                     <tr
                       key={l.productId}
                       className={
@@ -1271,13 +1237,11 @@ export function RecordPickedView({
                           productId={l.productId}
                           sku={l.sku}
                           partName={l.partName}
+                          extraFacts={[
+                            ['Kệ', l.binLocation ?? 'chưa có vị trí'],
+                            ['Lô gợi ý lấy', l.lotHint ?? 'Không có'],
+                          ]}
                         />
-                        <small>
-                          {l.sku} · kệ {l.binLocation ?? 'chưa có vị trí'}
-                        </small>
-                        {l.lotHint && (
-                          <strong className="sales-lot">{l.lotHint}</strong>
-                        )}
                       </td>
                       <td>
                         <strong>{l.requested}</strong>
@@ -1499,7 +1463,7 @@ export function RecordPickedView({
                   sessionStorage.removeItem(
                     'sales-pick-' + order.id + '-' + order.version,
                   )
-                  navigate('/sales-orders/' + order.id)
+                  navigate('/sales-orders/' + order.id, { replace: true })
                 } catch (error) {
                   setError(inventoryError(error))
                 } finally {
@@ -1521,6 +1485,9 @@ export function UnmetDemandPage() {
   const scope = useInventoryScope(),
     p = scope.params,
     page = Math.max(0, Number(p.get('page')) || 0)
+  const search = useSearchBox(p.get('q') ?? '', (value) =>
+    scope.filter({ q: value }, true),
+  )
   // Ô Phụ tùng và Khách hàng là ô tìm kiếm thả xuống (Truong 12/11: bỏ nút "Tải thêm"), mỗi ô tìm theo chữ gõ riêng.
   const [productSearch, setProductSearch] = useState('')
   const [customerSearch, setCustomerSearch] = useState('')
@@ -1593,9 +1560,8 @@ export function UnmetDemandPage() {
             <label>
               Tìm phụ tùng, khách hàng
               <input
+                {...search}
                 placeholder="Tên phụ tùng, SKU hoặc khách hàng…"
-                value={p.get('q') ?? ''}
-                onChange={(e) => scope.filter({ q: e.target.value }, true)}
               />
             </label>
             <div className="stock-filter sales-unmet-choice">

@@ -10,6 +10,7 @@ import { states, type Replenishment, type ReplenishmentRow } from './types'
 import { documentCode as code } from '../../shared/utils/documentCode'
 import { formatDateTime } from '../../shared/utils/format'
 import ServerDraftList from '../../shared/ui/ServerDraftList'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import './transfers.css'
 
 /**
@@ -36,6 +37,9 @@ export default function ReplenishmentListPage() {
   // PM 17/11: tab "Nháp" ngoài cùng bên phải; nháp lưu trên server, chỉ người tạo thấy.
   const drafts = activeStatus === 'DRAFT'
   const filters = { storeId: scope.storeId, q: search.trim() }
+  const searchBox = useSearchBox(search, (value) =>
+    scope.filter({ q: value }, true),
+  )
   const base = useInventoryData<Page<ReplenishmentRow>>(
     '/replenishment-requests',
     {
@@ -106,8 +110,7 @@ export default function ReplenishmentListPage() {
             <input
               aria-label="Tìm yêu cầu"
               placeholder="Tìm mã yêu cầu hoặc cửa hàng"
-              value={search}
-              onChange={(e) => scope.filter({ q: e.target.value }, true)}
+              {...searchBox}
             />
             {scope.owner && (
               <SearchableFilter

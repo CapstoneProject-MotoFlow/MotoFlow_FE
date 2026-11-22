@@ -30,7 +30,7 @@
   gap: 0.5rem;
 }
 
-.receiving-page button {
+.receiving-page button:not(.product-quick-view-trigger) {
   padding: 0.5rem 0.75rem;
   border: 1px solid #dce2eb;
   border-radius: 0.5rem;
@@ -741,11 +741,6 @@
 }
 
 .receiving-confirm-table td small,
-.receiving-lot-dates {
-  display: block;
-  color: #667085;
-  font-size: 0.75rem;
-}
 
 /* Mục 9 (PM 19/11): nút "Có HSD" dưới tên phụ tùng ở bảng kiểm nhận. */
 .receiving-lot-button {
@@ -773,10 +768,6 @@
 .receiving-arrival-control label {
   flex: 1;
   min-width: 0;
-}
-
-.receiving-arrival-control button {
-  flex-shrink: 0;
 }
 
 .receiving-staff-controls p {
@@ -880,34 +871,6 @@
   border-radius: 0.4rem;
 }
 
-.receiving-staff-delivery-type {
-  padding: 0;
-}
-
-.receiving-staff-delivery-type .receiving-staff-type-options {
-  padding: 1rem 1.25rem;
-}
-
-.receiving-staff-type-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.receiving-staff-type-options label {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #dce2eb;
-  border-radius: 0.55rem;
-}
-
-.receiving-staff-type-options label.is-selected {
-  border-color: #4658f3;
-  background: #eef1ff;
-}
-
 .receiving-staff-table-scroll table {
   min-width: 62rem;
 }
@@ -1008,10 +971,6 @@
     > .receiving-panel:first-child
     > .receiving-panel-head {
     grid-column: 1;
-  }
-
-  .receiving-staff-type-options {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

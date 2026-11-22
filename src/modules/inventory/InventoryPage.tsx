@@ -1,6 +1,7 @@
 import { Fragment, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import { Link, useNavigate } from 'react-router-dom'
 import Hint from '../../shared/ui/Hint'
 import Icon from '../../shared/ui/Icon'
@@ -81,6 +82,15 @@ export default function InventoryPage() {
     categoryId: p.get('categoryId') ?? '',
     storageArea: p.get('storageArea') ?? '',
   }
+  const qSearch = useSearchBox(filters.q, (value) =>
+    scope.filter({ q: value }, true),
+  )
+  const minQtySearch = useSearchBox(p.get('minQty') ?? '', (value) =>
+    scope.filter({ minQty: value }, true),
+  )
+  const maxQtySearch = useSearchBox(p.get('maxQty') ?? '', (value) =>
+    scope.filter({ maxQty: value }, true),
+  )
   const remoteFilter = !!(
     filters.q ||
     filters.categoryId ||
@@ -459,8 +469,7 @@ export default function InventoryPage() {
               type="search"
               aria-label="Tìm tên, SKU, mã OEM hoặc ô kệ"
               placeholder="Tìm tên, SKU, mã OEM hoặc ô kệ"
-              value={filters.q}
-              onChange={(e) => scope.filter({ q: e.target.value }, true)}
+              {...qSearch}
             />
           </label>
           {scope.owner && (
@@ -531,8 +540,7 @@ export default function InventoryPage() {
               inputMode="numeric"
               aria-label="Tồn có thể bán từ"
               placeholder="Từ"
-              value={p.get('minQty') ?? ''}
-              onChange={(e) => scope.filter({ minQty: e.target.value }, true)}
+              {...minQtySearch}
             />
             <span aria-hidden="true">–</span>
             <input
@@ -541,8 +549,7 @@ export default function InventoryPage() {
               inputMode="numeric"
               aria-label="Tồn có thể bán đến"
               placeholder="Đến"
-              value={p.get('maxQty') ?? ''}
-              onChange={(e) => scope.filter({ maxQty: e.target.value }, true)}
+              {...maxQtySearch}
             />
             <button
               type="button"
@@ -834,6 +841,7 @@ function StockHeaderSearch({
   onChange: (value: string) => void
 }) {
   const target = useContext(HeaderSearchTarget)
+  const search = useSearchBox(value, onChange)
   return target
     ? createPortal(
         <div className="account-search">
@@ -842,8 +850,7 @@ function StockHeaderSearch({
             type="search"
             aria-label="Tìm phụ tùng theo SKU, tên, mã OEM"
             placeholder="Tìm phụ tùng theo SKU, tên, mã OEM…"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
+            {...search}
           />
         </div>,
         target,

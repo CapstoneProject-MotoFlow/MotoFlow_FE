@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
 import ImageViewer from '../../../shared/ui/ImageViewer'
@@ -24,12 +24,15 @@ export default function ProductQuickView({
   partName,
   blindCount = false,
   className,
+  extraFacts,
 }: {
   productId: number
   sku: string
   partName: string
   blindCount?: boolean
   className?: string
+  /** Dòng thông tin thêm của ngữ cảnh (ví dụ Kệ, Lô gợi ý lấy), hiện đầu bảng chi tiết. */
+  extraFacts?: Array<[label: string, value: ReactNode]>
 }) {
   const [open, setOpen] = useState(false)
   const [product, setProduct] = useState<ProductInfo>()
@@ -71,6 +74,7 @@ export default function ProductQuickView({
           title="Chi tiết phụ tùng"
           formId={'product-quick-view-' + productId}
           submitLabel="Đóng"
+          closeLabel="Đóng"
           hideSubmit
           onClose={() => setOpen(false)}
         >
@@ -100,6 +104,12 @@ export default function ProductQuickView({
                 )}
               </section>
               <dl className="product-quick-view-facts">
+                {extraFacts?.map(([label, value], index) => (
+                  <div key={index}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
                 <div><dt>Phụ tùng</dt><dd>{product.partName}</dd></div>
                 <div><dt>Mã SKU</dt><dd>{product.sku}</dd></div>
                 {product.categoryName && <div><dt>Danh mục</dt><dd>{product.categoryName}</dd></div>}
