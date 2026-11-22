@@ -33,6 +33,7 @@ type StoreFormValues = {
   storeName: string
   address: string
   phone: string
+  taxCode: string
   central: boolean
   status: StoreStatus
 }
@@ -41,6 +42,7 @@ const emptyForm: StoreFormValues = {
   storeName: '',
   address: '',
   phone: '',
+  taxCode: '',
   central: false,
   status: 'PLANNED',
 }
@@ -239,6 +241,7 @@ export default function StoresPage() {
       storeName: store.storeName,
       address: store.address,
       phone: store.phone || '',
+      taxCode: store.taxCode ?? '',
       central: store.central,
       status: store.status,
     })
@@ -279,6 +282,7 @@ export default function StoresPage() {
       storeName: form.storeName.trim(),
       address: form.address.trim(),
       phone: form.phone.trim(),
+      taxCode: form.taxCode.trim() || null,
       central: form.central,
       ...(editingStore ? { status: form.status } : {}),
     }
@@ -793,6 +797,23 @@ export default function StoresPage() {
                     setForm({ ...form, phone: event.target.value })
                   }
                 />
+              </label>
+              <label>
+                Mã số thuế
+                <input
+                  name="taxCode"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}([0-9]{3})?"
+                  maxLength={13}
+                  title="MST gồm 10 hoặc 13 chữ số."
+                  value={form.taxCode}
+                  onChange={(event) =>
+                    setForm({ ...form, taxCode: event.target.value })
+                  }
+                />
+                <span className="store-field-hint">
+                  In trên phiếu bán hàng (bên bán).
+                </span>
               </label>
 
               {editingStore && (

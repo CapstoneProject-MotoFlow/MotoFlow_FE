@@ -69,6 +69,27 @@
   display: block;
   color: #b54708;
 }
+.sales-deposit-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sales-deposit-badge.tone-info {
+  background: color-mix(in srgb, var(--mf-primary) 12%, white);
+  color: var(--mf-primary);
+}
+.sales-deposit-badge.tone-danger {
+  background: color-mix(in srgb, var(--mf-danger) 12%, white);
+  color: var(--mf-danger);
+}
+.sales-deposit-badge.tone-muted {
+  background: #f2f4f7;
+  color: var(--mf-muted);
+}
 .sales-workspace button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -2190,4 +2211,123 @@
 .pos-tab-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ---- Tiền cọc (đơn chờ hàng): thẻ cọc, chip trạng thái, banner cảnh báo đỏ ---- */
+.sales-deposit-card {
+  border: 1px solid #e4e7ec;
+  border-radius: 13px;
+  background: #fff;
+  overflow: hidden;
+  margin-top: 20px;
+}
+.sales-deposit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #eaecf0;
+}
+.sales-deposit-head h2 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 600;
+}
+.sales-deposit-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #eef4ff;
+  color: #465fff;
+  white-space: nowrap;
+}
+.sales-deposit-chip.is-danger {
+  background: #fef3f2;
+  color: #b42318;
+}
+.sales-deposit-chip.is-muted {
+  background: #f2f4f7;
+  color: #475467;
+}
+.sales-deposit-meta {
+  margin: 0;
+  padding: 10px 20px 0;
+  font-size: 12px;
+  color: #667085;
+}
+.sales-deposit-facts {
+  margin: 0;
+  padding: 4px 20px 8px;
+}
+.sales-deposit-facts > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 0;
+  font-size: 13px;
+}
+.sales-deposit-facts dt {
+  color: #475467;
+}
+.sales-deposit-facts dd {
+  margin: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sales-deposit-facts .is-strong dt,
+.sales-deposit-facts .is-strong dd {
+  font-weight: 700;
+  color: #101828;
+}
+.sales-deposit-history {
+  padding: 0 20px 12px;
+  font-size: 12px;
+}
+.sales-deposit-history h3 {
+  font-size: 13px;
+  margin: 8px 0;
+  font-weight: 600;
+}
+.sales-deposit-history table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.sales-deposit-history th,
+.sales-deposit-history td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eaecf0;
+}
+.sales-deposit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px 18px;
+  border-top: 1px solid #eaecf0;
+}
+.sales-deposit-methods {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 16px;
+}
+.sales-deposit-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-deposit-banner {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 13px;
 }

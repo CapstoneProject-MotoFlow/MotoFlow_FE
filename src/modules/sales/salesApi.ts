@@ -13,6 +13,48 @@ export type OrderActions = {
   canComplete: boolean
   canCancel: boolean
   canRelease?: boolean
+  /** PM 21/11: đặt cọc cho đơn chờ hàng (AWAITING_STOCK). */
+  canRecordDeposit?: boolean
+  canChangeDepositExpiry?: boolean
+  canForfeitDeposit?: boolean
+  cancelForfeitsDeposit?: boolean
+}
+/** Loại khoản tiền: thu/hoàn đơn, thu/hoàn nợ, cọc và hoàn cọc. */
+export type SalesPaymentType =
+  | 'ORDER_PAYMENT'
+  | 'REFUND'
+  | 'DEBT_PAYMENT'
+  | 'DEPOSIT'
+  | 'DEPOSIT_REFUND'
+/** Trạng thái cọc của đơn (cùng enum với cột depositStatus của danh sách). */
+export type DepositStatus =
+  | 'NONE'
+  | 'ACTIVE'
+  | 'EXPIRED'
+  | 'FORFEITED'
+  | 'SETTLED'
+export type DepositExpiryChange = {
+  oldDate: string | null
+  newDate: string
+  changedById: number | null
+  changedBy: string | null
+  changedAt: string
+}
+/** Cọc của đơn chờ hàng; null với Staff và đơn nháp. */
+export type OrderDeposit = {
+  total: number
+  unverified: number
+  applied: number
+  refunded: number
+  remaining: number
+  /** YYYY-MM-DD */
+  expiresOn: string | null
+  status: DepositStatus
+  forfeitedAmount: number | null
+  forfeitedAt: string | null
+  forfeitedById: number | null
+  forfeitedBy: string | null
+  expiryChanges: DepositExpiryChange[]
 }
 export type OrderDto = {
   id: number
@@ -40,7 +82,7 @@ export type OrderDto = {
   money: {
     payments?: {
       id: number
-      type: string
+      type: SalesPaymentType
       method: string
       amount: number
       status: string
@@ -51,9 +93,13 @@ export type OrderDto = {
     remainingPayable: number
     refundable: number
     payableNow: number
+    /** Cọc đã đưa vào đơn này khi nhả đơn chờ; đã nằm trong netCollected. */
+    depositApplied?: number
     credit: { amount: number | null } | null
   } | null
   actions: OrderActions
+  /** PM 21/11: null với Staff và đơn nháp. */
+  deposit?: OrderDeposit | null
   history: { action: string; actorName: string | null; occurredAt: string }[]
   /** BE #79: đơn này tách từ đơn nào ("Tách từ BH-xxx"). */
   splitFromOrderId?: number | null
@@ -93,6 +139,11 @@ export type SummaryDto = {
     | 'CONFIRM'
     | 'COLLECT_PAYMENT'
     | null
+  /** PM 21/11: null khi đơn không bao giờ có cọc và với Staff. */
+  depositStatus?: DepositStatus | null
+  depositRemaining?: number | null
+  /** YYYY-MM-DD */
+  depositExpiresOn?: string | null
 }
 
 /**
@@ -158,6 +209,8 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     payableNow: dto.money?.payableNow,
     refundable: dto.money?.refundable,
     remainingPayable: dto.money?.remainingPayable,
+    depositApplied: dto.money?.depositApplied ?? 0,
+    deposit: dto.deposit ?? null,
     actions: dto.actions,
     lines: dto.lines.map((l) => ({
       productId: l.productId,

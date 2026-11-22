@@ -6,7 +6,7 @@ import { inventoryError } from '../inventory/api'
 import { today, money } from '../inventory/presentation'
 import { discountedPrice, salesTotal, type SalesOrder } from './salesModel'
 import { paymentMethodLabels } from '../../shared/labels/status'
-import { formatDateTime } from '../../shared/utils/format'
+import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
 function refreshSales(message = 'Đã lưu thay đổi.') {
@@ -692,6 +692,14 @@ export default function SalesSettlementDialog({
             <FieldError message={validation.errors.paymentId} />
           </label>
         )}
+        {action === 'cancel' &&
+          order.actions?.cancelForfeitsDeposit &&
+          (order.deposit?.remaining ?? 0) > 0 && (
+            <p className="sales-deposit-banner" role="alert">
+              Khách sẽ mất cọc {formatMoney(order.deposit?.remaining)}. Tiền cọc
+              không được hoàn.
+            </p>
+          )}
         {(action === 'cancel' || action === 'reject') && (
           <label>
             Lý do *<textarea name="reason" required maxLength={255} />

@@ -47,7 +47,23 @@ import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 import { DAMAGED_VARIANT_NAME_SUFFIX } from '../../shared/utils/damagedVariant'
-import type { TabCustomer, TabDraft, TabLine } from './salesTabsStore'
+import type {
+  TabCustomer,
+  TabDeposit,
+  TabDraft,
+  TabLine,
+} from './salesTabsStore'
+import {
+  addDaysIso,
+  afterDepositRoute,
+  depositPayload,
+  depositTarget,
+  todayIso,
+  validateDeposit,
+  type DepositRoute,
+} from './salesDeposit'
+import MoneyInput from '../../shared/ui/MoneyInput'
+import './salesDepositForm.css'
 export type SalesProduct = {
   id: number
   sku: string
@@ -61,6 +77,8 @@ export type SalesProduct = {
   heldByOthersQty?: number | null
 }
 type DraftLine = TabLine
+/** Phản hồi ghi cọc (BE SettlementResult): chỉ cần mã khoản thu để in phiếu. */
+type DepositResult = { paymentId: number }
 type SalesCustomer = TabCustomer
 type Preview = {
   key: string
@@ -195,6 +213,22 @@ export function SalesOrderFormView({
             ? [{ product: initialProduct, quantity: initialQuantity }]
             : [])),
   )
+  // Tiền cọc chỉ dùng khi đơn tạo ra toàn đơn chờ hàng (xem allWaiting); nháp không lưu cọc.
+  const [deposit, setDeposit] = useState<TabDeposit>(
+    () =>
+      initialDraft?.deposit ?? {
+        amount: '',
+        method: 'CASH',
+        reference: '',
+        expiresOn: '',
+        tendered: '',
+        verified: true,
+      },
+  )
+  // Khách đặt trước: cả đơn thành đơn chờ hàng, không lấy ngay (xem preorderActive).
+  const [preorder, setPreorder] = useState<boolean>(
+    initialDraft?.preorder ?? false,
+  )
   const [error, setError] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [now] = useState(() => formatDateTime(new Date()))
@@ -215,8 +249,12 @@ export function SalesOrderFormView({
       discount,
       note,
       lines,
+      ...(deposit.amount || deposit.reference || deposit.tendered || deposit.expiresOn
+        ? { deposit }
+        : {}),
+      ...(preorder ? { preorder: true } : {}),
     })
-  }, [customer, walkin, walkPhone, warehouse, type, discount, note, lines])
+  }, [customer, walkin, walkPhone, warehouse, type, discount, note, lines, deposit, preorder])
 
   // F3: đưa con trỏ về ô tìm phụ tùng (thói quen của phần mềm bán hàng phổ biến).
   useEffect(() => {
@@ -338,14 +376,16 @@ export function SalesOrderFormView({
     (sum, l) => sum + (Number.isFinite(l.quantity) ? l.quantity : 0),
     0,
   )
+  // Khách đặt trước: mọi dòng chờ hàng, không lấy ngay (nowQty 0, waitForRest true).
+  const preorderActive = preorder && !editing && lines.length > 0
   const stockSplit = lines.map(({ product, quantity, nowQty, waitForRest }) => ({
     productId: product.id,
     ...splitLine({
       requested: quantity,
       sellable: sellableOf(product.id),
       suggestedNow: lineOf(product.id)?.suggestedNowQty,
-      nowQty,
-      waitForRest,
+      nowQty: preorderActive ? 0 : nowQty,
+      waitForRest: preorderActive ? true : waitForRest,
     }),
   }))
   const stockSplitByProduct = new Map(
@@ -360,6 +400,15 @@ export function SalesOrderFormView({
     (line) => line.waitForRest && line.later > 0,
   ).length
   const immediateLineCount = stockSplit.filter((line) => line.takeNow > 0).length
+  // Đơn chờ thuần: không dòng nào lấy ngay, có số chờ hàng (đơn tạo ra chỉ là đơn chờ).
+  const allWaiting =
+    !editing && lines.length > 0 && immediateQty === 0 && pendingQty > 0
+  // Cọc chỉ được gửi khi đơn chờ có hồ sơ khách và đã nhập số tiền; còn lại bỏ qua.
+  const depositActive =
+    allWaiting && !!customer && deposit.amount.trim() !== ''
+  const depositError = depositActive
+    ? validateDeposit(deposit, todayIso(), { requireExpiry: true })
+    : null
   const stockShortages = lines.filter(({ product, quantity }) => {
     const sellable = sellableOf(product.id)
     return sellable != null && quantity > sellable
@@ -368,7 +417,9 @@ export function SalesOrderFormView({
   const unhandledShortage = immediateQty === 0 && pendingQty === 0
   const canCreatePendingRemainder =
     !editing &&
-    (stockSplit.some((line) => line.later > 0) || stockShortages.length > 0)
+    (preorderActive ||
+      stockSplit.some((line) => line.later > 0) ||
+      stockShortages.length > 0)
   const splitActive = canCreatePendingRemainder
   const saleReferenceTotal = splitActive
     ? salesTotal(
@@ -477,7 +528,9 @@ export function SalesOrderFormView({
           ? 'Nhập chiết khấu từ 0 đến 99,99%.'
           : canCreatePendingRemainder && unhandledShortage
             ? 'Không có phần nào để bán hoặc chờ hàng. Nhập số lấy ngay hoặc tích “Chờ phần còn lại”.'
-            : previewError
+            : depositError
+              ? depositError
+              : previewError
               ? previewError
               : !pricePreview
                 ? 'Đang tính giá…'
@@ -560,7 +613,40 @@ export function SalesOrderFormView({
           sku: line.product.sku,
         })),
       )
+      // Cọc ghi sau khi đơn chờ đã tạo. Lỗi cọc không hủy đơn: báo ở màn chi tiết đơn chờ.
+      const waitingId = depositActive ? depositTarget(result) : null
+      let depositRoute: DepositRoute | null = null
+      if (waitingId != null) {
+        try {
+          const settled = await axiosClient.post<DepositResult>(
+            '/sales-orders/' + waitingId + '/deposits',
+            depositPayload(deposit, 0, { withExpiry: true }),
+          )
+          depositRoute = afterDepositRoute(
+            {
+              ok: true,
+              paymentId: settled.data.paymentId,
+              verified: deposit.verified,
+            },
+            waitingId,
+          )
+        } catch (cause) {
+          depositRoute = afterDepositRoute(
+            { ok: false, message: inventoryError(cause) },
+            waitingId,
+          )
+        }
+      }
       if (!editing) onSubmitted?.()
+      if (depositRoute) {
+        navigate(
+          depositRoute.to,
+          depositRoute.notice
+            ? { state: { notice: depositRoute.notice } }
+            : undefined,
+        )
+        return
+      }
       navigate('/sales-orders/' + orderId, {
         state: notice
           ? {
@@ -879,6 +965,7 @@ export function SalesOrderFormView({
                               <input
                                 className="pos-qty"
                                 aria-label={'Lấy ngay ' + product.sku}
+                                disabled={preorderActive}
                                 type="number"
                                 min="0"
                                 max={quantity}
@@ -911,6 +998,7 @@ export function SalesOrderFormView({
                                     type="checkbox"
                                     aria-label={'Chờ hàng ' + product.sku}
                                     checked={!!split?.waitForRest}
+                                    disabled={preorderActive}
                                     onChange={(event) =>
                                       setLines((previous) =>
                                         previous.map((line) =>
@@ -1259,6 +1347,22 @@ export function SalesOrderFormView({
             </div>
           </dl>
 
+          {!editing && (
+            <div className="pos-preorder">
+              <label className="pos-deposit-check">
+                <input
+                  type="checkbox"
+                  checked={preorder}
+                  onChange={(event) => setPreorder(event.target.checked)}
+                />
+                Khách đặt trước (cả đơn chờ hàng, không lấy ngay)
+              </label>
+              <small>
+                Dùng khi khách hẹn hôm khác mới lấy. Đơn chờ không giữ hàng; khi
+                chuyển sang soạn mới kiểm tồn.
+              </small>
+            </div>
+          )}
           {canCreatePendingRemainder && (
             <div className="pos-stock-split">
               <strong>Tách đơn theo số lượng lấy ngay</strong>
@@ -1276,6 +1380,129 @@ export function SalesOrderFormView({
             </div>
           )}
 
+          {/*
+            Route tạo đơn bị giới hạn OWNER/BRANCH_MANAGER (RequireRole trong AppRoutes), đúng các vai trò
+            BE cho phép ghi cọc, nên không cần chặn thêm ở đây.
+          */}
+          {allWaiting && (
+            <section className="pos-deposit" aria-label="Tiền cọc">
+              <strong>Tiền cọc (không bắt buộc)</strong>
+              {!customer ? (
+                <p className="pos-deposit-note">
+                  Chọn khách hàng có hồ sơ để nhận cọc. Khách lẻ không nhận cọc
+                  được.
+                </p>
+              ) : (
+                <>
+                  <label className="pos-deposit-field">
+                    <span>Số tiền cọc</span>
+                    <MoneyInput
+                      aria-label="Số tiền cọc"
+                      placeholder="0"
+                      value={deposit.amount}
+                      onValueChange={(amount) =>
+                        setDeposit((previous) => ({ ...previous, amount }))
+                      }
+                    />
+                  </label>
+                  <div
+                    className="pos-deposit-methods"
+                    role="radiogroup"
+                    aria-label="Hình thức cọc"
+                  >
+                    {(
+                      [
+                        ['CASH', 'Tiền mặt'],
+                        ['BANK_TRANSFER', 'Chuyển khoản'],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <label
+                        key={value}
+                        className={
+                          deposit.method === value ? 'is-selected' : ''
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name="depositMethod"
+                          value={value}
+                          checked={deposit.method === value}
+                          onChange={() =>
+                            setDeposit((previous) => ({
+                              ...previous,
+                              method: value,
+                            }))
+                          }
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  {deposit.method === 'CASH' ? (
+                    <label className="pos-deposit-field">
+                      <span>Tiền khách đưa (không bắt buộc)</span>
+                      <MoneyInput
+                        aria-label="Tiền khách đưa"
+                        placeholder="0"
+                        value={deposit.tendered}
+                        onValueChange={(tendered) =>
+                          setDeposit((previous) => ({
+                            ...previous,
+                            tendered,
+                          }))
+                        }
+                      />
+                    </label>
+                  ) : (
+                    <label className="pos-deposit-field">
+                      <span>Mã giao dịch</span>
+                      <input
+                        aria-label="Mã giao dịch"
+                        maxLength={100}
+                        value={deposit.reference}
+                        onChange={(event) =>
+                          setDeposit((previous) => ({
+                            ...previous,
+                            reference: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  )}
+                  <label className="pos-deposit-check">
+                    <input
+                      type="checkbox"
+                      checked={deposit.verified}
+                      onChange={(event) =>
+                        setDeposit((previous) => ({
+                          ...previous,
+                          verified: event.target.checked,
+                        }))
+                      }
+                    />
+                    Đã nhận đủ số tiền này
+                  </label>
+                  <label className="pos-deposit-field">
+                    <span>Hạn cọc</span>
+                    <input
+                      type="date"
+                      min={addDaysIso(todayIso(), 1)}
+                      value={deposit.expiresOn}
+                      onChange={(event) =>
+                        setDeposit((previous) => ({
+                          ...previous,
+                          expiresOn: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </>
+              )}
+              <p className="pos-deposit-hint">
+                Khách đặt trước dù cửa hàng còn hàng? Tích "Khách đặt trước".
+              </p>
+            </section>
+          )}
           <div className="pos-actions">
             {error && error !== blocker && (
               <p className="pos-warn" role="alert">

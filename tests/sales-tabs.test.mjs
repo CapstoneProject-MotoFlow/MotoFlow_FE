@@ -264,6 +264,8 @@ test('isTabDirty counts walkin, walkPhone, note and deposit amount but not white
     method: 'CASH',
     reference: '',
     expiresOn: '',
+    tendered: '',
+    verified: true,
   })
   assert.equal(isTabDirty(with_({ deposit: deposit('50000') })), true)
   assert.equal(isTabDirty(with_({ deposit: deposit('  ') })), false)
@@ -289,6 +291,8 @@ test('save then load with the same key restores the exact state (F5)', () => {
       method: 'BANK_TRANSFER',
       reference: 'REF-1',
       expiresOn: '2026-12-01',
+      tendered: '',
+      verified: false,
     },
     lines: [
       {
@@ -422,6 +426,45 @@ test('parseTabs drops a customer without a numeric id or a string name', () => {
   assert.equal('customer' in parsed.tabs[0].draft, false)
 })
 
+test('parseTabs keeps tendered cash and the verified flag of a deposit', () => {
+  const parsed = parseTabs(
+    rawState([
+      rawTab(1, {
+        lines: [],
+        deposit: {
+          amount: '200000',
+          method: 'CASH',
+          reference: '',
+          expiresOn: '2026-12-01',
+          tendered: '250000',
+          verified: false,
+        },
+      }),
+      rawTab(2, {
+        lines: [],
+        deposit: { amount: '1', tendered: 5, verified: 'yes' },
+      }),
+    ]),
+  )
+  assert.equal(parsed.tabs[0].draft.deposit.tendered, '250000')
+  assert.equal(parsed.tabs[0].draft.deposit.verified, false)
+  assert.equal(parsed.tabs[1].draft.deposit.tendered, '')
+  assert.equal(parsed.tabs[1].draft.deposit.verified, true)
+})
+
+test('parseTabs keeps the preorder flag only when it is true', () => {
+  const parsed = parseTabs(
+    rawState([
+      rawTab(1, { lines: [], preorder: true }),
+      rawTab(2, { lines: [], preorder: 'yes' }),
+      rawTab(3, { lines: [], preorder: false }),
+    ]),
+  )
+  assert.equal(parsed.tabs[0].draft.preorder, true)
+  assert.equal('preorder' in parsed.tabs[1].draft, false)
+  assert.equal('preorder' in parsed.tabs[2].draft, false)
+})
+
 test('parseTabs normalises a bad deposit', () => {
   const parsed = parseTabs(
     rawState([
@@ -436,6 +479,8 @@ test('parseTabs normalises a bad deposit', () => {
     method: 'CASH',
     reference: '',
     expiresOn: '',
+    tendered: '',
+    verified: true,
   })
 })
 

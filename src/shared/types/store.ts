@@ -8,6 +8,7 @@ export type DashboardStore = {
   storeName: string
   address: string
   phone: string | null
+  taxCode?: string | null
   status: 'PLANNED' | 'ACTIVE' | 'INACTIVE'
   central: boolean
   managers: {

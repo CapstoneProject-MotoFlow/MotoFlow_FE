@@ -10,6 +10,7 @@ export type StorePayload = {
   storeName: string
   address: string
   phone: string
+  taxCode?: string | null
   central: boolean
   status?: DashboardStore['status']
 }
