@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import type { Page } from '../inventory/types'
 import PageHeader from '../../shared/ui/PageHeader'
+import Hint from '../../shared/ui/Hint'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { Card, Pager, Result, Status, Table } from './DocumentUi'
 import {
@@ -72,6 +73,14 @@ export default function AdjustmentListPage() {
           </Link>
         }
       >
+        <Hint>
+          Chênh lệch kiểm kê được ghi thẳng vào tồn kho khi Chủ cửa hàng duyệt
+          phiếu; xem ở{' '}
+          <Link to="/inventory/movements?movementType=COUNT_ADJUSTMENT">
+            Lịch sử xuất nhập
+          </Link>
+          , loại Điều chỉnh kiểm kê.
+        </Hint>
         <div className="docs-tabs" aria-label="Trạng thái yêu cầu">
           {tabs.map(([value, label]) => (
             <button

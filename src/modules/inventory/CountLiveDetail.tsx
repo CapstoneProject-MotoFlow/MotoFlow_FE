@@ -12,6 +12,7 @@ import {
 import { date, dateTime, money, today } from './presentation'
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import FormDialog from '../../shared/ui/FormDialog'
+import Hint from '../../shared/ui/Hint'
 import axiosClient from '../../shared/api/axiosClient'
 import { refreshNotifications } from '../notifications/notificationService'
 import { documentCode } from '../../shared/utils/documentCode'
@@ -150,6 +151,22 @@ export default function CountLiveDetail() {
                 !!reasons[l.id]?.trim(),
             )
           : true
+  // Lý do ngắn bên cạnh nút Xác nhận khi xác minh chưa đủ điều kiện (theo đúng thứ tự kiểm tra của valid).
+  const confirmBlocked =
+    action === 'confirm' && d && !valid
+      ? d.lines.some((l) => l.countedQty == null && !selected.includes(l.id))
+        ? 'Đếm hoặc bỏ chọn các dòng chưa đếm để xác nhận.'
+        : selected.length >= d.lines.length
+          ? 'Không thể bỏ hết mọi dòng của phiếu.'
+          : d.lines.some(
+                (l) =>
+                  l.difference != null &&
+                  l.difference !== 0 &&
+                  !reasons[l.id]?.trim(),
+              )
+            ? 'Nhập lý do cho mọi dòng chênh lệch để xác nhận.'
+            : ''
+      : ''
   const openingReady = d?.countType !== 'OPENING' || openingCosts.data?.complete === true
   return (
     <main className="inventory-workspace count-workspace">
@@ -395,6 +412,11 @@ export default function CountLiveDetail() {
               submitLabel="Xác nhận"
               busy={busy}
               submitDisabled={!valid}
+              footerExtra={
+                confirmBlocked ? (
+                  <small className="count-submit-reason">{confirmBlocked}</small>
+                ) : undefined
+              }
               onClose={() => setAction('')}
             >
               <form
@@ -406,6 +428,9 @@ export default function CountLiveDetail() {
                 }}
               >
                 <InventoryNotice error={error} />
+                {action === 'confirm' && (
+                  <Hint>Mỗi dòng chênh lệch cần ghi lý do.</Hint>
+                )}
                 <fieldset disabled={busy}>
                   {action === 'confirm' &&
                     d.lines
@@ -430,7 +455,10 @@ export default function CountLiveDetail() {
                             </label>
                           ) : (
                             <label>
-                              Lý do chênh lệch {l.difference}
+                              <span>
+                                Lý do chênh lệch {l.difference}{' '}
+                                <span className="required">*</span>
+                              </span>
                               <textarea
                                 required
                                 maxLength={255}

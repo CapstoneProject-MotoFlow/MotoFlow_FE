@@ -115,6 +115,26 @@ export default function DebtPaymentDialog({
       lock.current = false
     }
   }
+  // Lý do ngắn bên cạnh nút Ghi thu khi đang khóa; thứ tự kiểm tra theo điều kiện submitDisabled.
+  const blockReason = !(value > 0)
+    ? 'Nhập số tiền thu để tiếp tục.'
+    : mode === 'selected' && !selected.length
+      ? 'Chọn các khoản nợ khách chỉ định để thu.'
+      : owner && !store
+        ? 'Chọn cửa hàng thu nợ để tiếp tục.'
+        : value > total
+          ? 'Số tiền thu vượt tổng còn nợ được chọn.'
+          : method === 'BANK_TRANSFER' && !reference.trim()
+            ? 'Nhập mã giao dịch để tiếp tục.'
+            : !valid
+              ? 'Số tiền thu không hợp lệ.'
+              : loading
+                ? 'Đang xem phân bổ, chờ một chút.'
+                : !preview
+                  ? 'Chưa xem được phân bổ tiền thu.'
+                  : !confirmed
+                    ? 'Tích "Đã nhận đủ số tiền này" để tiếp tục.'
+                    : ''
   return (
     <FormDialog
       title={'Thu nợ của ' + data.customerName}
@@ -127,6 +147,11 @@ export default function DebtPaymentDialog({
         !confirmed ||
         loading ||
         (method === 'BANK_TRANSFER' && !reference.trim())
+      }
+      footerExtra={
+        blockReason ? (
+          <small className="rv-submit-reason">{blockReason}</small>
+        ) : undefined
       }
       busy={busy}
       onClose={onClose}

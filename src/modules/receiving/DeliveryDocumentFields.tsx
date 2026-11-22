@@ -70,7 +70,10 @@ export default function DeliveryDocumentFields({
         Biển số xe <input name="vehiclePlateNo" maxLength={20} />
       </label>
       <div className="receiving-layout-wide receiving-dropzone">
-        <strong>Chứng từ giao hàng</strong>
+        <strong>
+          Chứng từ giao hàng
+          {receiptDocumentUploadEnabled && <span className="required"> *</span>}
+        </strong>
         {receiptDocumentUploadEnabled ? (
           <>
             <span>Chọn ảnh hoặc PDF chứng từ để đính kèm</span>

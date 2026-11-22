@@ -2,7 +2,7 @@ import { formatDateTime, formatMoney } from '../../../shared/utils/format'
 import { numberToVietnameseWords } from '../../../shared/utils/numberToVietnameseWords'
 import { Table } from '../DocumentUi'
 import type { DocumentPrint } from '../types'
-import { amountAfterDeposit } from './printLayout'
+import { amountAfterDeposit, settlementRows } from './printLayout'
 
 /** Phiếu bán sỉ khổ A5, đủ thông tin thuế hai bên và chữ ký. */
 export default function PrintSheetLarge({ data }: { data: DocumentPrint }) {
@@ -79,6 +79,17 @@ export default function PrintSheetLarge({ data }: { data: DocumentPrint }) {
           <span>Còn phải trả</span>
           <span>{formatMoney(due)}</span>
         </div>
+        {settlementRows(totals)
+          .filter((row) => row.show)
+          .map((row) => (
+            <div
+              className={row.strong ? 'print-row print-strong' : 'print-row'}
+              key={row.label}
+            >
+              <span>{row.label}</span>
+              <span>{formatMoney(row.value)}</span>
+            </div>
+          ))}
       </div>
 
       <p>Số tiền bằng chữ: {numberToVietnameseWords(due)}</p>

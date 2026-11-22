@@ -4,8 +4,10 @@ import axiosClient from '../../shared/api/axiosClient'
 import { uploadAttachment } from '../../shared/api/upload'
 import { stockStatusLabels } from '../../shared/labels/status'
 import { formatDateTime } from '../../shared/utils/format'
+import FieldError from '../../shared/ui/FieldError'
 import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import PageHeader from '../../shared/ui/PageHeader'
+import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import {
   inventoryError,
   useInventoryData,
@@ -43,6 +45,7 @@ export default function StockLossPage() {
   const [preview, setPreview] = useState<Effects>()
   const [busy, setBusy] = useState<'preview' | 'send'>()
   const [error, setError] = useState('')
+  const validation = useFormValidation()
   const sourceProduct = useInventoryData<ProductOption>(
     '/products/' + sourceProductId,
     {},
@@ -118,6 +121,7 @@ export default function StockLossPage() {
 
   async function execute(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!validation.check(event.currentTarget)) return
     if (busy || !lot || !selectedPart || !storeId || exceeds) return
     if (!Number.isSafeInteger(units) || units <= 0 || !reason.trim()) {
       setError('Nhập số lượng và mô tả sự việc.')
@@ -194,7 +198,12 @@ export default function StockLossPage() {
           { label: 'Báo mất, hỏng hàng' },
         ]}
       />
-      <form className="docs-stack" onSubmit={execute}>
+      <form
+        className="docs-stack"
+        noValidate
+        onSubmit={execute}
+        onInput={validation.onInput}
+      >
         <div className="docs-split">
           <Card
             title={
@@ -211,8 +220,11 @@ export default function StockLossPage() {
               )}
               {owner && (
                 <label>
-                  Cửa hàng
+                  <span>
+                    Cửa hàng <span className="required">*</span>
+                  </span>
                   <select
+                    name="storeId"
                     required
                     value={warehouse}
                     onChange={(event) => {
@@ -228,6 +240,7 @@ export default function StockLossPage() {
                       </option>
                     ))}
                   </select>
+                  <FieldError message={validation.errors.storeId} />
                 </label>
               )}
               {storesError && (
@@ -262,7 +275,9 @@ export default function StockLossPage() {
               </div>
               <div className="docs-form-grid">
                 <label>
-                  Phụ tùng
+                  <span>
+                    Phụ tùng <span className="required">*</span>
+                  </span>
                   <ProductPicker
                     label="Phụ tùng"
                     selected={selectedPart}
@@ -276,8 +291,12 @@ export default function StockLossPage() {
                   />
                 </label>
                 <label>
-                  {byLot ? 'Lô và trạng thái tồn' : 'Trạng thái tồn'}
+                  <span>
+                    {byLot ? 'Lô và trạng thái tồn' : 'Trạng thái tồn'}{' '}
+                    <span className="required">*</span>
+                  </span>
                   <select
+                    name="lot"
                     required
                     value={lot ? lot.key : ''}
                     disabled={!choices.length}
@@ -306,13 +325,18 @@ export default function StockLossPage() {
                       </option>
                     ))}
                   </select>
+                  <FieldError message={validation.errors.lot} />
                 </label>
                 <label>
-                  Số lượng ghi giảm
-                  {stock.data?.stock.baseUnit
-                    ? ' (' + stock.data.stock.baseUnit + ')'
-                    : ''}
+                  <span>
+                    Số lượng ghi giảm
+                    {stock.data?.stock.baseUnit
+                      ? ' (' + stock.data.stock.baseUnit + ')'
+                      : ''}{' '}
+                    <span className="required">*</span>
+                  </span>
                   <input
+                    name="quantity"
                     type="number"
                     min="1"
                     max={lot?.quantity}
@@ -329,6 +353,7 @@ export default function StockLossPage() {
                       exceeds ? 'docs-quantity-error' : undefined
                     }
                   />
+                  <FieldError message={validation.errors.quantity} />
                 </label>
               </div>
               {stock.error && (
@@ -365,8 +390,11 @@ export default function StockLossPage() {
                 </div>
               )}
               <label>
-                Mô tả sự việc
+                <span>
+                  Mô tả sự việc <span className="required">*</span>
+                </span>
                 <textarea
+                  name="reason"
                   required
                   rows={4}
                   maxLength={500}
@@ -376,20 +404,26 @@ export default function StockLossPage() {
                     clearPreview()
                   }}
                 />
+                <FieldError message={validation.errors.reason} />
               </label>
               <div>
-                <strong>Ảnh, biên bản</strong>
+                <strong>
+                  Ảnh, biên bản <span className="required">*</span>
+                </strong>
                 <LocalizedFileInput
                   multiple
                   required
                   accept=".jpg,.jpeg,.png,.webp,.pdf"
+                  name="attachments"
                   aria-label="Ảnh, biên bản"
+                  data-label="Ảnh, biên bản"
                   onChange={(event) => {
                     uploaded.current.clear()
                     setFiles(Array.from(event.currentTarget.files ?? []))
                     clearPreview()
                   }}
                 />
+                <FieldError message={validation.errors.attachments} />
               </div>
             </fieldset>
           </Card>
