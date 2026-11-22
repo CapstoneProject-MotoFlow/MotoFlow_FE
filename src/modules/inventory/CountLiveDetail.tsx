@@ -158,14 +158,16 @@ export default function CountLiveDetail() {
         ? 'Đếm hoặc bỏ chọn các dòng chưa đếm để xác nhận.'
         : selected.length >= d.lines.length
           ? 'Không thể bỏ hết mọi dòng của phiếu.'
-          : d.lines.some(
-                (l) =>
-                  l.difference != null &&
-                  l.difference !== 0 &&
-                  !reasons[l.id]?.trim(),
-              )
-            ? 'Nhập lý do cho mọi dòng chênh lệch để xác nhận.'
-            : ''
+          : d.confirmedAt && selected.length > 0
+            ? 'Phiếu đếm lại phải đếm đủ các dòng, không được bỏ dòng chưa đếm.'
+            : d.lines.some(
+                  (l) =>
+                    l.difference != null &&
+                    l.difference !== 0 &&
+                    !reasons[l.id]?.trim(),
+                )
+              ? 'Nhập lý do cho mọi dòng chênh lệch để xác nhận.'
+              : ''
       : ''
   const openingReady = d?.countType !== 'OPENING' || openingCosts.data?.complete === true
   return (
@@ -434,7 +436,7 @@ export default function CountLiveDetail() {
                 <fieldset disabled={busy}>
                   {action === 'confirm' &&
                     d.lines
-                      .filter((l) => l.countedQty == null || l.difference !== 0)
+                      .filter((l) => l.countedQty == null || (l.difference != null && l.difference !== 0))
                       .map((l) => (
                         <div key={l.id}>
                           {l.sku} · {l.partName}
