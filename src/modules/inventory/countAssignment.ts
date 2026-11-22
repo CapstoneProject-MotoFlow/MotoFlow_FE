@@ -6,6 +6,7 @@ export type Assignment = {
   current: { assigneeId: number; assigneeName: string } | null
   eligibleAssignees: {
     id: number
+    username: string
     fullName: string
     self: boolean
     openTasks: number

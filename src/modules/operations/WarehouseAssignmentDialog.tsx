@@ -135,6 +135,7 @@ export default function WarehouseAssignmentDialog({
                 {r.data.eligibleAssignees.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.fullName}
+                    {p.username ? ' · ' + p.username : ''}
                     {p.self ? ' (Tôi)' : ''}
                   </option>
                 ))}

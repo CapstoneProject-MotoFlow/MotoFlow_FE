@@ -1,12 +1,14 @@
 import { formatDateTime, formatMoney } from '../../../shared/utils/format'
 import type { DocumentPrint } from '../types'
-import { amountAfterDeposit } from './printLayout'
+import { amountAfterDeposit, settlementRows } from './printLayout'
 
 type TotalRow = {
   label: string
   value: number | null | undefined
   /** Luôn hiện dù giá trị rỗng hoặc 0. */
   always?: boolean
+  /** Không đặt thì hiện khi giá trị khác 0. */
+  show?: boolean
   strong?: boolean
 }
 
@@ -23,6 +25,7 @@ export default function PrintSheetSmall({ data }: { data: DocumentPrint }) {
       always: true,
       strong: true,
     },
+    ...settlementRows(totals),
   ]
   return (
     <article className="print-small" aria-label={'Bản in ' + data.number}>
@@ -47,7 +50,11 @@ export default function PrintSheetSmall({ data }: { data: DocumentPrint }) {
       ))}
       <div className="print-divider" />
       {rows
-        .filter((row) => row.always || (row.value != null && row.value !== 0))
+        .filter(
+          (row) =>
+            row.always ||
+            (row.show ?? (row.value != null && row.value !== 0)),
+        )
         .map((row) => (
           <div
             className={row.strong ? 'print-row print-strong' : 'print-row'}

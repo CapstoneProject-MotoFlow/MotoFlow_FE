@@ -43,12 +43,39 @@ export function printParams(
 
 /**
  * Order amount the customer still owes at the till, after the deposit.
- * The backend's amountDue is the unpaid balance, so it is not used for display.
+ * It stays the "Khách cần thanh toán" figure; the backend's amountDue is shown only by settlementRows.
  */
 export function amountAfterDeposit(
   totals: { total: number | null; deposit: number | null } | null,
 ): number {
   return Math.max(0, (totals?.total ?? 0) - (totals?.deposit ?? 0))
+}
+
+/**
+ * Dòng thanh toán thêm sau khi đã thu hoặc ghi nợ (sau dòng số tiền phải trả).
+ * Chưa thu và chưa ghi nợ thì show = false, phiếu in giống như trước.
+ */
+export function settlementRows(
+  totals: {
+    paid: number | null
+    credit: number | null
+    amountDue: number | null
+  } | null,
+): { label: string; value: number | null | undefined; show: boolean; strong?: boolean }[] {
+  const paid = totals?.paid ?? 0
+  const credit = totals?.credit ?? 0
+  const due = totals?.amountDue ?? 0
+  return [
+    { label: 'Đã thanh toán', value: totals?.paid, show: paid > 0 },
+    { label: 'Ghi nợ', value: totals?.credit, show: credit > 0 },
+    // amountDue đã trừ phần ghi nợ: chỉ in khi còn tiền phải thu, tránh "Ghi nợ 55.000 / Còn phải thu 0".
+    {
+      label: 'Còn phải thu',
+      value: totals?.amountDue,
+      show: (paid > 0 || credit > 0) && due > 0,
+      strong: true,
+    },
+  ]
 }
 
 export function paymentTitle(

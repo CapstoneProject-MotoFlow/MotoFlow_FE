@@ -866,6 +866,13 @@
   background: #fcfcfd;
   border-radius: 0 0 20px 20px;
 }
+/* Lý do ngắn cạnh nút Ghi thu đang khóa (FormDialog footerExtra). */
+.rv-payment-dialog .rv-submit-reason {
+  align-self: center;
+  margin-right: 12px;
+  color: #667085;
+  font-size: 13px;
+}
 .rv-payment-form fieldset {
   border: 0;
   padding: 0;
