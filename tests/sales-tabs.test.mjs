@@ -201,15 +201,34 @@ test('openTab without a draft inherits the active tab warehouse', () => {
   assert.equal(result.state.tabs[1].draft.lines.length, 0)
 })
 
-test('openTab and closeTab do not mutate their input state', () => {
+test('openTab does not mutate its input state', () => {
   const state = stateWithTabs(3)
-  const snapshot = JSON.parse(JSON.stringify(state))
+  const snapshot = JSON.stringify(state)
   openTab(state, draftWithLine(1, 1))
-  assert.deepEqual(state, snapshot)
+  assert.equal(JSON.stringify(state), snapshot)
+})
+
+test('closeTab of a non-active tab does not mutate its input state', () => {
+  const state = stateWithTabs(3)
+  assert.notEqual(state.activeId, 'tab-2')
+  const snapshot = JSON.stringify(state)
   closeTab(state, 'tab-2')
-  assert.deepEqual(state, snapshot)
-  closeTab(createState(), 'tab-1')
-  assert.deepEqual(state, snapshot)
+  assert.equal(JSON.stringify(state), snapshot)
+})
+
+test('closeTab of the active tab does not mutate its input state', () => {
+  const state = stateWithTabs(3)
+  assert.equal(state.activeId, 'tab-3')
+  const snapshot = JSON.stringify(state)
+  closeTab(state, 'tab-3')
+  assert.equal(JSON.stringify(state), snapshot)
+})
+
+test('closeTab of the only tab does not mutate its input state', () => {
+  const state = createState()
+  const snapshot = JSON.stringify(state)
+  closeTab(state, 'tab-1')
+  assert.equal(JSON.stringify(state), snapshot)
 })
 
 test('updateDraft changes only the target tab and does not mutate the input state', () => {
@@ -270,6 +289,26 @@ test('isTabDirty counts walkin, walkPhone, note and deposit amount but not white
   assert.equal(isTabDirty(with_({ deposit: deposit('50000') })), true)
   assert.equal(isTabDirty(with_({ deposit: deposit('  ') })), false)
   assert.equal(isTabDirty(with_({ deposit: deposit('') })), false)
+})
+
+test('isTabDirty is true for a wholesale-only tab', () => {
+  const empty = createState().tabs[0]
+  const wholesale = { ...empty, draft: { ...empty.draft, type: 'WHOLESALE' } }
+  assert.equal(isTabDirty(wholesale), true)
+})
+
+test('isTabDirty is true for a tab with only a discount typed in', () => {
+  const empty = createState().tabs[0]
+  const withDiscount = (discount) => ({
+    ...empty,
+    draft: { ...empty.draft, discount },
+  })
+  assert.equal(isTabDirty(withDiscount('5')), true)
+  assert.equal(isTabDirty(withDiscount('0.5')), true)
+  assert.equal(isTabDirty(withDiscount('0')), false)
+  assert.equal(isTabDirty(withDiscount(' 0 ')), false)
+  assert.equal(isTabDirty(withDiscount('')), false)
+  assert.equal(isTabDirty(withDiscount('   ')), false)
 })
 
 test('save then load with the same key restores the exact state (F5)', () => {
@@ -465,6 +504,20 @@ test('parseTabs keeps the preorder flag only when it is true', () => {
   assert.equal('preorder' in parsed.tabs[2].draft, false)
 })
 
+test('parseTabs drops a customer with a numeric id but no string customerName', () => {
+  const missingName = parseTabs(
+    rawState([rawTab(1, { lines: [], customer: { id: 7 } })]),
+  )
+  assert.equal('customer' in missingName.tabs[0].draft, false)
+
+  const numericName = parseTabs(
+    rawState([
+      rawTab(1, { lines: [], customer: { id: 7, customerName: 123 } }),
+    ]),
+  )
+  assert.equal('customer' in numericName.tabs[0].draft, false)
+})
+
 test('parseTabs normalises a bad deposit', () => {
   const parsed = parseTabs(
     rawState([
@@ -607,6 +660,25 @@ test('draftFromPrefill clamps the quantity to 1..100000 and treats a missing one
   assert.equal(quantityOf(1e9), 100000)
   assert.equal(quantityOf(100000), 100000)
   assert.equal(quantityOf(12), 12)
+})
+
+test('draftFromPrefill floors a fractional quantity so the line survives a reload', () => {
+  const quantityOf = (quantity) =>
+    draftFromPrefill({ warehouse: '1', product: product(1), quantity }).lines[0]
+      .quantity
+  assert.equal(quantityOf(2.7), 2)
+  assert.equal(quantityOf('1.5'), 1)
+  assert.equal(quantityOf(0.5), 1)
+  const draft = draftFromPrefill({
+    warehouse: '1',
+    product: product(1),
+    quantity: 2.7,
+  })
+  const reloaded = parseTabs(
+    rawState([{ id: 'tab-1', seq: 1, draft }], { activeId: 'tab-1' }),
+  )
+  assert.equal(reloaded.tabs[0].draft.lines.length, 1)
+  assert.equal(reloaded.tabs[0].draft.lines[0].quantity, 2)
 })
 
 test('draftFromPrefill without a product has no lines and keeps only five customer fields', () => {
