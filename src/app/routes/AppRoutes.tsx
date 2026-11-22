@@ -7,6 +7,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
+import { requestedPathFrom } from '../../shared/utils/requestedPath'
 import AuthLayout from '../layouts/AuthLayout'
 import DashboardLayout from '../layouts/DashboardLayout'
 import RequireAuth from '../guards/RequireAuth'
@@ -283,9 +284,11 @@ function InventoryLegacyRedirect({
   )
 }
 
-/** RootRedirect: Chọn trang đích theo trạng thái đăng nhập và yêu cầu đổi mật khẩu. */
+/** RootRedirect: Chọn trang đích theo trạng thái đăng nhập và yêu cầu đổi mật khẩu; người vừa đăng nhập từ một link được đưa về đúng link đó (state `from`). */
 function RootRedirect() {
   const { user } = useAuth()
+  const location = useLocation()
+  const from = requestedPathFrom(location.state)
   return (
     <Navigate
       to={
@@ -293,7 +296,7 @@ function RootRedirect() {
           ? '/login'
           : user.mustChangePassword
             ? '/change-password'
-            : '/dashboard'
+            : (from ?? '/dashboard')
       }
       replace
     />

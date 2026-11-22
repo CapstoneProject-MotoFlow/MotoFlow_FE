@@ -43,6 +43,7 @@ export type IconName =
   | 'cash'
   | 'trend'
   | 'check'
+  | 'chevron-left'
 
 const paths: Record<IconName, string> = {
   receipt: 'M5 3h14v18l-3-2-4 2-4-2-3 2V3zm3 5h8m-8 4h8',
@@ -88,6 +89,7 @@ const paths: Record<IconName, string> = {
   cash: 'M3 6h18v12H3V6zm9 9a3 3 0 110-6 3 3 0 010 6zM6 9v.01M18 15v.01',
   trend: 'M3 17l6-6 4 4 8-8m-5 0h5v5',
   check: 'M5 12l5 5 9-10',
+  'chevron-left': 'M15 18l-6-6 6-6',
 }
 
 /** Icon: Bộ SVG theo IconName; paths ánh xạ tên biểu tượng sang nét vẽ SVG. */

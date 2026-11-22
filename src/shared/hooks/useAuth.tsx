@@ -8,6 +8,8 @@ import type { AuthUser } from '../types/auth'
 
 export type AuthContextValue = {
   user: AuthUser | null
+  // true sau khi người dùng bấm Đăng xuất (đến khi đăng nhập lại): trang đang mở không được ghi làm điểm quay lại.
+  signedOutByChoice?: boolean
   signIn: (user: AuthUser) => void
   signOut: () => Promise<void>
   finishPasswordChange: () => void
