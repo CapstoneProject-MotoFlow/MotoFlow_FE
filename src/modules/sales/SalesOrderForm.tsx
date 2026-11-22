@@ -1305,7 +1305,9 @@ export function SalesOrderFormView({
                     customer ||
                     walkin.trim() ||
                     walkPhone.trim() ||
-                    note.trim()
+                    note.trim() ||
+                    type === 'WHOLESALE' ||
+                    (discount.trim() !== '' && discount.trim() !== '0')
                   : lines.length) && !order
                   ? setConfirmLeave(true)
                   : discard()

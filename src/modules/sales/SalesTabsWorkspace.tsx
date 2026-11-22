@@ -110,11 +110,14 @@ export default function SalesTabsWorkspace({
     )
 
   const activeId = tabs.active.id
+  // Kho của nháp luôn lấy theo cửa hàng của bộ tab (storeId), không theo kho lưu trong tab cũ:
+  // tab khôi phục sau F5 hay đổi cửa hàng vẫn bán đúng kho đang chọn.
+  const warehouse = String(storeId)
   return (
     <SalesOrderFormView
       key={storeId + ':' + activeId}
-      initialDraft={tabs.active.draft}
-      onDraftChange={(draft) => tabs.update(activeId, draft)}
+      initialDraft={{ ...tabs.active.draft, warehouse }}
+      onDraftChange={(draft) => tabs.update(activeId, { ...draft, warehouse })}
       onSubmitted={() => tabs.close(activeId)}
       onDiscard={() => tabs.close(activeId)}
       storeLocked={scope.owner}

@@ -168,6 +168,12 @@ export function updateDraft(
   }
 }
 
+/** Discount typed in, i.e. not empty and not the default "0". */
+export function hasDiscountInput(discount: string): boolean {
+  const value = discount.trim()
+  return value !== '' && value !== '0'
+}
+
 export function isTabDirty(tab: SalesTab): boolean {
   const draft = tab.draft
   return (
@@ -176,7 +182,9 @@ export function isTabDirty(tab: SalesTab): boolean {
     draft.walkin.trim() !== '' ||
     draft.walkPhone.trim() !== '' ||
     draft.note.trim() !== '' ||
-    (draft.deposit?.amount ?? '').trim() !== ''
+    (draft.deposit?.amount ?? '').trim() !== '' ||
+    draft.type === 'WHOLESALE' ||
+    hasDiscountInput(draft.discount)
   )
 }
 
@@ -388,7 +396,11 @@ export function draftFromPrefill(input: {
   quantity?: number
   customer?: Customer
 }): TabDraft {
-  const quantity = Math.min(100000, Math.max(1, input.quantity || 1))
+  // Số nguyên: một dòng lẻ (1.5) sẽ bị parseTabs bỏ khi F5.
+  const quantity = Math.min(
+    100000,
+    Math.max(1, Math.floor(input.quantity || 1)),
+  )
   return {
     ...emptyDraft(input.warehouse),
     ...(input.customer ? { customer: tabCustomerOf(input.customer) } : {}),
