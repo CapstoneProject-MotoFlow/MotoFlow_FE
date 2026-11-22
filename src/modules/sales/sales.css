@@ -312,6 +312,11 @@
   font: inherit;
   cursor: pointer;
 }
+.sales-payment-row-actions a {
+  color: #465fff;
+  font-size: 13px;
+  text-decoration: none;
+}
 .sales-pick-controls {
   display: flex;
   align-items: center;

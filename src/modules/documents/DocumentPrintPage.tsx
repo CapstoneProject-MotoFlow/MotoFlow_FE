@@ -1,9 +1,8 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useInventoryData } from '../inventory/api'
 import PageHeader from '../../shared/ui/PageHeader'
-import { paymentMethodLabels } from '../../shared/labels/status'
-import { formatDateTime, formatMoney } from '../../shared/utils/format'
-import { Facts, Result, Table } from './DocumentUi'
+import { Result } from './DocumentUi'
 import {
   documentPath,
   isDocumentType,
@@ -11,170 +10,42 @@ import {
   validId,
   type PrintForm,
 } from './model'
-import type { DocumentDetail, DocumentPrint, PrintParty } from './types'
+import PrintSheetLarge from './print/PrintSheetLarge'
+import PrintSheetSmall from './print/PrintSheetSmall'
+import PrintSheetStandard from './print/PrintSheetStandard'
+import {
+  pageCss,
+  parseLayout,
+  printLayouts,
+  printParams,
+} from './print/printLayout'
+import type { DocumentDetail, DocumentPrint, PrintLayout } from './types'
 import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 
-function Party({ title, party }: { title: string; party: PrintParty }) {
-  return (
-    <div>
-      <strong>
-        {title} · {party.name}
-      </strong>
-      <p>{party.address}</p>
-      {party.phone && <p>Điện thoại {party.phone}</p>}
-      {party.taxCode && <p>Mã số thuế {party.taxCode}</p>}
-    </div>
-  )
-}
-
-function PrintSheet({ data }: { data: DocumentPrint }) {
-  const priced = data.lines.some(
-    (line) => line.unitPrice != null || line.amount != null,
-  )
-  const lots = data.lines.some(
-    (line) => line.lotId != null || line.manufacturerLotNo,
-  )
-  const payment = data.payment
-  const totals = data.totals
-  const amounts: [string, number | null | undefined][] = [
-    ['Tổng theo giá tham chiếu', totals?.referenceTotal],
-    ['Chiết khấu', totals?.discountAmount],
-    ['Tổng tiền', totals?.total],
-    ['Đã thu', totals?.paid],
-    ['Ghi nợ', totals?.credit],
-  ]
-  return (
-    <article className="docs-print-sheet" aria-label={'Bản in ' + data.number}>
-      <div className="docs-print-title">
-        <div>
-          <strong>MotoFlow</strong>
-          <p>{data.store.name}</p>
-        </div>
-        <div>
-          <strong>{data.number}</strong>
-          <p>{formatDateTime(data.documentDate)}</p>
-        </div>
-      </div>
-      <h2>
-        {data.form === 'PAYMENT_RECEIPT' && data.payment?.paymentType === 'REFUND'
-          ? 'Phiếu chi hoàn tiền'
-          : printForms[data.form]}
-      </h2>
-      <div className="docs-print-parties">
-        <Party title="Đơn vị lập" party={data.store} />
-        {data.counterpart && <Party title="Đối tác" party={data.counterpart} />}
-      </div>
-      {!!data.lines.length && (
-        <Table
-          label="Nội dung bản in"
-          headers={[
-            'STT',
-            'Phụ tùng',
-            ...(lots ? ['Lô'] : []),
-            'Đơn vị',
-            'Số lượng',
-            ...(priced ? ['Đơn giá', 'Thành tiền'] : []),
-          ]}
-        >
-          {data.lines.map((line) => (
-            <tr key={line.no}>
-              <td>{line.no}</td>
-              <td>
-                {line.partName}
-                <small>{line.sku}</small>
-              </td>
-              {lots && (
-                <td>
-                  {line.manufacturerLotNo ||
-                    (line.lotId ? '#' + line.lotId : '—')}
-                </td>
-              )}
-              <td>{line.baseUnit}</td>
-              <td>{line.quantity}</td>
-              {priced && (
-                <>
-                  <td>{formatMoney(line.unitPrice)}</td>
-                  <td>{formatMoney(line.amount)}</td>
-                </>
-              )}
-            </tr>
-          ))}
-        </Table>
-      )}
-      {totals && (
-        <Facts
-          items={amounts.map(([label, value]) => [
-            label,
-            value != null ? formatMoney(value) : null,
-          ])}
-        />
-      )}
-      {payment && (
-        <Facts
-          items={[
-            [
-              'Loại phiếu',
-              payment.paymentType === 'REFUND'
-                ? 'Hoàn tiền'
-                : payment.paymentType === 'DEBT_PAYMENT'
-                  ? 'Thu nợ'
-                  : 'Thu tiền đơn bán',
-            ],
-            [
-              'Hình thức thanh toán',
-              paymentMethodLabels[payment.paymentMethod] ??
-                payment.paymentMethod,
-            ],
-            [
-              'Số tiền',
-              formatMoney(payment.paymentType === 'REFUND' ? -payment.amount : payment.amount),
-            ],
-            [
-              'Khách đưa',
-              payment.tenderedAmount != null
-                ? formatMoney(payment.tenderedAmount)
-                : null,
-            ],
-            [
-              'Tiền trả lại',
-              payment.changeGiven != null
-                ? formatMoney(payment.changeGiven)
-                : null,
-            ],
-            ['Mã giao dịch', payment.transactionReference],
-          ]}
-        />
-      )}
-      {!!payment?.allocations.length && (
-        <Table label="Phân bổ khoản thu" headers={['Đơn bán', 'Khoản nợ', 'Số tiền phân bổ']}>
-          {payment.allocations.map((allocation) => (
-            <tr key={allocation.receivableId}>
-              <td>{allocation.salesOrderId ? `Đơn bán #${allocation.salesOrderId}` : '—'}</td>
-              <td>#{allocation.receivableId}</td>
-              <td>{formatMoney(allocation.amount)}</td>
-            </tr>
-          ))}
-        </Table>
-      )}
-      {data.note && (
-        <p>
-          {data.documentType === 'SALES_ORDER'
-            ? 'Hình thức: ' + (data.note === 'PAID' ? 'Trả đủ' : 'Ghi nợ')
-            : data.documentType === 'GOODS_RECEIPT'
-              ? 'Số chứng từ NCC: ' + data.note
-              : 'Ghi chú: ' + data.note}
-        </p>
-      )}
-      <div className="docs-signatures">
-        <strong>Người lập</strong>
-        <strong>Người giao / nhận</strong>
-        <strong>Quản lý cửa hàng</strong>
-      </div>
-      <p className="docs-muted">
-        In từ MotoFlow · {formatDateTime(data.printedAt)}
-        {data.printedBy && ' · ' + data.printedBy}
-      </p>
-    </article>
+function PrintBody({ data }: { data: DocumentPrint }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [heightMm, setHeightMm] = useState<number>()
+  // Chrome ignores `size: 80mm auto`, so the 80 mm page gets the sheet's real height.
+  useLayoutEffect(() => {
+    if (data.layout !== 'SMALL') return
+    const sheet = ref.current?.querySelector<HTMLElement>('.print-small')
+    if (sheet) setHeightMm((sheet.getBoundingClientRect().height * 25.4) / 96)
+  }, [data])
+  const sheet =
+    data.form === 'SALES_INVOICE' && data.layout === 'SMALL' ? (
+      <PrintSheetSmall data={data} />
+    ) : data.form === 'SALES_INVOICE' && data.layout === 'LARGE' ? (
+      <PrintSheetLarge data={data} />
+    ) : (
+      <PrintSheetStandard data={data} />
+    )
+  return data.layout ? (
+    <>
+      <style>{pageCss(data.layout, heightMm)}</style>
+      <div ref={ref}>{sheet}</div>
+    </>
+  ) : (
+    sheet
   )
 }
 
@@ -184,15 +55,18 @@ export default function DocumentPrintPage() {
   const path = valid ? documentPath(type, id!) : ''
   const [params, setParams] = useSearchParams()
   const form = params.get('form') as PrintForm | null
+  const requestedLayout = parseLayout(params.get('layout'))
   const detail = useInventoryData<DocumentDetail>(path, {}, 0, valid)
   const forms = detail.data?.document.printForms ?? []
   const selected = form && forms.includes(form) ? form : forms[0]
   const print = useInventoryData<DocumentPrint>(
     path + '/print',
-    { form: selected },
+    printParams(selected, requestedLayout),
     0,
     !!selected,
   )
+  // Keep the select mounted while a refetch runs: prefer the URL, then the last loaded layout.
+  const layoutValue = requestedLayout ?? print.data?.layout ?? null
   return (
     <div className="docs-page docs-print-page">
       <PageHeader
@@ -222,6 +96,26 @@ export default function DocumentPrintPage() {
                     {forms.map((item) => (
                       <option key={item} value={item}>
                         {printForms[item]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {selected === 'SALES_INVOICE' && layoutValue && (
+                <label>
+                  Khổ giấy
+                  <select
+                    value={layoutValue}
+                    onChange={(event) =>
+                      setParams({
+                        form: selected,
+                        layout: event.target.value,
+                      })
+                    }
+                  >
+                    {(Object.keys(printLayouts) as PrintLayout[]).map((item) => (
+                      <option key={item} value={item}>
+                        {printLayouts[item]}
                       </option>
                     ))}
                   </select>
@@ -265,7 +159,7 @@ export default function DocumentPrintPage() {
             </div>
             {selected ? (
               <Result request={print}>
-                {(data) => <PrintSheet data={data} />}
+                {(data) => <PrintBody data={data} />}
               </Result>
             ) : (
               <p className="docs-message">Chứng từ này chưa có mẫu in.</p>

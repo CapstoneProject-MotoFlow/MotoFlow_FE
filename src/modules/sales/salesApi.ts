@@ -14,6 +14,12 @@ export type OrderActions = {
   canCancel: boolean
   canRelease?: boolean
 }
+export type SalesPaymentType =
+  | 'ORDER_PAYMENT'
+  | 'REFUND'
+  | 'DEBT_PAYMENT'
+  | 'DEPOSIT'
+  | 'DEPOSIT_REFUND'
 export type OrderDto = {
   id: number
   version: number
@@ -40,7 +46,7 @@ export type OrderDto = {
   money: {
     payments?: {
       id: number
-      type: string
+      type: SalesPaymentType
       method: string
       amount: number
       status: string

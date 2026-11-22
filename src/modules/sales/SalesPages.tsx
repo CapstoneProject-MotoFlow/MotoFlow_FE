@@ -30,7 +30,12 @@ import {
 } from './salesModel'
 import SalesAssignmentDialog from './SalesAssignmentDialog'
 import axiosClient from '../../shared/api/axiosClient'
-import { orderFromDto, type OrderDto, type UnmetRow } from './salesApi'
+import {
+  orderFromDto,
+  type OrderDto,
+  type SalesPaymentType,
+  type UnmetRow,
+} from './salesApi'
 import SalesSettlementDialog from './SalesSettlementDialog'
 import SalesPendingReleaseDialog from './SalesPendingReleaseDialog'
 import { inventoryError } from '../inventory/api'
@@ -363,6 +368,13 @@ export function SalesOrderListPage({
   )
 }
 type Product = SalesProduct
+const paymentTypeLabels: Record<SalesPaymentType, string> = {
+  ORDER_PAYMENT: 'Thu tiền',
+  DEBT_PAYMENT: 'Thu tiền',
+  REFUND: 'Hoàn tiền',
+  DEPOSIT: 'Tiền cọc',
+  DEPOSIT_REFUND: 'Trả lại cọc',
+}
 export function SalesOrderFormPage() {
   const { id } = useParams()
   const [prefill] = useSearchParams()
@@ -674,6 +686,13 @@ export function SalesOrderDetailView({
                           </button>
                         </>
                       )}
+                    {order.status === 'COMPLETED' && (
+                      <Link
+                        to={`/documents/SALES_ORDER/${order.id}/print?form=SALES_INVOICE`}
+                      >
+                        In phiếu bán hàng
+                      </Link>
+                    )}
                   </>
                 )}
                 {order?.status === 'AWAITING_STOCK' &&
@@ -895,7 +914,7 @@ export function SalesOrderDetailView({
                     <li key={payment.id}>
                       <div>
                         <strong>
-                          {payment.type === 'REFUND' ? 'Hoàn tiền' : 'Thu tiền'}{' '}
+                          {paymentTypeLabels[payment.type] ?? 'Thu tiền'}{' '}
                           {money.format(payment.amount)}
                         </strong>{' '}
                         ·{' '}
@@ -916,7 +935,7 @@ export function SalesOrderDetailView({
                               : 'Chờ xác minh'}
                         </span>
                         {order.actions?.canRefund &&
-                          payment.type !== 'REFUND' &&
+                          !['REFUND', 'DEPOSIT_REFUND'].includes(payment.type) &&
                           payment.status === 'VERIFIED' && (
                             <button
                               type="button"
@@ -927,6 +946,14 @@ export function SalesOrderDetailView({
                             >
                               Hoàn khoản này
                             </button>
+                          )}
+                        {(bm || role === 'OWNER') &&
+                          payment.status === 'VERIFIED' && (
+                            <Link to={`/documents/PAYMENT/${payment.id}/print`}>
+                              {payment.type === 'DEPOSIT'
+                                ? 'In phiếu cọc'
+                                : 'In phiếu'}
+                            </Link>
                           )}
                       </div>
                     </li>

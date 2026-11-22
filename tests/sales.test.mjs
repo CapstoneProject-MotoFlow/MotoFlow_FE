@@ -258,6 +258,95 @@ test('Staff order and picking views omit financial data and manager actions', as
   }
 })
 
+test('sales order detail links to print the sales slip and payment receipts for managers only', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderDetailView } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesPages.tsx',
+    )
+    const payment = (id, type, status) => ({
+      id,
+      type,
+      method: 'CASH',
+      amount: 100000,
+      status,
+      recordedAt: '2026-11-20T10:00:00',
+      recordedBy: 'Thu ngân',
+    })
+    const order = (status, payments) => ({
+      id: 8,
+      code: 'SO-8',
+      version: 1,
+      storeName: 'Kho',
+      customerName: 'Khách',
+      priceType: 'RETAIL',
+      discount: 0,
+      status,
+      createdAt: '2026-11-08',
+      actions: {
+        canRecordPayment: false,
+        canRecordCredit: false,
+        canCancel: false,
+        canRefund: true,
+      },
+      netPaid: 0,
+      credit: 0,
+      lines: [],
+      payments,
+      versions: [],
+      events: [],
+    })
+    const render = (Component, props) =>
+      renderToStaticMarkup(
+        createElement(MemoryRouter, null, createElement(Component, props)),
+      )
+    const payments = [
+      payment(31, 'DEPOSIT', 'VERIFIED'),
+      payment(32, 'ORDER_PAYMENT', 'UNVERIFIED'),
+      payment(33, 'ORDER_PAYMENT', 'VERIFIED'),
+    ]
+    const completed = order('COMPLETED', payments)
+    const bm = render(SalesOrderDetailView, {
+      order: completed,
+      role: 'BRANCH_MANAGER',
+    })
+    assert.match(
+      bm,
+      /href="\/documents\/SALES_ORDER\/8\/print\?form=SALES_INVOICE"[^>]*>In phiếu bán hàng</,
+    )
+    assert.match(bm, /href="\/documents\/PAYMENT\/31\/print"[^>]*>In phiếu cọc</)
+    assert.match(bm, /Tiền cọc/)
+    assert.match(bm, /href="\/documents\/PAYMENT\/33\/print"[^>]*>In phiếu</)
+    assert.doesNotMatch(bm, /documents\/PAYMENT\/32\/print/)
+    const owner = render(SalesOrderDetailView, {
+      order: completed,
+      role: 'OWNER',
+    })
+    assert.match(owner, /In phiếu bán hàng/)
+    assert.match(owner, /In phiếu cọc/)
+
+    const confirmed = render(SalesOrderDetailView, {
+      order: order('CONFIRMED', payments),
+      role: 'BRANCH_MANAGER',
+    })
+    assert.doesNotMatch(confirmed, /SALES_INVOICE/)
+    assert.match(confirmed, /documents\/PAYMENT\/31\/print/)
+
+    const staff = render(SalesOrderDetailView, {
+      order: completed,
+      role: 'STAFF',
+    })
+    assert.doesNotMatch(staff, /\/documents\//)
+    assert.doesNotMatch(staff, /In phiếu/)
+  } finally {
+    await server.close()
+  }
+})
+
 test('cash records only the payable amount, supports partial payments and returns excess', async () => {
   const { cashCollection } = await import(
     'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')

@@ -116,43 +116,69 @@ export type PrintParty = {
   taxCode: string | null
 }
 
+export type PrintLayout = 'SMALL' | 'LARGE'
+
+export type PrintLine = {
+  no: number
+  productId: number | null
+  sku: string
+  partName: string
+  baseUnit: string
+  lotId: number | null
+  manufacturerLotNo: string | null
+  quantity: number
+  unitPrice: number | null
+  amount: number | null
+}
+
+export type PrintTotals = {
+  referenceTotal: number | null
+  discountAmount: number | null
+  discountRate: number | null
+  total: number | null
+  paid: number | null
+  credit: number | null
+  deposit: number | null
+  amountDue: number | null
+}
+
+export type PrintPayment = {
+  paymentType:
+    | 'ORDER_PAYMENT'
+    | 'REFUND'
+    | 'DEBT_PAYMENT'
+    | 'DEPOSIT'
+    | 'DEPOSIT_REFUND'
+  paymentMethod: 'CASH' | 'BANK_TRANSFER'
+  amount: number
+  tenderedAmount: number | null
+  changeGiven: number | null
+  transactionReference: string | null
+  allocations: {
+    receivableId: number
+    salesOrderId: number | null
+    amount: number
+  }[]
+  depositExpiresOn: string | null
+}
+
 export type DocumentPrint = {
   documentType: DocumentType
   form: PrintForm
+  id: number
   number: string
+  status: string
   documentDate: string
   printedAt: string
   printedBy: string
   store: PrintParty
   counterpart: PrintParty | null
-  lines: {
-    no: number
-    sku: string
-    partName: string
-    baseUnit: string
-    lotId: number | null
-    manufacturerLotNo: string | null
-    quantity: number
-    unitPrice: number | null
-    amount: number | null
-  }[]
-  totals: {
-    referenceTotal: number | null
-    discountAmount: number | null
-    total: number | null
-    paid: number | null
-    credit: number | null
-  } | null
-  payment: {
-    paymentType: 'ORDER_PAYMENT' | 'REFUND' | 'DEBT_PAYMENT'
-    paymentMethod: string
-    amount: number
-    tenderedAmount: number | null
-    changeGiven: number | null
-    transactionReference: string | null
-    allocations: { receivableId: number; salesOrderId: number | null; amount: number }[]
-  } | null
+  lines: PrintLine[]
+  totals: PrintTotals | null
+  payment: PrintPayment | null
   note: string | null
+  title: string | null
+  layout: PrintLayout | null
 }
 
 type Person = { id: number; fullName: string }
