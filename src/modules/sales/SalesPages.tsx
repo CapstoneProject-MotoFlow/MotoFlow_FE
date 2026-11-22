@@ -753,6 +753,13 @@ export function SalesOrderDetailView({
                           </button>
                         </>
                       )}
+                    {order.status === 'COMPLETED' && (
+                      <Link
+                        to={`/documents/SALES_ORDER/${order.id}/print?form=SALES_INVOICE`}
+                      >
+                        In phiếu bán hàng
+                      </Link>
+                    )}
                   </>
                 )}
                 {order?.status === 'AWAITING_STOCK' &&
@@ -1031,6 +1038,14 @@ export function SalesOrderDetailView({
                             >
                               Hoàn khoản này
                             </button>
+                          )}
+                        {(bm || role === 'OWNER') &&
+                          payment.status === 'VERIFIED' && (
+                            <Link to={`/documents/PAYMENT/${payment.id}/print`}>
+                              {payment.type === 'DEPOSIT'
+                                ? 'In phiếu cọc'
+                                : 'In phiếu'}
+                            </Link>
                           )}
                       </div>
                     </li>

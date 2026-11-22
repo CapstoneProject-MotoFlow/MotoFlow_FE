@@ -14,7 +14,7 @@ export const documentTypes = {
 }
 
 export const printForms = {
-  SALES_INVOICE: 'Hóa đơn bán lẻ',
+  SALES_INVOICE: 'Phiếu bán hàng',
   STOCK_ISSUE_NOTE: 'Phiếu xuất kho',
   GOODS_RECEIPT_NOTE: 'Phiếu nhập kho',
   PAYMENT_RECEIPT: 'Phiếu thu / hoàn tiền',
