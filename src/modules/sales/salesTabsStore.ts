@@ -27,6 +27,10 @@ export type TabDeposit = {
   method: 'CASH' | 'BANK_TRANSFER'
   reference: string
   expiresOn: string
+  /** Tiền khách đưa (chỉ tiền mặt, không bắt buộc). */
+  tendered: string
+  /** Đã nhận đủ số tiền cọc; mặc định true như màn thu tiền. */
+  verified: boolean
 }
 export type TabDraft = {
   customer?: TabCustomer
@@ -38,6 +42,8 @@ export type TabDraft = {
   note: string
   lines: TabLine[]
   deposit?: TabDeposit
+  /** Khách đặt trước: cả đơn đi thành đơn chờ hàng, không lấy ngay (chỉ lưu khi bật). */
+  preorder?: boolean
 }
 export type SalesTab = { id: string; seq: number; draft: TabDraft }
 export type SalesTabsState = {
@@ -184,7 +190,8 @@ export function isTabDirty(tab: SalesTab): boolean {
     draft.note.trim() !== '' ||
     (draft.deposit?.amount ?? '').trim() !== '' ||
     draft.type === 'WHOLESALE' ||
-    hasDiscountInput(draft.discount)
+    hasDiscountInput(draft.discount) ||
+    draft.preorder === true
   )
 }
 
@@ -216,6 +223,8 @@ function sanitizeDeposit(value: unknown): TabDeposit | null {
     method: value.method === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'CASH',
     reference: textOr(value.reference, ''),
     expiresOn: textOr(value.expiresOn, ''),
+    tendered: textOr(value.tendered, ''),
+    verified: typeof value.verified === 'boolean' ? value.verified : true,
   }
 }
 
@@ -252,6 +261,7 @@ function sanitizeDraft(
   })
   const customer = sanitizeCustomer(raw.customer)
   const deposit = sanitizeDeposit(raw.deposit)
+  const preorder = raw.preorder === true
   return {
     ...(customer ? { customer } : {}),
     walkin: textOr(raw.walkin, base.walkin),
@@ -262,6 +272,7 @@ function sanitizeDraft(
     note: textOr(raw.note, base.note),
     lines,
     ...(deposit ? { deposit } : {}),
+    ...(preorder ? { preorder: true } : {}),
   }
 }
 

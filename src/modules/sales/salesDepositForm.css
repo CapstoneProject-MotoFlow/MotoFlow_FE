@@ -1,0 +1,76 @@
+/* Khối "Tiền cọc" trong panel thanh toán của màn tạo đơn (chỉ hiện khi đơn toàn đơn chờ). */
+.pos-deposit {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #dbe4ff;
+  border-radius: 8px;
+  background: #f5f7ff;
+}
+.pos-deposit > strong {
+  color: var(--mf-text);
+  font-size: 14px;
+}
+.pos-deposit-note,
+.pos-deposit-hint {
+  margin: 0;
+  color: #465fff;
+  font-size: 13px;
+}
+.pos-deposit-field {
+  display: grid;
+  gap: 4px;
+  color: var(--mf-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pos-deposit-field input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #c9d3e8;
+  border-radius: 6px;
+  background: #fff;
+  font-weight: 400;
+}
+.pos-deposit-methods {
+  display: flex;
+  gap: 8px;
+}
+.pos-deposit-methods label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #c9d3e8;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pos-deposit-methods label.is-selected {
+  border-color: #465fff;
+  color: #465fff;
+  font-weight: 600;
+}
+.pos-deposit-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mf-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pos-deposit input[type='checkbox'],
+.pos-deposit input[type='radio'] {
+  accent-color: #465fff;
+}
+.pos-preorder {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 0;
+}
+.pos-preorder small {
+  color: #5b6478;
+  font-size: 12px;
+}

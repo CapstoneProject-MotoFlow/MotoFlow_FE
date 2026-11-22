@@ -63,3 +63,133 @@ test('the sales form starts from a tab draft and hides the store picker when the
     await server.close()
   }
 })
+
+test('a waiting-only order offers a deposit card, only for a customer with a profile', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderFormView } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesOrderForm.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const render = (props) =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          { initialEntries: ['/sales-orders/new'] },
+          createElement(
+            AuthContext.Provider,
+            { value: { user: { id: 1, role: 'SELLER' } } },
+            createElement(SalesOrderFormView, props),
+          ),
+        ),
+      )
+    const customer = {
+      id: 11,
+      customerName: 'Trần Thị B',
+      phone: '0900000000',
+      creditStatus: 'OK',
+      totalDebt: 0,
+    }
+    const outOfStock = { ...product, sellableQty: 0 }
+    const waiting = {
+      walkin: '',
+      walkPhone: '',
+      warehouse: '1',
+      type: 'RETAIL',
+      discount: '0',
+      note: '',
+      lines: [{ product: outOfStock, quantity: 2, nowQty: 0, waitForRest: true }],
+    }
+
+    const withCustomer = render({
+      initialDraft: { ...waiting, customer },
+    })
+    assert.match(withCustomer, /Tiền cọc/)
+    assert.match(withCustomer, /Hạn cọc/)
+    assert.match(withCustomer, /Khách đặt trước dù cửa hàng còn hàng/)
+
+    const walkIn = render({ initialDraft: waiting })
+    assert.match(walkIn, /Khách lẻ không nhận cọc được/)
+    assert.doesNotMatch(walkIn, /Hạn cọc/)
+
+    const takenNow = render({
+      initialDraft: {
+        ...waiting,
+        customer,
+        lines: [
+          {
+            product,
+            quantity: 2,
+            nowQty: 2,
+            waitForRest: true,
+          },
+        ],
+      },
+    })
+    assert.doesNotMatch(takenNow, /Tiền cọc/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('a preorder draft sends the whole line to the waiting order even when stock is enough', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderFormView } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesOrderForm.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ['/sales-orders/new'] },
+        createElement(
+          AuthContext.Provider,
+          { value: { user: { id: 1, role: 'SELLER' } } },
+          createElement(SalesOrderFormView, {
+            initialDraft: {
+              walkin: '',
+              walkPhone: '',
+              warehouse: '1',
+              type: 'RETAIL',
+              discount: '0',
+              note: '',
+              customer: {
+                id: 11,
+                customerName: 'Trần Thị B',
+                phone: '0900000000',
+                creditStatus: 'OK',
+                totalDebt: 0,
+              },
+              preorder: true,
+              lines: [{ product: { ...product, sellableQty: 10 }, quantity: 2 }],
+            },
+          }),
+        ),
+      ),
+    )
+    assert.match(html, /Tiền cọc/)
+    assert.match(html, /Hạn cọc/)
+    const tag = html.match(/<input[^>]*aria-label="Lấy ngay LG-X-1"[^>]*>/)
+    assert.ok(tag, 'the Lấy ngay input is rendered')
+    assert.match(tag[0], /disabled=""/)
+    assert.match(tag[0], /value="0"/)
+    const waitBox = html.match(/<input[^>]*aria-label="Chờ hàng LG-X-1"[^>]*>/)
+    assert.ok(waitBox && /checked=""/.test(waitBox[0]) && /disabled=""/.test(waitBox[0]))
+  } finally {
+    await server.close()
+  }
+})
+

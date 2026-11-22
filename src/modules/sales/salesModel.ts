@@ -1,4 +1,8 @@
-import type { OrderActions } from './salesApi'
+import type {
+  OrderActions,
+  OrderDeposit,
+  SalesPaymentType,
+} from './salesApi'
 /** UI model mapped from the BE sales DTO. */
 export type SalesStatus =
   | 'DRAFT'
@@ -33,7 +37,7 @@ export type SalesOrder = {
   nextAction?: string | null
   payments?: {
     id: number
-    type: string
+    type: SalesPaymentType
     method: string
     amount: number
     status: string
@@ -49,6 +53,10 @@ export type SalesOrder = {
   payableNow?: number
   refundable?: number
   remainingPayable?: number
+  /** Cọc đã đưa vào đơn này khi nhả đơn chờ (đã tính trong netPaid). */
+  depositApplied: number
+  /** PM 21/11: null với Staff và đơn nháp. */
+  deposit: OrderDeposit | null
   actions?: OrderActions
   code: string
   version: number

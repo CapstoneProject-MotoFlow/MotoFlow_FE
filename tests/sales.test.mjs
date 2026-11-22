@@ -301,3 +301,48 @@ test('sales list renders the BE total without inferring zero unpaid balance from
     await server.close()
   }
 })
+
+test('the waiting-stock tab and deposit filter appear for managers only', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderListPage } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesPages.tsx',
+    )
+    const { AuthContext } = await server.ssrLoadModule(
+      '/src/shared/hooks/useAuth.tsx',
+    )
+    const render = (role, url) =>
+      renderToStaticMarkup(
+        createElement(
+          AuthContext.Provider,
+          {
+            value: {
+              user: { role, storeId: 1, storeName: 'Kho' },
+              signIn: () => {},
+              signOut: async () => {},
+              finishPasswordChange: () => {},
+            },
+          },
+          createElement(
+            MemoryRouter,
+            { initialEntries: [url] },
+            createElement(SalesOrderListPage),
+          ),
+        ),
+      )
+    const manager = render('BRANCH_MANAGER', '/sales-orders')
+    assert.match(manager, /Chờ hàng/)
+    assert.doesNotMatch(render('STAFF', '/sales-orders'), /Chờ hàng/)
+    const waiting = render('BRANCH_MANAGER', '/sales-orders?tab=AWAITING_STOCK')
+    assert.match(waiting, /aria-pressed="true"[^>]*>Chờ hàng</)
+    assert.match(waiting, /Đang giữ cọc/)
+    assert.match(waiting, /Quá hạn cọc/)
+    assert.doesNotMatch(manager, /Đang giữ cọc/)
+  } finally {
+    await server.close()
+  }
+})
