@@ -119,10 +119,10 @@ test('settlement payment mode with deposit shows Đã cọc, Đã thu net of dep
     assert.equal(row(html, 'Đã thu'), '0 ₫')
     assert.equal(row(html, 'Còn phải trả'), '7.000.000 ₫')
     assert.doesNotMatch(html, /Còn phải thu/)
-    assert.match(
-      html,
-      /aria-label="Số tiền khách đưa"[^>]*value="7\.000\.000"/,
-    )
+    // Góp ý review 1: cả tiền mặt và chuyển khoản bắt đầu trống, người bán tự gõ.
+    assert.match(html, /aria-label="Số tiền mặt thu"[^>]*value=""/)
+    assert.match(html, /<legend>Chuyển khoản<\/legend>/)
+    assert.match(html, /Tổng thu: <strong>0\s₫<\/strong>/)
   })
 })
 

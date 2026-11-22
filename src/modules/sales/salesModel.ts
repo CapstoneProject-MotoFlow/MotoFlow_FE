@@ -128,21 +128,6 @@ export function pickedReady(
   )
 }
 
-export function cashCollection(input: string, payable: number) {
-  const cash = Number(input)
-  if (
-    !/^\d+$/.test(input) ||
-    !Number.isSafeInteger(cash) ||
-    cash <= 0 ||
-    cash > 100000000000 ||
-    !Number.isSafeInteger(payable) ||
-    payable <= 0
-  )
-    return null
-  const amount = Math.min(cash, payable)
-  return { amount, tenderedAmount: cash, changeGiven: cash - amount }
-}
-
 /**
  * BH2 (GVHD 20/11): chia một dòng thành "lấy ngay" và "lấy sau". Mặc định lấy ngay = số BE gợi ý
  * (suggestedNow) hoặc min(cần, còn bán được); không vượt số còn bán được vì BE chỉ bán ngay tối đa số đó.

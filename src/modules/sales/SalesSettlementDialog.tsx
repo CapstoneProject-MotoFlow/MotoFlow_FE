@@ -1,10 +1,16 @@
-import { cashCollection } from './salesModel'
+import { isAxiosError } from 'axios'
 import { useRef, useState } from 'react'
 import FormDialog from '../../shared/ui/FormDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import { inventoryError } from '../inventory/api'
 import { today, money } from '../inventory/presentation'
 import { discountedPrice, salesTotal, type SalesOrder } from './salesModel'
+import {
+  splitPaymentBody,
+  splitPaymentErrorField,
+  splitPaymentFigures,
+  type SplitPaymentField,
+} from './splitPayment'
 import { paymentMethodLabels } from '../../shared/labels/status'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
@@ -12,6 +18,9 @@ import FieldError from '../../shared/ui/FieldError'
 function refreshSales(message = 'Đã lưu thay đổi.') {
   window.dispatchEvent(new CustomEvent('sales-changed', { detail: message }))
 }
+const digitsOnly = (text: string) => text.replace(/[^0-9]/g, '')
+const formatSplitInput = (text: string) =>
+  text === '' ? '' : Number(text).toLocaleString('vi-VN')
 export default function SalesSettlementDialog({
   action,
   order,
@@ -32,29 +41,51 @@ export default function SalesSettlementDialog({
     [error, setError] = useState(''),
     [method, setMethod] = useState('CASH'),
     [amount, setAmount] = useState(
-      String(
-        action === 'refund'
-          ? Math.min(initialRefundAmount ?? order.refundable ?? 0, order.refundable ?? 0)
-          : (order.payableNow ?? order.remainingPayable ?? 0),
-      ),
+      action === 'refund'
+        ? String(
+            Math.min(
+              initialRefundAmount ?? order.refundable ?? 0,
+              order.refundable ?? 0,
+            ),
+          )
+        : '',
     ),
     [verified, setVerified] = useState(false),
     [agreed, setAgreed] = useState(false)
-  const [cashGiven, setCashGiven] = useState(
-    String(order.payableNow ?? order.remainingPayable ?? 0),
-  )
+  // Thu tiền: người bán tự gõ từng khoản (ban đầu để trống); khách đưa trống nghĩa là bằng tiền mặt.
+  const payable = order.payableNow ?? 0
+  const [paymentText, setPaymentText] = useState({
+      cashText: '',
+      tenderedText: '',
+      transferText: '',
+    }),
+    [reference, setReference] = useState(''),
+    [touched, setTouched] = useState<
+      Partial<Record<SplitPaymentField, boolean>>
+    >({}),
+    [attempted, setAttempted] = useState(false),
+    [serverError, setServerError] = useState<{
+      field: SplitPaymentField
+      message: string
+    } | null>(null)
+  const paymentState = { ...paymentText, reference }
+  const figures = splitPaymentFigures(paymentState, payable)
+  const { cash, transfer } = figures
+  // Lỗi BE gắn vào ô được ưu tiên; lỗi tự kiểm chỉ hiện sau khi bấm Ghi hoặc sau khi sửa ô đó.
+  const fieldError = (field: SplitPaymentField) =>
+    serverError?.field === field
+      ? serverError.message
+      : attempted || touched[field]
+        ? figures.check.errors[field]
+        : undefined
+  const touch = (...fields: SplitPaymentField[]) =>
+    setTouched((t) => ({
+      ...t,
+      ...Object.fromEntries(fields.map((f) => [f, true])),
+    }))
   // Cọc đã nằm trong netPaid (backend netCollected); hiển thị tách riêng.
   const depositApplied = order.depositApplied ?? 0
   const receivedExDeposit = Math.max(0, order.netPaid - depositApplied)
-  const cashResult = cashCollection(cashGiven, order.payableNow ?? 0)
-  const cash = Number(cashGiven),
-    recorded = method === 'CASH' ? (cashResult?.amount ?? 0) : Number(amount)
-  const validPayment =
-    method === 'CASH'
-      ? cashResult != null
-      : Number.isSafeInteger(Number(amount)) &&
-        Number(amount) > 0 &&
-        Number(amount) <= (order.payableNow ?? 0)
   const [delivered, setDelivered] = useState<Record<number, string>>(() =>
     Object.fromEntries(
       order.lines.map((l) => [l.productId, String(l.picked ?? 0)]),
@@ -121,8 +152,7 @@ export default function SalesSettlementDialog({
       submitDisabled={
         !allowed ||
         busy ||
-        (action === 'confirm' && (!agreed || !validDelivery)) ||
-        (action === 'payment' && !validPayment)
+        (action === 'confirm' && (!agreed || !validDelivery))
       }
       submitLabel={
         busy
@@ -140,6 +170,10 @@ export default function SalesSettlementDialog({
         onInput={validation.onInput}
         onSubmit={async (e) => {
           e.preventDefault()
+          if (action === 'payment') {
+            setAttempted(true)
+            if (!figures.check.valid) return
+          }
           if (!validation.check(e.currentTarget)) return
           if (lock.current || !allowed) return
           const form = new FormData(e.currentTarget),
@@ -176,9 +210,12 @@ export default function SalesSettlementDialog({
               customerAgreed: agreed,
               lines,
             }
-          } else if (action === 'payment' || action === 'refund') {
-            const value = action === 'payment' ? recorded : Number(amount),
-              limit = action === 'payment' ? order.payableNow : order.refundable
+          } else if (action === 'payment') {
+            path = 'payments/split'
+            body = splitPaymentBody(paymentState, payable)
+          } else if (action === 'refund') {
+            const value = Number(amount),
+              limit = order.refundable
             if (
               !Number.isSafeInteger(value) ||
               value <= 0 ||
@@ -193,19 +230,13 @@ export default function SalesSettlementDialog({
               setError('Nhập mã giao dịch chuyển khoản.')
               return
             }
-            path = action === 'payment' ? 'payments' : 'refunds'
+            path = 'refunds'
             body = {
               amount: value,
               paymentMethod: method,
               transactionReference: text('reference') || null,
               verified,
-              ...(action === 'payment'
-                ? {
-                    expectedPayable: order.payableNow,
-                    tenderedAmount: method === 'CASH' ? cash : null,
-                    evidence: [],
-                  }
-                : { expectedRefundable: order.refundable }),
+              expectedRefundable: order.refundable,
             }
           } else if (action === 'credit') {
             if (!agreed) {
@@ -247,6 +278,7 @@ export default function SalesSettlementDialog({
           lock.current = true
           setBusy(true)
           setError('')
+          setServerError(null)
           try {
             const { data } = await axiosClient.post(
               '/sales-orders/' + order.id + '/' + path,
@@ -260,7 +292,12 @@ export default function SalesSettlementDialog({
             )
             onClose(action === 'confirm' ? 'payment' : undefined)
           } catch (error) {
-            setError(inventoryError(error))
+            const field =
+              action === 'payment' && isAxiosError(error)
+                ? splitPaymentErrorField(error.response?.data ?? {})
+                : null
+            if (field) setServerError({ field, message: inventoryError(error) })
+            else setError(inventoryError(error))
           } finally {
             lock.current = false
             setBusy(false)
@@ -483,82 +520,137 @@ export default function SalesSettlementDialog({
                 <dd>{money.format(order.remainingPayable ?? 0)}</dd>
               </div>
             </dl>
-            <fieldset className="sales-payment-methods">
-              <legend>Hình thức</legend>
-              <div>
-                {[
-                  ['CASH', 'Tiền mặt'],
-                  ['BANK_TRANSFER', 'Chuyển khoản'],
-                ].map(([value, label]) => (
-                  <label
-                    key={value}
-                    className={method === value ? 'selected' : ''}
-                  >
+            <div className="sales-split-parts">
+              <fieldset className="sales-split-part">
+                <legend>Tiền mặt</legend>
+                <label>
+                  Số tiền thu
+                  <div className="sales-payment-amount">
                     <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={value}
-                      checked={method === value}
-                      onChange={() => setMethod(value)}
+                      inputMode="numeric"
+                      aria-label="Số tiền mặt thu"
+                      value={formatSplitInput(paymentText.cashText)}
+                      onChange={(e) => {
+                        const value = digitsOnly(e.target.value)
+                        setPaymentText((p) => ({
+                          ...p,
+                          cashText: value,
+                          // Tiền mặt về 0 thì khách đưa không còn ý nghĩa: xóa để không để lại số cũ.
+                          tenderedText:
+                            Number(value || 0) === 0 ? '' : p.tenderedText,
+                        }))
+                        touch('cash', 'total')
+                        setServerError(null)
+                      }}
                     />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <label>
-              {method === 'CASH' ? 'Số tiền khách đưa' : 'Số tiền chuyển khoản'}{' '}
-              <span className="sales-required">*</span>
-              <div className="sales-payment-amount">
-                <input
-                  required
-                  inputMode="numeric"
-                  aria-label={
-                    method === 'CASH'
-                      ? 'Số tiền khách đưa'
-                      : 'Số tiền chuyển khoản'
-                  }
-                  value={
-                    (method === 'CASH' ? cashGiven : amount) === ''
-                      ? ''
-                      : Number(
-                          method === 'CASH' ? cashGiven : amount,
-                        ).toLocaleString('vi-VN')
-                  }
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9]/g, '')
-                    if (method === 'CASH') setCashGiven(value)
-                    else setAmount(value)
-                  }}
-                />
-                <span>đ</span>
-              </div>
-              <FieldError
-                message={
-                  validation.errors[
-                    method === 'CASH'
-                      ? 'Số tiền khách đưa'
-                      : 'Số tiền chuyển khoản'
-                  ]
-                }
-              />
-            </label>
-            <dl className="sales-payment-change">
-              <div>
-                <dt>Ghi thu cho đơn</dt>
-                <dd>{validPayment ? money.format(recorded) : 'Chưa hợp lệ'}</dd>
-              </div>
-              <div>
-                <dt>Tiền thối lại</dt>
-                <dd>
-                  {validPayment
-                    ? money.format(
-                        method === 'CASH' ? Math.max(0, cash - recorded) : 0,
-                      )
-                    : '—'}
-                </dd>
-              </div>
-            </dl>
+                    <span>đ</span>
+                  </div>
+                  <FieldError message={fieldError('cash')} />
+                </label>
+                <label>
+                  Khách đưa
+                  <div className="sales-payment-amount">
+                    <input
+                      inputMode="numeric"
+                      aria-label="Số tiền khách đưa"
+                      disabled={cash === 0}
+                      placeholder={formatSplitInput(paymentText.cashText)}
+                      value={formatSplitInput(paymentText.tenderedText)}
+                      onChange={(e) => {
+                        const value = digitsOnly(e.target.value)
+                        setPaymentText((p) => ({ ...p, tenderedText: value }))
+                        touch('tendered')
+                        setServerError(null)
+                      }}
+                    />
+                    <span>đ</span>
+                  </div>
+                  <FieldError message={fieldError('tendered')} />
+                </label>
+                <p className="sales-split-change">
+                  <span>Tiền thối</span>
+                  <strong>{money.format(figures.check.change)}</strong>
+                </p>
+              </fieldset>
+              <fieldset className="sales-split-part">
+                <legend>Chuyển khoản</legend>
+                <label>
+                  Số tiền
+                  <div className="sales-payment-amount">
+                    <input
+                      inputMode="numeric"
+                      aria-label="Số tiền chuyển khoản"
+                      value={formatSplitInput(paymentText.transferText)}
+                      onChange={(e) => {
+                        const value = digitsOnly(e.target.value)
+                        setPaymentText((p) => ({ ...p, transferText: value }))
+                        touch('transfer', 'total')
+                        setServerError(null)
+                      }}
+                    />
+                    <span>đ</span>
+                  </div>
+                  <FieldError message={fieldError('transfer')} />
+                </label>
+                <label>
+                  Mã giao dịch{' '}
+                  {transfer > 0 && <span className="sales-required">*</span>}
+                  <input
+                    required={transfer > 0}
+                    name="reference"
+                    maxLength={100}
+                    value={reference}
+                    onChange={(e) => {
+                      setReference(e.target.value)
+                      touch('reference')
+                      setServerError(null)
+                    }}
+                  />
+                  <FieldError message={fieldError('reference')} />
+                </label>
+              </fieldset>
+            </div>
+            <div className="sales-split-total" aria-live="polite">
+              <p>
+                Tổng thu: <strong>{money.format(figures.check.total)}</strong> /
+                còn phải thu <strong>{money.format(payable)}</strong>
+              </p>
+              <FieldError message={fieldError('total')} />
+              {payable > 0 && (
+                <div className="sales-split-fill">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      // Điền tiền mặt thì khách đưa về trống, để tiền thối tính lại từ tiền mặt mới.
+                      setPaymentText((p) => ({
+                        ...p,
+                        cashText: String(Math.max(0, payable - transfer)),
+                        tenderedText: '',
+                      }))
+                      touch('cash', 'total')
+                      setServerError(null)
+                    }}
+                  >
+                    Điền phần còn lại vào tiền mặt
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPaymentText((p) => ({
+                        ...p,
+                        transferText: String(Math.max(0, payable - cash)),
+                      }))
+                      touch('transfer', 'total')
+                      setServerError(null)
+                    }}
+                  >
+                    Điền phần còn lại vào chuyển khoản
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         )}
         {action === 'refund' && (
@@ -583,22 +675,19 @@ export default function SalesSettlementDialog({
             <FieldError message={validation.errors.refundAmount} />
           </label>
         )}
-        {(action === 'payment' ||
-          action === 'refund' ||
+        {(action === 'refund' ||
           (action === 'cancel' && order.netPaid > 0)) && (
           <>
-            {action !== 'payment' && (
-              <label>
-                Phương thức
-                <select
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value)}
-                >
-                  <option value="CASH">Tiền mặt</option>
-                  <option value="BANK_TRANSFER">Chuyển khoản</option>
-                </select>
-              </label>
-            )}
+            <label>
+              Phương thức
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+              >
+                <option value="CASH">Tiền mặt</option>
+                <option value="BANK_TRANSFER">Chuyển khoản</option>
+              </select>
+            </label>
             {method === 'BANK_TRANSFER' && (
               <label>
                 Mã giao dịch
@@ -612,9 +701,7 @@ export default function SalesSettlementDialog({
                 checked={verified}
                 onChange={(e) => setVerified(e.target.checked)}
               />
-              {action === 'payment'
-                ? 'Đã nhận đủ số tiền này'
-                : 'Đã trả tiền cho khách'}
+              Đã trả tiền cho khách
             </label>
           </>
         )}
