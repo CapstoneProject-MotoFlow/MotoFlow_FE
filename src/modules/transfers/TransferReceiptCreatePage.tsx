@@ -95,9 +95,11 @@ export default function TransferReceiptCreatePage() {
     lock.current = true
     setError('')
     setStage(files.length ? 'uploading' : 'creating')
+    let creating = false
     try {
       const photos = await docs.upload(files)
       setStage('creating')
+      creating = true
       const { data } = await axiosClient.post<{ id: number }>(
         '/transfer-orders/' + id + '/receipts',
         { arrivedAt: arrivedAt || null, photos },
@@ -105,9 +107,9 @@ export default function TransferReceiptCreatePage() {
       refreshNotifications()
       navigate('/transfer-orders/' + id + '/receipts/' + data.id)
     } catch (e) {
-      // BE trả 403 khi người lập không giữ việc nhận hàng của lệnh này.
+      // BE trả 403 khi tạo phiếu nhận hàng: người lập không giữ việc nhận hàng của lệnh này.
       setError(
-        isAxiosError(e) && e.response?.status === 403
+        creating && isAxiosError(e) && e.response?.status === 403
           ? NOT_ASSIGNED_MESSAGE
           : inventoryError(e),
       )
