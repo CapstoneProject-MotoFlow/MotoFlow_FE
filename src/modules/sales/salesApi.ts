@@ -77,6 +77,14 @@ export type OrderDto = {
     pickFirst: { lotId: number; expiryDate: string | null; takeQty: number }[]
   }[]
 }
+export type SalesNextAction =
+  | 'RELEASE'
+  | 'ASSIGN_PICKER'
+  | 'RECORD_PICKING'
+  | 'CONFIRM'
+  | 'COLLECT_PAYMENT'
+  | null
+
 export type SummaryDto = {
   id: number
   version: number
@@ -87,12 +95,7 @@ export type SummaryDto = {
   createdAt: string
   total: number | null
   pickerName: string | null
-  nextAction:
-    | 'ASSIGN_PICKER'
-    | 'RECORD_PICKING'
-    | 'CONFIRM'
-    | 'COLLECT_PAYMENT'
-    | null
+  nextAction: SalesNextAction
 }
 
 /**
