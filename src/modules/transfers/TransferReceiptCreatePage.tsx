@@ -5,13 +5,15 @@
  * xem thông tin bàn giao từ lần xuất và có thể đính kèm ảnh lúc nhận.
  */
 import { useRef, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { isAxiosError } from 'axios'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { inventoryError, useInventoryData } from '../inventory/api'
 import { InventoryNotice } from '../inventory/components'
 import { dateTime } from '../inventory/presentation'
 import { refreshNotifications } from '../notifications/notificationService'
+import { useReceivingTasks } from '../operations/useReceivingTasks'
 import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import { receiptDatesInFuture } from '../receiving/receivingRules'
 import {
@@ -25,6 +27,7 @@ import './transfers.css'
 
 const FORM_ID = 'transfer-receipt-create'
 const SUBMIT_LABEL = 'Lập phiếu nhận'
+const NOT_ASSIGNED_MESSAGE = 'Cần giao việc nhận hàng trước khi lập phiếu.'
 
 export default function TransferReceiptCreatePage() {
   const { id } = useParams(),
@@ -54,11 +57,19 @@ export default function TransferReceiptCreatePage() {
     !d.receipts.some(
       (r) => r.receiptType === 'TRANSFER_IN' && r.status !== 'CONFIRMED',
     )
+  // Chỉ người đang giữ việc nhận hàng của lệnh này (TRANSFER_RECEIVING) mới được lập phiếu nhận.
+  const receiving = useReceivingTasks(['TRANSFER_RECEIVING'], valid && !!d)
+  const assigned = receiving.tasks.some(
+    (task) => task.documentId === Number(id),
+  )
+  const awaitingAssignee =
+    open && !receiving.loading && !receiving.failed && !assigned
+  const canCreate = open && assigned
   const saving = stage !== undefined
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (lock.current || !open) return
+    if (lock.current || !canCreate) return
     const form = new FormData(event.currentTarget)
     const arrivedAt = String(form.get('arrivedAt') ?? '')
     if (receiptDatesInFuture('', arrivedAt)) {
@@ -94,7 +105,12 @@ export default function TransferReceiptCreatePage() {
       refreshNotifications()
       navigate('/transfer-orders/' + id + '/receipts/' + data.id)
     } catch (e) {
-      setError(inventoryError(e))
+      // BE trả 403 khi người lập không giữ việc nhận hàng của lệnh này.
+      setError(
+        isAxiosError(e) && e.response?.status === 403
+          ? NOT_ASSIGNED_MESSAGE
+          : inventoryError(e),
+      )
     } finally {
       lock.current = false
       setStage(undefined)
@@ -143,7 +159,7 @@ export default function TransferReceiptCreatePage() {
                   icon: 'receipt',
                   primary: true,
                   form: FORM_ID,
-                  disabled: saving || !open,
+                  disabled: saving || !canCreate,
                 }}
               />
             </CardHead>
@@ -158,6 +174,19 @@ export default function TransferReceiptCreatePage() {
             {!open && (
               <p className="tf-note" role="status">
                 Lệnh này không còn hàng chờ nhận hoặc đã có phiếu nhận đang mở.
+              </p>
+            )}
+            {open && !assigned && receiving.failed && (
+              <p role="alert">
+                Không tải được việc nhận hàng của bạn. Vui lòng tải lại trang.
+              </p>
+            )}
+            {awaitingAssignee && (
+              <p className="tf-note" role="status">
+                {NOT_ASSIGNED_MESSAGE}{' '}
+                <Link to={'/transfer-orders/' + id}>
+                  Mở lệnh để giao việc
+                </Link>
               </p>
             )}
             <div className="tf-detail-meta">
@@ -235,7 +264,7 @@ export default function TransferReceiptCreatePage() {
                   min={d.dispatchedAt?.slice(0, 19)}
                   step={1}
                   onFocus={docs.refreshDateLimits}
-                  disabled={saving || !open}
+                  disabled={saving || !canCreate}
                 />
               </label>
               {receiptDocumentUploadEnabled && (
@@ -246,7 +275,7 @@ export default function TransferReceiptCreatePage() {
                     aria-label="Ảnh nhận hàng"
                     accept="image/jpeg,image/png,image/webp"
                     multiple
-                    disabled={saving || !open}
+                    disabled={saving || !canCreate}
                   />
                 </div>
               )}

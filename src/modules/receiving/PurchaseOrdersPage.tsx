@@ -22,6 +22,7 @@ import {
   purchaseOrderDisplayStatus,
 } from './receivingPresentation'
 import ReceivingAssignment from '../operations/ReceivingAssignment'
+import Hint from '../../shared/ui/Hint'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingWork } from '../operations/receivingTaskModel'
 import { documentCode } from '../../shared/utils/documentCode'
@@ -1271,6 +1272,11 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                 />
               )}
           </div>
+        )}
+      {owner &&
+        !!detail &&
+        ['AWAITING_DELIVERY', 'RECEIVING'].includes(detail.status) && (
+          <Hint>Việc nhận hàng do Quản lý cửa hàng nhận giao cho nhân viên.</Hint>
         )}
       {fromReplacement && manager && detail?.canCreateReplacement && (
         <p className="receiving-replacement-hint" role="status">
