@@ -934,3 +934,46 @@
   font-size: 22px;
   cursor: pointer;
 }
+/* Popup "Phiên đăng nhập" của một tài khoản (AccountSessionsDialog). */
+.ui-form-dialog.account-sessions-dialog {
+  width: min(100%, 860px);
+}
+.account-sessions-intro {
+  margin: 0 0 16px;
+  color: #65748c;
+  font-size: 1rem;
+}
+.account-sessions-dialog .session-table-scroll {
+  border: 1px solid #e7ebf1;
+  border-radius: 10px;
+}
+.account-sessions-empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed #d4dbe6;
+  border-radius: 10px;
+  color: #65748c;
+  text-align: center;
+}
+.account-sessions-confirm p {
+  margin: 0 0 4px;
+  color: #26354c;
+  font-size: 1rem;
+}
+.account-sessions-confirm label {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  color: #394860;
+  font-size: 1rem;
+}
+.account-sessions-confirm textarea {
+  min-height: 72px;
+  resize: vertical;
+  padding: 9px 11px;
+  border: 1px solid #ccd5e3;
+  border-radius: 7px;
+  outline-color: #8290ff;
+  color: #26354c;
+  font: inherit;
+}

@@ -6,7 +6,7 @@ import { inventoryError } from '../inventory/api'
 import { today, money } from '../inventory/presentation'
 import { discountedPrice, salesTotal, type SalesOrder } from './salesModel'
 import { paymentMethodLabels } from '../../shared/labels/status'
-import { formatDateTime } from '../../shared/utils/format'
+import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
 function refreshSales(message = 'Đã lưu thay đổi.') {
@@ -44,6 +44,9 @@ export default function SalesSettlementDialog({
   const [cashGiven, setCashGiven] = useState(
     String(order.payableNow ?? order.remainingPayable ?? 0),
   )
+  // Cọc đã nằm trong netPaid (backend netCollected); hiển thị tách riêng.
+  const depositApplied = order.depositApplied ?? 0
+  const receivedExDeposit = Math.max(0, order.netPaid - depositApplied)
   const cashResult = cashCollection(cashGiven, order.payableNow ?? 0)
   const cash = Number(cashGiven),
     recorded = method === 'CASH' ? (cashResult?.amount ?? 0) : Number(amount)
@@ -444,9 +447,15 @@ export default function SalesSettlementDialog({
                       : money.format(subtotal)}
                   </dd>
                 </div>
+                {depositApplied > 0 && (
+                  <div>
+                    <dt>Đã cọc</dt>
+                    <dd>{money.format(depositApplied)}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Đã thu trước</dt>
-                  <dd>{money.format(order.netPaid)}</dd>
+                  <dd>{money.format(receivedExDeposit)}</dd>
                 </div>
                 <div className="total">
                   <dt>Tổng tiền tạm tính</dt>
@@ -507,12 +516,18 @@ export default function SalesSettlementDialog({
                     : money.format(order.total)}
                 </dd>
               </div>
+              {depositApplied > 0 && (
+                <div>
+                  <dt>Đã cọc</dt>
+                  <dd>{money.format(depositApplied)}</dd>
+                </div>
+              )}
               <div>
                 <dt>Đã thu</dt>
-                <dd>{money.format(order.netPaid)}</dd>
+                <dd>{money.format(receivedExDeposit)}</dd>
               </div>
               <div>
-                <dt>Còn phải thu</dt>
+                <dt>{depositApplied > 0 ? 'Còn phải trả' : 'Còn phải thu'}</dt>
                 <dd>{money.format(order.remainingPayable ?? 0)}</dd>
               </div>
             </dl>
@@ -692,6 +707,14 @@ export default function SalesSettlementDialog({
             <FieldError message={validation.errors.paymentId} />
           </label>
         )}
+        {action === 'cancel' &&
+          order.actions?.cancelForfeitsDeposit &&
+          (order.deposit?.remaining ?? 0) > 0 && (
+            <p className="sales-deposit-banner" role="alert">
+              Khách sẽ mất cọc {formatMoney(order.deposit?.remaining)}. Tiền cọc
+              không được hoàn.
+            </p>
+          )}
         {(action === 'cancel' || action === 'reject') && (
           <label>
             Lý do *<textarea name="reason" required maxLength={255} />

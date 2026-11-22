@@ -239,6 +239,11 @@
 .store-form .store-required {
   color: #ed4a53;
 }
+.store-form .store-field-hint {
+  color: #6b7a90;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
 .store-form input:not([type='checkbox']),
 .store-form select {
   width: 100%;

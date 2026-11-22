@@ -55,6 +55,17 @@ export function formatDate(value: string | null | undefined) {
   return formatDateTime(value)
 }
 
+const loopbackAddresses = new Set(['127.0.0.1', '::1', '0:0:0:0:0:0:0:1'])
+
+/**
+ * formatIpAddress: Địa chỉ IP của một phiên đăng nhập. BE thấy địa chỉ loopback khi trình duyệt chạy trên chính
+ * máy chủ, nên hiện "Máy chủ (localhost)"; không có địa chỉ hiện "—".
+ */
+export function formatIpAddress(value: string | null | undefined) {
+  if (!value) return '—'
+  return loopbackAddresses.has(value) ? 'Máy chủ (localhost)' : value
+}
+
 export function formatStoreStatus(status: 'ACTIVE' | 'PLANNED' | 'INACTIVE') {
   return {
     ACTIVE: 'Đang hoạt động',

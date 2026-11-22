@@ -32,22 +32,28 @@ import SalesAssignmentDialog from './SalesAssignmentDialog'
 import axiosClient from '../../shared/api/axiosClient'
 import {
   orderFromDto,
+  type DepositStatus,
   type OrderDto,
   type SalesPaymentType,
   type UnmetRow,
 } from './salesApi'
+import { depositBadge, depositStatusLabels } from './salesDeposit'
+import SalesDepositPanel from './SalesDepositPanel'
+import { viewDate } from './salesDepositDate'
 import SalesSettlementDialog from './SalesSettlementDialog'
 import SalesPendingReleaseDialog from './SalesPendingReleaseDialog'
 import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
 import DemandReplenishment from './DemandReplenishment'
 import { SalesOrderFormView, type SalesProduct } from './SalesOrderForm'
+import SalesTabsWorkspace from './SalesTabsWorkspace'
 import { SalesDraftTab } from './SalesDraftPages'
 import { documentCode } from '../../shared/utils/documentCode'
 import { salesOrderStatusLabels as salesStates } from '../../shared/labels/status'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 export { SalesOrderFormView }
 import './sales.css'
+
 function Header({
   title,
   breadcrumb = title,
@@ -90,14 +96,23 @@ function Shell({
 export function SalesListTotal({ total }: { total?: number | null }) {
   return <td>{total == null ? 'Chưa có dữ liệu' : money.format(total)}</td>
 }
+/** Dòng danh sách: đơn UI kèm trạng thái cọc từ SummaryDto (null khi không có cọc hoặc là Staff). */
+type SalesOrderRow = SalesOrder & {
+  depositStatus?: DepositStatus | null
+  depositRemaining?: number | null
+}
 export function SalesOrderListPage({
   orders = [],
 }: { orders?: SalesOrder[] } = {}) {
   const scope = useInventoryScope(),
     staff = scope.user?.role === 'STAFF',
     p = scope.params
+  // Tab "Chờ hàng" theo role: BE không có cờ riêng cho tab này, nên dùng role như scope.owner/staff trong file.
+  const canWait = ['OWNER', 'BRANCH_MANAGER'].includes(scope.user?.role ?? '')
   const tab = p.get('tab') ?? 'OPEN',
     closed = ['COMPLETED', 'CANCELLED'].includes(tab),
+    // PM 21/11: tab "Chờ hàng" (đơn cọc) chỉ Owner, BM; Staff gõ URL cũng không mở được bộ lọc này.
+    awaiting = canWait && tab === 'AWAITING_STOCK',
     // PM 17/11: tab "Nháp" ngoài cùng bên phải (Owner, BM) thay cho mục "Đơn nháp" trên sidebar.
     drafts = !staff && tab === 'DRAFT'
   const from = p.get('from') ?? today(),
@@ -106,21 +121,24 @@ export function SalesOrderListPage({
   const resource = useSalesList(
     {
       storeId: scope.storeId,
-      view: tab === 'PICKED' ? 'OPEN' : tab,
+      view: tab === 'PICKED' || awaiting ? 'OPEN' : tab,
       q: p.get('q') ?? '',
       createdFrom: closed ? from : '',
       createdTo: closed ? to : '',
+      depositStatus: awaiting ? p.get('depositStatus') || undefined : undefined,
       page,
       size: 20,
     },
     tab === 'PICKED'
       ? 'PICKED'
-      : staff && tab === 'OPEN'
-        ? 'AWAITING_PICKING'
-        : (p.get('status') ?? ''),
+      : awaiting
+        ? 'AWAITING_STOCK'
+        : staff && tab === 'OPEN'
+          ? 'AWAITING_PICKING'
+          : (p.get('status') ?? ''),
     !drafts && (!closed || from <= to),
   )
-  const matches = orders.length
+  const matches: SalesOrderRow[] = orders.length
     ? orders
     : (resource.data?.items ?? [])
         .filter((o) => tab !== 'PICKED' || o.status === 'PICKED')
@@ -144,7 +162,11 @@ export function SalesOrderListPage({
               versions: [],
               events: [],
               nextAction: o.nextAction,
-            }) as SalesOrder,
+              deposit: null,
+              depositApplied: 0,
+              depositStatus: o.depositStatus ?? null,
+              depositRemaining: o.depositRemaining ?? null,
+            }) as SalesOrderRow,
         )
   const createAction = (
     <div className="sales-list-actions">
@@ -164,6 +186,7 @@ export function SalesOrderListPage({
           ]
         : [
             ['OPEN', 'Chưa hoàn tất'],
+            ...(canWait ? [['AWAITING_STOCK', 'Chờ hàng']] : []),
             ['COMPLETED', 'Hoàn tất'],
             ['CANCELLED', 'Đã hủy'],
             ['DRAFT', 'Nháp'],
@@ -172,7 +195,9 @@ export function SalesOrderListPage({
         <button
           key={value}
           aria-pressed={tab === value}
-          onClick={() => scope.filter({ tab: value, status: '' })}
+          onClick={() =>
+            scope.filter({ tab: value, status: '', depositStatus: '' })
+          }
         >
           {label}
         </button>
@@ -210,7 +235,20 @@ export function SalesOrderListPage({
               placeholder="Mã đơn, tên hoặc số điện thoại…"
             />
           </label>
-          {!closed && !staff && (
+          {awaiting && (
+            <label>
+              Cọc
+              <select
+                value={p.get('depositStatus') ?? ''}
+                onChange={(e) => scope.filter({ depositStatus: e.target.value })}
+              >
+                <option value="">Tất cả</option>
+                <option value="ACTIVE">{depositStatusLabels.ACTIVE}</option>
+                <option value="EXPIRED">{depositStatusLabels.EXPIRED}</option>
+              </select>
+            </label>
+          )}
+          {!closed && !staff && !awaiting && (
             <label>
               Trạng thái
               <select
@@ -284,7 +322,9 @@ export function SalesOrderListPage({
               </tr>
             </thead>
             <tbody>
-              {matches.map((order) => (
+              {matches.map((order) => {
+                const badge = staff ? null : depositBadge(order)
+                return (
                 <tr key={order.id}>
                   <td>
                     <Link to={'/sales-orders/' + order.id}>{order.code}</Link>
@@ -297,10 +337,26 @@ export function SalesOrderListPage({
                   ) : (
                     <SalesListTotal total={order.total} />
                   )}
-                  <td>{salesStates[order.status]}</td>
+                  <td>
+                    {salesStates[order.status]}
+                    {badge && (
+                      <span
+                        className={'sales-deposit-badge tone-' + badge.tone}
+                      >
+                        {badge.text}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <div className="mf-row-actions">
-                      {order.nextAction === 'RECORD_PICKING' ? (
+                      {order.nextAction === 'RELEASE' ? (
+                        <Link
+                          className="mf-btn mf-btn--sm mf-btn--primary"
+                          to={'/sales-orders/' + order.id}
+                        >
+                          Chuyển sang soạn
+                        </Link>
+                      ) : order.nextAction === 'RECORD_PICKING' ? (
                         <Link
                           className="mf-btn mf-btn--sm mf-btn--primary"
                           to={'/sales-orders/' + order.id + '/pick'}
@@ -339,7 +395,8 @@ export function SalesOrderListPage({
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
               {!matches.length && (
                 <tr>
                   <td colSpan={scope.owner ? 7 : 6} className="stock-empty">
@@ -403,14 +460,16 @@ export function SalesOrderFormPage() {
     return <InventoryNotice loading={product.loading} error={product.error} />
   if (!id)
     return (
-      <SalesOrderFormView
-        initialCustomer={buyer.data?.customer}
-        key={product.data?.id ?? 'new'}
-        initialProduct={product.data}
-        initialQuantity={Math.min(
-          100000,
-          Math.max(1, Number(prefill.get('quantity')) || 1),
-        )}
+      <SalesTabsWorkspace
+        prefill={
+          prefill.get('productId') || prefill.get('customerId')
+            ? {
+                product: product.data,
+                customer: buyer.data?.customer,
+                quantity: Number(prefill.get('quantity')),
+              }
+            : undefined
+        }
       />
     )
   return (
@@ -452,11 +511,16 @@ export function SalesOrderDetailPage() {
     })
   useEffect(() => {
     const changed = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        message: string
-        orderId?: number
-        pendingOrderId?: number
-      }>).detail
+      const raw = (event as CustomEvent<
+        | string
+        | {
+            message: string
+            orderId?: number
+            pendingOrderId?: number
+          }
+      >).detail
+      // Dialog cũ gửi chuỗi thẳng; dialog mới gửi {message, orderId, pendingOrderId}.
+      const detail = typeof raw === 'string' ? { message: raw } : raw
       setNotice(detail.message)
       setLinkedOrders({ primaryOrderId: detail.orderId, pendingOrderId: detail.pendingOrderId })
       setRevision((n) => n + 1)
@@ -556,6 +620,9 @@ export function SalesOrderDetailView({
             : l.requested),
       0,
     ) ?? 0
+  // Cọc đã nằm trong netPaid; tách riêng để "Đã thu" không tính cọc.
+  const depositApplied = order?.depositApplied ?? 0
+  const receivedExDeposit = Math.max(0, (order?.netPaid ?? 0) - depositApplied)
   const historyNames: Record<string, string> = {
     CREATED: 'Tạo đơn bán',
     VERSIONED: 'Lưu phiên bản đơn',
@@ -722,6 +789,15 @@ export function SalesOrderDetailView({
                 để tiếp tục.
               </p>
             )}
+            {order?.deposit?.status === 'EXPIRED' && (
+              <p className="sales-deposit-banner" role="status">
+                {order.deposit.expiresOn
+                  ? 'Quá hạn cọc từ ' +
+                    viewDate(order.deposit.expiresOn) +
+                    '. Đơn không chuyển sang soạn được.'
+                  : 'Quá hạn cọc. Đơn không chuyển sang soạn được.'}
+              </p>
+            )}
             {order &&
               !['CANCELLED', 'AWAITING_STOCK'].includes(order.status) && (
                 <ol className="sales-progress">
@@ -884,9 +960,15 @@ export function SalesOrderDetailView({
                       : money.format(financial)}
                   </dd>
                 </div>
+                {depositApplied > 0 && (
+                  <div>
+                    <dt>Đã cọc</dt>
+                    <dd>{money.format(depositApplied)}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Đã thu</dt>
-                  <dd>{money.format(order.netPaid)}</dd>
+                  <dd>{money.format(receivedExDeposit)}</dd>
                 </div>
                 {order.credit > 0 && (
                   <div>
@@ -895,7 +977,7 @@ export function SalesOrderDetailView({
                   </div>
                 )}
                 <div className="total">
-                  <dt>Còn phải thu</dt>
+                  <dt>{depositApplied > 0 ? 'Còn phải trả' : 'Còn phải thu'}</dt>
                   <dd>
                     {order.remainingPayable == null
                       ? 'Chưa có dữ liệu'
@@ -905,6 +987,16 @@ export function SalesOrderDetailView({
               </dl>
             )}
           </section>
+          {!staff && order && (
+            <SalesDepositPanel
+              order={order}
+              onChanged={(message) =>
+                window.dispatchEvent(
+                  new CustomEvent('sales-changed', { detail: { message } }),
+                )
+              }
+            />
+          )}
           {!staff && (
             <section className="sales-payment-card">
               <h2>Thanh toán</h2>
