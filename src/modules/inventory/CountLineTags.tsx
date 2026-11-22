@@ -2,7 +2,7 @@ import { isDamagedVariant } from '../../shared/utils/damagedVariant'
 import { number } from './presentation'
 
 /**
- * KH2 (GVHD 20/11): phiếu kiểm kê Khu hàng lỗi gồm hàng hỏng của các mã và mã hàng móp "<SKU>-M".
+ * KH2 (GVHD 20/11): phiếu kiểm kê Khu hàng lỗi gồm hàng hỏng của các mã và mã hàng lỗi "<SKU>-M".
  * Nhãn cho biết dòng thuộc phần nào. Đếm mù (Staff) chỉ thấy loại, không thấy số sổ sách.
  */
 export default function CountLineTags({
@@ -17,7 +17,7 @@ export default function CountLineTags({
   if (!variant && !damaged) return null
   return (
     <span className="count-line-tags">
-      {variant && <small className="count-tag">Hàng móp</small>}
+      {variant && <small className="count-tag">Hàng lỗi</small>}
       {damaged && (
         <small className="count-tag">
           {blind

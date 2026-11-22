@@ -17,10 +17,13 @@ const { outputText } = ts.transpileModule(
 const { isDamagedVariant, damagedVariantBaseSku } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
-test('a dented-goods variant needs both the -M SKU and the "(hàng móp)" name', () => {
+test('a dented-goods variant needs both the -M SKU and the "(hàng lỗi)" name', () => {
+  assert.equal(isDamagedVariant({ sku: 'DEN-01-M', partName: 'Đèn pha (hàng lỗi)' }), true)
+  // Dữ liệu cũ đặt tên "(hàng móp)" vẫn được nhận ra.
   assert.equal(isDamagedVariant({ sku: 'DEN-01-M', partName: 'Đèn pha (hàng móp)' }), true)
-  assert.equal(isDamagedVariant({ sku: 'GHI-M', partName: 'Ghi đông M' }), false)
-  assert.equal(isDamagedVariant({ sku: 'DEN-01', partName: 'Đèn pha (hàng móp)' }), false)
   assert.equal(damagedVariantBaseSku({ sku: 'DEN-01-M', partName: 'Đèn pha (hàng móp)' }), 'DEN-01')
+  assert.equal(isDamagedVariant({ sku: 'GHI-M', partName: 'Ghi đông M' }), false)
+  assert.equal(isDamagedVariant({ sku: 'DEN-01', partName: 'Đèn pha (hàng lỗi)' }), false)
+  assert.equal(damagedVariantBaseSku({ sku: 'DEN-01-M', partName: 'Đèn pha (hàng lỗi)' }), 'DEN-01')
   assert.equal(damagedVariantBaseSku({ sku: 'DEN-01', partName: 'Đèn pha' }), null)
 })

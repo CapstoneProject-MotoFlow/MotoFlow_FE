@@ -473,7 +473,7 @@ export function PartChoice({
     Page<{ id: number; sku: string; partName: string }>
   >('/products', { q: query?.trim(), page: 0, size: 10 }, 0, query !== null)
   const parts =
-    // BH8 (GVHD 20/11): yêu cầu bổ sung không xin mã hàng móp.
+    // BH8 (GVHD 20/11): yêu cầu bổ sung không xin mã hàng lỗi.
     choices.data?.items.filter(
       (part) => !excluded.includes(part.id) && !isDamagedVariant(part),
     ) ?? []

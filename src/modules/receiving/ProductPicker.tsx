@@ -6,7 +6,9 @@ import { isDamagedVariant } from '../../shared/utils/damagedVariant'
 
 export type ProductOption = { id: number; sku: string; partName: string }
 
+
 export default function ProductPicker({
+  id,
   selected,
   excludedIds,
   label,
@@ -14,11 +16,13 @@ export default function ProductPicker({
   excludeDamagedVariants = false,
   onSelect,
 }: {
+  /** id của ô nhập, để <label htmlFor> ở ngoài trỏ tới. */
+  id?: string
   selected?: ProductOption
   excludedIds: number[]
   label: string
   disabled: boolean
-  /** BH8 (GVHD 20/11): ô chọn ở đơn nhập hàng, yêu cầu bổ sung, nhập đầu kỳ không hiện mã hàng móp. */
+  /** BH8 (GVHD 20/11): ô chọn ở đơn nhập hàng, yêu cầu bổ sung, nhập đầu kỳ không hiện mã hàng lỗi. */
   excludeDamagedVariants?: boolean
   onSelect: (product: ProductOption) => void
 }) {
@@ -41,6 +45,7 @@ export default function ProductPicker({
   return (
     <div className="receiving-product-picker">
       <SearchableFilter
+        id={id}
         label={label}
         value={selected ? String(selected.id) : ''}
         options={parts.map((part) => ({

@@ -94,7 +94,7 @@ type Preview = {
     heldByOthersQty?: number | null
     /** BE #79: số "lấy ngay" gợi ý = min(số cần, còn bán được). */
     suggestedNowQty?: number
-    /** BE #80: hàng móp "<SKU>-M" của phụ tùng này mà cửa hàng còn bán được. */
+    /** BE #80: hàng lỗi "<SKU>-M" của phụ tùng này mà cửa hàng còn bán được. */
     variant?: {
       productId: number
       sku: string
@@ -887,7 +887,7 @@ export function SalesOrderFormView({
                               Tồn kho không đủ; giảm số lấy ngay hoặc tạo đơn chờ phần còn lại.
                             </small>
                           )}
-                          {/* BH7: BE trả hàng móp của mã gốc; bấm để thêm mã "<SKU>-M" như phụ tùng thường. */}
+                          {/* BH7: BE trả hàng lỗi của mã gốc; bấm để thêm mã "<SKU>-M" như phụ tùng thường. */}
                           {priced?.variant &&
                             priced.variant.sellableQty > 0 &&
                             !lines.some(
@@ -913,7 +913,7 @@ export function SalesOrderFormView({
                                 }}
                               >
                                 Có {number.format(priced.variant.sellableQty)}{' '}
-                                hàng móp
+                                hàng lỗi
                                 {priced.variant.retailPrice != null &&
                                   ' · giá ' + vnd(priced.variant.retailPrice)}{' '}
                                 · Thêm vào đơn

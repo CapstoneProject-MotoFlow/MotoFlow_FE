@@ -28,7 +28,7 @@ export default function PartsSearchPage() {
   const [modelText, setModelText] = useState('')
   const [categoryText, setCategoryText] = useState('')
   const [searchParams] = useSearchParams()
-  // BH7: link "Hàng móp của <SKU gốc>" mở danh mục với ?q=<SKU gốc>.
+  // BH7: link "Hàng lỗi của <SKU gốc>" mở danh mục với ?q=<SKU gốc>.
   const [q, setQ] = useState(() => searchParams.get('q') ?? '')
   const [filters, setFilters] = useState({
     vehicleType: '',
@@ -263,7 +263,7 @@ export default function PartsSearchPage() {
                           <small>{item.sku}</small>
                           {damagedVariantBaseSku(item) && (
                             <small className="product-variant-label">
-                              Hàng móp của{' '}
+                              Hàng lỗi của{' '}
                               <Link to={`${base}?q=${encodeURIComponent(damagedVariantBaseSku(item)!)}`}>
                                 {damagedVariantBaseSku(item)}
                               </Link>

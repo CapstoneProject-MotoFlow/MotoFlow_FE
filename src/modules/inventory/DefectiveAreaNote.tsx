@@ -5,7 +5,7 @@ import type { StockRow } from './types'
 
 /**
  * KH1 + BH7 (GVHD 20/11): dưới tên phụ tùng ở Tồn kho, hiện phần đang để ở Khu hàng lỗi (hỏng / sai / chờ trả)
- * và nhãn "Hàng móp của <SKU gốc>" cho mã biến thể "<SKU>-M".
+ * và nhãn "Hàng lỗi của <SKU gốc>" cho mã biến thể "<SKU>-M".
  */
 export default function DefectiveAreaNote({ rows }: { rows: StockRow[] }) {
   const first = rows[0]
@@ -23,7 +23,7 @@ export default function DefectiveAreaNote({ rows }: { rows: StockRow[] }) {
     <>
       {baseSku && (
         <small className="stock-variant-label">
-          Hàng móp của{' '}
+          Hàng lỗi của{' '}
           <Link to={'/inventory?q=' + encodeURIComponent(baseSku)}>
             {baseSku}
           </Link>
