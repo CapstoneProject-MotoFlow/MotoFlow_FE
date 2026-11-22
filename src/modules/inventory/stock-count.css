@@ -355,7 +355,7 @@
 /* Ghi số đếm dưới 600px: ngưỡng khớp với ngăn kéo menu (layouts.css). */
 @media (max-width: 599px) {
   /* Màn ghi số đếm trên điện thoại: mỗi dòng là một thẻ; tiêu đề bảng vẫn có cho trình đọc màn hình. */
-  .count-workspace .stock-table thead {
+  .count-workspace .stock-table.count-record-table thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -364,14 +364,14 @@
     white-space: nowrap;
   }
   /* ui.css đặt min-width 960px cho bảng kiểm kê (đè bằng selector cao hơn nên dùng !important). */
-  .count-workspace .stock-table {
+  .count-workspace .stock-table.count-record-table {
     min-width: 0 !important;
   }
-  .count-workspace .stock-table,
-  .count-workspace .stock-table tbody {
+  .count-workspace .stock-table.count-record-table,
+  .count-workspace .stock-table.count-record-table tbody {
     display: block;
   }
-  .count-workspace .stock-table tr.count-record-row {
+  .count-workspace .stock-table.count-record-table tr.count-record-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
@@ -380,28 +380,28 @@
     border: 1px solid #eaecf0;
     border-radius: 10px;
   }
-  .count-workspace .stock-table tr.count-record-row td {
+  .count-workspace .stock-table.count-record-table tr.count-record-row td {
     display: block;
     min-width: 0;
     padding: 0;
     border: 0;
   }
-  .count-workspace .stock-table td.count-cell-name,
-  .count-workspace .stock-table td.count-cell-meta {
+  .count-workspace .stock-table.count-record-table td.count-cell-name,
+  .count-workspace .stock-table.count-record-table td.count-cell-meta {
     grid-column: 1 / -1;
   }
-  .count-workspace .stock-table td.count-cell-meta {
+  .count-workspace .stock-table.count-record-table td.count-cell-meta {
     color: #475467;
     font-size: 14px;
   }
-  .count-workspace .stock-table td[data-label]::before {
+  .count-workspace .stock-table.count-record-table td[data-label]::before {
     display: block;
     margin-bottom: 6px;
     color: #667085;
     font-size: 12px;
     content: attr(data-label);
   }
-  .count-workspace .stock-table td.count-cell-qty input {
+  .count-workspace .stock-table.count-record-table td.count-cell-qty input {
     max-width: none;
     min-height: 44px;
   }
