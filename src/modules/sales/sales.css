@@ -65,10 +65,6 @@
   color: #667085;
   flex: 1;
 }
-.sales-lot {
-  display: block;
-  color: #b54708;
-}
 .sales-deposit-badge {
   display: inline-block;
   margin-left: 8px;
@@ -338,13 +334,6 @@
   font-size: 13px;
   text-decoration: none;
 }
-.sales-pick-controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
 .sales-progress {
   list-style: none;
   display: grid;
@@ -566,7 +555,7 @@
   font-size: 16px;
   font-weight: 600;
 }
-.sales-pick-screen button,
+.sales-pick-screen button:not(.product-quick-view-trigger),
 .sales-pick-screen .sales-cancel {
   border: 1px solid #d0d5dd;
   border-radius: 7px;
@@ -577,18 +566,6 @@
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-}
-.sales-pick-filter {
-  display: flex !important;
-  align-items: center;
-  gap: 8px !important;
-  font-size: 12px !important;
-  white-space: nowrap;
-}
-.sales-pick-filter input {
-  accent-color: #465fff;
-  width: 16px;
-  height: 16px;
 }
 .sales-pick-screen .stock-table {
   min-width: 650px;
@@ -631,11 +608,6 @@
 .sales-pick-screen .stock-table small {
   font-size: 12px;
   margin-top: 5px;
-}
-.sales-pick-screen .sales-lot {
-  font-size: 12px;
-  margin-top: 5px;
-  font-weight: 600;
 }
 .sales-pick-screen .sales-pick-complete {
   background: #f0fdf8;

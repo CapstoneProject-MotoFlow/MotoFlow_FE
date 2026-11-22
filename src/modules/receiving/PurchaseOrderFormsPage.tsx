@@ -1,4 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
+import { useBackClick } from '../../shared/hooks/useBackClick'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Hint from '../../shared/ui/Hint'
 import { formatDateTime } from '../../shared/utils/format'
@@ -174,6 +175,7 @@ function OrderFormLayout({
   const owner = user?.role === 'OWNER'
   const navigate = useNavigate()
   const location = useLocation()
+  const onBackClick = useBackClick()
   const source = order ?? savedDraft
   const prefill = source
     ? undefined
@@ -442,7 +444,7 @@ function OrderFormLayout({
               supplierId,
               storeId,
             })
-      navigate('/purchase-orders/' + data.id)
+      navigate('/purchase-orders/' + data.id, { replace: true })
     } catch (error) {
       setSaveError(apiMessage(error))
     } finally {
@@ -615,7 +617,7 @@ function OrderFormLayout({
             </button>
           )}
           <div className="receiving-order-cancel">
-            <Link to={back}>
+            <Link to={back} onClick={onBackClick}>
               {editing
                 ? 'Hủy thay đổi'
                 : savedDraft
@@ -870,7 +872,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       )
       // BE đã giao việc kiểm nhận của phiếu cho chính người lập: mở thẳng màn ghi kết quả kiểm.
       refreshNotifications()
-      navigate('/goods-receipt-notes/' + data.id)
+      navigate('/goods-receipt-notes/' + data.id, { replace: true })
     } catch (error) {
       setError(inventoryError(error))
     } finally {

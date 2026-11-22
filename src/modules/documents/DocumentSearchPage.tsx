@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import type { Page } from '../inventory/types'
 import PageHeader from '../../shared/ui/PageHeader'
+import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { Card, Pager, Result, Status, Table } from './DocumentUi'
 import {
@@ -27,6 +28,7 @@ export default function DocumentSearchPage() {
   } = useInventoryScope()
   const defaults = dateWindow(7)
   const q = params.get('q') ?? ''
+  const search = useSearchBox(q, (value) => filter({ q: value }, true))
   const numberSearch = /^#?\d+$/.test(q.trim())
   const rawType = params.get('type') ?? ''
   const type = isDocumentType(rawType) ? rawType : ''
@@ -61,8 +63,7 @@ export default function DocumentSearchPage() {
             <input
               type="search"
               placeholder="Số chứng từ, tên khách hoặc nhà cung cấp"
-              value={q}
-              onChange={(e) => filter({ q: e.target.value }, true)}
+              {...search}
             />
           </label>
           <label>

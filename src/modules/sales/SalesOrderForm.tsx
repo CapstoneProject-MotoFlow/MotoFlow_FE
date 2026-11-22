@@ -18,6 +18,7 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import PageHeader from '../../shared/ui/PageHeader'
+import { hasAppHistory } from '../../shared/hooks/useBackClick'
 import Icon from '../../shared/ui/Icon'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { formatDateTime } from '../../shared/utils/format'
@@ -274,7 +275,13 @@ export function SalesOrderFormView({
   })
   const products = useInventoryData<Page<SalesProduct>>(
     '/products',
-    { q: query.trim(), size: 20, status: 'ACTIVE' },
+    // Gửi storeId của kho đang chọn: Owner không có kho mặc định, thiếu storeId thì availableQty = null.
+    {
+      q: query.trim(),
+      size: 20,
+      status: 'ACTIVE',
+      storeId: warehouse ? Number(warehouse) : undefined,
+    },
     0,
     productOpen,
   )
@@ -493,6 +500,11 @@ export function SalesOrderFormView({
       onDiscard()
       return
     }
+    // "Quay lại" (đơn đang sửa / nháp): về đúng trang đã mở trước đó nếu có.
+    if ((editing || draftOrder) && hasAppHistory()) {
+      navigate(-1)
+      return
+    }
     navigate(
       editing
         ? '/sales-orders/' + editing.id
@@ -639,15 +651,17 @@ export function SalesOrderFormView({
       }
       if (!editing) onSubmitted?.()
       if (depositRoute) {
-        navigate(
-          depositRoute.to,
-          depositRoute.notice
-            ? { state: { notice: depositRoute.notice } }
+        // replace: nút "Quay lại" ở trang chi tiết không quay về form đã lưu (đã cũ).
+        navigate(depositRoute.to, {
+          replace: true,
+          state: depositRoute.notice
+            ? { notice: depositRoute.notice }
             : undefined,
-        )
+        })
         return
       }
       navigate('/sales-orders/' + orderId, {
+        replace: true,
         state: notice
           ? {
               notice,

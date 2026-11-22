@@ -251,7 +251,9 @@ test('Staff order and picking views omit financial data and manager actions', as
     const picking = render(RecordPickedView, {
       order: { ...order, status: 'AWAITING_PICKING' },
     })
-    assert.match(picking, /Lô hạn sớm nhất/)
+    // SKU, kệ và lô gợi ý nằm trong cửa sổ chi tiết (mở khi bấm tên phụ tùng), không hiện trên dòng.
+    assert.match(picking, /product-quick-view-trigger/)
+    assert.doesNotMatch(picking, /Lô hạn sớm nhất/)
     assert.doesNotMatch(picking, /555\.555|987\.654|123\.456|Giá bán/)
   } finally {
     await server.close()

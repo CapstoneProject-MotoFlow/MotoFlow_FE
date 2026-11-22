@@ -320,17 +320,21 @@ export default function CountLiveDetail() {
                           sku={l.sku}
                           partName={l.partName}
                           blindCount={staff}
+                          extraFacts={
+                            l.lotId != null
+                              ? [
+                                  ['Lô', documentCode('L', l.lotId)],
+                                  ['Hạn sử dụng', l.expiryDate ? date(l.expiryDate) : 'Không có'],
+                                ]
+                              : undefined
+                          }
                         />
-                        <CountLineTags line={l} blind={staff} />
-                        <small>
-                          {l.sku}
-                        </small>
                         {l.lotId != null && (
-                          <small className="count-line-lot-details">
-                            Lô {documentCode('L', l.lotId)} · Hạn sử dụng:{' '}
-                            {l.expiryDate ? date(l.expiryDate) : 'Không có'}
+                          <small className="count-line-lot-code">
+                            Lô {documentCode('L', l.lotId)}
                           </small>
                         )}
+                        <CountLineTags line={l} blind={staff} />
                       </td>
                       <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
                       {!staff && (
