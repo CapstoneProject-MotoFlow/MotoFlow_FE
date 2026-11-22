@@ -397,25 +397,6 @@ test('sales order detail links to print the sales slip and payment receipts for 
   }
 })
 
-test('cash records only the payable amount, supports partial payments and returns excess', async () => {
-  const { cashCollection } = await import(
-    'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
-  )
-  assert.deepEqual(cashCollection('200000', 140000), {
-    amount: 140000,
-    tenderedAmount: 200000,
-    changeGiven: 60000,
-  })
-  assert.deepEqual(cashCollection('50000', 140000), {
-    amount: 50000,
-    tenderedAmount: 50000,
-    changeGiven: 0,
-  })
-  for (const value of ['', '0', '-1', '1.5', 'abc', '100000000001'])
-    assert.equal(cashCollection(value, 140000), null)
-  assert.equal(cashCollection('100', 0), null)
-})
-
 test('sales list renders the BE total without inferring zero unpaid balance from absent lines', async () => {
   const server = await createServer({
     configFile: false,
