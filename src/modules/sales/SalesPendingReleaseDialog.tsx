@@ -1,10 +1,24 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { isAxiosError } from 'axios'
 import FormDialog from '../../shared/ui/FormDialog'
+import MoneyInput from '../../shared/ui/MoneyInput'
 import axiosClient from '../../shared/api/axiosClient'
+import { formatMoney } from '../../shared/utils/format'
 import { inventoryError } from '../inventory/api'
 import { number } from '../inventory/presentation'
 import type { SalesOrder } from './salesModel'
 import type { OrderDto } from './salesApi'
+import { parseMoney } from './salesDeposit'
+import {
+  buildReleaseBody,
+  estimateReleaseTotal,
+  isLastRelease,
+  parseSurplusFromMessage,
+  releaseBlockers,
+  releaseDeposit,
+  shortLines,
+} from './salesRelease'
+import './salesRelease.css'
 
 export default function SalesPendingReleaseDialog({
   order,
@@ -28,6 +42,14 @@ export default function SalesPendingReleaseDialog({
       ]),
     ),
   )
+  // null = theo số đề nghị của hệ thống; có giá trị = người dùng đã sửa ô "Trừ cọc vào đơn này".
+  const [depositInput, setDepositInput] = useState<string | null>(null)
+  const [refundMethod, setRefundMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH')
+  const [refundReference, setRefundReference] = useState('')
+  const [refundPaid, setRefundPaid] = useState(false)
+  // BE báo MSG328 (có cọc thừa mà FE không ước tính được): buộc hiện khối hoàn tiền.
+  const [forceRefund, setForceRefund] = useState(false)
+  const [systemRefund, setSystemRefund] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const releaseLines = useMemo(
@@ -38,6 +60,15 @@ export default function SalesPendingReleaseDialog({
         nowQty: Number(quantities[line.productId] ?? 0),
       })),
     [order.lines, quantities],
+  )
+  const qtyByLineId = useMemo(
+    () =>
+      Object.fromEntries(
+        releaseLines
+          .filter((line) => line.lineId != null)
+          .map((line) => [line.lineId, line.nowQty]),
+      ) as Record<number, number>,
+    [releaseLines],
   )
   // MSG305: không vượt số đang chờ; BE cũng chỉ bán tối đa số còn bán được nên chặn luôn ở đây.
   const valid =
@@ -50,18 +81,65 @@ export default function SalesPendingReleaseDialog({
           Math.min(line.requested, line.sellableQty ?? line.requested),
     ) && releaseLines.some((line) => line.nowQty > 0)
   const missingLineIds = order.lines.some((line) => line.lineId == null)
+  const shortIds = shortLines(order.lines, qtyByLineId)
+
+  // Cọc: chỉ khi đơn còn cọc giữ. Tổng đơn tách chỉ ước tính; BE tính lại bằng giá hiện tại.
+  const deposit =
+    order.deposit && order.deposit.remaining > 0 ? order.deposit : null
+  const estimatedTotal = estimateReleaseTotal(
+    order.lines,
+    qtyByLineId,
+    order.discount,
+  )
+  const isLast = isLastRelease(order.lines, qtyByLineId)
+  const typedDeposit =
+    depositInput == null ? null : (parseMoney(depositInput) ?? 0)
+  const depositPlan = deposit
+    ? releaseDeposit({
+        remaining: deposit.remaining,
+        estimatedTotal,
+        isLast,
+        typed: typedDeposit,
+      })
+    : null
+  const refund = depositPlan && isLast ? depositPlan.refund : 0
+  const refundInput = {
+    needed: isLast && (refund > 0 || forceRefund),
+    method: refundMethod,
+    reference: refundReference,
+    paid: refundPaid,
+  }
+  const blockers = releaseBlockers({
+    shortCount: shortIds.length,
+    isLast,
+    deposit,
+    typed: typedDeposit,
+    max: depositPlan?.max ?? null,
+    estimatedTotal,
+    refund: refundInput,
+  })
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (busy || !valid || missingLineIds) return
+    if (busy || !valid || missingLineIds || blockers.length > 0) return
     setBusy(true)
     setError('')
     try {
+      const body = buildReleaseBody({
+        lines: releaseLines,
+        deposit:
+          deposit && depositPlan
+            ? {
+                remaining: deposit.remaining,
+                isLast,
+                send: depositPlan.send,
+              }
+            : null,
+        refund: refundInput,
+      })
       const { data } = await axiosClient.post<OrderDto>(
         `/sales-orders/${order.id}/release`,
-        {
-          lines: releaseLines.map(({ lineId, nowQty }) => ({ lineId, nowQty })),
-        },
+        body,
       )
       // BE #79: nhả một phần → split.salesOrderId là đơn bán mới, đơn này vẫn chờ phần còn lại.
       const soldId = data.split?.salesOrderId ?? null
@@ -80,6 +158,16 @@ export default function SalesPendingReleaseDialog({
         },
       )
     } catch (cause) {
+      if (
+        isAxiosError<{ code?: string; message?: string }>(cause) &&
+        cause.response?.data?.code === 'MSG328'
+      ) {
+        // Cọc thừa mà FE không tính ra: mở khối hoàn tiền để người dùng nhập, không để kẹt.
+        setForceRefund(true)
+        setSystemRefund(
+          parseSurplusFromMessage(cause.response?.data?.message ?? ''),
+        )
+      }
       setError(inventoryError(cause))
     } finally {
       setBusy(false)
@@ -92,7 +180,7 @@ export default function SalesPendingReleaseDialog({
       formId="sales-pending-release"
       submitLabel="Chuyển sang soạn"
       busy={busy}
-      submitDisabled={!valid || missingLineIds}
+      submitDisabled={!valid || missingLineIds || blockers.length > 0}
       onClose={onClose}
     >
       <form
@@ -110,12 +198,19 @@ export default function SalesPendingReleaseDialog({
             Chờ BE trả mã dòng hàng để gửi yêu cầu chuyển soạn.
           </p>
         )}
+        {blockers.length > 0 && (
+          <ul className="sales-release-blockers" role="status">
+            {blockers.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        )}
         <div className="stock-table-scroll">
           <table className="stock-table">
             <thead>
               <tr>
                 <th>Phụ tùng</th>
-                <th>Còn bán được</th>
+                <th>Khách đặt / Còn bán được</th>
                 <th>Lấy ngay</th>
                 <th>Lấy sau</th>
               </tr>
@@ -123,13 +218,19 @@ export default function SalesPendingReleaseDialog({
             <tbody>
               {order.lines.map((line) => {
                 const now = Number(quantities[line.productId] ?? 0)
+                const short =
+                  line.sellableQty != null && now > line.sellableQty
                 return (
-                  <tr key={line.productId}>
+                  <tr
+                    key={line.productId}
+                    className={short ? 'is-short' : undefined}
+                  >
                     <td>
                       {line.partName}
                       <small>{line.sku}</small>
                     </td>
                     <td>
+                      {number.format(line.requested)} /{' '}
                       {line.sellableQty == null
                         ? 'Chưa có dữ liệu'
                         : number.format(line.sellableQty)}
@@ -154,6 +255,11 @@ export default function SalesPendingReleaseDialog({
                           }))
                         }
                       />
+                      {short && (
+                        <small className="sales-release-short-note">
+                          {`Thiếu ${number.format(now - (line.sellableQty ?? 0))}`}
+                        </small>
+                      )}
                     </td>
                     <td>{Math.max(0, line.requested - now)}</td>
                   </tr>
@@ -162,6 +268,91 @@ export default function SalesPendingReleaseDialog({
             </tbody>
           </table>
         </div>
+        {deposit && depositPlan && (
+          <section className="sales-release-deposit" aria-label="Tiền cọc khi chuyển đơn">
+            <p>{`Cọc còn giữ: ${formatMoney(deposit.remaining)}`}</p>
+            <p>
+              {`Tổng đơn tách (ước tính): ${
+                estimatedTotal == null
+                  ? 'chưa ước tính được'
+                  : formatMoney(estimatedTotal)
+              }`}
+            </p>
+            {!isLast && (
+              <label className="sales-release-deposit-field">
+                Trừ cọc vào đơn này
+                <MoneyInput
+                  value={depositInput ?? String(depositPlan.suggested)}
+                  onValueChange={setDepositInput}
+                  onBlur={() => {
+                    if (
+                      depositPlan.max != null &&
+                      typedDeposit != null &&
+                      typedDeposit > depositPlan.max
+                    )
+                      setDepositInput(String(depositPlan.max))
+                  }}
+                />
+              </label>
+            )}
+            {isLast && (
+              <>
+                <p>{`Trừ hết cọc vào đơn này (ước tính): ${formatMoney(depositPlan.suggested)}`}</p>
+                <p className="sales-release-hint">
+                  Lần chuyển cuối: hệ thống trừ hết cọc còn lại, tối đa bằng tổng đơn.
+                </p>
+                {(refund > 0 || forceRefund) && (
+                  <fieldset className="sales-release-refund">
+                    <legend>
+                      {forceRefund
+                        ? 'Hoàn lại khách (theo hệ thống)'
+                        : `Hoàn lại khách ${formatMoney(refund)} (ước tính)`}
+                    </legend>
+                    {forceRefund && (
+                      <p className="sales-release-hint">
+                        {systemRefund != null
+                          ? `Số tiền hoàn: ${formatMoney(systemRefund)}`
+                          : 'Số tiền hoàn theo hệ thống'}
+                      </p>
+                    )}
+                    <label>
+                      Phương thức
+                      <select
+                        value={refundMethod}
+                        onChange={(event) =>
+                          setRefundMethod(event.target.value as 'CASH' | 'BANK_TRANSFER')
+                        }
+                      >
+                        <option value="CASH">Tiền mặt</option>
+                        <option value="BANK_TRANSFER">Chuyển khoản</option>
+                      </select>
+                    </label>
+                    {refundMethod === 'BANK_TRANSFER' && (
+                      <label>
+                        Mã giao dịch <span className="sales-required">*</span>
+                        <input
+                          required
+                          maxLength={100}
+                          value={refundReference}
+                          onChange={(event) => setRefundReference(event.target.value)}
+                        />
+                      </label>
+                    )}
+                    <label className="sales-release-check">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={refundPaid}
+                        onChange={(event) => setRefundPaid(event.target.checked)}
+                      />
+                      Đã trả tiền cho khách
+                    </label>
+                  </fieldset>
+                )}
+              </>
+            )}
+          </section>
+        )}
       </form>
     </FormDialog>
   )

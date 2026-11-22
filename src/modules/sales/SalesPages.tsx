@@ -604,6 +604,9 @@ export function SalesOrderDetailView({
             : l.requested),
       0,
     ) ?? 0
+  // Cọc đã nằm trong netPaid; tách riêng để "Đã thu" không tính cọc.
+  const depositApplied = order?.depositApplied ?? 0
+  const receivedExDeposit = Math.max(0, (order?.netPaid ?? 0) - depositApplied)
   const historyNames: Record<string, string> = {
     CREATED: 'Tạo đơn bán',
     VERSIONED: 'Lưu phiên bản đơn',
@@ -934,9 +937,15 @@ export function SalesOrderDetailView({
                       : money.format(financial)}
                   </dd>
                 </div>
+                {depositApplied > 0 && (
+                  <div>
+                    <dt>Đã cọc</dt>
+                    <dd>{money.format(depositApplied)}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Đã thu</dt>
-                  <dd>{money.format(order.netPaid)}</dd>
+                  <dd>{money.format(receivedExDeposit)}</dd>
                 </div>
                 {order.credit > 0 && (
                   <div>
@@ -945,7 +954,7 @@ export function SalesOrderDetailView({
                   </div>
                 )}
                 <div className="total">
-                  <dt>Còn phải thu</dt>
+                  <dt>{depositApplied > 0 ? 'Còn phải trả' : 'Còn phải thu'}</dt>
                   <dd>
                     {order.remainingPayable == null
                       ? 'Chưa có dữ liệu'
