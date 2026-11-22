@@ -163,12 +163,14 @@ export default function SalesPendingReleaseDialog({
         cause.response?.data?.code === 'MSG328'
       ) {
         // Cọc thừa mà FE không tính ra: mở khối hoàn tiền để người dùng nhập, không để kẹt.
+        // Không hiện lỗi thô; ghi chú hướng dẫn nằm ở khối hoàn tiền.
         setForceRefund(true)
         setSystemRefund(
           parseSurplusFromMessage(cause.response?.data?.message ?? ''),
         )
+      } else {
+        setError(inventoryError(cause))
       }
-      setError(inventoryError(cause))
     } finally {
       setBusy(false)
     }
@@ -308,6 +310,11 @@ export default function SalesPendingReleaseDialog({
                         ? 'Hoàn lại khách (theo hệ thống)'
                         : `Hoàn lại khách ${formatMoney(refund)} (ước tính)`}
                     </legend>
+                    {forceRefund && (
+                      <p role="status" className="sales-release-hint">
+                        Hệ thống báo tiền cọc vượt tổng đơn. Vui lòng nhập cách trả lại khách phần thừa rồi gửi lại.
+                      </p>
+                    )}
                     {forceRefund && (
                       <p className="sales-release-hint">
                         {systemRefund != null

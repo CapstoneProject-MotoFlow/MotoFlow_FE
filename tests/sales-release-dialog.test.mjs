@@ -169,6 +169,10 @@ test('a line that requests 5 with only 2 sellable starts clamped to 2 and is not
       }),
     })
     assert.match(html, /Khách đặt \/ Còn bán được/)
+    // Ô "Lấy ngay" phải hiện đúng số đã kẹp (2), không chỉ là không có cảnh báo.
+    const nowInput = html.match(/<input[^>]*aria-label="Lấy ngay SKU-1"[^>]*>/)
+    assert.ok(nowInput, 'ô Lấy ngay phải được render')
+    assert.match(nowInput[0], /value="2"/)
     assert.doesNotMatch(html, /is-short/)
     assert.doesNotMatch(html, /Thiếu/)
     assert.doesNotMatch(html, /vượt số còn bán được/)

@@ -19,6 +19,7 @@ function unitEstimate(
 ): number | null {
   if (line.retailPrice != null)
     return Math.round(line.retailPrice * (1 - discountRate / 100))
+  // actualUnitPrice đã là giá sau chiết khấu, nên không áp dụng discount thêm lần nữa.
   return line.actualUnitPrice ?? null
 }
 
@@ -151,7 +152,7 @@ export type ReleaseBody = {
   lines: { lineId: number | undefined; nowQty: number }[]
   /** Chỉ có ở lần chuyển một phần (BE: null = 0). */
   depositAmount?: number | null
-  /** Chỉ có ở lần chuyển cuối khi cần hoàn cọc thừa. */
+  /** Chỉ có ở lần chuyển cuối khi cần hoàn cọc thừa và đã xác nhận đã trả khách. */
   depositRefund?: {
     paymentMethod: 'CASH' | 'BANK_TRANSFER'
     transactionReference: string | null
@@ -161,7 +162,7 @@ export type ReleaseBody = {
 
 /**
  * Body POST /sales-orders/{id}/release. Không có cọc (hoặc cọc đã hết) thì chỉ có lines;
- * lần cuối không gửi depositAmount (BE tự áp dụng), chỉ gửi depositRefund khi cần hoàn.
+ * lần cuối không gửi depositAmount (BE tự áp dụng), chỉ gửi depositRefund khi cần hoàn và đã trả.
  */
 export function buildReleaseBody({
   lines,
@@ -177,7 +178,8 @@ export function buildReleaseBody({
   }
   if (!deposit || deposit.remaining <= 0) return body
   if (deposit.isLast) {
-    if (refund.needed)
+    // Chỉ gửi khi người dùng đã xác nhận trả tiền; không tự khẳng định paidToCustomer.
+    if (refund.needed && refund.paid)
       body.depositRefund = {
         paymentMethod: refund.method,
         transactionReference:
@@ -241,10 +243,13 @@ export function releaseBlockers({
   return blockers
 }
 
-/** Lấy số tiền từ thông báo MSG328 (ví dụ "... 1.000.000 đ ..."); không đọc được thì null. */
+/**
+ * Lấy số tiền từ thông báo MSG328 (ví dụ "... 1.000.000 đ ..."): số phải đứng ngay trước "đ"/"₫"
+ * trên cùng một dòng, không ghép chữ số qua khoảng trắng hay xuống dòng; không đọc được thì null.
+ */
 export function parseSurplusFromMessage(message: string): number | null {
-  const match = /(\d[\d.,\s]*\d|\d)\s*(?:đ|₫)/i.exec(message)
+  const match = /(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+)[ \u00a0]*[đ₫]/i.exec(message)
   if (!match) return null
-  const value = Number(match[1].replace(/[.,\s]/g, ''))
+  const value = Number(match[1].replace(/[.,]/g, ''))
   return Number.isSafeInteger(value) && value > 0 ? value : null
 }

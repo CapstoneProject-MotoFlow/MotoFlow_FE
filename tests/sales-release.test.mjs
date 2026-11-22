@@ -377,3 +377,35 @@ test('parseSurplusFromMessage reads the amount from an MSG328 message or returns
   )
   assert.equal(parseSurplusFromMessage('Cần hoàn lại khách.'), null)
 })
+
+test('parseSurplusFromMessage reads the real BE MSG328 text', () => {
+  assert.equal(
+    parseSurplusFromMessage(
+      'Tiền cọc còn lại vượt tổng tiền đơn 680.000 đ. Vui lòng chọn cách trả lại khách phần thừa này.',
+    ),
+    680_000,
+  )
+})
+
+test('parseSurplusFromMessage never joins digits across whitespace or newlines', () => {
+  assert.equal(parseSurplusFromMessage('12\n345 đ'), 345)
+  assert.equal(parseSurplusFromMessage('12 345 đ'), 345)
+  assert.equal(parseSurplusFromMessage('Mã 12 345 ₫'), 345)
+  assert.equal(parseSurplusFromMessage('Số 500 000 cần trả'), null)
+})
+
+test('parseSurplusFromMessage returns null when no currency follows the number', () => {
+  assert.equal(parseSurplusFromMessage('Cọc thừa 500000 đ cần trả.'), 500_000)
+  assert.equal(parseSurplusFromMessage('Cọc thừa 500000 cần trả.'), null)
+  assert.equal(parseSurplusFromMessage('Còn 500.000 chưa rõ'), null)
+})
+
+test('buildReleaseBody omits depositRefund when the refund is needed but not confirmed as paid', () => {
+  const body = buildReleaseBody({
+    lines: [{ lineId: 1, nowQty: 1 }],
+    deposit: { remaining: 5_000_000, isLast: true, send: null },
+    refund: { needed: true, method: 'CASH', reference: '', paid: false },
+  })
+  assert.deepEqual(body, { lines: [{ lineId: 1, nowQty: 1 }] })
+  assert.equal('depositRefund' in body, false)
+})
