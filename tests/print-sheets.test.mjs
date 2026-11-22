@@ -162,7 +162,28 @@ test('retail slip shows only the store name, totals and no logo', async () => {
   assert.doesNotMatch(html, /Chiết khấu|Đã cọc/)
 })
 
-test('retail slip shows the amount after deposit when the backend sends amountDue 0', async () => {
+test('retail slip prints total minus deposit as the amount due when nothing is paid yet', async () => {
+  const unpaid = {
+    ...retailSmall,
+    totals: {
+      ...retailSmall.totals,
+      total: 950000,
+      discountAmount: 50000,
+      deposit: 300000,
+      paid: 0,
+      amountDue: 700000,
+    },
+  }
+  const html = await render(
+    '/src/modules/documents/print/PrintSheetSmall.tsx',
+    { data: unpaid },
+  )
+  assert.match(html, /Chiết khấu/)
+  assert.match(html, /Đã cọc/)
+  assert.match(html, /Khách cần thanh toán<\/span><span>650\.000(?!\d)/)
+})
+
+test('retail slip prints total minus deposit as the amount due when the backend sends amountDue 0', async () => {
   const paid = {
     ...retailSmall,
     totals: {
@@ -180,9 +201,7 @@ test('retail slip shows the amount after deposit when the backend sends amountDu
   )
   assert.match(html, /Chiết khấu/)
   assert.match(html, /Đã cọc/)
-  const due = html.match(/Khách cần thanh toán<\/span><span>([^<]*)<\/span>/)
-  assert.ok(due, 'the amount due row is rendered')
-  assert.match(due[1], /650\.000/)
+  assert.match(html, /Khách cần thanh toán<\/span><span>650\.000(?!\d)/)
 })
 
 test('wholesale A5 sheet shows both tax codes, amount in words and signatures', async () => {
@@ -214,16 +233,18 @@ test('wholesale A5 sheet shows total minus deposit even when amountDue is 0', as
     ...wholesaleLarge,
     totals: {
       ...wholesaleLarge.totals,
-      amountDue: 0,
+      total: 1900000,
+      deposit: 100000,
+      paid: 500000,
       credit: 0,
-      paid: 1800000,
+      amountDue: 1300000,
     },
   }
   const html = await render(
     '/src/modules/documents/print/PrintSheetLarge.tsx',
     { data: paid },
   )
-  assert.match(html, /Còn phải trả[\s\S]*?1\.800\.000/)
+  assert.match(html, /Còn phải trả<\/span><span>1\.800\.000(?!\d)/)
   assert.match(html, /Số tiền bằng chữ: Một triệu tám trăm nghìn đồng chẵn/)
 })
 
