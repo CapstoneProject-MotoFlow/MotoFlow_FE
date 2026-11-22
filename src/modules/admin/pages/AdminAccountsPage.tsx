@@ -2,7 +2,7 @@
  * File: modules/admin/pages/AdminAccountsPage.tsx
  * Loại: MÀN HÌNH — Quản lý tài khoản Admin.
  * Đường dẫn: /accounts.
- * Công dụng: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa và cấp lại mật khẩu.
+ * Công dụng: Danh sách tài khoản; tìm kiếm, lọc, phân trang giao diện; form tạo tài khoản, cập nhật vai trò/quyền/cửa hàng, khóa/mở khóa, cấp lại mật khẩu và xem/đăng xuất phiên đăng nhập.
  */
 /**
  * Admin account screen: loads accounts/stores, handles search and filters,
@@ -29,6 +29,7 @@ import {
   resetAccountPassword,
   updatePermissions,
 } from '../services/accountService'
+import AccountSessionsDialog from '../components/AccountSessionsDialog'
 
 import { roleNames } from '../../../shared/utils/roles'
 import { matchesSearch } from '../../../shared/utils/searchText'
@@ -103,6 +104,7 @@ export default function AccountsPage() {
   } | null>(null)
   const [notice, setNotice] = useState('')
   const [workingId, setWorkingId] = useState<number | null>(null)
+  const [sessionsOf, setSessionsOf] = useState<Account | null>(null)
   const [page, setPage] = useState(1)
 
   async function loadAccounts() {
@@ -595,6 +597,17 @@ export default function AccountsPage() {
                           >
                             Cấp lại mật khẩu
                           </button>
+                          {/* Phiên của chính mình xem ở trang Thông tin cá nhân (BE trả MSG15 ở đây). */}
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--secondary mf-btn--sm"
+                            disabled={
+                              workingId === account.id || account.id === user.id
+                            }
+                            onClick={() => setSessionsOf(account)}
+                          >
+                            Phiên đăng nhập
+                          </button>
                           <button
                             type="button"
                             className={
@@ -1067,6 +1080,12 @@ export default function AccountsPage() {
           message={permissionConfirm.message}
           onConfirm={permissionConfirm.run}
           onCancel={() => setPermissionConfirm(null)}
+        />
+      )}
+      {sessionsOf && (
+        <AccountSessionsDialog
+          account={sessionsOf}
+          onClose={() => setSessionsOf(null)}
         />
       )}
       {confirmation && (

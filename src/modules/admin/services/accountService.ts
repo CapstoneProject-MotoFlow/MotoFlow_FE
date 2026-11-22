@@ -1,10 +1,11 @@
 /**
  * File: modules/admin/services/accountService.ts
  * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — không phải màn hình độc lập.
- * Công dụng: Hàm gọi API tài khoản/cửa hàng/lịch sử: listAccounts, listAccountSummaries, getAccount, createAccount, updatePermissions, resetAccountPassword, changeAccountLock, listPermissionHistory.
+ * Công dụng: Hàm gọi API tài khoản/cửa hàng/lịch sử: listAccounts, listAccountSummaries, getAccount, createAccount, updatePermissions, resetAccountPassword, changeAccountLock, listAccountSessions, signOutAccountSession, listPermissionHistory.
  */
 import axiosClient from '../../../shared/api/axiosClient'
 import type { Account, DashboardAccount } from '../../../shared/types/account'
+import type { Session } from '../../../shared/types/session'
 import type { DashboardStore } from '../../../shared/types/store'
 import { fetchPermissionHistory } from '../../../shared/api/permissionHistoryApi'
 
@@ -61,5 +62,22 @@ export async function changeAccountLock(
   reason: string,
 ) {
   await axiosClient.post(`/accounts/${id}/${action}`, { reason })
+}
+/** Các thiết bị tài khoản đang đăng nhập, mới nhất trước. Tài khoản không tồn tại trả MSG48. */
+export async function listAccountSessions(id: number) {
+  return (await axiosClient.get<Session[]>(`/accounts/${id}/sessions`)).data
+}
+/**
+ * Buộc tài khoản đăng xuất khỏi một thiết bị; lý do (không bắt buộc) được ghi vào nhật ký.
+ * Phiên đã kết thúc trả MSG75; tài khoản của chính Admin trả MSG15.
+ */
+export async function signOutAccountSession(
+  id: number,
+  sessionId: number,
+  reason: string,
+) {
+  await axiosClient.post(`/accounts/${id}/sessions/${sessionId}/sign-out`, {
+    reason: reason.trim() || null,
+  })
 }
 export const listPermissionHistory = fetchPermissionHistory
