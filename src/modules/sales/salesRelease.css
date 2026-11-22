@@ -1,0 +1,68 @@
+/* Hộp chuyển đơn chờ sang soạn (SalesPendingReleaseDialog): dòng vượt tồn và khối tiền cọc. */
+.sales-release-short-note {
+  display: block;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stock-table tr.is-short td {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.sales-release-blockers {
+  margin: 0;
+  padding: 0 0 0 18px;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.sales-release-deposit {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #dbe4ff;
+  border-radius: 8px;
+  background: #f5f7ff;
+}
+
+.sales-release-deposit > p {
+  margin: 0;
+  color: #1d2939;
+  font-size: 14px;
+}
+
+.sales-release-deposit .sales-release-hint {
+  color: #465fff;
+  font-size: 13px;
+}
+
+.sales-release-deposit-field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sales-release-refund {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fffbfa;
+}
+
+.sales-release-refund legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+
+.sales-release-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
