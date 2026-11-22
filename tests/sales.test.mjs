@@ -18,7 +18,17 @@ const { outputText } = ts.transpileModule(
     },
   },
 )
-const { salesTotal, discountedPrice, mayCancel, pickedReady, suggestedPickingQty, splitLine } = await import(
+const {
+  salesTotal,
+  discountedPrice,
+  mayCancel,
+  pickedReady,
+  suggestedPickingQty,
+  splitLine,
+  walkInShortLeft,
+  walkInShortageText,
+  orderLinesWithNowQty,
+} = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
 test('sales pricing rounds each discounted unit before multiplying quantity', () => {
@@ -55,24 +65,62 @@ test('picking suggestion is limited by sellable quantity and defaults to request
   assert.equal(suggestedPickingQty(10, 12), 10)
   assert.equal(suggestedPickingQty(10, null), 10)
 })
-test('split line: take now defaults to the BE suggestion, never exceeds sellable, and the rest waits by default', () => {
-  // GVHD: bán 10 đèn khi tồn 5 → lấy ngay 5, chờ 5.
+test('split line: take now defaults to the BE suggestion, never exceeds sellable, and the rest waits', () => {
+  // GVHD: bán 10 đèn khi tồn 5 → lấy ngay 5, phần còn lại chờ hàng.
   assert.deepEqual(splitLine({ requested: 10, sellable: 5, suggestedNow: 5 }), {
     takeNow: 5,
     later: 5,
-    waitForRest: true,
   })
   // Không có gợi ý thì lấy min(cần, còn bán được).
   assert.equal(splitLine({ requested: 3, sellable: 5 }).takeNow, 3)
   // Người bán nhập vượt số còn bán được: chặn ở số còn bán được.
   assert.equal(splitLine({ requested: 10, sellable: 5, nowQty: 8 }).takeNow, 5)
-  // Lấy ngay 0, bỏ tích: cả dòng là khách bỏ.
-  assert.deepEqual(
-    splitLine({ requested: 4, sellable: 0, nowQty: 0, waitForRest: false }),
-    { takeNow: 0, later: 4, waitForRest: false },
-  )
+  // Lấy ngay 0: cả dòng chờ hàng.
+  assert.deepEqual(splitLine({ requested: 4, sellable: 0, nowQty: 0 }), {
+    takeNow: 0,
+    later: 4,
+  })
   // Chưa biết tồn: lấy đủ.
   assert.equal(splitLine({ requested: 7, sellable: null }).later, 0)
+  // Khách lẻ (sellable null, không gợi ý, không nhập lấy ngay): lấy đủ số lượng, không tách.
+  assert.deepEqual(splitLine({ requested: 6, sellable: null, suggestedNow: null, nowQty: null }), {
+    takeNow: 6,
+    later: 0,
+  })
+})
+
+test('walk-in over-stock: blocked only for a new order, against the preview sellable, and never while unknown', () => {
+  const base = { walkIn: true, editing: false, quantity: 3, previewSellable: 2 }
+  // Xin 3, preview còn 2: chặn, báo còn 2.
+  assert.equal(walkInShortLeft(base), 2)
+  // Đủ số: không chặn.
+  assert.equal(walkInShortLeft({ ...base, quantity: 2 }), null)
+  // Chưa có preview: không chặn (không đoán theo tồn cũ).
+  assert.equal(walkInShortLeft({ ...base, previewSellable: undefined }), null)
+  assert.equal(walkInShortLeft({ ...base, previewSellable: null }), null)
+  // Sửa đơn đã có: BE không kiểm MSG332, không chặn.
+  assert.equal(walkInShortLeft({ ...base, editing: true }), null)
+  // Khách có hồ sơ: không áp dụng (BE tự tách đơn).
+  assert.equal(walkInShortLeft({ ...base, walkIn: false }), null)
+  assert.equal(
+    walkInShortageText(2),
+    'Khách lẻ chỉ mua được số đang có: còn 2. Tạo hồ sơ khách để chờ hàng.',
+  )
+})
+
+test('order lines sent to the BE carry nowQty and never waitForRest', () => {
+  const body = orderLinesWithNowQty(
+    [
+      { productId: 1, quantity: 5 },
+      { productId: 2, quantity: 3 },
+    ],
+    new Map([[1, 2]]),
+  )
+  assert.deepEqual(body, [
+    { productId: 1, quantity: 5, nowQty: 2 },
+    { productId: 2, quantity: 3, nowQty: 3 },
+  ])
+  for (const line of body) assert.equal('waitForRest' in line, false)
 })
 test('the sales form shows chain prices before a warehouse is selected', async () => {
   const server = await createServer({
@@ -181,7 +229,7 @@ test('a server draft reopens in the sales form with save, submit and delete', as
     )
     assert.match(html, /Đơn nháp SO-5/)
     assert.match(html, /Khách hẹn chiều lấy/)
-    assert.match(html, /value="Anh Nam"/)
+    assert.doesNotMatch(html, /aria-label="Tên khách lẻ"/)
     assert.match(html, />Tạo đơn<\/button>/)
     assert.match(html, />Lưu nháp<\/button>/)
     assert.match(html, />Xóa nháp<\/button>/)

@@ -1027,26 +1027,6 @@
 .sales-confirm-shortage .sales-confirm-warning {
   margin: 0 0 10px !important;
 }
-.sales-pending-remainder-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.sales-pending-remainder-option input {
-  flex: 0 0 18px;
-  width: 18px !important;
-  height: 18px;
-  min-height: 18px !important;
-  margin: 0;
-  accent-color: #465fff;
-}
-.sales-pending-remainder-hint {
-  margin: 6px 0 0;
-  color: #667085;
-  font-size: 12px;
-}
 .sales-confirm-agreement {
   padding: 0 24px 20px;
   font-size: 13px !important;
@@ -1636,35 +1616,9 @@
   text-align: right;
   white-space: nowrap;
 }
-.pos-table .pos-col-split-check {
-  width: 136px;
-  text-align: left;
-  white-space: nowrap;
-}
 .pos-table td.pos-col-split-qty {
   color: var(--mf-text-2);
   font-variant-numeric: tabular-nums;
-}
-.pos-table td.pos-col-split-check {
-  vertical-align: middle;
-}
-.sales-workspace .pos-table td.pos-col-split-check label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin: 0;
-  color: var(--mf-text-2);
-  font-size: 13px;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.sales-workspace .pos-table td.pos-col-split-check input[type='checkbox'] {
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: #465fff;
 }
 .pos-table .pos-col-money {
   width: 116px;
@@ -1723,29 +1677,6 @@
 }
 .pos-muted {
   color: var(--mf-muted);
-}
-.pos-stock-split {
-  margin: 14px 0;
-  padding: 12px;
-  border: 1px solid #dbe4ff;
-  border-radius: 8px;
-  background: #f5f7ff;
-}
-.pos-stock-split label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--mf-text);
-  font-size: 13px;
-  font-weight: 600;
-}
-.pos-stock-split input {
-  accent-color: #465fff;
-}
-.pos-stock-split p {
-  margin: 8px 0 0;
-  color: #465fff;
-  font-size: 13px;
 }
 .pos-empty {
   display: grid;
@@ -1868,19 +1799,6 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: -4px;
-}
-.pos-walkin {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
-  margin-top: -4px;
-}
-.sales-workspace.pos-page .pos-walkin input {
-  width: 100%;
-  min-width: 0;
-  min-height: 40px;
-  padding: 0 12px;
-  font-size: 14px;
 }
 .pos-segment {
   display: grid;

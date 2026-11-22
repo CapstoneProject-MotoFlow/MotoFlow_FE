@@ -20,7 +20,6 @@ export type TabLine = {
   product: SalesProduct
   quantity: number
   nowQty?: number
-  waitForRest?: boolean
 }
 export type TabDeposit = {
   amount: string
@@ -34,8 +33,6 @@ export type TabDeposit = {
 }
 export type TabDraft = {
   customer?: TabCustomer
-  walkin: string
-  walkPhone: string
   warehouse: string
   type: 'RETAIL' | 'WHOLESALE'
   discount: string
@@ -85,8 +82,6 @@ function textOr(value: unknown, fallback: string): string {
 
 export function emptyDraft(warehouse = ''): TabDraft {
   return {
-    walkin: '',
-    walkPhone: '',
     warehouse,
     type: 'RETAIL',
     discount: '0',
@@ -185,8 +180,6 @@ export function isTabDirty(tab: SalesTab): boolean {
   return (
     draft.lines.length > 0 ||
     draft.customer !== undefined ||
-    draft.walkin.trim() !== '' ||
-    draft.walkPhone.trim() !== '' ||
     draft.note.trim() !== '' ||
     (draft.deposit?.amount ?? '').trim() !== '' ||
     draft.type === 'WHOLESALE' ||
@@ -244,9 +237,6 @@ function sanitizeLine(value: unknown): TabLine | null {
     quantity: value.quantity,
   }
   if (isNonNegativeInteger(value.nowQty)) line.nowQty = value.nowQty
-  if (typeof value.waitForRest === 'boolean') {
-    line.waitForRest = value.waitForRest
-  }
   return line
 }
 
@@ -264,8 +254,6 @@ function sanitizeDraft(
   const preorder = raw.preorder === true
   return {
     ...(customer ? { customer } : {}),
-    walkin: textOr(raw.walkin, base.walkin),
-    walkPhone: textOr(raw.walkPhone, base.walkPhone),
     warehouse: textOr(raw.warehouse, base.warehouse),
     type: raw.type === 'WHOLESALE' ? 'WHOLESALE' : 'RETAIL',
     discount: textOr(raw.discount, base.discount),

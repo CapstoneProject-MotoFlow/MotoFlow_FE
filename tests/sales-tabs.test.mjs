@@ -66,8 +66,6 @@ const product = (id) => ({
 })
 
 const draftWithLine = (productId, quantity) => ({
-  walkin: '',
-  walkPhone: '',
   warehouse: '',
   type: 'RETAIL',
   discount: '0',
@@ -267,15 +265,11 @@ test('isTabDirty is false for an empty tab and true with a line or a customer', 
   assert.equal(isTabDirty(withCustomer), true)
 })
 
-test('isTabDirty counts walkin, walkPhone, note and deposit amount but not whitespace-only text', () => {
+test('isTabDirty counts note and deposit amount but not whitespace-only text', () => {
   const empty = createState().tabs[0]
   const with_ = (patch) => ({ ...empty, draft: { ...empty.draft, ...patch } })
 
-  assert.equal(isTabDirty(with_({ walkin: 'Anh Tám' })), true)
-  assert.equal(isTabDirty(with_({ walkPhone: '0900000000' })), true)
   assert.equal(isTabDirty(with_({ note: 'Giao sớm' })), true)
-  assert.equal(isTabDirty(with_({ walkin: '   ' })), false)
-  assert.equal(isTabDirty(with_({ walkPhone: '  ' })), false)
   assert.equal(isTabDirty(with_({ note: ' \n\t ' })), false)
 
   const deposit = (amount) => ({
@@ -344,7 +338,6 @@ test('save then load with the same key restores the exact state (F5)', () => {
         product: product(5),
         quantity: 4,
         nowQty: 1,
-        waitForRest: true,
       },
     ],
   })
@@ -553,7 +546,7 @@ test('parseTabs drops lines with a negative or fractional quantity and cleans op
           { product: p(1), quantity: -1 },
           { product: p(2), quantity: 1.5 },
           { product: p(3), quantity: 2 },
-          { product: p(4), quantity: 1, nowQty: -1, waitForRest: 'yes' },
+          { product: p(4), quantity: 1, nowQty: -1 },
           { product: { id: 5, partName: 'x' }, quantity: 1 },
         ],
       }),
@@ -650,7 +643,6 @@ test('draftFromPrefill seeds one line from product and quantity in the given war
   assert.equal(draft.warehouse, '3')
   assert.deepEqual(draft.lines, [{ product: product(9), quantity: 4 }])
   assert.equal(draft.customer, undefined)
-  assert.equal(draft.walkin, '')
   assert.equal(draft.type, 'RETAIL')
   assert.equal(draft.discount, '0')
   assert.equal(draft.note, '')

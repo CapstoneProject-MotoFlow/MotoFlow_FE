@@ -29,8 +29,6 @@ test('the sales form starts from a tab draft and hides the store picker when the
       '/src/shared/hooks/useAuth.tsx',
     )
     const draft = {
-      walkin: 'Anh Tư',
-      walkPhone: '',
       warehouse: '1',
       type: 'RETAIL',
       discount: '0',
@@ -52,7 +50,8 @@ test('the sales form starts from a tab draft and hides the store picker when the
 
     const html = render({ initialDraft: draft }, 'SELLER')
     assert.match(html, /Lọc gió X/)
-    assert.match(html, /value="Anh Tư"/)
+    assert.doesNotMatch(html, /aria-label="Tên khách lẻ"/)
+    assert.doesNotMatch(html, /aria-label="Số điện thoại khách lẻ"/)
 
     const owner = render({ initialDraft: draft, storeLocked: true }, 'OWNER')
     assert.doesNotMatch(owner, /aria-label="Cửa hàng bán"/)
@@ -98,13 +97,11 @@ test('a waiting-only order offers a deposit card, only for a customer with a pro
     }
     const outOfStock = { ...product, sellableQty: 0 }
     const waiting = {
-      walkin: '',
-      walkPhone: '',
       warehouse: '1',
       type: 'RETAIL',
       discount: '0',
       note: '',
-      lines: [{ product: outOfStock, quantity: 2, nowQty: 0, waitForRest: true }],
+      lines: [{ product: outOfStock, quantity: 2, nowQty: 0 }],
     }
 
     const withCustomer = render({
@@ -114,8 +111,11 @@ test('a waiting-only order offers a deposit card, only for a customer with a pro
     assert.match(withCustomer, /Hạn cọc/)
     assert.match(withCustomer, /Khách đặt trước dù cửa hàng còn hàng/)
 
+    // Khách lẻ không có đơn chờ hàng nên không có phần cọc.
     const walkIn = render({ initialDraft: waiting })
-    assert.match(walkIn, /Khách lẻ không nhận cọc được/)
+    // Chưa có preview (SSR) nên chưa chặn; việc chặn theo preview được kiểm ở walkInShortLeft.
+    assert.doesNotMatch(walkIn, /Khách lẻ chỉ mua được số đang có/)
+    assert.doesNotMatch(walkIn, /Tiền cọc/)
     assert.doesNotMatch(walkIn, /Hạn cọc/)
 
     const takenNow = render({
@@ -127,7 +127,6 @@ test('a waiting-only order offers a deposit card, only for a customer with a pro
             product,
             quantity: 2,
             nowQty: 2,
-            waitForRest: true,
           },
         ],
       },
@@ -160,8 +159,6 @@ test('a preorder draft sends the whole line to the waiting order even when stock
           { value: { user: { id: 1, role: 'SELLER' } } },
           createElement(SalesOrderFormView, {
             initialDraft: {
-              walkin: '',
-              walkPhone: '',
               warehouse: '1',
               type: 'RETAIL',
               discount: '0',
@@ -186,8 +183,9 @@ test('a preorder draft sends the whole line to the waiting order even when stock
     assert.ok(tag, 'the Lấy ngay input is rendered')
     assert.match(tag[0], /disabled=""/)
     assert.match(tag[0], /value="0"/)
-    const waitBox = html.match(/<input[^>]*aria-label="Chờ hàng LG-X-1"[^>]*>/)
-    assert.ok(waitBox && /checked=""/.test(waitBox[0]) && /disabled=""/.test(waitBox[0]))
+    // Không còn ô "Chờ hàng": phần lấy sau hiện như số, BE tự chờ hàng.
+    assert.doesNotMatch(html, /aria-label="Chờ hàng LG-X-1"/)
+    assert.doesNotMatch(html, /Chờ phần còn lại/)
   } finally {
     await server.close()
   }
