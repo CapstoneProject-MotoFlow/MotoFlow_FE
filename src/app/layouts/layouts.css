@@ -424,9 +424,6 @@
   }
 }
 @media (max-width: 520px) {
-  .sidebar-toggle {
-    display: none;
-  }
   .header-tools {
     flex: 1;
   }
@@ -812,4 +809,69 @@
 .access-denied-card p {
   margin: 0.5rem 0 1rem;
   color: #475467;
+}
+
+/* Dưới 600px: menu là ngăn kéo phủ lên nội dung, mở bằng ☰ trên header; không còn thanh icon 64px. */
+@media (max-width: 599px) {
+  .admin-dashboard .admin-sidebar,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar {
+    width: min(280px, 86vw);
+    padding: 20px 12px 14px;
+    align-items: stretch;
+    transform: translateX(-100%);
+    visibility: hidden;
+    /* Đóng: trượt ra rồi mới ẩn; mở: hiện ngay để focus vào được menu. */
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+  .admin-dashboard .admin-sidebar.is-drawer-open,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar.is-drawer-open {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 0.2s ease,
+      visibility 0s;
+  }
+  .admin-dashboard .admin-sidebar .sidebar-brand,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar .sidebar-brand {
+    justify-content: flex-start;
+    padding-inline: 1px 0;
+  }
+  .admin-dashboard .admin-sidebar .sidebar-brand .brand > span:not(.brand-mark),
+  .admin-dashboard .admin-sidebar .sidebar-brand strong,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar .sidebar-brand strong {
+    display: inline;
+  }
+  .admin-dashboard .admin-sidebar .sidebar-link span,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar .sidebar-link > span {
+    display: inline;
+  }
+  .admin-dashboard .admin-sidebar .nav-group-title {
+    display: block;
+  }
+  .admin-dashboard .admin-sidebar .sidebar-scope {
+    display: grid;
+  }
+  .admin-dashboard .admin-sidebar .sidebar-link,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar .sidebar-link {
+    justify-content: flex-start;
+    padding-right: 11px;
+    padding-left: 11px;
+    font-size: 1rem;
+  }
+  .admin-dashboard .admin-sidebar .sidebar-nav,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .admin-sidebar .sidebar-nav {
+    width: auto;
+  }
+  .admin-dashboard .dashboard-main,
+  .admin-dashboard.owner-dashboard:has(.inventory-page) .dashboard-main {
+    margin-left: 0;
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: rgb(15 23 42 / 0.4);
+  }
 }

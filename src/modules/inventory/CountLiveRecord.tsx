@@ -394,7 +394,7 @@ function Editor({
           <tbody>
             {rows.map((l) => (
               <tr key={l.id} className="count-record-row">
-                <td>
+                <td className="count-cell-name">
                   <ProductQuickView
                     productId={l.productId}
                     sku={l.sku}
@@ -416,15 +416,15 @@ function Editor({
                   )}
                   <CountLineTags line={l} blind />
                 </td>
-                <td>{l.binLocation ?? l.storageArea ?? '—'}</td>
+                <td className="count-cell-meta" data-label="Vị trí (khu – kệ)">{l.binLocation ?? l.storageArea ?? '—'}</td>
                 {recountMode && (
-                  <td>
+                  <td className="count-cell-meta" data-label="Lý do đếm lại">
                     {l.recountReason ? (
                       <span className="count-reason-badge">{l.recountReason}</span>
                     ) : '—'}
                   </td>
                 )}
-                <td>
+                <td className="count-cell-qty" data-label="Số đếm thực tế">
                   <input
                     aria-label={
                       'Số đếm ' + l.sku + ' lô ' + (l.lotId ?? 'không lô')
@@ -446,7 +446,7 @@ function Editor({
                     }}
                   />
                 </td>
-                <td>
+                <td className="count-cell-qty" data-label="Hư hỏng">
                   <input
                     aria-label={'Số hư hỏng ' + l.sku + ' lô ' + (l.lotId ?? 'không lô')}
                     type="number"
@@ -478,7 +478,7 @@ function Editor({
         </table>
       </div>
       {editable && (
-        <div className="stock-notice count-buttons">
+        <div className="stock-notice count-buttons count-record-actions">
           <p>
             Để trống nghĩa là chưa đếm; số 0 nghĩa là đã đếm và không có hàng.
           </p>
@@ -491,19 +491,29 @@ function Editor({
             />
             Tôi xác nhận số đếm thực tế đã nhập.
           </label>
-          <button
-            disabled={busy || importing || !valid}
-            onClick={() => void act('lines')}
-          >
-            Lưu tạm
-          </button>
-          <button
-            className="count-primary"
-            disabled={busy || importing || !valid || !confirmed}
-            onClick={() => void act('submit')}
-          >
-            Gửi kết quả
-          </button>
+          <div className="count-submit-group">
+            <button
+              disabled={busy || importing || !valid}
+              onClick={() => void act('lines')}
+            >
+              Lưu tạm
+            </button>
+            <button
+              className="count-primary"
+              disabled={busy || importing || !valid || !confirmed}
+              aria-describedby={
+                valid && !confirmed ? 'count-submit-hint' : undefined
+              }
+              onClick={() => void act('submit')}
+            >
+              Gửi kết quả
+            </button>
+          </div>
+          {valid && !confirmed && !busy && !importing && (
+            <p id="count-submit-hint" className="count-submit-hint">
+              Đánh dấu xác nhận số đếm để gửi.
+            </p>
+          )}
         </div>
       )}
     </InventoryPanel>

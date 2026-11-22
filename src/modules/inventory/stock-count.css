@@ -235,6 +235,23 @@
   align-items: center;
   flex-wrap: wrap;
 }
+.count-workspace .count-buttons button.count-primary {
+  background: #465fff;
+  border-color: #465fff;
+  color: #fff;
+}
+.count-submit-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+}
+.count-submit-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+}
 .count-excel-tools > span {
   flex-basis: 100%;
 }
@@ -326,6 +343,64 @@
   }
   .count-workspace .count-primary {
     white-space: normal;
+  }
+}
+
+/* Ghi số đếm dưới 600px: ngưỡng khớp với ngăn kéo menu (layouts.css). */
+@media (max-width: 599px) {
+  /* Màn ghi số đếm trên điện thoại: mỗi dòng là một thẻ; tiêu đề bảng vẫn có cho trình đọc màn hình. */
+  .count-workspace .stock-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  /* ui.css đặt min-width 960px cho bảng kiểm kê (đè bằng selector cao hơn nên dùng !important). */
+  .count-workspace .stock-table {
+    min-width: 0 !important;
+  }
+  .count-workspace .stock-table,
+  .count-workspace .stock-table tbody {
+    display: block;
+  }
+  .count-workspace .stock-table tr.count-record-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 14px;
+    border: 1px solid #eaecf0;
+    border-radius: 10px;
+  }
+  .count-workspace .stock-table tr.count-record-row td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .count-workspace .stock-table td.count-cell-name,
+  .count-workspace .stock-table td.count-cell-meta {
+    grid-column: 1 / -1;
+  }
+  .count-workspace .stock-table td.count-cell-meta {
+    color: #475467;
+    font-size: 14px;
+  }
+  .count-workspace .stock-table td[data-label]::before {
+    display: block;
+    margin-bottom: 6px;
+    color: #667085;
+    font-size: 12px;
+    content: attr(data-label);
+  }
+  .count-workspace .stock-table td.count-cell-qty input {
+    max-width: none;
+    min-height: 44px;
+  }
+  .count-record-actions {
+    padding-bottom: 24px;
   }
 }
 .ui-form-dialog:has(.count-form) footer button:disabled {
