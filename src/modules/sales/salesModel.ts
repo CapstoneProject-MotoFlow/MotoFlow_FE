@@ -1,4 +1,8 @@
-import type { OrderActions, OrderDeposit } from './salesApi'
+import type {
+  OrderActions,
+  OrderDeposit,
+  SalesPaymentType,
+} from './salesApi'
 /** UI model mapped from the BE sales DTO. */
 export type SalesStatus =
   | 'DRAFT'
@@ -33,7 +37,7 @@ export type SalesOrder = {
   nextAction?: string | null
   payments?: {
     id: number
-    type: string
+    type: SalesPaymentType
     method: string
     amount: number
     status: string
