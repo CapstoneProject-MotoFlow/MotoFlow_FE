@@ -349,7 +349,14 @@ export function SalesOrderListPage({
                   </td>
                   <td>
                     <div className="mf-row-actions">
-                      {order.nextAction === 'RECORD_PICKING' ? (
+                      {order.nextAction === 'RELEASE' ? (
+                        <Link
+                          className="mf-btn mf-btn--sm mf-btn--primary"
+                          to={'/sales-orders/' + order.id}
+                        >
+                          Chuyển sang soạn
+                        </Link>
+                      ) : order.nextAction === 'RECORD_PICKING' ? (
                         <Link
                           className="mf-btn mf-btn--sm mf-btn--primary"
                           to={'/sales-orders/' + order.id + '/pick'}

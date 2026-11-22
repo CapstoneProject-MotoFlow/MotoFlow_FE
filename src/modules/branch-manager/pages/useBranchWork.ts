@@ -7,6 +7,7 @@ import type { TransferRow, ReplenishmentRow } from '../../transfers/types'
 
 import { documentCode } from '../../../shared/utils/documentCode'
 import { purchaseOrderCode } from '../../receiving/receivingPresentation'
+import { saleWork } from './branchSaleWork'
 type PurchaseOrderRow = {
   id: number
   supplierName: string
@@ -84,25 +85,8 @@ export function useBranchWork(coordinator: boolean) {
       page: 0,
       size: 1,
     })
-  const saleActions = {
-    ASSIGN_PICKER: { title: 'Chưa giao việc lấy hàng', action: 'Giao việc' },
-    RECORD_PICKING: { title: 'Đang chờ kết quả lấy hàng', action: 'Xem đơn' },
-    CONFIRM: { title: 'Đơn lấy hàng chờ xác nhận', action: 'Xác nhận' },
-    COLLECT_PAYMENT: { title: 'Đơn chờ thanh toán', action: 'Thu tiền' },
-  }
   const work: Work[] = [
-    ...(sales.data?.items ?? [])
-      .filter((s) => s.nextAction)
-      .map((s) => ({
-        key: 's' + s.id,
-        code: documentCode('DB', s.id),
-        kind: 'Đơn bán',
-        title: saleActions[s.nextAction!].title,
-        action: saleActions[s.nextAction!].action,
-        description: s.customerName ?? 'Khách lẻ',
-        at: s.createdAt,
-        href: '/sales-orders/' + s.id,
-      })),
+    ...saleWork(sales.data?.items ?? [], (id) => documentCode('DB', id)),
     ...(purchaseOrders.data?.items ?? []).map((order) => ({
       key: 'po' + order.id,
       code: purchaseOrderCode(order.id),
