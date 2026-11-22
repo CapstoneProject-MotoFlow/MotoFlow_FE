@@ -2,19 +2,21 @@
  * File: modules/auth/pages/LoginPage.tsx
  * Loại: MÀN HÌNH — Đăng nhập.
  * Đường dẫn: /login.
- * Công dụng: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công.
+ * Công dụng: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công (quay lại trang người dùng đã mở trước đó nếu có).
  */
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import PasswordField from '../../../shared/ui/PasswordField'
 import { login } from '../services/authService'
 import { useAuth } from '../../../shared/hooks/useAuth'
+import { requestedPathFrom } from '../../../shared/utils/requestedPath'
 import '../auth.css'
 
 /** LoginPage: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công. */
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { signIn } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +31,13 @@ export default function LoginPage() {
     try {
       const user = await login(username, password)
       signIn(user)
-      navigate(user.mustChangePassword ? '/change-password' : '/dashboard')
+      // replace: nút Back không quay lại /login sau khi đã đăng nhập.
+      navigate(
+        user.mustChangePassword
+          ? '/change-password'
+          : (requestedPathFrom(location.state) ?? '/dashboard'),
+        { replace: true },
+      )
     } catch (requestError) {
       const message = axios.isAxiosError(requestError)
         ? requestError.response?.data?.message

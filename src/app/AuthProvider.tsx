@@ -15,6 +15,7 @@ import { clearAllSalesTabs } from '../modules/sales/salesTabsStore'
 /** AuthProvider: Quản lý user đăng nhập trong React Context; khôi phục phiên; xử lý hết phiên, đăng nhập, đăng xuất và hoàn tất đổi mật khẩu; bổ sung tên cửa hàng từ dữ liệu home. */
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [signedOutByChoice, setSignedOutByChoice] = useState(false)
   const currentUser = useRef(user)
   currentUser.current = user
   const navigate = useNavigate()
@@ -66,7 +67,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const expired = () => {
       if (!currentUser.current) return
       setUser(null)
-      navigate('/login', { replace: true })
+      // Phiên hết hạn giữa chừng: đăng nhập lại xong thì quay về đúng trang đang mở.
+      navigate('/login', {
+        replace: true,
+        state: {
+          from:
+            window.location.pathname +
+            window.location.search +
+            window.location.hash,
+        },
+      })
     }
     window.addEventListener('auth-session-expired', expired)
     return () => window.removeEventListener('auth-session-expired', expired)
@@ -94,7 +104,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
-      signIn: (nextUser: AuthUser) => setUser(nextUser),
+      signedOutByChoice,
+      signIn: (nextUser: AuthUser) => {
+        setSignedOutByChoice(false)
+        setUser(nextUser)
+      },
       signOut: async () => {
         try {
           await logout()
@@ -106,6 +120,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           } catch {
             /* Storage unavailable: no tab state to clear. */
           }
+          // Cùng một lần render: user = null và cờ đăng xuất chủ động, nên trang cũ không ghi làm điểm quay lại.
+          setSignedOutByChoice(true)
           setUser(null)
           navigate('/login')
         }
@@ -117,7 +133,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         navigate('/dashboard')
       },
     }),
-    [user, navigate],
+    [user, signedOutByChoice, navigate],
   )
   if (restoring)
     return (
