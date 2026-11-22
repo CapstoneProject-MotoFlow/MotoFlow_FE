@@ -201,6 +201,7 @@ const noPortal = fileURLToPath(
 )
 
 test('cancelling a waiting order with a deposit warns that the customer forfeits it', async () => {
+  const prevDocument = globalThis.document
   const server = await createServer({
     configFile: false,
     resolve: { alias: [{ find: /^react-dom$/, replacement: noPortal }] },
@@ -227,7 +228,8 @@ test('cancelling a waiting order with a deposit warns that the customer forfeits
     assert.match(html, /Khách sẽ mất cọc/)
     assert.match(html, /500\.000/)
   } finally {
-    delete globalThis.document
+    if (prevDocument === undefined) delete globalThis.document
+    else globalThis.document = prevDocument
     await server.close()
   }
 })
@@ -329,15 +331,63 @@ test('the waiting-stock list shows a deposit badge on rows with an active deposi
 
 test('staff opening the waiting-stock tab by URL does not get the waiting filter', async () => {
   await withSalesPages(({ renderList }) => {
-    const staff = renderList('STAFF', '/sales-orders?tab=AWAITING_STOCK', [])
+    const rows = [
+      {
+        id: 21,
+        code: 'SO-21',
+        status: 'AWAITING_STOCK',
+        storeName: 'Kho',
+        customerName: 'Khách',
+        createdAt: '2026-11-20',
+        total: 1500000,
+        assigneeName: null,
+        depositStatus: 'ACTIVE',
+        depositRemaining: 500000,
+        lines: [],
+        events: [],
+        payments: [],
+        actions: {},
+      },
+    ]
+    const staff = renderList('STAFF', '/sales-orders?tab=AWAITING_STOCK', rows)
+    assert.match(staff, /SO-21/)
     assert.doesNotMatch(staff, /Đang giữ cọc/)
     assert.doesNotMatch(staff, /aria-pressed="true"[^>]*>Chờ hàng</)
-    // Đối chứng: cùng URL với quản lý thì bộ lọc cọc hiện ra.
+    assert.doesNotMatch(staff, /Đã cọc/)
+    // Đối chứng: cùng URL và cùng dòng với quản lý thì bộ lọc và huy hiệu cọc hiện ra.
     const manager = renderList(
       'BRANCH_MANAGER',
       '/sales-orders?tab=AWAITING_STOCK',
-      [],
+      rows,
     )
     assert.match(manager, /Đang giữ cọc/)
+    assert.match(manager, /Đã cọc 500\.000 đ/)
+  })
+})
+
+test('a deposit refund row is labelled "Trả lại cọc" and cannot be refunded again', async () => {
+  await withSalesPages(({ renderDetail }) => {
+    const payment = (type) => ({
+      id: 7,
+      type,
+      amount: 200000,
+      method: 'CASH',
+      status: 'VERIFIED',
+      recordedAt: '2026-11-21T10:00:00',
+      recordedBy: 'Chủ cửa hàng',
+    })
+    const refund = renderDetail(
+      order(null, { canRefund: true }, { payments: [payment('DEPOSIT_REFUND')] }),
+    )
+    assert.match(refund, /Trả lại cọc/)
+    assert.doesNotMatch(refund, /Hoàn khoản này/)
+    assert.doesNotMatch(refund, /Thu tiền/)
+
+    // Đối chứng: khoản cọc đã xác minh vẫn được phép hoàn.
+    const deposit = renderDetail(
+      order(null, { canRefund: true }, { payments: [payment('DEPOSIT')] }),
+    )
+    assert.match(deposit, /Tiền cọc/)
+    assert.match(deposit, /Hoàn khoản này/)
   })
 })

@@ -34,6 +34,7 @@ import {
   orderFromDto,
   type DepositStatus,
   type OrderDto,
+  type SalesPaymentType,
   type UnmetRow,
 } from './salesApi'
 import { depositBadge, depositStatusLabels } from './salesDeposit'
@@ -52,6 +53,7 @@ import { salesOrderStatusLabels as salesStates } from '../../shared/labels/statu
 import ProductQuickView from '../catalog/components/ProductQuickView'
 export { SalesOrderFormView }
 import './sales.css'
+
 function Header({
   title,
   breadcrumb = title,
@@ -321,7 +323,7 @@ export function SalesOrderListPage({
             </thead>
             <tbody>
               {matches.map((order) => {
-                const badge = depositBadge(order)
+                const badge = staff ? null : depositBadge(order)
                 return (
                 <tr key={order.id}>
                   <td>
@@ -416,6 +418,13 @@ export function SalesOrderListPage({
   )
 }
 type Product = SalesProduct
+const paymentTypeLabels: Record<SalesPaymentType, string> = {
+  ORDER_PAYMENT: 'Thu tiền',
+  DEBT_PAYMENT: 'Thu tiền',
+  REFUND: 'Hoàn tiền',
+  DEPOSIT: 'Tiền cọc',
+  DEPOSIT_REFUND: 'Trả lại cọc',
+}
 export function SalesOrderFormPage() {
   const { id } = useParams()
   const [prefill] = useSearchParams()
@@ -974,7 +983,7 @@ export function SalesOrderDetailView({
                     <li key={payment.id}>
                       <div>
                         <strong>
-                          {payment.type === 'REFUND' ? 'Hoàn tiền' : 'Thu tiền'}{' '}
+                          {paymentTypeLabels[payment.type] ?? 'Thu tiền'}{' '}
                           {money.format(payment.amount)}
                         </strong>{' '}
                         ·{' '}
@@ -995,7 +1004,7 @@ export function SalesOrderDetailView({
                               : 'Chờ xác minh'}
                         </span>
                         {order.actions?.canRefund &&
-                          payment.type !== 'REFUND' &&
+                          !['REFUND', 'DEPOSIT_REFUND'].includes(payment.type) &&
                           payment.status === 'VERIFIED' && (
                             <button
                               type="button"
