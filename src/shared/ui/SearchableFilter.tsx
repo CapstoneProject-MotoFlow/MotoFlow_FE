@@ -12,6 +12,7 @@ function searchText(text: string) {
 }
 
 export default function SearchableFilter({
+  id,
   label,
   value,
   options,
@@ -24,6 +25,8 @@ export default function SearchableFilter({
   toggleOnClick = false,
   onChange,
 }: {
+  /** id của ô nhập, để <label htmlFor> ở ngoài trỏ tới. */
+  id?: string
   label: string
   value: string
   options: Option[]
@@ -72,6 +75,7 @@ export default function SearchableFilter({
   return (
     <div className="searchable-filter">
       <input
+        id={id}
         role="combobox"
         aria-label={label}
         aria-expanded={open}

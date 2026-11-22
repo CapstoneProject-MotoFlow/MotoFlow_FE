@@ -150,7 +150,7 @@ export default function ProductDetailPage() {
         </nav>
         {data && damagedVariantBaseSku(data) && (
           <p className="product-variant-label">
-            Hàng móp của{' '}
+            Hàng lỗi của{' '}
             <Link to={`${base}?q=${encodeURIComponent(damagedVariantBaseSku(data)!)}`}>
               {damagedVariantBaseSku(data)}
             </Link>

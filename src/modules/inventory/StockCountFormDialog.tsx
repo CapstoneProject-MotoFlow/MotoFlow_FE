@@ -215,7 +215,7 @@ export function StockCountFormDialog({
     products.data?.items.filter(
       (p) =>
         !actualProducts.includes(p.id) &&
-        // BH8: phiếu tồn đầu kỳ không nhập mã hàng móp.
+        // BH8: phiếu tồn đầu kỳ không nhập mã hàng lỗi.
         !(countType === 'OPENING' && isDamagedVariant(p)),
     ) ?? []
   useEffect(() => {

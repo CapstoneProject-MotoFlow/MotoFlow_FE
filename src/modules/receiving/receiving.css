@@ -391,10 +391,17 @@
 .receiving-layout-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--mf-control-h);
   padding: 0.5rem 0.8rem;
   border: 1px solid #dce2eb;
   border-radius: 0.55rem;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .receiving-page .receiving-layout-primary {
