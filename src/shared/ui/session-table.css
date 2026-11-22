@@ -4,6 +4,7 @@
  * Công dụng: CSS bảng thiết bị đang đăng nhập (SessionTable).
  */
 .session-table-scroll {
+  position: relative;
   overflow-x: auto;
 }
 .session-table {

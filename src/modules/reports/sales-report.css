@@ -468,6 +468,9 @@
   }
 }
 @media (max-width: 640px) {
+  .sales-report-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .sr-kpis {
     grid-template-columns: minmax(0, 1fr);
   }
