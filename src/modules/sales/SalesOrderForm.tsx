@@ -170,6 +170,7 @@ export function SalesOrderFormView({
   }>()
   const [customerQuery, setCustomerQuery] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
+  const customerInput = useRef<HTMLInputElement>(null)
   const [customer, setCustomer] = useState<SalesCustomer | undefined>(
     initialDraft ? initialDraft.customer : initialCustomer,
   )
@@ -698,6 +699,11 @@ export function SalesOrderFormView({
     : order?.customerId && !customerTouched
       ? order.customerName
       : ''
+  // Mở danh sách khách khi focus hoặc bấm vào ô (kể cả khi ô đang có focus sau khi chọn khách).
+  function openCustomerList() {
+    setCustomerOpen(true)
+    setCustomerQuery('')
+  }
 
   return (
     <main className="inventory-workspace sales-workspace pos-page">
@@ -1099,6 +1105,7 @@ export function SalesOrderFormView({
           <div className="pos-customer-row">
             <div className="pos-customer">
               <input
+                ref={customerInput}
                 role="combobox"
                 aria-expanded={customerOpen}
                 aria-controls="pos-customer-results"
@@ -1108,12 +1115,13 @@ export function SalesOrderFormView({
                 placeholder={
                   customerOpen ? 'Tìm theo tên hoặc số điện thoại' : 'Khách lẻ'
                 }
-                onFocus={() => {
-                  setCustomerOpen(true)
-                  setCustomerQuery('')
-                }}
+                onFocus={openCustomerList}
+                onClick={openCustomerList}
                 onBlur={() => setTimeout(() => setCustomerOpen(false), 150)}
-                onChange={(e) => setCustomerQuery(e.target.value)}
+                onChange={(e) => {
+                  setCustomerOpen(true)
+                  setCustomerQuery(e.target.value)
+                }}
               />
               <svg
                 className="pos-caret"
@@ -1145,6 +1153,7 @@ export function SalesOrderFormView({
                       // Khách lẻ không đặt trước: bỏ tích để khi chọn lại khách có hồ sơ không tự bật lại.
                       setPreorder(false)
                       setCustomerOpen(false)
+                      customerInput.current?.blur()
                     }}
                   >
                     <span className="pos-result-name">Khách lẻ</span>
@@ -1163,6 +1172,7 @@ export function SalesOrderFormView({
                         setCustomerTouched(true)
                         setCustomer(c)
                         setCustomerOpen(false)
+                        customerInput.current?.blur()
                       }}
                     >
                       <span className="pos-result-name">

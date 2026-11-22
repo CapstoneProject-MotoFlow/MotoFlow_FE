@@ -781,6 +781,8 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
   const { user } = useAuth()
   const [order, setOrder] = useState<ReceivingView>()
   const [loadError, setLoadError] = useState('')
+  // 403 khi đọc receiving-view: phiếu đã lập (việc SUPPLIER_RECEIVING đã DONE) hoặc không còn được giao.
+  const [forbidden, setForbidden] = useState(false)
   const [error, setError] = useState('')
   const [stage, setStage] = useState<'uploading' | 'creating'>()
   const saving = stage !== undefined
@@ -827,7 +829,10 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
         if (!signal.aborted) setOrder(data)
       })
       .catch((error) => {
-        if (!signal.aborted) setLoadError(apiMessage(error))
+        if (signal.aborted) return
+        if (isAxiosError(error) && error.response?.status === 403)
+          setForbidden(true)
+        else setLoadError(apiMessage(error))
       })
     return () => controller.abort()
   }, [orderId, manager])
@@ -893,6 +898,12 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
       }}
     >
       <Panel title="Thông tin phiếu nhập">
+        {forbidden && (
+          <p role="alert">
+            Phiếu nhập cho đơn này đã được lập hoặc bạn không còn được giao việc
+            nhận hàng. <Link to="/dashboard">Việc của tôi</Link>
+          </p>
+        )}
         {loadError && <p role="alert">{loadError}</p>}
         <Hint>
           Lập phiếu xong, màn hình mở ngay bước ghi kết quả kiểm nhận của phiếu
@@ -962,7 +973,7 @@ function ReceiptFormLayout({ orderId }: { orderId: string | null }) {
               disabled={!order?.canCreateReceipt}
               onChange={() => setReplacement(false)}
             />{' '}
-            Giao theo đơn đặt hàng
+            Giao theo đơn nhập hàng
           </label>
           <label className="receiving-inline">
             <input

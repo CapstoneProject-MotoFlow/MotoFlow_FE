@@ -482,6 +482,11 @@ export default function TransferDetailPage() {
               )}
             </ol>
           </section>
+          {d.status === 'RECONCILING' && !coordinator && (
+            <p className="tf-note" role="status">
+              Chủ cửa hàng đang xử lý phần thiếu.
+            </p>
+          )}
           {d.discrepancies.length > 0 && (
             <section>
               <h2>Sai lệch</h2>

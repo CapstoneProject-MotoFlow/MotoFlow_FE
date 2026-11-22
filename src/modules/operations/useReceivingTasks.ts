@@ -17,7 +17,11 @@ export function useReceivingTasks(
   revision = 0,
 ) {
   const key = types.join(',') + '#' + revision
-  const [state, setState] = useState<{ key: string; tasks: ReceivingTask[] }>()
+  const [state, setState] = useState<{
+    key: string
+    tasks: ReceivingTask[]
+    failed: boolean
+  }>()
   useEffect(() => {
     if (!enabled) return
     const controller = new AbortController()
@@ -41,6 +45,7 @@ export function useReceivingTasks(
               ? readReceivingTasks(result.value.data)
               : [],
           ),
+          failed: results.some((result) => result.status === 'rejected'),
         })
       })
     }, 0)
@@ -50,5 +55,10 @@ export function useReceivingTasks(
     }
   }, [key, enabled])
   const current = enabled && state?.key === key ? state : undefined
-  return { tasks: current?.tasks ?? [], loading: enabled && !current }
+  return {
+    tasks: current?.tasks ?? [],
+    loading: enabled && !current,
+    // Có ít nhất một loại việc đọc lỗi: danh sách có thể thiếu, đừng kết luận là "không được giao".
+    failed: current?.failed ?? false,
+  }
 }
