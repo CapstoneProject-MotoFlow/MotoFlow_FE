@@ -10,6 +10,7 @@ import { AuthContext } from '../shared/hooks/useAuth'
 import type { AuthUser } from '../shared/types/auth'
 import { logout, restoreSession } from '../modules/auth/services/authService'
 import axiosClient from '../shared/api/axiosClient'
+import { clearAllSalesTabs } from '../modules/sales/salesTabsStore'
 
 /** AuthProvider: Quản lý user đăng nhập trong React Context; khôi phục phiên; xử lý hết phiên, đăng nhập, đăng xuất và hoàn tất đổi mật khẩu; bổ sung tên cửa hàng từ dữ liệu home. */
 export default function AuthProvider({ children }: { children: ReactNode }) {
@@ -100,6 +101,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
           /* End the local session even when the API is unavailable. */
         } finally {
+          try {
+            clearAllSalesTabs(window.localStorage)
+          } catch {
+            /* Storage unavailable: no tab state to clear. */
+          }
           setUser(null)
           navigate('/login')
         }

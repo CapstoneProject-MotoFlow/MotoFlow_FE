@@ -8,7 +8,13 @@
  * Nghiệp vụ giữ nguyên: giá lấy từ API preview; chiết khấu một mức cho cả đơn, chỉ cho đơn bán buôn, dưới ngưỡng
  * (BR-10, BR-12, BR-16); Owner phải chọn cửa hàng bán (MSG157); vượt tồn khả dụng vẫn tạo được đơn.
  */
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import PageHeader from '../../shared/ui/PageHeader'
@@ -41,6 +47,7 @@ import { useFormValidation } from '../../shared/hooks/useFormValidation'
 import FieldError from '../../shared/ui/FieldError'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 import { DAMAGED_VARIANT_NAME_SUFFIX } from '../../shared/utils/damagedVariant'
+import type { TabCustomer, TabDraft, TabLine } from './salesTabsStore'
 export type SalesProduct = {
   id: number
   sku: string
@@ -53,16 +60,8 @@ export type SalesProduct = {
   sellableQty?: number | null
   heldByOthersQty?: number | null
 }
-type DraftLine = {
-  product: SalesProduct
-  quantity: number
-  nowQty?: number
-  waitForRest?: boolean
-}
-type SalesCustomer = Pick<
-  Customer,
-  'id' | 'customerName' | 'phone' | 'creditStatus' | 'totalDebt'
->
+type DraftLine = TabLine
+type SalesCustomer = TabCustomer
 type Preview = {
   key: string
   total: number
@@ -93,16 +92,34 @@ type Preview = {
 
 const vnd = (value: number) => money.format(value)
 
+/**
+ * Các prop tùy chọn cho màn tạo đơn nhiều tab (POS): không truyền thì hành vi như cũ.
+ * initialDraft: nháp của tab; onDraftChange: báo mọi thay đổi để tab lưu lại;
+ * onSubmitted: sau khi tạo đơn / lưu nháp thành công; onDiscard: "Hủy đơn" thay vì rời trang;
+ * storeLocked: cửa hàng do trang ngoài chọn (Owner), chỉ hiện tên; tabBar: thanh tab đặt ở đầu màn.
+ */
 export function SalesOrderFormView({
   order,
   initialProduct,
   initialCustomer,
   initialQuantity = 1,
+  initialDraft,
+  onDraftChange,
+  onSubmitted,
+  onDiscard,
+  storeLocked = false,
+  tabBar,
 }: {
   order?: SalesOrder
   initialCustomer?: Customer
   initialProduct?: SalesProduct
   initialQuantity?: number
+  initialDraft?: TabDraft
+  onDraftChange?: (draft: TabDraft) => void
+  onSubmitted?: () => void
+  onDiscard?: () => void
+  storeLocked?: boolean
+  tabBar?: ReactNode
 }) {
   const [prefill] = useSearchParams()
   const navigate = useNavigate(),
@@ -115,13 +132,17 @@ export function SalesOrderFormView({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [customerTouched, setCustomerTouched] = useState(false)
-  const [walkPhone, setWalkPhone] = useState(order?.customerPhone ?? '')
+  const [walkPhone, setWalkPhone] = useState(
+    initialDraft ? initialDraft.walkPhone : (order?.customerPhone ?? ''),
+  )
   const [warehouse, setWarehouse] = useState(
-    String(
-      order?.storeId ??
-        (scope.owner ? prefill.get('storeId') : scope.user?.storeId) ??
-        '',
-    ),
+    initialDraft
+      ? initialDraft.warehouse
+      : String(
+          order?.storeId ??
+            (scope.owner ? prefill.get('storeId') : scope.user?.storeId) ??
+            '',
+        ),
   )
   const [previewFailure, setPreviewFailure] = useState<{
     key: string
@@ -130,43 +151,72 @@ export function SalesOrderFormView({
   const [customerQuery, setCustomerQuery] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
   const [customer, setCustomer] = useState<SalesCustomer | undefined>(
-    initialCustomer,
+    initialDraft ? initialDraft.customer : initialCustomer,
   )
   const [quick, setQuick] = useState(false)
   // orderFromDto ghi "Khách lẻ" khi đơn không có tên khách; không đưa chữ đó vào ô tên khách lẻ.
   const [walkin, setWalkin] = useState(
-    order && !order.customerId && order.customerName !== 'Khách lẻ'
-      ? order.customerName
-      : '',
+    initialDraft
+      ? initialDraft.walkin
+      : order && !order.customerId && order.customerName !== 'Khách lẻ'
+        ? order.customerName
+        : '',
   )
   const [query, setQuery] = useState('')
   const [productOpen, setProductOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
-  const [type, setType] = useState(order?.priceType ?? 'RETAIL')
-  const [discount, setDiscount] = useState(String(order?.discount ?? 0))
-  const [note, setNote] = useState(order?.note ?? '')
+  const [type, setType] = useState(
+    initialDraft?.type ?? order?.priceType ?? 'RETAIL',
+  )
+  const [discount, setDiscount] = useState(
+    initialDraft ? initialDraft.discount : String(order?.discount ?? 0),
+  )
+  const [note, setNote] = useState(
+    initialDraft ? initialDraft.note : (order?.note ?? ''),
+  )
   const [lines, setLines] = useState<DraftLine[]>(
     () =>
-      order?.lines.map((l) => ({
-        product: {
-          id: l.productId,
-          sku: l.sku,
-          partName: l.partName,
-          baseUnit: l.baseUnit,
-          retailPrice: l.retailPrice,
-          sellableQty: l.sellableQty,
-          heldByOthersQty: l.heldByOthersQty,
-          status: 'ACTIVE',
-        },
-        quantity: l.requested,
-      })) ??
-      (initialProduct
-        ? [{ product: initialProduct, quantity: initialQuantity }]
-        : []),
+      initialDraft
+        ? initialDraft.lines
+        : (order?.lines.map((l) => ({
+            product: {
+              id: l.productId,
+              sku: l.sku,
+              partName: l.partName,
+              baseUnit: l.baseUnit,
+              retailPrice: l.retailPrice,
+              sellableQty: l.sellableQty,
+              heldByOthersQty: l.heldByOthersQty,
+              status: 'ACTIVE',
+            },
+            quantity: l.requested,
+          })) ??
+          (initialProduct
+            ? [{ product: initialProduct, quantity: initialQuantity }]
+            : [])),
   )
   const [error, setError] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [now] = useState(() => formatDateTime(new Date()))
+
+  // Báo nháp hiện tại cho trang ngoài (tab) mỗi khi dữ liệu đổi. Callback giữ trong ref
+  // để đổi hàm không kích hoạt effect; ref được cập nhật trước effect gửi dữ liệu.
+  const onDraftChangeRef = useRef(onDraftChange)
+  useEffect(() => {
+    onDraftChangeRef.current = onDraftChange
+  })
+  useEffect(() => {
+    onDraftChangeRef.current?.({
+      ...(customer ? { customer } : {}),
+      walkin,
+      walkPhone,
+      warehouse,
+      type,
+      discount,
+      note,
+      lines,
+    })
+  }, [customer, walkin, walkPhone, warehouse, type, discount, note, lines])
 
   // F3: đưa con trỏ về ô tìm phụ tùng (thói quen của phần mềm bán hàng phổ biến).
   useEffect(() => {
@@ -202,7 +252,7 @@ export function SalesOrderFormView({
       ? (customer?.id ?? null)
       : (customer?.id ??
         order?.customerId ??
-        (Number(prefill.get('customerId')) || null)),
+        (initialDraft ? null : Number(prefill.get('customerId')) || null)),
     storeId: warehouse ? Number(warehouse) : undefined,
     walkInPhone: walkPhone,
     walkInName: walkin,
@@ -388,6 +438,10 @@ export function SalesOrderFormView({
     }
   }
   function discard() {
+    if (onDiscard) {
+      onDiscard()
+      return
+    }
     navigate(
       editing
         ? '/sales-orders/' + editing.id
@@ -506,6 +560,7 @@ export function SalesOrderFormView({
           sku: line.product.sku,
         })),
       )
+      if (!editing) onSubmitted?.()
       navigate('/sales-orders/' + orderId, {
         state: notice
           ? {
@@ -529,6 +584,7 @@ export function SalesOrderFormView({
             body(),
           )
         : await axiosClient.post<OrderDto>('/sales-orders/drafts', body())
+      onSubmitted?.()
       navigate(salesDraftsPath, {
         state: { notice: 'Đã lưu đơn nháp SO-' + result.data.id + '.' },
       })
@@ -577,6 +633,7 @@ export function SalesOrderFormView({
               ]
         }
       />
+      {tabBar}
       <form
         className="pos-layout"
         noValidate
@@ -948,7 +1005,7 @@ export function SalesOrderFormView({
           aria-label="Thông tin thanh toán"
         >
           <div className="pos-summary-top">
-            {scope.owner && !editing ? (
+            {scope.owner && !editing && !storeLocked ? (
               <label className="pos-store-select">
                 <span className="sr-only">Cửa hàng bán</span>
                 <select
@@ -1242,7 +1299,18 @@ export function SalesOrderFormView({
               type="button"
               className="mf-btn mf-btn--secondary mf-btn--lg"
               onClick={() =>
-                lines.length && !order ? setConfirmLeave(true) : discard()
+                // Ở chế độ tab, "Hủy đơn" đóng tab: hỏi khi tab có bất kỳ dữ liệu nào, không chỉ dòng hàng.
+                (onDiscard
+                  ? lines.length ||
+                    customer ||
+                    walkin.trim() ||
+                    walkPhone.trim() ||
+                    note.trim() ||
+                    type === 'WHOLESALE' ||
+                    (discount.trim() !== '' && discount.trim() !== '0')
+                  : lines.length) && !order
+                  ? setConfirmLeave(true)
+                  : discard()
               }
             >
               {editing

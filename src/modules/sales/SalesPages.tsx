@@ -37,6 +37,7 @@ import { inventoryError } from '../inventory/api'
 import { useChoicePages, useSalesList } from './useSalesList'
 import DemandReplenishment from './DemandReplenishment'
 import { SalesOrderFormView, type SalesProduct } from './SalesOrderForm'
+import SalesTabsWorkspace from './SalesTabsWorkspace'
 import { SalesDraftTab } from './SalesDraftPages'
 import { documentCode } from '../../shared/utils/documentCode'
 import { salesOrderStatusLabels as salesStates } from '../../shared/labels/status'
@@ -398,14 +399,16 @@ export function SalesOrderFormPage() {
     return <InventoryNotice loading={product.loading} error={product.error} />
   if (!id)
     return (
-      <SalesOrderFormView
-        initialCustomer={buyer.data?.customer}
-        key={product.data?.id ?? 'new'}
-        initialProduct={product.data}
-        initialQuantity={Math.min(
-          100000,
-          Math.max(1, Number(prefill.get('quantity')) || 1),
-        )}
+      <SalesTabsWorkspace
+        prefill={
+          prefill.get('productId') || prefill.get('customerId')
+            ? {
+                product: product.data,
+                customer: buyer.data?.customer,
+                quantity: Number(prefill.get('quantity')),
+              }
+            : undefined
+        }
       />
     )
   return (
