@@ -6,7 +6,8 @@
  * Công dụng: Bố cục kiểu quầy bán hàng (POS) theo ảnh mẫu 12/11: bên trái ô tìm phụ tùng + bảng dòng hàng + ghi chú,
  * bên phải cửa hàng, khách hàng, loại giá, tổng tiền, chiết khấu, "Khách cần trả" và nút Tạo đơn / Hủy đơn.
  * Nghiệp vụ giữ nguyên: giá lấy từ API preview; chiết khấu một mức cho cả đơn, chỉ cho đơn bán buôn, dưới ngưỡng
- * (BR-10, BR-12, BR-16); Owner phải chọn cửa hàng bán (MSG157); vượt tồn khả dụng vẫn tạo được đơn.
+ * (BR-10, BR-12, BR-16); Owner phải chọn cửa hàng bán (MSG157); khách có hồ sơ vượt tồn khả dụng thì phần
+ * còn lại tự chờ hàng; khách lẻ chỉ mua được số đang có (góp ý UI 21/11).
  */
 import {
   useEffect,
@@ -33,9 +34,12 @@ import CustomerForm from '../customers/components/CustomerForm'
 import type { Customer } from '../customers/types'
 import {
   discountedPrice,
+  orderLinesWithNowQty,
   salesTotal,
   splitLine,
   validQuantity,
+  walkInShortLeft,
+  walkInShortageText,
   type SalesOrder,
 } from './salesModel'
 import {
@@ -151,9 +155,6 @@ export function SalesOrderFormView({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [customerTouched, setCustomerTouched] = useState(false)
-  const [walkPhone, setWalkPhone] = useState(
-    initialDraft ? initialDraft.walkPhone : (order?.customerPhone ?? ''),
-  )
   const [warehouse, setWarehouse] = useState(
     initialDraft
       ? initialDraft.warehouse
@@ -173,14 +174,6 @@ export function SalesOrderFormView({
     initialDraft ? initialDraft.customer : initialCustomer,
   )
   const [quick, setQuick] = useState(false)
-  // orderFromDto ghi "Khách lẻ" khi đơn không có tên khách; không đưa chữ đó vào ô tên khách lẻ.
-  const [walkin, setWalkin] = useState(
-    initialDraft
-      ? initialDraft.walkin
-      : order && !order.customerId && order.customerName !== 'Khách lẻ'
-        ? order.customerName
-        : '',
-  )
   const [query, setQuery] = useState('')
   const [productOpen, setProductOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
@@ -236,6 +229,13 @@ export function SalesOrderFormView({
 
   // Báo nháp hiện tại cho trang ngoài (tab) mỗi khi dữ liệu đổi. Callback giữ trong ref
   // để đổi hàm không kích hoạt effect; ref được cập nhật trước effect gửi dữ liệu.
+  const customerId = customerTouched
+    ? (customer?.id ?? null)
+    : (customer?.id ??
+      order?.customerId ??
+      (initialDraft ? null : Number(prefill.get('customerId')) || null))
+  // Góp ý UI 21/11: khách lẻ (không hồ sơ) không tách đơn, không chờ hàng; chỉ mua số đang có.
+  const walkIn = customerId == null
   const onDraftChangeRef = useRef(onDraftChange)
   useEffect(() => {
     onDraftChangeRef.current = onDraftChange
@@ -243,8 +243,6 @@ export function SalesOrderFormView({
   useEffect(() => {
     onDraftChangeRef.current?.({
       ...(customer ? { customer } : {}),
-      walkin,
-      walkPhone,
       warehouse,
       type,
       discount,
@@ -253,9 +251,9 @@ export function SalesOrderFormView({
       ...(deposit.amount || deposit.reference || deposit.tendered || deposit.expiresOn
         ? { deposit }
         : {}),
-      ...(preorder ? { preorder: true } : {}),
+      ...(preorder && !walkIn ? { preorder: true } : {}),
     })
-  }, [customer, walkin, walkPhone, warehouse, type, discount, note, lines, deposit, preorder])
+  }, [customer, walkIn, warehouse, type, discount, note, lines, deposit, preorder])
 
   // F3: đưa con trỏ về ô tìm phụ tùng (thói quen của phần mềm bán hàng phổ biến).
   useEffect(() => {
@@ -293,14 +291,8 @@ export function SalesOrderFormView({
     ({ quantity }) => !validQuantity(quantity) || quantity < 1,
   )
   const previewBody = JSON.stringify({
-    customerId: customerTouched
-      ? (customer?.id ?? null)
-      : (customer?.id ??
-        order?.customerId ??
-        (initialDraft ? null : Number(prefill.get('customerId')) || null)),
+    customerId,
     storeId: warehouse ? Number(warehouse) : undefined,
-    walkInPhone: walkPhone,
-    walkInName: walkin,
     priceType: type,
     discountRate,
     lines: lines.map((l) => ({
@@ -383,30 +375,35 @@ export function SalesOrderFormView({
     (sum, l) => sum + (Number.isFinite(l.quantity) ? l.quantity : 0),
     0,
   )
-  // Khách đặt trước: mọi dòng chờ hàng, không lấy ngay (nowQty 0, waitForRest true).
-  const preorderActive = preorder && !editing && lines.length > 0
-  const stockSplit = lines.map(({ product, quantity, nowQty, waitForRest }) => ({
+  // Khách đặt trước: mọi dòng chờ hàng, không lấy ngay (nowQty 0). Khách lẻ không đặt trước được.
+  const preorderActive = preorder && !editing && !walkIn && lines.length > 0
+  // Khách lẻ lấy đủ số lượng ngay: không giới hạn theo tồn, không dùng số gợi ý hay số lấy ngay đã nhập.
+  const stockSplit = lines.map(({ product, quantity, nowQty }) => ({
     productId: product.id,
     ...splitLine({
       requested: quantity,
-      sellable: sellableOf(product.id),
-      suggestedNow: lineOf(product.id)?.suggestedNowQty,
-      nowQty: preorderActive ? 0 : nowQty,
-      waitForRest: preorderActive ? true : waitForRest,
+      sellable: walkIn ? null : sellableOf(product.id),
+      suggestedNow: walkIn ? null : lineOf(product.id)?.suggestedNowQty,
+      nowQty: walkIn ? null : preorderActive ? 0 : nowQty,
     }),
   }))
   const stockSplitByProduct = new Map(
     stockSplit.map((line) => [line.productId, line]),
   )
   const immediateQty = stockSplit.reduce((sum, line) => sum + line.takeNow, 0)
-  const pendingQty = stockSplit.reduce(
-    (sum, line) => sum + (line.waitForRest ? line.later : 0),
-    0,
+  const pendingQty = stockSplit.reduce((sum, line) => sum + line.later, 0)
+  // Khách lẻ xin nhiều hơn số đang có: không tạo được đơn (BE trả MSG332 nếu vẫn gửi).
+  // Khách lẻ xin nhiều hơn số đang có (theo preview; chỉ khi tạo đơn mới): chặn "Tạo đơn".
+  const walkInLeftOf = (productId: number, quantity: number) =>
+    walkInShortLeft({
+      walkIn,
+      editing: !!editing,
+      quantity,
+      previewSellable: lineOf(productId)?.sellableQty,
+    })
+  const walkInBlocked = lines.some(
+    ({ product, quantity }) => walkInLeftOf(product.id, quantity) != null,
   )
-  const pendingLineCount = stockSplit.filter(
-    (line) => line.waitForRest && line.later > 0,
-  ).length
-  const immediateLineCount = stockSplit.filter((line) => line.takeNow > 0).length
   // Đơn chờ thuần: không dòng nào lấy ngay, có số chờ hàng (đơn tạo ra chỉ là đơn chờ).
   const allWaiting =
     !editing && lines.length > 0 && immediateQty === 0 && pendingQty > 0
@@ -424,6 +421,7 @@ export function SalesOrderFormView({
   const unhandledShortage = immediateQty === 0 && pendingQty === 0
   const canCreatePendingRemainder =
     !editing &&
+    !walkIn &&
     (preorderActive ||
       stockSplit.some((line) => line.later > 0) ||
       stockShortages.length > 0)
@@ -538,9 +536,11 @@ export function SalesOrderFormView({
         ? 'Số lượng mỗi dòng phải là số nguyên từ 1 đến 100.000.'
         : !validDiscount
           ? 'Nhập chiết khấu từ 0 đến 99,99%.'
-          : canCreatePendingRemainder && unhandledShortage
-            ? 'Không có phần nào để bán hoặc chờ hàng. Nhập số lấy ngay hoặc tích “Chờ phần còn lại”.'
-            : depositError
+          : walkInBlocked
+            ? 'Khách lẻ chỉ mua được số đang có. Giảm số lượng hoặc tạo hồ sơ khách để chờ hàng.'
+            : canCreatePendingRemainder && unhandledShortage
+              ? 'Không có phần nào để bán hoặc chờ hàng. Nhập số lấy ngay để tạo đơn.'
+              : depositError
               ? depositError
               : previewError
               ? previewError
@@ -573,19 +573,14 @@ export function SalesOrderFormView({
     return { ...JSON.parse(previewBody), note: note.trim() || null }
   }
   function splitBody() {
+    // R-02: giữ nguyên dòng của body() (productId, quantity) rồi thêm nowQty (lấy ngay). Phần còn lại BE tự
+    // chờ hàng cho khách có hồ sơ (góp ý UI 21/11: không gửi waitForRest nữa).
     const request = body()
-    // R-02: giữ nguyên dòng của body() (productId, quantity) rồi thêm nowQty / waitForRest theo BE #79.
     return {
       ...request,
-      lines: (request.lines as { productId: number; quantity: number }[]).map(
-        (line) => {
-          const split = stockSplitByProduct.get(line.productId)
-          return {
-            ...line,
-            nowQty: split?.takeNow ?? line.quantity,
-            waitForRest: split?.waitForRest ?? true,
-          }
-        },
+      lines: orderLinesWithNowQty(
+        request.lines as { productId: number; quantity: number }[],
+        new Map(stockSplit.map((line) => [line.productId, line.takeNow])),
       ),
     }
   }
@@ -618,13 +613,7 @@ export function SalesOrderFormView({
       // BE #79: `split` cho biết đơn bán / đơn chờ vừa tạo; mở đơn bán nếu có, không thì đơn chờ.
       const split = result.split
       const orderId = split?.salesOrderId ?? split?.waitingOrderId ?? result.id
-      const notice = splitNotice(
-        split,
-        lines.map((line) => ({
-          productId: line.product.id,
-          sku: line.product.sku,
-        })),
-      )
+      const notice = splitNotice(split)
       // Cọc ghi sau khi đơn chờ đã tạo. Lỗi cọc không hủy đơn: báo ở màn chi tiết đơn chờ.
       const waitingId = depositActive ? depositTarget(result) : null
       let depositRoute: DepositRoute | null = null
@@ -837,7 +826,6 @@ export function SalesOrderFormView({
                       <>
                         <th className="pos-col-split-qty">Lấy ngay</th>
                         <th className="pos-col-split-qty">Lấy sau</th>
-                        <th className="pos-col-split-check">Chờ phần còn lại</th>
                       </>
                     )}
                     <th className="pos-col-money">Đơn giá</th>
@@ -854,7 +842,7 @@ export function SalesOrderFormView({
                       product.availableQty
                     const heldByOthersQty =
                       priced?.heldByOthersQty ?? product.heldByOthersQty
-                    const over = sellable != null && quantity > sellable
+                    const walkInLeft = walkInLeftOf(product.id, quantity)
                     const retailPrice = priced
                       ? priced.retailPrice
                       : product.retailPrice
@@ -890,16 +878,19 @@ export function SalesOrderFormView({
                             {sellable != null &&
                               ` · còn bán được ${number.format(sellable)} ${product.baseUnit}${heldByOthersQty ? ` (đã trừ ${number.format(heldByOthersQty)} đang giữ)` : ''}`}
                           </small>
-                          {splitActive && (split?.later ?? 0) > 0 ? (
-                            <small className="pos-line-warn">
-                              {split?.waitForRest
-                                ? `Chờ hàng ${number.format(split?.later ?? 0)} ${product.baseUnit}`
-                                : `Khách bỏ ${number.format(split?.later ?? 0)} ${product.baseUnit}`}
-                            </small>
-                          ) : over && (
-                            <small className="pos-line-warn">
-                              Tồn kho không đủ; giảm số lấy ngay hoặc tạo đơn chờ phần còn lại.
-                            </small>
+                          {walkIn ? (
+                            walkInLeft != null && (
+                              <small className="pos-line-warn" role="alert">
+                                {walkInShortageText(walkInLeft)}
+                              </small>
+                            )
+                          ) : (
+                            splitActive &&
+                            (split?.later ?? 0) > 0 && (
+                              <small className="pos-line-warn">
+                                {`Chờ hàng ${number.format(split?.later ?? 0)} ${product.baseUnit}`}
+                              </small>
+                            )
                           )}
                           {/* BH7: BE trả hàng lỗi của mã gốc; bấm để thêm mã "<SKU>-M" như phụ tùng thường. */}
                           {priced?.variant &&
@@ -1004,34 +995,6 @@ export function SalesOrderFormView({
                             </td>
                             <td className="pos-col-split-qty">
                               {number.format(split?.later ?? 0)}
-                            </td>
-                            <td className="pos-col-split-check">
-                              {(split?.later ?? 0) > 0 || over ? (
-                                <label>
-                                  <input
-                                    type="checkbox"
-                                    aria-label={'Chờ hàng ' + product.sku}
-                                    checked={!!split?.waitForRest}
-                                    disabled={preorderActive}
-                                    onChange={(event) =>
-                                      setLines((previous) =>
-                                        previous.map((line) =>
-                                          line.product.id === product.id
-                                            ? {
-                                                ...line,
-                                                waitForRest:
-                                                  event.target.checked,
-                                              }
-                                            : line,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                  Chờ hàng
-                                </label>
-                              ) : (
-                                '—'
-                              )}
                             </td>
                           </>
                         )}
@@ -1179,15 +1142,12 @@ export function SalesOrderFormView({
                       e.preventDefault()
                       setCustomerTouched(true)
                       setCustomer(undefined)
+                      // Khách lẻ không đặt trước: bỏ tích để khi chọn lại khách có hồ sơ không tự bật lại.
+                      setPreorder(false)
                       setCustomerOpen(false)
                     }}
                   >
-                    <span className="pos-result-name">
-                      Khách lẻ
-                      <small>
-                        Không lưu hồ sơ, chỉ ghi tên và số điện thoại nếu có
-                      </small>
-                    </span>
+                    <span className="pos-result-name">Khách lẻ</span>
                   </li>
                   {customers.loading && (
                     <li className="pos-results-note">Đang tìm…</li>
@@ -1234,7 +1194,7 @@ export function SalesOrderFormView({
               <Icon name="plus" />
             </button>
           </div>
-          {customer ? (
+          {customer && (
             <div className="pos-badges">
               <span
                 className={
@@ -1253,24 +1213,6 @@ export function SalesOrderFormView({
                   Đang nợ {vnd(customer.totalDebt)}
                 </span>
               )}
-            </div>
-          ) : (
-            <div className="pos-walkin">
-              <input
-                aria-label="Tên khách lẻ"
-                maxLength={150}
-                value={walkin}
-                onChange={(e) => setWalkin(e.target.value)}
-                placeholder="Tên khách (không bắt buộc)"
-              />
-              <input
-                aria-label="Số điện thoại khách lẻ"
-                maxLength={20}
-                inputMode="tel"
-                value={walkPhone}
-                onChange={(e) => setWalkPhone(e.target.value)}
-                placeholder="Số điện thoại"
-              />
             </div>
           )}
 
@@ -1361,7 +1303,7 @@ export function SalesOrderFormView({
             </div>
           </dl>
 
-          {!editing && (
+          {!editing && !walkIn && (
             <div className="pos-preorder">
               <label className="pos-deposit-check">
                 <input
@@ -1377,37 +1319,16 @@ export function SalesOrderFormView({
               </small>
             </div>
           )}
-          {canCreatePendingRemainder && (
-            <div className="pos-stock-split">
-              <strong>Tách đơn theo số lượng lấy ngay</strong>
-              <p role="status">
-                {unhandledShortage
-                  ? 'Nhập số lấy ngay hoặc tích “Chờ phần còn lại” để tạo đơn.'
-                  : `Sẽ tạo: đơn bán ${immediateLineCount} dòng · đơn chờ ${pendingLineCount} dòng.`}
-              </p>
-              {pendingQty > 0 && (
-                <small>
-                  Số lượng chờ hàng: {number.format(pendingQty)}; chưa tính vào
-                  số tiền khách cần trả lúc này.
-                </small>
-              )}
-            </div>
-          )}
 
           {/*
             Route tạo đơn bị giới hạn OWNER/BRANCH_MANAGER (RequireRole trong AppRoutes), đúng các vai trò
             BE cho phép ghi cọc, nên không cần chặn thêm ở đây.
           */}
-          {allWaiting && (
+          {/* Khách lẻ không có đơn chờ hàng nên không tới đây: chỉ khách có hồ sơ mới đặt cọc. */}
+          {allWaiting && customer && (
             <section className="pos-deposit" aria-label="Tiền cọc">
               <strong>Tiền cọc (không bắt buộc)</strong>
-              {!customer ? (
-                <p className="pos-deposit-note">
-                  Chọn khách hàng có hồ sơ để nhận cọc. Khách lẻ không nhận cọc
-                  được.
-                </p>
-              ) : (
-                <>
+              <>
                   <label className="pos-deposit-field">
                     <span>Số tiền cọc</span>
                     <MoneyInput
@@ -1510,8 +1431,7 @@ export function SalesOrderFormView({
                       }
                     />
                   </label>
-                </>
-              )}
+              </>
               <p className="pos-deposit-hint">
                 Khách đặt trước dù cửa hàng còn hàng? Tích "Khách đặt trước".
               </p>
@@ -1544,13 +1464,11 @@ export function SalesOrderFormView({
                 (onDiscard
                   ? lines.length ||
                     customer ||
-                    walkin.trim() ||
-                    walkPhone.trim() ||
                     note.trim() ||
                     type === 'WHOLESALE' ||
                     (discount.trim() !== '' && discount.trim() !== '0') ||
                     deposit.amount.trim() ||
-                    preorder
+                    (preorder && !walkIn)
                   : lines.length) && !order
                   ? setConfirmLeave(true)
                   : discard()

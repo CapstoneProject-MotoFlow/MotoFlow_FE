@@ -1,4 +1,4 @@
-import type { SalesOrder } from './salesModel'
+import type { SalesOrder, SalesStatus } from './salesModel'
 /** PM 17/11: nháp đơn bán nằm ở tab "Nháp" của màn Đơn bán (không còn mục "Đơn nháp" trên sidebar). */
 export const salesDraftsPath = '/sales-orders?tab=DRAFT'
 
@@ -150,41 +150,24 @@ export type SummaryDto = {
 }
 
 /**
- * BE #79 (GVHD 20/11): `split` chỉ có trong kết quả của lần gọi tách đơn (tạo đơn, xác nhận giao thiếu,
- * nhả đơn chờ). Mã đơn null khi không có phần nào vào đơn đó; `declined` là phần khách bỏ.
+ * BE #79 (GVHD 20/11): `split` cho biết đơn bán và đơn chờ vừa tạo khi tạo đơn có phần chờ hàng.
+ * Mã đơn null khi không có phần nào vào đơn đó.
  */
 export type OrderSplit = {
   salesOrderId: number | null
   waitingOrderId: number | null
-  declinedOrderId: number | null
-  declined: { productId: number; quantity: number }[]
 }
 
-/** Thông báo sau khi tách đơn: mã đơn bán và đơn chờ (có link ở màn chi tiết), phần khách bỏ báo một lần. */
-export function splitNotice(
-  split: OrderSplit | null | undefined,
-  lines: { productId: number; sku: string }[],
-) {
+/** Thông báo sau khi tách đơn: mã đơn bán và đơn chờ (có link ở màn chi tiết). */
+export function splitNotice(split: OrderSplit | null | undefined) {
   if (!split) return undefined
   const parts: string[] = []
   if (split.salesOrderId != null)
     parts.push('đơn bán SO-' + split.salesOrderId)
   if (split.waitingOrderId != null)
     parts.push('đơn chờ hàng SO-' + split.waitingOrderId)
-  const declined = split.declined
-    .filter((item) => item.quantity > 0)
-    .map(
-      (item) =>
-        (lines.find((line) => line.productId === item.productId)?.sku ??
-          '#' + item.productId) +
-        ' × ' +
-        item.quantity,
-    )
-  if (!parts.length && !declined.length) return undefined
-  return (
-    (parts.length ? 'Đã tạo ' + parts.join(' và ') + '.' : '') +
-    (declined.length ? ' Khách bỏ: ' + declined.join(', ') + '.' : '')
-  ).trim()
+  if (!parts.length) return undefined
+  return 'Đã tạo ' + parts.join(' và ') + '.'
 }
 
 export function orderFromDto(dto: OrderDto): SalesOrder {
@@ -266,4 +249,6 @@ export type UnmetRow = {
   missingQty: number
   sellableQty: number
   occurredAt: string
+  /** Góp ý UI 21/11: 'AWAITING_STOCK' là đơn chờ hàng, chưa giao gì (occurredAt là ngày tạo). */
+  orderStatus: SalesStatus
 }

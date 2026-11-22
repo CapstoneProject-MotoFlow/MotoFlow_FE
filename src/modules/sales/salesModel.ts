@@ -145,15 +145,14 @@ export function cashCollection(input: string, payable: number) {
 
 /**
  * BH2 (GVHD 20/11): chia một dòng thành "lấy ngay" và "lấy sau". Mặc định lấy ngay = số BE gợi ý
- * (suggestedNowQty) hoặc min(cần, còn bán được); không vượt số còn bán được vì BE chỉ bán ngay tối đa số đó.
- * waitForRest mặc định bật; bỏ tích thì phần lấy sau là khách bỏ.
+ * (suggestedNow) hoặc min(cần, còn bán được); không vượt số còn bán được vì BE chỉ bán ngay tối đa số đó.
+ * Phần lấy sau luôn chờ hàng (BE tự tách đơn cho khách có hồ sơ). Khách lẻ không tách: truyền sellable null.
  */
 export function splitLine(input: {
   requested: number
   sellable?: number | null
   suggestedNow?: number | null
   nowQty?: number | null
-  waitForRest?: boolean
 }) {
   const requested = Number.isFinite(input.requested)
     ? Math.max(0, input.requested)
@@ -175,6 +174,41 @@ export function splitLine(input: {
   return {
     takeNow,
     later: requested - takeNow,
-    waitForRest: input.waitForRest ?? true,
   }
+}
+
+/**
+ * Góp ý UI 21/11 (#8): khách lẻ (không hồ sơ) chỉ mua được số đang có. Trả số còn bán được khi dòng xin nhiều hơn,
+ * null khi đủ. Chỉ áp dụng khi tạo đơn mới (BE update không kiểm MSG332) và theo sellableQty của preview;
+ * chưa có preview (null/undefined) thì không chặn.
+ */
+export function walkInShortLeft(input: {
+  walkIn: boolean
+  editing: boolean
+  quantity: number
+  previewSellable?: number | null
+}): number | null {
+  if (!input.walkIn || input.editing) return null
+  const left = input.previewSellable
+  if (left == null || !Number.isFinite(left)) return null
+  return input.quantity > left ? Math.max(0, left) : null
+}
+
+/** Câu báo trên dòng của khách lẻ xin nhiều hơn số còn bán được. */
+export function walkInShortageText(sellable: number) {
+  return `Khách lẻ chỉ mua được số đang có: còn ${sellable}. Tạo hồ sơ khách để chờ hàng.`
+}
+
+/**
+ * Góp ý UI 21/11: các dòng gửi tạo đơn kèm nowQty (số lấy ngay). Không có waitForRest: BE tự cho phần còn lại
+ * chờ hàng (khách có hồ sơ) hoặc bỏ (khách lẻ không tách). Dòng không có trong bảng lấy ngay giữ nguyên số lượng.
+ */
+export function orderLinesWithNowQty<T extends { productId: number; quantity: number }>(
+  lines: T[],
+  takeNowByProduct: Map<number, number>,
+) {
+  return lines.map((line) => ({
+    ...line,
+    nowQty: takeNowByProduct.get(line.productId) ?? line.quantity,
+  }))
 }

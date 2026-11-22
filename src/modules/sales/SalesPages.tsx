@@ -1640,9 +1640,8 @@ export function UnmetDemandPage() {
             }
           />
           <p className="sales-unmet-description">
-            Nhu cầu được tổng hợp tự động từ đơn hoàn tất giao thiếu và đơn đã
-            hủy; mặc định 30 ngày gần nhất.{' '}
-            {/* BC1 (GVHD 20/11): đơn đang chờ hàng xem ở danh sách đơn bán, không gộp vào báo cáo này. */}
+            Nhu cầu được tổng hợp tự động từ đơn hoàn tất giao thiếu, đơn đã
+            hủy và đơn đang chờ hàng; mặc định 30 ngày gần nhất.{' '}
             <Link to="/sales-orders?status=AWAITING_STOCK">Xem đơn chờ hàng</Link>
           </p>
           <div className="stock-table-scroll">
@@ -1666,6 +1665,11 @@ export function UnmetDemandPage() {
                       <Link to={'/sales-orders/' + row.orderId}>
                         SO-{row.orderId}
                       </Link>
+                      {row.orderStatus === 'AWAITING_STOCK' && (
+                        <span className="sales-status sales-status-AWAITING_STOCK">
+                          Đang chờ hàng
+                        </span>
+                      )}
                     </td>
                     {scope.owner && <td>{row.storeName}</td>}
                     <td>{row.customerName ?? 'Khách lẻ'}</td>
