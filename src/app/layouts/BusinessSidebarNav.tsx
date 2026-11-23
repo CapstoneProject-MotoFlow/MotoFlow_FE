@@ -27,6 +27,7 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
     labels: [
       'Tồn kho',
       'Lịch sử xuất nhập',
+      'Phiếu xuất nhập',
       'Lô hàng',
       'Tồn kho theo ngày',
       'Kỳ kho',

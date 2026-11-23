@@ -276,7 +276,7 @@ function WorkEditor({
                   : 'passedQty' in l
                     ? l.passedQty
                     : 0,
-            damaged: 'damagedQty' in l ? l.damagedQty : 0,
+            damaged: 'damagedQty' in l ? (l.damagedQty ?? 0) : 0,
             wrong: 'wrongItemQty' in l ? (l.wrongItemQty ?? 0) : 0,
             reason:
               mode === 'prepare' &&
@@ -292,6 +292,15 @@ function WorkEditor({
     ),
     [files, setFiles] = useState<File[]>([]),
     [inspectionNote, setInspectionNote] = useState(receipt?.inspectionNote ?? ''),
+    // PM 22/11 + BE #98: HSD của hàng thừa để Owner duyệt trừ đúng lô kho gửi; trống = lô nhập trước (FIFO).
+    [excessExpiry, setExcessExpiry] = useState<Record<number, string>>(() =>
+      Object.fromEntries(
+        (receipt?.lines ?? []).map((line) => [
+          line.productId,
+          line.expiryDate ?? '',
+        ]),
+      ),
+    ),
     [reason, setReason] = useState(''),
     [action, setAction] = useState(''),
     [busy, setBusy] = useState(false),
@@ -416,6 +425,10 @@ function WorkEditor({
                   passedQty: values[l.productId].qty,
                   damagedQty: values[l.productId].damaged,
                   wrongItemQty: values[l.productId].wrong,
+                  expiryDate:
+                    'documentQty' in l && excessOf(l) > 0
+                      ? excessExpiry[l.productId] || null
+                      : null,
                 })),
               }
             : {
@@ -834,7 +847,27 @@ function WorkEditor({
                       {mode === 'receipt' && 'documentQty' in l && (
                         <>
                           <td>{shortOf(l)}</td>
-                          <td>{excessOf(l)}</td>
+                          <td>
+                            {excessOf(l)}
+                            {canRecord && excessOf(l) > 0 && (
+                              <label className="tf-excess-expiry">
+                                <small>HSD hàng thừa</small>
+                                <input
+                                  type="date"
+                                  aria-label={'HSD hàng thừa ' + l.sku}
+                                  title="Để trống nếu phụ tùng không có hạn sử dụng: khi Owner duyệt, kho gửi trừ lô nhập trước."
+                                  value={excessExpiry[l.productId] ?? ''}
+                                  disabled={busy}
+                                  onChange={(e) =>
+                                    setExcessExpiry({
+                                      ...excessExpiry,
+                                      [l.productId]: e.target.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                            )}
+                          </td>
                           {canRecord && (
                             <td>
                               <PassAllButton

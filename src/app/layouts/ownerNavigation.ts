@@ -55,6 +55,8 @@ export const ownerNavigation: NavItem[] = [
     href: '/inventory/movements',
     icon: 'clock',
   },
+  // PM 23/11 (Q8): Quản lý phiếu xuất nhập cho Owner, BM, Staff.
+  { label: 'Phiếu xuất nhập', href: '/stock-documents', icon: 'clipboard' },
   { label: 'Lô hàng', href: '/inventory/lots', icon: 'hourglass' },
   {
     label: 'Tồn kho theo ngày',

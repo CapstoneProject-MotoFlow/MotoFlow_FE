@@ -61,10 +61,12 @@ import type {
 import {
   addDaysIso,
   afterDepositRoute,
-  depositPayload,
+  depositSplitPayload,
   depositTarget,
+  parseMoney,
+  splitDepositTotal,
   todayIso,
-  validateDeposit,
+  validateSplitDeposit,
   type DepositRoute,
 } from './salesDeposit'
 import MoneyInput from '../../shared/ui/MoneyInput'
@@ -249,7 +251,11 @@ export function SalesOrderFormView({
       discount,
       note,
       lines,
-      ...(deposit.amount || deposit.reference || deposit.tendered || deposit.expiresOn
+      ...(deposit.amount ||
+      deposit.transfer ||
+      deposit.reference ||
+      deposit.tendered ||
+      deposit.expiresOn
         ? { deposit }
         : {}),
       ...(preorder && !walkIn ? { preorder: true } : {}),
@@ -412,10 +418,21 @@ export function SalesOrderFormView({
   const allWaiting =
     !editing && lines.length > 0 && immediateQty === 0 && pendingQty > 0
   // Cọc chỉ được gửi khi đơn chờ có hồ sơ khách và đã nhập số tiền; còn lại bỏ qua.
+  // PM 22/11 + BE #98: cọc nhập tiền mặt (`amount`) và chuyển khoản (`transfer`) trong một lần.
+  const splitDeposit = {
+    cash: deposit.amount,
+    transfer: deposit.transfer ?? '',
+    reference: deposit.reference,
+    expiresOn: deposit.expiresOn,
+  }
+  const depositTotal = splitDepositTotal(splitDeposit)
   const depositActive =
-    allWaiting && wholesale && !!customer && deposit.amount.trim() !== ''
+    allWaiting &&
+    wholesale &&
+    !!customer &&
+    (deposit.amount.trim() !== '' || (deposit.transfer ?? '').trim() !== '')
   const depositError = depositActive
-    ? validateDeposit(deposit, todayIso(), { requireExpiry: true })
+    ? validateSplitDeposit(splitDeposit, todayIso(), { requireExpiry: true })
     : null
   const stockShortages = lines.filter(({ product, quantity }) => {
     const sellable = sellableOf(product.id)
@@ -624,11 +641,9 @@ export function SalesOrderFormView({
       if (waitingId != null) {
         try {
           const settled = await axiosClient.post<DepositResult>(
-            '/sales-orders/' + waitingId + '/deposits',
-            // PM 22/11: bỏ "Tiền khách đưa" và ô "Đã nhận đủ": số cọc ghi là số đã nhận.
-            depositPayload({ ...deposit, tendered: '', verified: true }, 0, {
-              withExpiry: true,
-            }),
+            '/sales-orders/' + waitingId + '/deposits/split',
+            // PM 22/11: tiền mặt + chuyển khoản một lần; số cọc ghi là số đã nhận.
+            depositSplitPayload(splitDeposit, 0, { withExpiry: true }),
           )
           depositRoute = afterDepositRoute(
             {
@@ -1329,9 +1344,9 @@ export function SalesOrderFormView({
               <strong>Tiền cọc</strong>
               <>
                   <label className="pos-deposit-field">
-                    <span>Số tiền cọc</span>
+                    <span>Tiền mặt</span>
                     <MoneyInput
-                      aria-label="Số tiền cọc"
+                      aria-label="Cọc tiền mặt"
                       placeholder="0"
                       value={deposit.amount}
                       onValueChange={(amount) =>
@@ -1339,40 +1354,23 @@ export function SalesOrderFormView({
                       }
                     />
                   </label>
-                  <div
-                    className="pos-deposit-methods"
-                    role="radiogroup"
-                    aria-label="Hình thức cọc"
-                  >
-                    {(
-                      [
-                        ['CASH', 'Tiền mặt'],
-                        ['BANK_TRANSFER', 'Chuyển khoản'],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <label
-                        key={value}
-                        className={
-                          deposit.method === value ? 'is-selected' : ''
-                        }
-                      >
-                        <input
-                          type="radio"
-                          name="depositMethod"
-                          value={value}
-                          checked={deposit.method === value}
-                          onChange={() =>
-                            setDeposit((previous) => ({
-                              ...previous,
-                              method: value,
-                            }))
-                          }
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                  {deposit.method === 'BANK_TRANSFER' && (
+                  <label className="pos-deposit-field">
+                    <span>Chuyển khoản</span>
+                    <MoneyInput
+                      aria-label="Cọc chuyển khoản"
+                      placeholder="0"
+                      value={deposit.transfer ?? ''}
+                      onValueChange={(transfer) =>
+                        setDeposit((previous) => ({ ...previous, transfer }))
+                      }
+                    />
+                  </label>
+                  {depositTotal > 0 && (
+                    <p className="pos-deposit-total">
+                      Tổng cọc <b>{vnd(depositTotal)}</b>
+                    </p>
+                  )}
+                  {(parseMoney(deposit.transfer ?? '') ?? 0) > 0 && (
                     <label className="pos-deposit-field">
                       <span>Mã giao dịch</span>
                       <input
@@ -1442,6 +1440,7 @@ export function SalesOrderFormView({
                     type === 'WHOLESALE' ||
                     (discount.trim() !== '' && discount.trim() !== '0') ||
                     deposit.amount.trim() ||
+                    (deposit.transfer ?? '').trim() ||
                     (preorder && !walkIn)
                   : lines.length) && !order
                   ? setConfirmLeave(true)

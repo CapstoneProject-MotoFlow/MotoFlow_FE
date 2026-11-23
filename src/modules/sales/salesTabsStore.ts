@@ -30,6 +30,11 @@ export type TabDeposit = {
   tendered: string
   /** Đã nhận đủ số tiền cọc; mặc định true như màn thu tiền. */
   verified: boolean
+  /**
+   * PM 22/11 + BE #98: số tiền chuyển khoản khi cọc cả hai hình thức; `amount` là phần tiền mặt.
+   * Không bắt buộc để nháp cũ vẫn đọc được.
+   */
+  transfer?: string
 }
 export type TabDraft = {
   customer?: TabCustomer

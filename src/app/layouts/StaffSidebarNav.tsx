@@ -25,6 +25,8 @@ const items: NavItem[] = [
     icon: 'truck',
   },
   { label: 'Kiểm kê', href: '/stock-counts', icon: 'checklist' },
+  // PM 23/11 (Q8): Quản lý phiếu xuất nhập cho Owner, BM, Staff.
+  { label: 'Phiếu xuất nhập', href: '/stock-documents', icon: 'clipboard' },
   { label: 'Phụ tùng', href: '/staff/products', icon: 'tool' },
 ]
 /** StaffSidebarNav: Menu dành cho nhân viên. */

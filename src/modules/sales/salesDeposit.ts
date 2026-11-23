@@ -59,6 +59,69 @@ export function validateDeposit(
   return null
 }
 
+/**
+ * PM 22/11 + BE #98: một lần cọc nhận cả tiền mặt và chuyển khoản, giống màn thu tiền.
+ * Ô trống = 0. Không còn "Tiền khách đưa" và ô "Đã nhận đủ": số ghi là số đã nhận.
+ */
+export type SplitDepositInput = {
+  cash: string
+  transfer: string
+  reference: string
+  expiresOn: string
+}
+
+/** Tổng cọc của hai ô; ô trống hoặc không hợp lệ tính là 0. */
+export function splitDepositTotal(d: Pick<SplitDepositInput, 'cash' | 'transfer'>) {
+  return (parseMoney(d.cash) ?? 0) + (parseMoney(d.transfer) ?? 0)
+}
+
+/** Kiểm tra phía giao diện, mirror BE recordSplitDeposit (MSG333, MSG154); BE vẫn là nơi quyết định. */
+export function validateSplitDeposit(
+  d: SplitDepositInput,
+  today: string,
+  opts: { requireExpiry: boolean },
+): string | null {
+  const cash = parseMoney(d.cash) ?? 0
+  const transfer = parseMoney(d.transfer) ?? 0
+  if (cash + transfer <= 0)
+    return 'Vui lòng nhập số tiền mặt hoặc tiền chuyển khoản lớn hơn 0.'
+  if (cash > MAX_DEPOSIT || transfer > MAX_DEPOSIT)
+    return 'Mỗi khoản cọc không được vượt 100.000.000.000 đ.'
+  if (transfer > 0 && !d.reference.trim())
+    return 'Vui lòng nhập mã giao dịch chuyển khoản.'
+  if (opts.requireExpiry) {
+    if (!d.expiresOn) return 'Vui lòng chọn hạn cọc.'
+    if (d.expiresOn <= today) return 'Hạn cọc phải sau hôm nay.'
+  }
+  return null
+}
+
+/** Body của POST /sales-orders/{id}/deposits/split (BE #98, DepositSplitRequest). */
+export type DepositSplitRequest = {
+  cashAmount: number
+  transferAmount: number
+  transactionReference: string | null
+  depositExpiresOn?: string
+  expectedDepositRecorded: number
+  evidence: []
+}
+
+export function depositSplitPayload(
+  d: SplitDepositInput,
+  expectedDepositRecorded: number,
+  opts: { withExpiry: boolean },
+): DepositSplitRequest {
+  const transfer = parseMoney(d.transfer) ?? 0
+  return {
+    cashAmount: parseMoney(d.cash) ?? 0,
+    transferAmount: transfer,
+    transactionReference: transfer > 0 ? d.reference.trim() : null,
+    ...(opts.withExpiry ? { depositExpiresOn: d.expiresOn } : {}),
+    expectedDepositRecorded,
+    evidence: [],
+  }
+}
+
 /** Body của POST /sales-orders/{id}/deposits (BE: không gửi bằng chứng, evidence luôn rỗng). */
 export type DepositRequest = {
   amount: number

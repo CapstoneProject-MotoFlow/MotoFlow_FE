@@ -9,11 +9,11 @@ import type { SalesOrder } from './salesModel'
 import { viewDate } from './salesDepositDate'
 import {
   addDaysIso,
-  depositPayload,
+  depositSplitPayload,
   depositStatusLabels,
+  splitDepositTotal,
   todayIso,
-  validateDeposit,
-  type DepositInput,
+  validateSplitDeposit,
 } from './salesDeposit'
 
 type DepositDialog = 'record' | 'expiry' | 'forfeit'
@@ -29,7 +29,7 @@ export default function SalesDepositPanel({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [amount, setAmount] = useState(''),
-    [method, setMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH'),
+    [transfer, setTransfer] = useState(''),
     [reference, setReference] = useState(''),
     [expiresOn, setExpiresOn] = useState('')
   // Chặn bấm đúp nút mất cọc: lần gọi thứ hai bị bỏ khi lần đầu chưa xong.
@@ -49,7 +49,7 @@ export default function SalesDepositPanel({
   function open(next: DepositDialog) {
     setError('')
     setAmount('')
-    setMethod('CASH')
+    setTransfer('')
     setReference('')
     setExpiresOn(next === 'expiry' ? (deposit?.expiresOn ?? '') : '')
     setDialog(next)
@@ -58,29 +58,22 @@ export default function SalesDepositPanel({
   async function record(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy || !deposit) return
-    const input: DepositInput = {
-      amount,
-      method,
-      reference,
-      expiresOn,
-      // PM 22/11: bỏ "Khách đưa" và ô "Đã nhận đủ": số cọc ghi là số đã nhận.
-      tendered: '',
-      verified: true,
-    }
-    const problem = validateDeposit(input, todayIso(), {
+    // PM 22/11 + BE #98: một lần cọc nhận cả tiền mặt và chuyển khoản; số ghi là số đã nhận.
+    const input = { cash: amount, transfer, reference, expiresOn }
+    const problem = validateSplitDeposit(input, todayIso(), {
       requireExpiry: !deposit.expiresOn,
     })
     if (problem) {
       setError(problem)
       return
     }
-    const body = depositPayload(input, deposit.total + deposit.unverified, {
+    const body = depositSplitPayload(input, deposit.total + deposit.unverified, {
       withExpiry: !deposit.expiresOn,
     })
     setBusy(true)
     setError('')
     try {
-      await axiosClient.post('/sales-orders/' + order.id + '/deposits', body)
+      await axiosClient.post('/sales-orders/' + order.id + '/deposits/split', body)
       setDialog(null)
       onChanged('Đã ghi nhận tiền cọc.')
     } catch (failure) {
@@ -252,31 +245,19 @@ export default function SalesDepositPanel({
             onSubmit={record}
           >
             <label>
-              Số tiền cọc (đ)
+              Tiền mặt (đ)
               <MoneyInput value={amount} onValueChange={setAmount} />
             </label>
-            <fieldset className="sales-deposit-methods">
-              <legend>Hình thức</legend>
-              <label>
-                <input
-                  type="radio"
-                  name="deposit-method"
-                  checked={method === 'CASH'}
-                  onChange={() => setMethod('CASH')}
-                />{' '}
-                Tiền mặt
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="deposit-method"
-                  checked={method === 'BANK_TRANSFER'}
-                  onChange={() => setMethod('BANK_TRANSFER')}
-                />{' '}
-                Chuyển khoản
-              </label>
-            </fieldset>
-            {method === 'BANK_TRANSFER' && (
+            <label>
+              Chuyển khoản (đ)
+              <MoneyInput value={transfer} onValueChange={setTransfer} />
+            </label>
+            {splitDepositTotal({ cash: amount, transfer }) > 0 && (
+              <p className="sales-release-hint">
+                {'Tổng cọc: ' + formatMoney(splitDepositTotal({ cash: amount, transfer }))}
+              </p>
+            )}
+            {splitDepositTotal({ cash: '0', transfer }) > 0 && (
               <label>
                 Mã giao dịch
                 <input
