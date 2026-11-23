@@ -77,7 +77,14 @@ function DocumentContents({ data }: { data: DocumentDetail }) {
           [
             'Thiếu',
             (line) =>
-              Math.max(0, (line.documentQty ?? 0) - (line.deliveredQty ?? 0)),
+              Math.max(
+                0,
+                (line.documentQty ?? 0) -
+                  // Phiếu nhận điều chuyển (PM 23/11): giao sai là phụ tùng khác, không trừ vào thiếu.
+                  (content.transferOrderId != null
+                    ? (line.passedQty ?? 0) + (line.damagedQty ?? 0)
+                    : (line.deliveredQty ?? 0)),
+              ),
           ],
           ['Giao sai', (line) => line.wrongItemQty],
           ['Hư hỏng', (line) => line.damagedQty],

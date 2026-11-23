@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import Icon, { type IconName } from '../../shared/ui/Icon'
+import InfoTip from '../../shared/ui/InfoTip'
 import PageHeader from '../../shared/ui/PageHeader'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { mapConcurrent } from '../../shared/utils/mapConcurrent'
@@ -165,14 +166,6 @@ function Change({
   )
 }
 
-function Info({ text }: { text: string }) {
-  return (
-    <span className="sr-info" title={text} aria-label={text} role="img">
-      <Icon name="info" />
-    </span>
-  )
-}
-
 function KpiCard({
   icon,
   tone,
@@ -201,7 +194,7 @@ function KpiCard({
           <Icon name={icon} />
         </span>
         <span className="sr-kpi-label">{label}</span>
-        {info && <Info text={info} />}
+        {info && <InfoTip text={info} />}
       </header>
       <strong className="sr-kpi-value">
         {format(current)}
@@ -656,7 +649,7 @@ export function SalesReportPage() {
           {provisional && (
             <span className="sr-provisional">
               <span className="sr-badge">Tạm tính</span>
-              <Info text="Kỳ chưa kết thúc nên số liệu còn thay đổi." />
+              <InfoTip text="Kỳ chưa kết thúc nên số liệu còn thay đổi." />
             </span>
           )}
         </p>
@@ -730,7 +723,7 @@ export function SalesReportPage() {
             <section className="sr-panel sr-recon">
               <header>
                 <h2>Đối chiếu công nợ phải thu</h2>
-                <Info text="Phải thu cuối kỳ = phải thu đầu kỳ + bán chịu − thu nợ ± điều chỉnh công nợ. Đầu kỳ và cuối kỳ lấy theo sổ công nợ ở cuối ngày." />
+                <InfoTip text="Phải thu cuối kỳ = phải thu đầu kỳ + bán chịu − thu nợ ± điều chỉnh công nợ. Đầu kỳ và cuối kỳ lấy theo sổ công nợ ở cuối ngày." />
               </header>
               <dl>
                 <div>
@@ -753,7 +746,7 @@ export function SalesReportPage() {
                   <div>
                     <dt>
                       Khoản khác{' '}
-                      <Info text="Phần chênh còn lại giữa đầu kỳ và cuối kỳ, ví dụ nợ đầu kỳ ghi thêm trong kỳ." />
+                      <InfoTip text="Phần chênh còn lại giữa đầu kỳ và cuối kỳ, ví dụ nợ đầu kỳ ghi thêm trong kỳ." />
                     </dt>
                     <dd>{num(other)}</dd>
                   </div>
@@ -853,7 +846,7 @@ export function SalesReportPage() {
               <h2>
                 Chi tiết theo {periodWord} · {scopeLabel}
               </h2>
-              <Info text="Số gốc của đơn và phiếu thu giữ nguyên; điều chỉnh áp dụng trong kỳ hiện riêng ở nhóm Điều chỉnh trong kỳ, vào ngày áp dụng." />
+              <InfoTip text="Số gốc của đơn và phiếu thu giữ nguyên; điều chỉnh áp dụng trong kỳ hiện riêng ở nhóm Điều chỉnh trong kỳ, vào ngày áp dụng." />
             </header>
             <div className="sr-table-wrap">
               <table className="sr-table sr-detail-table">
@@ -879,7 +872,7 @@ export function SalesReportPage() {
                     <th>Thu nợ</th>
                     <th>
                       Tổng thu{' '}
-                      <Info text="Thu tiền đơn − hoàn tiền + thu nợ." />
+                      <InfoTip text="Thu tiền đơn − hoàn tiền + thu nợ." />
                     </th>
                     <th>Doanh số</th>
                     <th>Tiền thu</th>

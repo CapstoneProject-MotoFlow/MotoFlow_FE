@@ -92,3 +92,31 @@ export function returnableQuantities(
     })
     .filter((l) => l.quantity > 0)
 }
+
+/**
+ * Thiếu của một dòng phiếu nhận điều chuyển (PM 23/11): số đã xuất trừ đạt và hỏng. Giao sai là phụ tùng khác, không
+ * trừ vào thiếu. Không dùng deliveredQty của BE vì số đó cộng cả giao sai (BR-24, test 23/11 T-11).
+ */
+export function receiptShortage(line: {
+  documentQty: number
+  passedQty: number
+  damagedQty: number
+}) {
+  return Math.max(0, line.documentQty - line.passedQty - line.damagedQty)
+}
+
+/**
+ * Thừa của một dòng phiếu nhận điều chuyển khi đang ghi (PM 23/11): hỏng lấp số đã xuất trước, phần hỏng vượt số xuất
+ * chỉ ghi trên phiếu, nên thừa chỉ là hàng đạt vượt số đã xuất (khớp BE). Xuất 5, hỏng 20, đạt 0 thì thừa 0.
+ */
+export function receiptExcess(line: {
+  documentQty: number
+  passedQty: number
+  damagedQty: number
+}) {
+  const damaged = Math.min(line.damagedQty, line.documentQty)
+  return Math.min(
+    line.passedQty,
+    Math.max(0, line.passedQty + damaged - line.documentQty),
+  )
+}

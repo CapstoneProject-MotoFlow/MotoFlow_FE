@@ -106,16 +106,6 @@
   font-size: 12px;
   font-weight: 600;
 }
-.sr-info {
-  display: inline-flex;
-  vertical-align: middle;
-  color: #667085;
-  cursor: help;
-}
-.sr-info svg {
-  width: 16px;
-  height: 16px;
-}
 .sr-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

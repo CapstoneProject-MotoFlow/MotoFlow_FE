@@ -1362,3 +1362,8 @@ p.tf-validation-hint {
   padding-left: 18px;
   font-size: 13px;
 }
+
+/* Test 23/11 T-04: nút Owner xác nhận nằm cuối dòng phiếu giao sai. */
+.tf-wrong-item-confirm {
+  margin-left: 12px;
+}

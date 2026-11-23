@@ -96,12 +96,54 @@ test('the receiving BM records a wrong item receipt and sees it wait for the Own
         onDone: () => {},
       }),
     )
-    assert.match(out, /<h2>Hàng giao sai<\/h2>/)
+    // PM 23/11 UI-01: giải thích nằm trong biểu tượng (i), không còn đoạn mô tả.
+    assert.match(
+      out,
+      /<h2>Hàng giao sai <span class="mf-info-tip"[^>]*title="Giao sai là giao nhầm/,
+    )
+    assert.doesNotMatch(out, /<p class="tf-note">Giao sai là/)
+    // Không phải Owner thì không có nút xác nhận.
+    assert.doesNotMatch(out, />Xác nhận<\/button>/)
     assert.match(out, /Giao sai 2 · Chưa lập phiếu 1 · Chờ Owner xác nhận 1/)
     assert.match(out, /1 × MA-PHANH-SAU · Má phanh sau · HSD 01\/03\/2027 · Chờ Owner xác nhận · Lê B/)
     assert.match(out, />Lập phiếu nhận hàng giao sai<\/button>/)
     // Không còn cách "Trả về kho gửi" cho hàng giao sai.
     assert.doesNotMatch(out, /Trả về kho gửi/)
+  })
+})
+
+test('the Owner confirms a wrong item receipt from the order page (test 23/11 T-04)', async () => {
+  await withModules(({ Section, html }) => {
+    const out = html(
+      createElement(Section, {
+        order: order([line()], [awaiting]),
+        canRecord: true,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.match(
+      out,
+      /Chờ Owner xác nhận · Lê B<button[^>]*>Xác nhận<\/button>/,
+    )
+    const confirmed = html(
+      createElement(Section, {
+        order: order(
+          [line({ wrongPendingQty: 0, wrongAwaitingOwnerQty: 0 })],
+          [
+            {
+              ...awaiting,
+              status: 'CONFIRMED',
+              confirmedAt: '2026-11-23T22:00:00',
+            },
+          ],
+        ),
+        canRecord: true,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.doesNotMatch(confirmed, />Xác nhận<\/button>/)
   })
 })
 

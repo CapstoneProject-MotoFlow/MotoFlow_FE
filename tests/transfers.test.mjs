@@ -28,9 +28,45 @@ const {
   canConfirmExcess,
   returnableQuantities,
   hasExistingPurchase,
+  receiptShortage,
+  receiptExcess,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
+
+test('a submitted transfer receipt keeps wrong items out of the shortage (test 23/11 T-11)', () => {
+  // Xuất 20, đạt 18, giao sai 1, hỏng 1: BE deliveredQty = 20 nhưng vẫn thiếu 1.
+  assert.equal(
+    receiptShortage({ documentQty: 20, passedQty: 18, damagedQty: 1 }),
+    1,
+  )
+  assert.equal(
+    receiptShortage({ documentQty: 5, passedQty: 6, damagedQty: 0 }),
+    0,
+  )
+})
+
+test('damaged above the dispatch is not excess (PM 23/11)', () => {
+  // Xuất 5, hỏng 20, đạt 0: không thừa, 15 hỏng vượt chỉ ghi trên phiếu.
+  assert.equal(
+    receiptExcess({ documentQty: 5, passedQty: 0, damagedQty: 20 }),
+    0,
+  )
+  // Xuất 5, đạt 3, hỏng 20: hỏng lấp đủ 5, 3 đạt là thừa (khớp BE).
+  assert.equal(
+    receiptExcess({ documentQty: 5, passedQty: 3, damagedQty: 20 }),
+    3,
+  )
+  // Xuất 20, đạt 10, hỏng 20 (ảnh PM): thừa 10.
+  assert.equal(
+    receiptExcess({ documentQty: 20, passedQty: 10, damagedQty: 20 }),
+    10,
+  )
+  assert.equal(
+    receiptExcess({ documentQty: 5, passedQty: 6, damagedQty: 0 }),
+    1,
+  )
+})
 
 test('existing non-cancelled purchases prevent duplicate creation', () => {
   assert.equal(hasExistingPurchase([]), false)
