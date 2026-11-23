@@ -75,6 +75,7 @@ export type DocumentDetail = {
     confirmedAt?: string | null
     paymentMethod?: string
     paymentType?: string
+    salesOrderId?: number | null
     amount?: number
     recordedBy?: string
     transactionReference?: string | null

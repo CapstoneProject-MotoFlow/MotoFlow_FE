@@ -2,13 +2,13 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useInventoryData } from '../inventory/api'
 import PageHeader from '../../shared/ui/PageHeader'
-import { useBackClick } from '../../shared/hooks/useBackClick'
 import { Result } from './DocumentUi'
 import {
   documentPath,
   isDocumentType,
   printForms,
   validId,
+  type DocumentType,
   type PrintForm,
 } from './model'
 import PrintSheetLarge from './print/PrintSheetLarge'
@@ -21,6 +21,17 @@ import {
   printParams,
 } from './print/printLayout'
 import type { DocumentDetail, DocumentPrint, PrintLayout } from './types'
+
+/**
+ * Góp ý 23/11: "Quay lại" về thẳng màn gốc của chứng từ, không theo lịch sử trình duyệt. Phiếu thu của một đơn bán
+ * (cọc, thanh toán) về đơn bán; phiếu thu nợ gồm nhiều đơn và các chứng từ khác về trang chứng từ.
+ */
+function backPath(type: DocumentType, id: string, detail?: DocumentDetail) {
+  if (type === 'SALES_ORDER') return '/sales-orders/' + id
+  const order = detail?.content.salesOrderId
+  if (type === 'PAYMENT' && order) return '/sales-orders/' + order
+  return documentPath(type, id)
+}
 
 function PrintBody({ data }: { data: DocumentPrint }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -50,7 +61,6 @@ function PrintBody({ data }: { data: DocumentPrint }) {
 }
 
 export default function DocumentPrintPage() {
-  const onBackClick = useBackClick()
   const { type, id } = useParams()
   const valid = isDocumentType(type) && validId(id)
   const path = valid ? documentPath(type, id!) : ''
@@ -116,8 +126,7 @@ export default function DocumentPrintPage() {
               )}
               <Link
                 className="mf-btn mf-btn--secondary"
-                to={path}
-                onClick={onBackClick}
+                to={backPath(type as DocumentType, id!, detail.data)}
               >
                 Quay lại
               </Link>
