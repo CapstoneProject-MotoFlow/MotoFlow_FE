@@ -203,7 +203,7 @@ export default function SalesSettlementDialog({
         )}
         {cash > 0 && (
           <p className="sales-split-change">
-            <span>Tiền thối</span>
+            <span>Tiền thừa</span>
             <strong>{money.format(figures.check.change)}</strong>
           </p>
         )}

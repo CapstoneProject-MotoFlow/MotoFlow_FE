@@ -13,6 +13,7 @@ import axiosClient from '../../shared/api/axiosClient'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { documentCode } from '../../shared/utils/documentCode'
 import { inventoryError } from '../inventory/api'
+import { partLabel } from './transferRules'
 import './transfers.css'
 
 type PlannedLot = { lotId: number; expiryDate: string | null; quantity: number }
@@ -146,10 +147,14 @@ function PendingRow({
             title="Xác nhận hàng giao sai"
             message={
               <p>
-                {item.sourceStoreName} trừ {item.quantity} {item.receivedSku}
+                {/* PM 24/11: thông báo ghi cả tên phụ tùng, không chỉ mã. */}
+                {item.sourceStoreName} trừ {item.quantity}{' '}
+                {partLabel(item.receivedSku, item.receivedPartName)}
                 {lotText ? ' (' + lotText + ')' : ''}, {item.destStoreName} cộng{' '}
-                {item.quantity} {item.receivedSku}. {item.sku} không đổi. Thao
-                tác không hoàn tác được.
+                {item.quantity}{' '}
+                {partLabel(item.receivedSku, item.receivedPartName)}. Phụ tùng
+                yêu cầu {partLabel(item.sku, item.partName)} không đổi. Thao tác
+                không hoàn tác được.
               </p>
             }
             onCancel={() => setAsking(false)}

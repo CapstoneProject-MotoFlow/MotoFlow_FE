@@ -17,7 +17,13 @@ import TransferAction from './TransferAction'
 import { states, type Transfer } from './types'
 import TransferWorkPage from './TransferWorkPage'
 import './transfers.css'
-import { canConfirmExcess, receiptAcceptsResult } from './transferRules'
+import {
+  canConfirmExcess,
+  EXCESS_TIP,
+  receiptAcceptsResult,
+  WRONG_ITEM_TIP,
+} from './transferRules'
+import InfoTip from '../../shared/ui/InfoTip'
 import { useReturnQuantities } from './useReturnQuantities'
 import { resolutionNames } from './types'
 import TransferWrongItemSection from './TransferWrongItemSection'
@@ -109,6 +115,16 @@ function miscountEvent(order: Transfer, productId: number) {
     .filter((item) => item.productId === productId)
     .flatMap((item) => item.events)
     .find((event) => event.resolutionType === 'RECEIVER_MISCOUNT')
+}
+
+/**
+ * PM 24/11: cột Đạt hiện đúng số người kiểm nhập trên phiếu nhận. BE trả receivedQty = đạt trong số đã xuất
+ * (đã trừ hàng thừa), nên cộng lại extraReceivedQty. Chưa nhận thì null.
+ */
+function passedOf(line: Transfer['lines'][number]) {
+  return line.receivedQty == null
+    ? null
+    : line.receivedQty + (line.extraReceivedQty ?? 0)
 }
 
 /** Tổng một cột của closing-preview, kèm danh sách SKU có số. */
@@ -460,9 +476,13 @@ export default function TransferDetailPage() {
                     <th>Đã xuất</th>
                     <th>Đạt</th>
                     <th>Hỏng</th>
-                    <th>Giao sai</th>
+                    <th>
+                      Giao sai <InfoTip text={WRONG_ITEM_TIP} />
+                    </th>
                     <th>Thiếu</th>
-                    <th>Thừa</th>
+                    <th>
+                      Thừa <InfoTip text={EXCESS_TIP} />
+                    </th>
                     <th>Không giao bù</th>
                     <th>Mất</th>
                     <th>Chờ quyết</th>
@@ -488,7 +508,7 @@ export default function TransferDetailPage() {
                         <td>{l.plannedQty}</td>
                         <td>{l.preparedQty ?? 'Chưa ghi'}</td>
                         <td>{l.dispatchedQty ?? 'Chưa xuất'}</td>
-                        <td>{l.receivedQty ?? '—'}</td>
+                        <td>{passedOf(l) ?? '—'}</td>
                         <td>{l.damagedQty ?? '—'}</td>
                         <td>
                           {l.wrongItemQty ?? '—'}
@@ -521,14 +541,6 @@ export default function TransferDetailPage() {
               Kho nhận và Owner đang xử lý sai lệch.
             </p>
           )}
-          {dest &&
-            d.status === 'RECONCILING' &&
-            unresolvedLines.length > 0 && (
-              <p className="tf-note" role="status">
-                Phần thiếu chưa chọn Nhận sau hoặc Không cần giao bù sẽ tính là
-                mất khi Owner đóng phiếu.
-              </p>
-            )}
           {d.discrepancies.length > 0 && (
             <section>
               <h2>Sai lệch</h2>
@@ -544,8 +556,12 @@ export default function TransferDetailPage() {
                       <th>Đã xuất</th>
                       <th>Đạt</th>
                       <th>Thiếu</th>
-                      <th>Giao sai</th>
-                      <th>Thừa</th>
+                      <th>
+                        Giao sai <InfoTip text={WRONG_ITEM_TIP} />
+                      </th>
+                      <th>
+                        Thừa <InfoTip text={EXCESS_TIP} />
+                      </th>
                       <th>Chờ quyết</th>
                       <th>Trạng thái</th>
                       <th>Chi tiết</th>
@@ -561,7 +577,7 @@ export default function TransferDetailPage() {
                         <tr key={c.id}>
                           <td>{line?.sku ?? '—'} · {line?.partName ?? 'Phụ tùng'}</td>
                           <td>{line?.dispatchedQty ?? '—'}</td>
-                          <td>{line?.receivedQty ?? '—'}</td>
+                          <td>{(line && passedOf(line)) ?? '—'}</td>
                           <td>{line?.shortageQty ?? c.shortQty}</td>
                           <td>{line?.wrongItemQty ?? c.wrongItemQty ?? 0}</td>
                           <td>{line?.extraReceivedQty ?? '—'}</td>
