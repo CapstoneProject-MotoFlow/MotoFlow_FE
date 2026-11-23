@@ -490,6 +490,29 @@ test('parseTabs keeps tendered cash and the verified flag of a deposit', () => {
   assert.equal(parsed.tabs[1].draft.deposit.verified, true)
 })
 
+test('parseTabs keeps the bank-transfer part of a split deposit', () => {
+  const parsed = parseTabs(
+    rawState([
+      rawTab(1, {
+        lines: [],
+        deposit: {
+          amount: '300000',
+          transfer: '700000',
+          method: 'CASH',
+          reference: 'FT123',
+          expiresOn: '2026-12-01',
+          tendered: '',
+          verified: true,
+        },
+      }),
+      rawTab(2, { lines: [], deposit: { amount: '1', transfer: 5 } }),
+    ]),
+  )
+  assert.equal(parsed.tabs[0].draft.deposit.transfer, '700000')
+  assert.equal(parsed.tabs[0].draft.deposit.reference, 'FT123')
+  assert.equal(parsed.tabs[1].draft.deposit.transfer, undefined)
+})
+
 test('parseTabs keeps the preorder flag only when it is true', () => {
   const parsed = parseTabs(
     rawState([

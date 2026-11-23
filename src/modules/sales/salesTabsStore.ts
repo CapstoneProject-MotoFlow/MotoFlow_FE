@@ -223,6 +223,8 @@ function sanitizeDeposit(value: unknown): TabDeposit | null {
     expiresOn: textOr(value.expiresOn, ''),
     tendered: textOr(value.tendered, ''),
     verified: typeof value.verified === 'boolean' ? value.verified : true,
+    // Graphify #73: giữ số cọc chuyển khoản khi khôi phục nháp sau khi tải lại trang.
+    ...(typeof value.transfer === 'string' ? { transfer: value.transfer } : {}),
   }
 }
 
