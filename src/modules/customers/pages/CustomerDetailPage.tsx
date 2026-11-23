@@ -148,10 +148,6 @@ export default function CustomerDetailPage() {
     <main className="dashboard-content customer-profile">
       <header className="cp-heading">
         <h1>{c.customerName}</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to={base}>Khách hàng</Link> › {c.customerName}
-        </nav>
       </header>
       <div className="cp-layout">
         <div className="cp-main">

@@ -59,7 +59,6 @@ function ReportFrame({
       <PageHeader
         title={title}
         subtitle={subtitle}
-        breadcrumb={[{ label: 'Báo cáo' }, { label: title }]}
       />
       {children}
     </main>

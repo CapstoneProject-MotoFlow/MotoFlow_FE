@@ -92,10 +92,6 @@ export default function SupplierDetailPage() {
     <main className="dashboard-content suppliers-page supplier-redesign supplier-detail-page">
       <div className="suppliers-page-heading">
         <h1>{data?.supplier.supplierName || 'Chi tiết nhà cung cấp'}</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to="/owner/suppliers">Nhà cung cấp</Link> › Chi tiết
-        </nav>
       </div>
       {error ? (
         <p role="alert">

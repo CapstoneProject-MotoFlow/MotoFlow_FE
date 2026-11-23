@@ -203,10 +203,6 @@ export default function ProductCreatePage() {
         <h1>
           {id ? 'Sửa phụ tùng ' + (initial?.partName || '') : 'Thêm phụ tùng'}
         </h1>
-        <span>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to={base}>Phụ tùng</Link> › Thêm mới
-        </span>
       </div>
       {error && (
         <p role="alert" className="part-create-error">

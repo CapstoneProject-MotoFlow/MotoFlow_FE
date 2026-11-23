@@ -144,10 +144,6 @@ export default function ProductDetailPage() {
     <main className="dashboard-content product-detail">
       <header>
         <h1>{data?.partName || 'Chi tiết phụ tùng'}</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to={base}>Phụ tùng</Link> › {data?.sku}
-        </nav>
         {data && damagedVariantBaseSku(data) && (
           <p className="product-variant-label">
             Hàng lỗi của{' '}

@@ -293,10 +293,6 @@ export default function AdjustmentDetailPage() {
             ? 'Yêu cầu điều chỉnh ' + data.number
             : 'Chi tiết yêu cầu điều chỉnh'
         }
-        breadcrumb={[
-          { label: 'Yêu cầu điều chỉnh', to: '/adjustments' },
-          { label: data?.number ?? 'Chi tiết' },
-        ]}
       />
       {reload?.id === id && reload?.message && (
         <p className="docs-alert" role="alert">

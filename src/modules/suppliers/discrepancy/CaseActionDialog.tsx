@@ -53,7 +53,7 @@ export function CaseTimeline({ events }: { events?: CaseEvent[] }) {
         return (
           <li key={event.id}>
             <div className="sd-timeline-head">
-              <strong>{supplierResolutionLabels[event.type] ?? event.type}</strong>
+              <strong>{supplierResolutionLabels[event.type] ?? 'Bước xử lý khác'}</strong>
               <span className="sd-qty">{event.quantity}</span>
             </div>
             <div className="sd-timeline-meta">

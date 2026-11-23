@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
 import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import axiosClient from '../../shared/api/axiosClient'
@@ -70,12 +70,6 @@ export default function PriceListPage() {
   }
   return (
     <main className="dashboard-content pricing-page">
-      <header>
-        <h1>Bảng giá bán lẻ</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Giá bán › Bảng giá
-        </nav>
-      </header>
       {notice && (
         <p className="pricing-notice" role="status">
           {notice}

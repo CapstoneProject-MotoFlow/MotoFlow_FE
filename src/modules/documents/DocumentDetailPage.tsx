@@ -354,10 +354,6 @@ export default function DocumentDetailPage() {
               request.data.document.number
             : 'Chi tiết chứng từ'
         }
-        breadcrumb={[
-          { label: 'Tra cứu chứng từ', to: '/documents' },
-          { label: request.data?.document.number ?? 'Chi tiết' },
-        ]}
       />
       <Result request={request} empty="Chứng từ không hợp lệ.">
         {(data) => {

@@ -526,7 +526,6 @@ export function SalesReportPage() {
     <main className="reports-page sales-report-page">
       <PageHeader
         title="Báo cáo bán hàng và thu tiền"
-        breadcrumb={[{ label: 'Báo cáo' }, { label: 'Báo cáo bán hàng' }]}
         actions={
           <>
             <button

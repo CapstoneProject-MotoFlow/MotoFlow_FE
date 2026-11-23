@@ -7,7 +7,7 @@
 /** Password change form for an already signed-in user. The temporary-password flow stays on the auth page. */
 import { useState, type FormEvent } from 'react'
 import axios from 'axios'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import PasswordField from '../../../shared/ui/PasswordField'
 import PasswordRequirements from '../../../shared/ui/PasswordRequirements'
 import { validateNewPassword } from '../../../shared/utils/passwordPolicy'
@@ -79,15 +79,6 @@ export default function ProfileChangePasswordPage() {
       <main className="dashboard-content profile-password-content">
         <div className="profile-password-heading">
           <h1>Đổi mật khẩu</h1>
-          {!forced && (
-            <div className="breadcrumb">
-              <Link to="/dashboard">Trang chủ</Link>
-              <span>›</span>
-              <Link to="/profile">Thông tin cá nhân</Link>
-              <span>›</span>
-              <span>Đổi mật khẩu</span>
-            </div>
-          )}
         </div>
         <section className="profile-password-panel">
           <div className="profile-password-panel-title">

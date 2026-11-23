@@ -21,6 +21,11 @@ export function canEditCatalog(user: AuthUser | null) {
   )
 }
 
+/** homePath: trang mở ra sau khi đăng nhập. PM 22/11: BM vào thẳng màn Tạo đơn bán; vai trò khác vào Tổng quan. */
+export function homePath(user: AuthUser | null) {
+  return user?.role === 'BRANCH_MANAGER' ? '/sales-orders/new' : '/dashboard'
+}
+
 export function canCoordinateTransfers(user: AuthUser | null) {
   return (
     user?.role === 'OWNER' ||

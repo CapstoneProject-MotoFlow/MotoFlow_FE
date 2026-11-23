@@ -10,7 +10,6 @@ import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { createXlsx, downloadBlob } from '../../../shared/utils/xlsx'
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { Link } from 'react-router-dom'
 import type {
   DashboardAccount,
   PermissionHistoryItem,
@@ -189,13 +188,6 @@ export default function AdminPermissionHistoryPage() {
       <main className="dashboard-content history-content">
         <div className="history-page-heading">
           <h1>Lịch sử phân quyền</h1>
-          <div className="breadcrumb">
-            <Link to="/dashboard">Trang chủ</Link>
-            <span>›</span>
-            <Link to="/accounts">Tài khoản</Link>
-            <span>›</span>
-            <span>Lịch sử phân quyền</span>
-          </div>
         </div>
         {error && (
           <div className="dashboard-banner error-banner" role="alert">

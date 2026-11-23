@@ -657,39 +657,6 @@
   border-color: #a4bcfd;
   opacity: 1;
 }
-.sales-pick-drafts {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border: 1px solid #e4e7ec;
-  border-radius: 10px;
-  background: #f8fafc;
-  font-size: 13px;
-  color: #667085;
-}
-.sales-pick-drafts summary {
-  cursor: pointer;
-  padding: 4px 2px;
-  color: #344054;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.sales-pick-drafts[open] {
-  border-color: #cbd5e1;
-  background: #fff;
-}
-.sales-pick-drafts button {
-  min-height: 38px;
-  margin: 0;
-  padding: 7px 12px;
-  border-color: #d0d5dd;
-  border-radius: 7px;
-  background: #fff;
-  color: #344054;
-  white-space: nowrap;
-}
 .sales-pick-footer .sales-cancel {
   width: auto;
   min-height: 0;
@@ -710,16 +677,6 @@
   .sales-pick-actions {
     width: 100%;
     gap: 8px;
-  }
-  .sales-pick-drafts {
-    flex-wrap: wrap;
-    flex: 1 1 100%;
-  }
-  .sales-pick-drafts summary {
-    flex: 1 0 100%;
-  }
-  .sales-pick-drafts button {
-    flex: 1 1 auto;
   }
   .sales-pick-screen .stock-table {
     min-width: 580px;

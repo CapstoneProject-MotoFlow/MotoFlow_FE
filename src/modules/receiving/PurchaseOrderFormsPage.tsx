@@ -1056,13 +1056,6 @@ function FormShell({
       {backTo && <PageBackLink to={backTo} />}
       <header className="receiving-heading">
         <h1>{title}</h1>
-        <nav className="receiving-breadcrumb" aria-label="Đường dẫn">
-          <Link to="/dashboard">Trang chủ</Link>
-          <span aria-hidden="true">›</span>
-          <Link to="/purchase-orders">Đơn nhập hàng</Link>
-          <span aria-hidden="true">›</span>
-          <span aria-current="page">{title}</span>
-        </nav>
       </header>
       {children}
     </main>

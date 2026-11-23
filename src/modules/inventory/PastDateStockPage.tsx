@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from './api'
 import { InventoryNotice, Pagination } from './components'
@@ -71,12 +70,6 @@ export default function PastDateStockPage() {
   }
   return (
     <main className="dashboard-content tf-page past-stock-page">
-      <header>
-        <h1>Tồn kho theo ngày</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Kho hàng › Tồn kho theo ngày
-        </nav>
-      </header>
       <section>
         <h2>
           Tồn cuối ngày {date.split('-').reverse().join('/')}
