@@ -2,7 +2,7 @@
  * File: modules/receivables/DebtPaymentDetailDialog.tsx
  * Loại: THÀNH PHẦN / XỬ LÝ HỖ TRỢ — popup, không phải màn hình độc lập.
  * Công dụng: Mục 10 (PM 19/11): popup "Chi tiết phiếu thu" của Lịch sử thu nợ. Bảng chỉ ghi Tiền mặt / Chuyển khoản;
- * mã giao dịch, chứng từ, khách đưa/tiền thối và phần trừ vào từng khoản nợ xem ở đây.
+ * mã giao dịch, chứng từ, khách đưa/tiền thừa và phần trừ vào từng khoản nợ xem ở đây.
  */
 import type { ReactNode } from 'react'
 import FormDialog from '../../shared/ui/FormDialog'
@@ -37,7 +37,7 @@ export default function DebtPaymentDetailDialog({
       ? []
       : ([
           ['Khách đưa', money.format(payment.tenderedAmount)],
-          ['Tiền thối', money.format(payment.changeAmount ?? 0)],
+          ['Tiền thừa', money.format(payment.changeAmount ?? 0)],
         ] as [string, ReactNode][])),
     [
       'Xác minh',

@@ -15,6 +15,7 @@ import ProductPicker, { type ProductOption } from '../receiving/ProductPicker'
 import { inventoryError } from '../inventory/api'
 import TransferAction from './TransferAction'
 import type { PartLine, Transfer } from './types'
+import { partLabel } from './transferRules'
 import './transfers.css'
 
 const day = (value?: string | null) =>
@@ -242,10 +243,22 @@ export default function TransferWrongItemSection({
           title="Xác nhận hàng giao sai"
           message={
             <p>
-              {order.sourceStoreName} trừ {asking.quantity} {asking.receivedSku}{' '}
-              (lô cùng HSD bên nhận ghi, không ghi thì lô nhập trước),{' '}
-              {order.destStoreName} cộng {asking.quantity} {asking.receivedSku}.
-              Phụ tùng yêu cầu không đổi. Thao tác không hoàn tác được.
+              {/* PM 24/11: thông báo ghi cả tên phụ tùng, không chỉ mã. */}
+              {order.sourceStoreName} trừ {asking.quantity}{' '}
+              {partLabel(asking.receivedSku, asking.receivedPartName)} (lô cùng
+              HSD bên nhận ghi, không ghi thì lô nhập trước),{' '}
+              {order.destStoreName} cộng {asking.quantity}{' '}
+              {partLabel(asking.receivedSku, asking.receivedPartName)}. Phụ tùng
+              yêu cầu{' '}
+              {(() => {
+                const requested = order.lines.find(
+                  (line) => line.productId === asking.productId,
+                )
+                return requested
+                  ? partLabel(requested.sku, requested.partName) + ' '
+                  : ''
+              })()}
+              không đổi. Thao tác không hoàn tác được.
             </p>
           }
           onCancel={() => setAsking(undefined)}

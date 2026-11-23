@@ -120,3 +120,12 @@ export function receiptExcess(line: {
     Math.max(0, line.passedQty + damaged - line.documentQty),
   )
 }
+
+/** PM 24/11: giải thích cột Giao sai / Thừa (biểu tượng (i) cạnh tiêu đề cột). */
+export const WRONG_ITEM_TIP = 'Giao sai: sản phẩm khác với sản phẩm yêu cầu.'
+export const EXCESS_TIP =
+  'Thừa: số lượng sản phẩm nhiều hơn số lượng đúng yêu cầu. Sản phẩm khác mã yêu cầu thì điền ở cột Giao sai.'
+
+/** PM 24/11: thông báo ghi "mã · tên" phụ tùng; thiếu tên thì chỉ mã. */
+export const partLabel = (sku?: string | null, name?: string | null) =>
+  [sku, name].filter(Boolean).join(' · ') || 'phụ tùng khác'

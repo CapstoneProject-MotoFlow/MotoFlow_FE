@@ -26,7 +26,7 @@ export type SplitPaymentInput = {
 
 export type SplitPaymentCheck = {
   total: number
-  /** Tiền thối = khách đưa − tiền mặt; 0 khi chưa thu tiền mặt. */
+  /** Tiền thừa = khách đưa − tiền mặt; 0 khi chưa thu tiền mặt. */
   change: number
   errors: Partial<Record<SplitPaymentField, string>>
   valid: boolean
@@ -105,7 +105,7 @@ export function splitPaymentErrorField(body: {
 /** Chuỗi các ô nhập của hộp Thu tiền (chưa parse). */
 export type SplitPaymentState = {
   cashText: string
-  /** Khách đưa; để trống thì coi như bằng tiền mặt (tiền thối 0). */
+  /** Khách đưa; để trống thì coi như bằng tiền mặt (tiền thừa 0). */
   tenderedText: string
   transferText: string
   reference: string

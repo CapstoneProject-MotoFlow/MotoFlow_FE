@@ -4,9 +4,11 @@ import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import ExcessDispatchEditor from './ExcessDispatchEditor'
 import { uploadAttachment } from '../../shared/api/upload'
 import {
+  EXCESS_TIP,
   receiptAcceptsResult,
   receiptExcess,
   receiptShortage,
+  WRONG_ITEM_TIP,
 } from './transferRules'
 import { dateTime } from '../inventory/presentation'
 import { useRef, useState, type ReactNode } from 'react'
@@ -25,6 +27,7 @@ import CardHead, { HeadButton } from './CardHead'
 import ReceiptDocumentSummary from './ReceiptDocumentSummary'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 import PassAllButton from '../receiving/PassAllButton'
+import InfoTip from '../../shared/ui/InfoTip'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
 
@@ -696,12 +699,22 @@ function WorkEditor({
                           ? 'Xuất thêm'
                           : 'Đã soạn'}
                     </th>
-                    <th>{mode === 'receipt' ? 'Giao sai' : 'Lý do thiếu'}</th>
+                    <th>
+                      {mode === 'receipt' ? (
+                        <>
+                          Giao sai <InfoTip text={WRONG_ITEM_TIP} />
+                        </>
+                      ) : (
+                        'Lý do thiếu'
+                      )}
+                    </th>
                     {mode === 'receipt' && (
                       <>
                         <th>Hư hỏng</th>
                         <th>Thiếu</th>
-                        <th>Thừa</th>
+                        <th>
+                          Thừa <InfoTip text={EXCESS_TIP} />
+                        </th>
                         {canRecord && <th>Đạt đủ</th>}
                       </>
                     )}
@@ -878,22 +891,17 @@ function WorkEditor({
                           <td>
                             {excessOf(l)}
                             {canRecord && excessOf(l) > 0 && (
-                              <label className="tf-excess-expiry">
-                                <small>HSD hàng thừa (cùng mã)</small>
-                                <input
-                                  type="date"
-                                  aria-label={'HSD hàng thừa ' + l.sku}
-                                  title="Để trống: khi Owner duyệt, kho gửi trừ lô nhập trước. Có ghi HSD thì kho gửi phải có lô cùng HSD."
-                                  value={excessExpiry[l.productId] ?? ''}
-                                  disabled={busy}
-                                  onChange={(e) =>
-                                    setExcessExpiry({
-                                      ...excessExpiry,
-                                      [l.productId]: e.target.value,
-                                    })
-                                  }
-                                />
-                              </label>
+                              <ExcessExpiryButton
+                                sku={l.sku}
+                                value={excessExpiry[l.productId] ?? ''}
+                                disabled={busy}
+                                onChange={(value) =>
+                                  setExcessExpiry({
+                                    ...excessExpiry,
+                                    [l.productId]: value,
+                                  })
+                                }
+                              />
                             )}
                           </td>
                           {canRecord && (
@@ -1000,5 +1008,48 @@ function WorkEditor({
         </TransferAction>
       )}
     </>
+  )
+}
+
+/**
+ * PM 24/11: HSD hàng thừa là nút "Điền HSD" thay cho ô ngày luôn hiện; bấm mới hiện ô ngày.
+ * Để trống: khi Owner duyệt, kho gửi trừ lô nhập trước. Có ghi HSD thì kho gửi phải có lô cùng HSD.
+ */
+function ExcessExpiryButton({
+  sku,
+  value,
+  disabled,
+  onChange,
+}: {
+  sku: string
+  value: string
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  return (
+    <span className="tf-excess-expiry">
+      {editing ? (
+        <input
+          type="date"
+          aria-label={'HSD hàng thừa ' + sku}
+          value={value}
+          disabled={disabled}
+          autoFocus
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={() => setEditing(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          className="mf-btn mf-btn--sm"
+          disabled={disabled}
+          title="Để trống: khi Owner duyệt, kho gửi trừ lô nhập trước. Có ghi HSD thì kho gửi phải có lô cùng HSD."
+          onClick={() => setEditing(true)}
+        >
+          {value ? 'HSD ' + value.split('-').reverse().join('/') : 'Điền HSD'}
+        </button>
+      )}
+    </span>
   )
 }
