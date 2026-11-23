@@ -182,6 +182,8 @@ export type Receipt = ReceiptDocumentInfo & {
     deliveredQty: number
     passedQty: number
     damagedQty: number
+    /** PM 23/11: số hỏng ghi vượt số đã xuất, chỉ lưu trên phiếu, không đổi tồn (damagedQty là phần trong số xuất). */
+    damagedBeyondQty?: number
     wrongItemQty: number
     excessQty: number
     /** BE #98: dòng phiếu, HSD bên nhận ghi cho hàng thừa, quyết định của Owner. */

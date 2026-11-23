@@ -181,6 +181,12 @@ export default function TransferDetailPage() {
       ['TRANSFER_RECEIVING'],
       scope.user?.role === 'STAFF' && awaitingArrival,
     ).tasks.some((task) => task.documentId === d?.id)
+  // Test 23/11 T-02: chưa có phiếu nhận nào được xác nhận thì BE vẫn trả thiếu = số xuất; bảng hiện '—' để không
+  // trông như hàng thiếu hết. Logic chờ hàng (awaitingArrival) vẫn dùng số của BE.
+  const received = !!d?.receipts.some(
+    (receipt) =>
+      receipt.receiptType === 'TRANSFER_IN' && receipt.status === 'CONFIRMED',
+  )
   const unresolvedLines = (d?.lines ?? [])
     .filter((l) => (l.unresolvedQty ?? 0) > 0)
     .map((l) => ({
@@ -225,7 +231,7 @@ export default function TransferDetailPage() {
     if (staffReceiving)
       actions.push({
         key: 'create-receipt',
-        label: 'Lập phiếu nhập',
+        label: 'Lập phiếu nhận',
         icon: 'receipt',
         to: receivingCreatePath('TRANSFER_RECEIVING', d.id),
         primary: true,
@@ -456,6 +462,7 @@ export default function TransferDetailPage() {
                     <th>Hỏng</th>
                     <th>Giao sai</th>
                     <th>Thiếu</th>
+                    <th>Thừa</th>
                     <th>Không giao bù</th>
                     <th>Mất</th>
                     <th>Chờ quyết</th>
@@ -492,14 +499,15 @@ export default function TransferDetailPage() {
                           )}
                         </td>
                         <td>
-                          {l.shortageQty ?? '—'}
+                          {received ? (l.shortageQty ?? '—') : '—'}
                           {(l.latePendingQty ?? 0) > 0 && (
                             <small>{l.latePendingQty} nhận sau</small>
                           )}
                         </td>
+                        <td>{l.extraReceivedQty || (received ? 0 : '—')}</td>
                         <td>{l.noReplacementQty ?? '—'}</td>
                         <td>{l.lossQty ?? '—'}</td>
-                        <td>{l.unresolvedQty ?? '—'}</td>
+                        <td>{received ? (l.unresolvedQty ?? '—') : '—'}</td>
                       </tr>
                     )
                   })}
@@ -507,6 +515,109 @@ export default function TransferDetailPage() {
               </table>
             </div>
           </section>
+          {/* PM 23/11 (UI-02): Sai lệch + Hàng giao sai đặt trên Các lần nhận hàng. */}
+          {d.status === 'RECONCILING' && !coordinator && !dest && (
+            <p className="tf-note" role="status">
+              Kho nhận và Owner đang xử lý sai lệch.
+            </p>
+          )}
+          {dest &&
+            d.status === 'RECONCILING' &&
+            unresolvedLines.length > 0 && (
+              <p className="tf-note" role="status">
+                Phần thiếu chưa chọn Nhận sau hoặc Không cần giao bù sẽ tính là
+                mất khi Owner đóng phiếu.
+              </p>
+            )}
+          {d.discrepancies.length > 0 && (
+            <section>
+              <h2>Sai lệch</h2>
+              <InventoryNotice
+                loading={returns.loading}
+                error={returns.error}
+              />
+              <div className="stock-table-scroll">
+                <table className="tf-table tf-discrepancy-table">
+                  <thead>
+                    <tr>
+                      <th>Phụ tùng</th>
+                      <th>Đã xuất</th>
+                      <th>Đạt</th>
+                      <th>Thiếu</th>
+                      <th>Giao sai</th>
+                      <th>Thừa</th>
+                      <th>Chờ quyết</th>
+                      <th>Trạng thái</th>
+                      <th>Chi tiết</th>
+                      {miscountAllowed && <th>Owner</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.discrepancies.map((c) => {
+                      const line = d.lines.find(
+                        (item) => item.productId === c.productId,
+                      )
+                      return (
+                        <tr key={c.id}>
+                          <td>{line?.sku ?? '—'} · {line?.partName ?? 'Phụ tùng'}</td>
+                          <td>{line?.dispatchedQty ?? '—'}</td>
+                          <td>{line?.receivedQty ?? '—'}</td>
+                          <td>{line?.shortageQty ?? c.shortQty}</td>
+                          <td>{line?.wrongItemQty ?? c.wrongItemQty ?? 0}</td>
+                          <td>{line?.extraReceivedQty ?? '—'}</td>
+                          <td><strong>{line?.unresolvedQty ?? '—'}</strong></td>
+                          <td>{states[c.status] ?? c.status}</td>
+                          <td>
+                            {c.events.length ? (
+                              <details>
+                                <summary>{c.events.length} lần xử lý</summary>
+                                <ul>
+                                  {c.events.map((event) => (
+                                    <li key={event.id}>
+                                      {eventName(event)}
+                                      {' · '}{event.quantity}
+                                      {event.reason ? ' · ' + event.reason : ''}
+                                      {event.recordedBy ? ' · ' + event.recordedBy.fullName : ''}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            ) : '—'}
+                          </td>
+                          {miscountAllowed && (
+                            <td>
+                              {c.status === 'OPEN' && line && !line.receiverMiscounted ? (
+                                <ReceiverMiscountAction
+                                  orderId={d.id}
+                                  caseId={c.id}
+                                  line={line}
+                                  onSaved={(message) => {
+                                    setSuccess(message)
+                                    setRevision((n) => n + 1)
+                                  }}
+                                />
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+          <TransferWrongItemSection
+            order={d}
+            canRecord={d.status === 'RECONCILING' && (dest || scope.owner)}
+            canConfirm={d.status === 'RECONCILING' && !!scope.owner}
+            onDone={(message) => {
+              setSuccess(message)
+              setRevision((n) => n + 1)
+            }}
+          />
           <section>
             <h2>Các lần nhận hàng</h2>
             {d.receipts.length > 0 && (
@@ -646,107 +757,6 @@ export default function TransferDetailPage() {
               )}
             </ol>
           </section>
-          {d.status === 'RECONCILING' && !coordinator && !dest && (
-            <p className="tf-note" role="status">
-              Kho nhận và Owner đang xử lý sai lệch.
-            </p>
-          )}
-          {dest &&
-            d.status === 'RECONCILING' &&
-            unresolvedLines.length > 0 && (
-              <p className="tf-note" role="status">
-                Phần thiếu chưa chọn Nhận sau hoặc Không cần giao bù sẽ tính là
-                mất khi Owner đóng phiếu.
-              </p>
-            )}
-          {d.discrepancies.length > 0 && (
-            <section>
-              <h2>Sai lệch</h2>
-              <InventoryNotice
-                loading={returns.loading}
-                error={returns.error}
-              />
-              <div className="stock-table-scroll">
-                <table className="tf-table tf-discrepancy-table">
-                  <thead>
-                    <tr>
-                      <th>Phụ tùng</th>
-                      <th>Đã xuất</th>
-                      <th>Đạt</th>
-                      <th>Thiếu</th>
-                      <th>Giao sai</th>
-                      <th>Thừa</th>
-                      <th>Chờ quyết</th>
-                      <th>Trạng thái</th>
-                      <th>Chi tiết</th>
-                      {miscountAllowed && <th>Owner</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.discrepancies.map((c) => {
-                      const line = d.lines.find(
-                        (item) => item.productId === c.productId,
-                      )
-                      return (
-                        <tr key={c.id}>
-                          <td>{line?.sku ?? '—'} · {line?.partName ?? 'Phụ tùng'}</td>
-                          <td>{line?.dispatchedQty ?? '—'}</td>
-                          <td>{line?.receivedQty ?? '—'}</td>
-                          <td>{line?.shortageQty ?? c.shortQty}</td>
-                          <td>{line?.wrongItemQty ?? c.wrongItemQty ?? 0}</td>
-                          <td>{line?.extraReceivedQty ?? '—'}</td>
-                          <td><strong>{line?.unresolvedQty ?? '—'}</strong></td>
-                          <td>{states[c.status] ?? c.status}</td>
-                          <td>
-                            {c.events.length ? (
-                              <details>
-                                <summary>{c.events.length} lần xử lý</summary>
-                                <ul>
-                                  {c.events.map((event) => (
-                                    <li key={event.id}>
-                                      {eventName(event)}
-                                      {' · '}{event.quantity}
-                                      {event.reason ? ' · ' + event.reason : ''}
-                                      {event.recordedBy ? ' · ' + event.recordedBy.fullName : ''}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </details>
-                            ) : '—'}
-                          </td>
-                          {miscountAllowed && (
-                            <td>
-                              {c.status === 'OPEN' && line && !line.receiverMiscounted ? (
-                                <ReceiverMiscountAction
-                                  orderId={d.id}
-                                  caseId={c.id}
-                                  line={line}
-                                  onSaved={(message) => {
-                                    setSuccess(message)
-                                    setRevision((n) => n + 1)
-                                  }}
-                                />
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                          )}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-          <TransferWrongItemSection
-            order={d}
-            canRecord={d.status === 'RECONCILING' && (dest || scope.owner)}
-            onDone={(message) => {
-              setSuccess(message)
-              setRevision((n) => n + 1)
-            }}
-          />
           {action && (
             <TransferAction
               title={

@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
+import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { documentCode } from '../../shared/utils/documentCode'
 import { inventoryError } from '../inventory/api'
 import './transfers.css'
@@ -59,8 +60,18 @@ function PendingRow({
   onDone: (message: string) => void
 }) {
   const [busy, setBusy] = useState(false)
+  const [asking, setAsking] = useState(false)
   const [error, setError] = useState('')
   const blocked = blockedText(item)
+  const lotText = item.lots
+    .map(
+      (lot) =>
+        documentCode('L', lot.lotId) +
+        (lot.expiryDate ? ' (HSD ' + day(lot.expiryDate) + ')' : '') +
+        ' × ' +
+        lot.quantity,
+    )
+    .join(', ')
   async function confirm() {
     if (busy) return
     setBusy(true)
@@ -84,6 +95,7 @@ function PendingRow({
       setError(inventoryError(failure))
     } finally {
       setBusy(false)
+      setAsking(false)
     }
   }
   return (
@@ -109,15 +121,7 @@ function PendingRow({
         {blocked ? (
           <span className="tf-excess-blocked">{blocked}</span>
         ) : (
-          item.lots
-            .map(
-              (lot) =>
-                documentCode('L', lot.lotId) +
-                (lot.expiryDate ? ' (HSD ' + day(lot.expiryDate) + ')' : '') +
-                ' × ' +
-                lot.quantity,
-            )
-            .join(', ') || '—'
+          lotText || '—'
         )}
         {error && (
           <p role="alert" className="stock-error">
@@ -131,11 +135,27 @@ function PendingRow({
             type="button"
             className="mf-btn mf-btn--sm mf-btn--primary"
             disabled={busy || !!blocked}
-            onClick={() => void confirm()}
+            onClick={() => setAsking(true)}
           >
             Xác nhận
           </button>
         </div>
+        {/* Test 23/11 T-09: xác nhận đổi tồn hai kho, phải hỏi lại trước khi gửi. */}
+        {asking && (
+          <ConfirmDialog
+            title="Xác nhận hàng giao sai"
+            message={
+              <p>
+                {item.sourceStoreName} trừ {item.quantity} {item.receivedSku}
+                {lotText ? ' (' + lotText + ')' : ''}, {item.destStoreName} cộng{' '}
+                {item.quantity} {item.receivedSku}. {item.sku} không đổi. Thao
+                tác không hoàn tác được.
+              </p>
+            }
+            onCancel={() => setAsking(false)}
+            onConfirm={confirm}
+          />
+        )}
       </td>
     </tr>
   )

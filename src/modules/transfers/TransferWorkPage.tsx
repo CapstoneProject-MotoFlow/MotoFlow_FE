@@ -3,7 +3,11 @@ import LocalizedFileInput from '../../shared/ui/LocalizedFileInput'
 import WarehouseAssignmentDialog from '../operations/WarehouseAssignmentDialog'
 import ExcessDispatchEditor from './ExcessDispatchEditor'
 import { uploadAttachment } from '../../shared/api/upload'
-import { receiptAcceptsResult } from './transferRules'
+import {
+  receiptAcceptsResult,
+  receiptExcess,
+  receiptShortage,
+} from './transferRules'
 import { dateTime } from '../inventory/presentation'
 import { useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -25,6 +29,10 @@ import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
 
 const WORK_FORM = 'tf-work-form'
+
+// Test 23/11 T-05: ô số có sẵn 0, gõ thêm thành '020'; chọn hết khi focus để gõ đè.
+const selectAll = (event: { currentTarget: HTMLInputElement }) =>
+  event.currentTarget.select()
 export default function TransferWorkPage({
   mode = 'prepare',
 }: {
@@ -276,7 +284,12 @@ function WorkEditor({
                   : 'passedQty' in l
                     ? l.passedQty
                     : 0,
-            damaged: 'damagedQty' in l ? (l.damagedQty ?? 0) : 0,
+            // PM 23/11: phiếu đã gửi hiện đủ số hỏng đã ghi, kể cả phần vượt số xuất.
+            damaged:
+              'damagedQty' in l
+                ? (l.damagedQty ?? 0) +
+                  ('damagedBeyondQty' in l ? (l.damagedBeyondQty ?? 0) : 0)
+                : 0,
             wrong: 'wrongItemQty' in l ? (l.wrongItemQty ?? 0) : 0,
             reason:
               mode === 'prepare' &&
@@ -342,13 +355,19 @@ function WorkEditor({
   }
   // Thiếu = Đã xuất − Đạt − Hư hỏng (tối thiểu 0), Thừa = Đạt + Hư hỏng − số trên phiếu.
   type ReceiptLine = Receipt['lines'][number]
-  const deliveredOf = (l: ReceiptLine) =>
-    canRecord ? receivedQty(l.productId) : l.deliveredQty
+  // Test 23/11 T-11: phiếu đã gửi cũng tính đạt + hỏng, không dùng deliveredQty (BE cộng cả giao sai).
   const shortOf = (l: ReceiptLine) =>
-    Math.max(0, l.documentQty - deliveredOf(l))
+    canRecord
+      ? Math.max(0, l.documentQty - receivedQty(l.productId))
+      : receiptShortage(l)
+  // PM 23/11: hỏng vượt số xuất không phải thừa; thừa chỉ là hàng đạt vượt số xuất.
   const excessOf = (l: ReceiptLine) =>
     canRecord
-      ? Math.max(0, receivedQty(l.productId) - l.documentQty)
+      ? receiptExcess({
+          documentQty: l.documentQty,
+          passedQty: values[l.productId].qty,
+          damagedQty: values[l.productId].damaged,
+        })
       : l.excessQty
   const passedAll = (l: ReceiptLine) =>
     values[l.productId].qty === l.documentQty &&
@@ -612,7 +631,11 @@ function WorkEditor({
               <span>
                 {' '}
                 · Thực nhận:{' '}
-                {receipt.lines.reduce((n, l) => n + l.deliveredQty, 0)} · Hàng
+                {receipt.lines.reduce(
+                  (n, l) => n + l.deliveredQty + (l.damagedBeyondQty ?? 0),
+                  0,
+                )}{' '}
+                · Hàng
                 thừa: {receipt.lines.reduce((n, l) => n + l.excessQty, 0)}
               </span>
             )}
@@ -732,6 +755,7 @@ function WorkEditor({
                       <td>
                         <input
                           aria-label={'Số lượng ' + l.sku}
+                          onFocus={selectAll}
                           disabled={busy || !canRecord}
                           required
                           type="number"
@@ -770,6 +794,7 @@ function WorkEditor({
                         {mode === 'receipt' ? (
                           <input
                             aria-label={'Giao sai ' + l.sku}
+                            onFocus={selectAll}
                             disabled={busy || !canRecord}
                             type="number"
                             required
@@ -821,6 +846,7 @@ function WorkEditor({
                         <td>
                           <input
                             aria-label={'Hư hỏng ' + l.sku}
+                            onFocus={selectAll}
                             disabled={busy || !canRecord}
                             type="number"
                             required
@@ -853,7 +879,7 @@ function WorkEditor({
                             {excessOf(l)}
                             {canRecord && excessOf(l) > 0 && (
                               <label className="tf-excess-expiry">
-                                <small>HSD hàng thừa</small>
+                                <small>HSD hàng thừa (cùng mã)</small>
                                 <input
                                   type="date"
                                   aria-label={'HSD hàng thừa ' + l.sku}

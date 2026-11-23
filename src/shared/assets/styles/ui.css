@@ -1073,6 +1073,16 @@ input[type='checkbox'] {
 }
 
 /* ---------- Hộp ghi chú nghiệp vụ (ví dụ "Lô chỉ dùng để tính giá vốn") ---------- */
+.mf-info-tip {
+  display: inline-flex;
+  vertical-align: middle;
+  color: #667085;
+  cursor: help;
+}
+.mf-info-tip svg {
+  width: 16px;
+  height: 16px;
+}
 .mf-hint {
   display: flex;
   align-items: flex-start;

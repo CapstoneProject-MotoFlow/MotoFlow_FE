@@ -170,7 +170,7 @@ function StaffRowAction({
         className="mf-btn mf-btn--sm mf-btn--primary"
         to={receivingCreatePath('TRANSFER_RECEIVING', row.id)}
       >
-        Lập phiếu nhập
+        Lập phiếu nhận
       </Link>
     )
   if (receipt)
