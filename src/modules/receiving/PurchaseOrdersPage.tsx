@@ -300,6 +300,8 @@ export default function PurchaseOrdersPage() {
     setSearchParams(value === 'OPEN' ? {} : { tab: value }, { replace: true })
   }
   const drafts = view === 'DRAFT'
+  // PM 22/11 + BE #98: Staff có thêm tab "Đã đóng" (đơn nhập đã nhận đủ hoặc đã hủy của kho mình), chỉ xem.
+  const staffClosed = staff && view === 'CLOSED'
   const discrepancyView = view === 'DISCREPANCY_OPEN'
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null)
   const [orderCases, setOrderCases] = useState<
@@ -430,7 +432,7 @@ export default function PurchaseOrdersPage() {
       setLoading(true)
       setError('')
       try {
-        if (staff) {
+        if (staff && !staffClosed) {
           const { data } = await axiosClient.get<Page<Assignment>>(
             '/goods-receipt-notes/assigned-to-me',
             {
@@ -528,11 +530,12 @@ export default function PurchaseOrdersPage() {
     dateRangeError,
     drafts,
     discrepancyView,
+    staffClosed,
   ])
 
   const total = dateRangeError
     ? 0
-    : ((staff ? assignments : orders)?.totalItems ?? 0)
+    : ((staff && !staffClosed ? assignments : orders)?.totalItems ?? 0)
   return (
     <main
       className={
@@ -636,18 +639,55 @@ export default function PurchaseOrdersPage() {
             >
               <button
                 type="button"
-                aria-pressed={true}
+                aria-pressed={!staffClosed}
                 onClick={() => {
                   setView('OPEN')
                   setPage(0)
                 }}
               >
                 Việc của tôi
-                {!loading && !error && (
+                {!staffClosed && !loading && !error && (
                   <span className="receiving-pill">{total}</span>
                 )}
               </button>
+              <button
+                type="button"
+                aria-pressed={staffClosed}
+                onClick={() => {
+                  setView('CLOSED')
+                  setPage(0)
+                }}
+              >
+                Đã đóng
+              </button>
             </div>
+            {staffClosed && (
+              // Review #73 (73-9): BE mặc định 30 ngày gần nhất; chọn ngày để xem đơn cũ hơn.
+              <div className="receiving-filter-row">
+                <label>
+                  Từ ngày{' '}
+                  <input
+                    type="date"
+                    value={createdFrom}
+                    onChange={(event) => {
+                      setCreatedFrom(event.target.value)
+                      setPage(0)
+                    }}
+                  />
+                </label>
+                <label>
+                  Đến ngày{' '}
+                  <input
+                    type="date"
+                    value={createdTo}
+                    onChange={(event) => {
+                      setCreatedTo(event.target.value)
+                      setPage(0)
+                    }}
+                  />
+                </label>
+              </div>
+            )}
           </div>
         )}
         {!staff && (
@@ -788,7 +828,7 @@ export default function PurchaseOrdersPage() {
         ) : (
           <>
             <div className="table-scroll">
-              {staff ? (
+              {staff && !staffClosed ? (
                 <table>
                   <thead>
                     <tr>
@@ -1004,12 +1044,17 @@ export default function PurchaseOrdersPage() {
                         return (
                           <tr key={row.id}>
                             <td>
-                              <Link
-                                className="receiving-request-link"
-                                to={'/purchase-orders/' + row.id}
-                              >
-                                {purchaseOrderCode(row.id)}
-                              </Link>
+                              {staff ? (
+                                // Staff không mở được chi tiết đơn nhập (BE chỉ cho Owner/BM).
+                                purchaseOrderCode(row.id)
+                              ) : (
+                                <Link
+                                  className="receiving-request-link"
+                                  to={'/purchase-orders/' + row.id}
+                                >
+                                  {purchaseOrderCode(row.id)}
+                                </Link>
+                              )}
                             </td>
                             <td>{row.supplierName}</td>
                             {owner && <td>{row.storeName}</td>}

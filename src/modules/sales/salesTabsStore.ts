@@ -30,6 +30,11 @@ export type TabDeposit = {
   tendered: string
   /** Đã nhận đủ số tiền cọc; mặc định true như màn thu tiền. */
   verified: boolean
+  /**
+   * PM 22/11 + BE #98: số tiền chuyển khoản khi cọc cả hai hình thức; `amount` là phần tiền mặt.
+   * Không bắt buộc để nháp cũ vẫn đọc được.
+   */
+  transfer?: string
 }
 export type TabDraft = {
   customer?: TabCustomer
@@ -218,6 +223,8 @@ function sanitizeDeposit(value: unknown): TabDeposit | null {
     expiresOn: textOr(value.expiresOn, ''),
     tendered: textOr(value.tendered, ''),
     verified: typeof value.verified === 'boolean' ? value.verified : true,
+    // Graphify #73: giữ số cọc chuyển khoản khi khôi phục nháp sau khi tải lại trang.
+    ...(typeof value.transfer === 'string' ? { transfer: value.transfer } : {}),
   }
 }
 

@@ -32,25 +32,10 @@
   background: #fff;
   font-weight: 400;
 }
-.pos-deposit-methods {
-  display: flex;
-  gap: 8px;
-}
-.pos-deposit-methods label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid #c9d3e8;
-  border-radius: 6px;
-  background: #fff;
+.pos-deposit-total {
+  margin: 0;
+  color: var(--mf-text);
   font-size: 13px;
-  cursor: pointer;
-}
-.pos-deposit-methods label.is-selected {
-  border-color: #465fff;
-  color: #465fff;
-  font-weight: 600;
 }
 .pos-deposit-check {
   display: flex;

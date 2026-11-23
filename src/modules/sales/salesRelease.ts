@@ -188,7 +188,8 @@ export function buildReleaseBody({
       }
     return body
   }
-  body.depositAmount = deposit.send
+  // Review #73 (73-3) + BE #98: lần chuyển chưa phải cuối không gửi depositAmount; BE tự trừ
+  // min(cọc còn giữ, tổng đơn lấy ngay), tránh MSG327 do tổng FE ước tính lệch tổng BE.
   return body
 }
 

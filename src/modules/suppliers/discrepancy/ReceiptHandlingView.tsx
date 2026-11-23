@@ -18,14 +18,18 @@ import CaseActionDialog, { type CaseActionMode } from './CaseActionDialog'
 import CaseCard from './CaseCard'
 import { errorMessage, type Case } from './types'
 
-/** Dòng hàng thừa của phiếu nhập (GET /goods-receipt-notes/{id}): Owner quyết nhận vào kho hay trả nhà cung cấp. */
+/**
+ * Dòng hàng thừa của phiếu nhập (BE #98: GET /discrepancy-cases/receipts/{id}/handling): Owner quyết nhận vào kho
+ * hay trả nhà cung cấp. Review #72 (72-2): dùng API này để BE giữ luôn cách tính "đã xử lý xong".
+ */
 type ExcessLine = {
-  id: number
+  lineId: number
   sku: string
   partName: string
-  excessQty: number
-  excessDecision: 'NOT_APPLICABLE' | 'AWAITING_OWNER' | 'ACCEPTED' | 'REJECTED'
+  quantity: number
+  decision: 'NOT_APPLICABLE' | 'AWAITING_OWNER' | 'ACCEPTED' | 'REJECTED'
 }
+type ReceiptHandling = { excessLines: ExcessLine[]; handlingComplete: boolean }
 
 const excessDecisionLabels: Record<string, string> = {
   AWAITING_OWNER: 'Chờ Owner quyết',
@@ -41,8 +45,8 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const { user } = useAuth()
   const [rows, setRows] = useState<Case[]>([])
   const [excess, setExcess] = useState<ExcessLine[]>([])
-  // Graphify #72: false = không tải được hàng thừa (không được coi là không có hàng thừa).
-  const [excessLoaded, setExcessLoaded] = useState(true)
+  // null = không tải được API hàng thừa (không được coi là không có hàng thừa).
+  const [handlingComplete, setHandlingComplete] = useState<boolean | null>(null)
   const [drafts, setDrafts] = useState<Record<number, CaseDraft>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -71,16 +75,17 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           if (!data.items.length || cases.length >= data.totalItems) break
         }
         // Hàng thừa nằm trên phiếu nhập, không phải hồ sơ sai lệch; lỗi tải phần này không chặn màn hình.
-        const receipt = await axiosClient
-          .get<{ lines: ExcessLine[] }>('/goods-receipt-notes/' + receiptId, {
-            signal: controller.signal,
-          })
-          .then(({ data }) => data.lines.filter((line) => line.excessQty > 0))
-          .catch(() => null)
+        const handling = await axiosClient
+          .get<ReceiptHandling>(
+            '/discrepancy-cases/receipts/' + receiptId + '/handling',
+            { signal: controller.signal },
+          )
+          .then(({ data }) => data)
+          .catch(() => undefined)
         if (!controller.signal.aborted) {
           setRows(cases)
-          setExcess(receipt ?? [])
-          setExcessLoaded(receipt !== null)
+          setExcess(handling?.excessLines ?? [])
+          setHandlingComplete(handling ? handling.handlingComplete : null)
           setError('')
         }
       } catch (failure) {
@@ -145,13 +150,10 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const first = rows[0]
   const openCases = rows.filter((row) => row.status !== 'CLOSED').length
   const waitingExcess = excess.filter(
-    (line) => line.excessDecision === 'AWAITING_OWNER',
+    (line) => line.decision === 'AWAITING_OWNER',
   ).length
-  const status = receiptHandlingStatus({
-    openCases,
-    waitingExcess,
-    handlingComplete: excessLoaded ? openCases === 0 && waitingExcess === 0 : null,
-  })
+  // BE quyết định (gồm cả phiếu đã xác nhận); không tải được thì tự tính như trước.
+  const status = receiptHandlingStatus({ openCases, waitingExcess, handlingComplete })
   return (
     <>
       <header className="sd-head">
@@ -184,7 +186,7 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
                 Giao ngày <b>{formatDate(first.deliveryDate)}</b>
               </span>
             )}
-            {!loading && (rows.length > 0 || excess.length > 0 || !excessLoaded) && (
+            {!loading && (rows.length > 0 || excess.length > 0 || handlingComplete === null) && (
               <span>
                 Tình trạng phiếu{' '}
                 <b className={status.done ? 'sd-receipt-done' : 'sd-receipt-open'}>
@@ -274,12 +276,12 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
             </thead>
             <tbody>
               {excess.map((line) => (
-                <tr key={line.id}>
+                <tr key={line.lineId}>
                   <td>
                     {line.sku} · {line.partName}
                   </td>
-                  <td>{line.excessQty}</td>
-                  <td>{excessDecisionLabels[line.excessDecision] ?? '—'}</td>
+                  <td>{line.quantity}</td>
+                  <td>{excessDecisionLabels[line.decision] ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

@@ -20,6 +20,10 @@ export type PartLine = {
   extraReceivedQty: number | null
   extraDispatchedQty: number | null
   unresolvedQty: number | null
+  /** BE #98: số hỏng khi nhận (Đã nhận = số đạt); null với Staff. */
+  damagedQty?: number | null
+  /** BE #98: số thiếu (gồm phần BM kho nhận đã xác nhận); null với Staff. */
+  shortageQty?: number | null
 }
 /** UC69 list response. Does not include lines or related documents. */
 export type ReplenishmentRow = {
@@ -82,6 +86,9 @@ export type Transfer = Omit<
   delivererName?: string | null
   vehiclePlateNo?: string | null
   closedBy: { id: number; fullName: string } | null
+  /** BE #98: BM kho nhận đã "Xác nhận xử lý" sai lệch (Owner mới được đóng phiếu). */
+  discrepancyAcknowledgedBy?: { id: number; fullName: string } | null
+  discrepancyAcknowledgedAt?: string | null
   lines: PartLine[]
   receipts: ({
     id: number
@@ -101,6 +108,9 @@ export type Transfer = Omit<
     id: number
     productId: number
     shortQty: number
+    /** BE #98: hồ sơ giao sai / hỏng cũng cần kho nhận xác nhận (MSG336). */
+    wrongItemQty?: number
+    damagedQty?: number
     status: string
     events: {
       id: number
@@ -152,6 +162,10 @@ export type Receipt = ReceiptDocumentInfo & {
     damagedQty: number
     wrongItemQty: number
     excessQty: number
+    /** BE #98: dòng phiếu, HSD bên nhận ghi cho hàng thừa, quyết định của Owner. */
+    lineId?: number | null
+    expiryDate?: string | null
+    excessDecision?: string | null
   }[]
 }
 export type Preparation = {

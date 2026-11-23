@@ -347,3 +347,19 @@
     border-right: 0;
   }
 }
+/* PM 23/11: chi tiết phiếu xuất nhập. */
+.stock-document-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 20px;
+  margin: 0 0 16px;
+  padding: 0 20px;
+}
+.stock-document-meta dt {
+  color: var(--mf-muted);
+  font-size: 12px;
+}
+.stock-document-meta dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}

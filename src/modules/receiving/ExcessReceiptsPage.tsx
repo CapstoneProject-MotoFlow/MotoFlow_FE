@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { apiMessage } from '../suppliers/supplierService'
 import { documentCode } from '../../shared/utils/documentCode'
+import TransferExcessSection from '../transfers/TransferExcessSection'
 import './receiving.css'
 
 type Row = {
@@ -127,6 +128,8 @@ export default function ExcessReceiptsPage() {
           )}
         </section>
       )}
+      {/* PM 22/11 (Q7) + BE #98: hàng thừa điều chuyển duyệt trên cùng màn với hàng thừa NCC. */}
+      <TransferExcessSection />
     </main>
   )
 }

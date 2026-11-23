@@ -65,6 +65,14 @@ const LotDetailPage = lazy(
 const InventoryMovementsPage = lazy(
   () => import('../../modules/inventory/InventoryMovementsPage'),
 )
+const StockDocumentsPage = lazy(
+  () => import('../../modules/inventory/StockDocumentsPage'),
+)
+const StockDocumentDetailPage = lazy(() =>
+  import('../../modules/inventory/StockDocumentsPage').then((m) => ({
+    default: m.StockDocumentDetailPage,
+  })),
+)
 const InventoryPage = lazy(
   () => import('../../modules/inventory/InventoryPage'),
 )
@@ -376,6 +384,11 @@ export default function AppRoutes() {
                 <RequireRole roles={['OWNER', 'BRANCH_MANAGER', 'STAFF']} />
               }
             >
+              <Route path="/stock-documents" element={<StockDocumentsPage />} />
+              <Route
+                path="/stock-documents/:type/:sourceId"
+                element={<StockDocumentDetailPage />}
+              />
               <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
               <Route
                 path="/goods-receipt-notes/:id"
