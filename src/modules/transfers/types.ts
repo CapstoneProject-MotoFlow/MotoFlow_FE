@@ -108,6 +108,9 @@ export type Transfer = Omit<
     id: number
     productId: number
     shortQty: number
+    /** BE #98: hồ sơ giao sai / hỏng cũng cần kho nhận xác nhận (MSG336). */
+    wrongItemQty?: number
+    damagedQty?: number
     status: string
     events: {
       id: number

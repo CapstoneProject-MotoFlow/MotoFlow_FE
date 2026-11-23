@@ -213,7 +213,17 @@ export function SalesOrderFormView({
   // Tiền cọc chỉ dùng khi đơn tạo ra toàn đơn chờ hàng (xem allWaiting); nháp không lưu cọc.
   const [deposit, setDeposit] = useState<TabDeposit>(
     () =>
-      initialDraft?.deposit ?? {
+      // Review #73 (73-8): nháp cũ cọc chuyển khoản (method + amount) chuyển sang ô Chuyển khoản.
+      (initialDraft?.deposit &&
+      initialDraft.deposit.method === 'BANK_TRANSFER' &&
+      initialDraft.deposit.transfer == null
+        ? {
+            ...initialDraft.deposit,
+            amount: '',
+            transfer: initialDraft.deposit.amount,
+            method: 'CASH',
+          }
+        : initialDraft?.deposit) ?? {
         amount: '',
         method: 'CASH',
         reference: '',

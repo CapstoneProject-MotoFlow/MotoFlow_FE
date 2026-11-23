@@ -135,9 +135,16 @@ export default function TransferDetailPage() {
     !!d &&
     d.status === 'RECONCILING' &&
     !d.discrepancyAcknowledgedAt &&
-    d.lines.some(
+    // Review #73 (73-1): cùng điều kiện MSG336 của BE, kể cả lệnh chỉ có hàng giao sai.
+    (d.lines.some(
       (line) => (line.damagedQty ?? 0) > 0 || (line.unresolvedQty ?? 0) > 0,
-    )
+    ) ||
+      d.discrepancies.some((item) => (item.wrongItemQty ?? 0) > 0))
+  // Review #73 (73-2): còn phiếu nhận chưa xác nhận thì BE từ chối (MSG29), nên chưa hiện nút.
+  const canAcknowledge = needsAcknowledgement && !pendingReceipt
+  // Sau khi kho nhận xác nhận, BE chỉ cho Owner đóng phiếu.
+  const ownerOnlyClose =
+    !!d?.discrepancyAcknowledgedAt && scope.user?.role !== 'OWNER'
   // Mọi thao tác của lệnh nằm một chỗ ở góc phải tiêu đề thẻ; mỗi vai trò chỉ có một nút chính (nền xanh).
   const actions: HeadAction[] = []
   let closeAction: HeadAction | undefined
@@ -197,7 +204,7 @@ export default function TransferDetailPage() {
         to: base + '/receipts/' + pendingReceipt.id,
         primary: true,
       })
-    if (dest && needsAcknowledgement)
+    if (dest && canAcknowledge)
       actions.push({
         key: 'acknowledge',
         label: 'Xác nhận xử lý',
@@ -215,7 +222,7 @@ export default function TransferDetailPage() {
         icon: 'layers',
         to: base + '/extra',
       })
-    if (closing.data && moving)
+    if (closing.data && moving && !ownerOnlyClose)
       closeAction = {
         key: 'close',
         label: 'Xem trước đóng phiếu',
@@ -251,7 +258,17 @@ export default function TransferDetailPage() {
       )}
       {coordinator && needsAcknowledgement && (
         <p className="tf-note" role="status">
-          Kho nhận chưa xác nhận xử lý hàng hỏng/thiếu. Owner đóng phiếu sau khi kho nhận xác nhận.
+          Kho nhận chưa xác nhận xử lý hàng hỏng/thiếu/giao sai. Owner đóng phiếu sau khi kho nhận xác nhận.
+        </p>
+      )}
+      {dest && needsAcknowledgement && pendingReceipt && (
+        <p className="tf-note" role="status">
+          Xác nhận phiếu nhận điều chuyển trước, sau đó mới xác nhận xử lý sai lệch.
+        </p>
+      )}
+      {coordinator && ownerOnlyClose && moving && (
+        <p className="tf-note" role="status">
+          Kho nhận đã xác nhận xử lý. Chỉ Owner đóng phiếu.
         </p>
       )}
       {d && (
@@ -794,7 +811,14 @@ export default function TransferDetailPage() {
               setSuccess('Đã xác nhận xử lý sai lệch. Owner đã được báo để đóng phiếu.')
               setRevision((n) => n + 1)
             } catch (failure) {
-              setAckError(inventoryError(failure))
+              // Review #73 (73-2): MSG29 = còn phiếu nhận/trả hoặc yêu cầu điều chỉnh đang xử lý.
+              const code = (failure as { response?: { data?: { code?: string } } })
+                .response?.data?.code
+              setAckError(
+                code === 'MSG29'
+                  ? 'Chưa xác nhận được: lệnh còn phiếu nhận, phiếu trả hoặc yêu cầu điều chỉnh đang xử lý. Hoàn tất các phiếu đó rồi xác nhận lại.'
+                  : inventoryError(failure),
+              )
             } finally {
               setAcknowledging(false)
             }

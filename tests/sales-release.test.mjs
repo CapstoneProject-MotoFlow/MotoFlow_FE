@@ -210,14 +210,14 @@ test('buildReleaseBody sends only lines when there is no deposit', () => {
   )
 })
 
-test('buildReleaseBody sends depositAmount for a partial release even when the user typed less than requested', () => {
+test('buildReleaseBody leaves depositAmount to the BE on a partial release (BE #98 deducts it)', () => {
   assert.deepEqual(
     buildReleaseBody({
       lines: [{ lineId: 1, nowQty: 1 }],
       deposit: { remaining: 3_000_000, isLast: false, send: 500_000 },
       refund: { needed: false, method: 'CASH', reference: '', paid: false },
     }),
-    { lines: [{ lineId: 1, nowQty: 1 }], depositAmount: 500_000 },
+    { lines: [{ lineId: 1, nowQty: 1 }] },
   )
 })
 
