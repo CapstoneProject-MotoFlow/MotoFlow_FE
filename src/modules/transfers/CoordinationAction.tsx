@@ -44,6 +44,7 @@ export default function CoordinationAction({
       qty >= (replenishment ? 0 : 1) &&
       qty <= chosen.quantity
   function open(next: string) {
+    setDecision('LATE_DELIVERY')
     const first = (next === 'return' ? (returnLines ?? lines) : lines)[0]
     setProduct(String(first?.productId ?? ''))
     setQty(
@@ -89,7 +90,7 @@ export default function CoordinationAction({
               ? 'Cập nhật tổng số cần mua'
               : action === 'return'
                 ? 'Nhận hàng trả về kho nguồn'
-                : 'Quyết định xử lý sai lệch'
+                : 'Xử lý phần thiếu'
           }
           method={action === 'purchase' ? 'put' : 'post'}
           path={
@@ -145,7 +146,7 @@ export default function CoordinationAction({
                     ? 'Mua tối đa'
                     : action === 'return'
                       ? 'Có thể nhận trả'
-                      : 'Còn thiếu'}{' '}
+                      : 'Chờ quyết'}{' '}
                   {l.quantity}
                 </option>
               ))}
@@ -171,9 +172,15 @@ export default function CoordinationAction({
                   onChange={(e) => setDecision(e.target.value)}
                 >
                   <option value="LATE_DELIVERY">Nhận sau</option>
-                  <option value="RETURN_TO_SOURCE">Trả về kho nguồn</option>
+                  <option value="NO_REPLACEMENT">Không cần giao bù</option>
                 </select>
               </label>
+              <p className="tf-note">
+                {decision === 'NO_REPLACEMENT'
+                  ? 'Không cần giao bù: khi Owner đóng phiếu, số này cộng lại tồn khả dụng kho gửi.'
+                  : 'Nhận sau: chờ lần giao tiếp theo; chưa tới khi đóng phiếu thì tính là mất.'}{' '}
+                Phần chưa chọn sẽ tính là mất khi Owner đóng phiếu.
+              </p>
               <label>
                 Lý do
                 <textarea
