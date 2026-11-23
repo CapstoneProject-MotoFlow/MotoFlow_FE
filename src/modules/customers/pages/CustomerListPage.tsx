@@ -4,7 +4,6 @@
  * Công dụng: Danh sách khách; tìm kiếm, lọc mua chịu/đang nợ, phân trang API, mở tạo/sửa. scope quyết định nhãn và cột công nợ theo toàn chuỗi hay cửa hàng.
  */
 import { useEffect, useState, useCallback } from 'react'
-import PageHeader from '../../../shared/ui/PageHeader'
 import EmptyState from '../../../shared/ui/EmptyState'
 import { formatMoney } from '../../../shared/utils/format'
 import { Link } from 'react-router-dom'
@@ -78,10 +77,6 @@ export default function CustomerListPage({
   const visible = rows
   return (
     <main className="dashboard-content branch-customers">
-      <PageHeader
-        title="Khách hàng"
-        breadcrumb={[{ label: 'Bán hàng' }, { label: 'Khách hàng' }]}
-      />
       <section className="branch-customers-panel">
         <header>
           <h2>

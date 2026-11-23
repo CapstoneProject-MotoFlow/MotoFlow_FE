@@ -6,7 +6,6 @@
  */
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
 import Icon from '../../../shared/ui/Icon'
@@ -128,16 +127,6 @@ export default function VehicleModelsPage() {
           : '—'
   return (
     <main className="dashboard-content vehicle-page">
-      <header className="vehicle-heading">
-        <h1>Dòng xe</h1>
-        <nav aria-label="Đường dẫn">
-          <Link to="/dashboard">Trang chủ</Link>
-          <span>›</span>
-          <span>Danh mục</span>
-          <span>›</span>
-          <span>Dòng xe</span>
-        </nav>
-      </header>
       <section className="vehicle-panel">
         <header>
           <h2>Dòng xe</h2>

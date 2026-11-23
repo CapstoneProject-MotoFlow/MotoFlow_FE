@@ -60,13 +60,6 @@ export default function ManagerTransferListPage() {
     ) ?? []
   return (
     <main className="dashboard-content tf-page tf-manager-list">
-      <header>
-        <h1>Lệnh điều chuyển</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Điều chuyển › Lệnh điều
-          chuyển
-        </nav>
-      </header>
       <section>
         <div className="tf-list-heading">
           <h2>Lệnh điều chuyển giữa các kho</h2>

@@ -193,10 +193,6 @@ export default function StockLossPage() {
     <div className="docs-page">
       <PageHeader
         title="Báo mất, hỏng hàng"
-        breadcrumb={[
-          { label: 'Yêu cầu điều chỉnh', to: '/adjustments' },
-          { label: 'Báo mất, hỏng hàng' },
-        ]}
       />
       <form
         className="docs-stack"

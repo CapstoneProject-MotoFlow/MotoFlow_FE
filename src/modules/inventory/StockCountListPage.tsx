@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import {
-  InventoryHeader,
   InventoryPanel,
   WarehouseFilter,
   InventoryNotice,
@@ -122,7 +121,6 @@ export default function StockCountListPage() {
   return (
     <main className="inventory-workspace count-workspace">
       {/* Review C6: trang Kiểm kê có tiêu đề và breadcrumb như các trang khác. */}
-      <InventoryHeader title="Kiểm kê" />
       <InventoryPanel
         title={
           staff

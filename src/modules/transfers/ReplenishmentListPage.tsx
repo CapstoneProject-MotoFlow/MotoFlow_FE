@@ -60,12 +60,6 @@ export default function ReplenishmentListPage() {
         (branch ? ' tf-branch-list' : '')
       }
     >
-      <header>
-        <h1>Yêu cầu bổ sung</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Điều chuyển › Yêu cầu bổ sung
-        </nav>
-      </header>
       <section>
         <div className="tf-list-heading">
           <h2>

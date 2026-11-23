@@ -321,14 +321,6 @@ export default function StoresPage() {
         }))}
       />
       <main className="stores-page dashboard-content">
-        <div className="stores-page-heading">
-          <h1>Cửa hàng</h1>
-          <div className="breadcrumbs">
-            <Link to="/dashboard">Trang chủ</Link>
-            <span>›</span>
-            <strong>Cửa hàng</strong>
-          </div>
-        </div>
 
         <section className="dashboard-panel stores-table-panel">
           <div className="stores-panel-heading">

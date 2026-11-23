@@ -236,18 +236,6 @@ export default function ReplenishmentCreatePage({
             ? 'Nháp yêu cầu bổ sung ' + draftCode
             : 'Tạo yêu cầu bổ sung'
         }
-        breadcrumb={
-          savedDraft
-            ? [
-                { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
-                { label: 'Nháp', to: replenishmentDraftsPath },
-                { label: draftCode },
-              ]
-            : [
-                { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
-                { label: 'Tạo mới' },
-              ]
-        }
       />
       {draftNotice && <Hint>{draftNotice}</Hint>}
       {confirmDelete && (
@@ -547,10 +535,6 @@ export function ReplenishmentDraftPage() {
     <main className="dashboard-content tf-page tf-repl-create">
       <PageHeader
         title="Nháp yêu cầu bổ sung"
-        breadcrumb={[
-          { label: 'Yêu cầu bổ sung', to: '/replenishment-requests' },
-          { label: 'Nháp', to: replenishmentDraftsPath },
-        ]}
       />
       {!valid ? (
         <p role="alert">Mã nháp không hợp lệ.</p>

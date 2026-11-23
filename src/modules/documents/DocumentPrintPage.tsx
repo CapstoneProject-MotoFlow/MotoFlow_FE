@@ -21,7 +21,6 @@ import {
   printParams,
 } from './print/printLayout'
 import type { DocumentDetail, DocumentPrint, PrintLayout } from './types'
-import { createXlsx, downloadBlob } from '../../shared/utils/xlsx'
 
 function PrintBody({ data }: { data: DocumentPrint }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -73,14 +72,6 @@ export default function DocumentPrintPage() {
     <div className="docs-page docs-print-page">
       <PageHeader
         title="In, xuất chứng từ"
-        breadcrumb={[
-          { label: 'Tra cứu chứng từ', to: '/documents' },
-          {
-            label: detail.data?.document.number ?? 'Chi tiết',
-            to: path || '/documents',
-          },
-          { label: 'In' },
-        ]}
       />
       <Result request={detail} empty="Chứng từ không hợp lệ.">
         {() => (
@@ -131,36 +122,9 @@ export default function DocumentPrintPage() {
                 Quay lại
               </Link>
               {print.data && (
-                <>
-                  <button className="mf-btn mf-btn--secondary" onClick={() => window.print()}>
-                    In / Lưu PDF
-                  </button>
-                  <button
-                    className="mf-btn mf-btn--primary"
-                    onClick={() => {
-                      const data = print.data!
-                      const rows: unknown[][] = [
-                        ['Số chứng từ', 'Loại', 'Ngày', 'Cửa hàng', 'Đối tượng', 'Phụ tùng', 'SKU', 'Số lượng', 'Đơn vị', 'Đơn giá', 'Thành tiền'],
-                        ...data.lines.map((line) => [
-                          data.number,
-                          printForms[data.form],
-                          data.documentDate.slice(0, 10).split('-').reverse().join('/'),
-                          data.store.name,
-                          data.counterpart?.name ?? '',
-                          line.partName,
-                          line.sku,
-                          line.quantity,
-                          line.baseUnit,
-                          line.unitPrice,
-                          line.amount,
-                        ]),
-                      ]
-                      downloadBlob(`${data.number}.xlsx`, createXlsx([{ name: 'Chung tu', rows }]))
-                    }}
-                  >
-                    Xuất Excel
-                  </button>
-                </>
+                <button className="mf-btn mf-btn--primary" onClick={() => window.print()}>
+                  In / Lưu PDF
+                </button>
               )}
             </div>
             {selected ? (

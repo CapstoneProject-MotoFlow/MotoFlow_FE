@@ -72,7 +72,9 @@
 .tf-dialog button {
   cursor: pointer;
 }
-.tf-page button:not(.tf-primary):not(.product-quick-view-trigger) {
+/* PM 22/11: không áp lên nút chính mf-btn--primary (trước đây làm nút chính nền trắng, rê chuột thì chữ tối). */
+.tf-page
+  button:not(.tf-primary):not(.mf-btn--primary):not(.product-quick-view-trigger) {
   padding: 10px 14px;
   border: 1px solid #d0d5dd;
   border-radius: 8px;

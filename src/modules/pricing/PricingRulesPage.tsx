@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import FormDialog from '../../shared/ui/FormDialog'
 import { useInventoryData, inventoryError } from '../inventory/api'
@@ -45,9 +44,6 @@ export default function PricingRulesPage() {
     <main className="dashboard-content pricing-page pricing-rules-page">
       <header>
         <h1>Quy tắc giá</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Giá bán › Quy tắc giá
-        </nav>
       </header>
       <div className="pricing-tabs" role="tablist" aria-label="Quy tắc giá">
         <button

@@ -14,7 +14,6 @@ import HeaderSearch from '../../../shared/ui/HeaderSearch'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import axios from 'axios'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { default as DashboardIcon } from '../../../shared/ui/Icon'
 import type { AuthUser } from '../../../shared/types/auth'
@@ -382,14 +381,6 @@ export default function AccountsPage() {
         }))}
       />
       <main className="dashboard-content accounts-content">
-        <div className="accounts-page-heading">
-          <h1>Tài khoản</h1>
-          <div className="breadcrumb">
-            <Link to="/dashboard">Trang chủ</Link>
-            <span>›</span>
-            <span>Tài khoản</span>
-          </div>
-        </div>
         {error && (
           <div className="dashboard-banner error-banner" role="alert">
             {error}

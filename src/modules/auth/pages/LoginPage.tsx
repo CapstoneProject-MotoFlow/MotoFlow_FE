@@ -11,6 +11,7 @@ import PasswordField from '../../../shared/ui/PasswordField'
 import { login } from '../services/authService'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { requestedPathFrom } from '../../../shared/utils/requestedPath'
+import { homePath } from '../../../shared/utils/roles'
 import '../auth.css'
 
 /** LoginPage: Form username/password, gửi đăng nhập, hiển thị lỗi và điều hướng sau thành công. */
@@ -35,7 +36,7 @@ export default function LoginPage() {
       navigate(
         user.mustChangePassword
           ? '/change-password'
-          : (requestedPathFrom(location.state) ?? '/dashboard'),
+          : (requestedPathFrom(location.state) ?? homePath(user)),
         { replace: true },
       )
     } catch (requestError) {

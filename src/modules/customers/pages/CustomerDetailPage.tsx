@@ -1,3 +1,4 @@
+import PageBackLink from '../../../shared/ui/PageBackLink'
 import { useInventoryData } from '../../inventory/api'
 import type { DebtDetail } from '../../receivables/types'
 import CustomerCreditActions from '../../receivables/CustomerCreditActions'
@@ -146,12 +147,9 @@ export default function CustomerDetailPage() {
   )
   return (
     <main className="dashboard-content customer-profile">
+      <PageBackLink to={base} />
       <header className="cp-heading">
         <h1>{c.customerName}</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to={base}>Khách hàng</Link> › {c.customerName}
-        </nav>
       </header>
       <div className="cp-layout">
         <div className="cp-main">

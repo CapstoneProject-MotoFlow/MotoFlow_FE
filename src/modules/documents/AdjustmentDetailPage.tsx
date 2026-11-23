@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -287,16 +288,13 @@ export default function AdjustmentDetailPage() {
   const data = request.data
   return (
     <div className="docs-page">
+      <PageBackLink to="/adjustments" />
       <PageHeader
         title={
           data
             ? 'Yêu cầu điều chỉnh ' + data.number
             : 'Chi tiết yêu cầu điều chỉnh'
         }
-        breadcrumb={[
-          { label: 'Yêu cầu điều chỉnh', to: '/adjustments' },
-          { label: data?.number ?? 'Chi tiết' },
-        ]}
       />
       {reload?.id === id && reload?.message && (
         <p className="docs-alert" role="alert">

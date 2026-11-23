@@ -6,7 +6,6 @@
  */
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import FormDialog from '../../../shared/ui/FormDialog'
 import Icon from '../../../shared/ui/Icon'
@@ -141,16 +140,6 @@ export default function PartCategoriesPage() {
   }
   return (
     <main className="dashboard-content category-page">
-      <header className="category-heading">
-        <h1>Nhóm phụ tùng</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link>
-          <span>›</span>
-          <span>Danh mục</span>
-          <span>›</span>
-          <span>Nhóm phụ tùng</span>
-        </nav>
-      </header>
       <section className="category-panel">
         <header>
           <h2>Nhóm phụ tùng theo loại xe</h2>

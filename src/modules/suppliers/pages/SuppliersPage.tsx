@@ -70,12 +70,6 @@ export default function SuppliersPage() {
   }, [query, status, page, revision])
   return (
     <main className="dashboard-content suppliers-page supplier-redesign">
-      <div className="suppliers-page-heading">
-        <h1>Nhà cung cấp</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Danh mục › Nhà cung cấp
-        </nav>
-      </div>
       <section className="suppliers-panel">
         <header className="suppliers-panel-heading">
           <h2>Nhà cung cấp</h2>

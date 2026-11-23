@@ -90,6 +90,9 @@ export const transferResolutionLabels: Record<string, string> = {
   RECEIVED_BACK_AT_SOURCE: 'Trả về kho nguồn',
   APPROVED_LOSS: 'Mất/hỏng',
   CLOSED_BY_AGREEMENT: 'Đóng theo thỏa thuận',
+  RELEASED_FROM_AWAITING_RETURN: 'Giữ lại, không trả',
+  ACCEPTED_AS_VARIANT: 'Nhập kho thành mã hàng lỗi (-M)',
+  RECEIVED_AS_OTHER_PRODUCT: 'Nhận thành phụ tùng khác',
 }
 
 /** Sai lệch hàng nhà cung cấp giao: trạng thái hồ sơ. */
@@ -112,6 +115,8 @@ export const supplierResolutionLabels: Record<string, string> = {
   REPLACEMENT_RECEIVED: 'Đã nhận hàng giao bù',
   REPLACEMENT_WAIVED: 'Không cần nhà cung cấp giao bù',
   WRITE_OFF: 'Xử lý hàng hỏng',
+  ACCEPTED_AS_VARIANT: 'Nhập kho thành mã hàng lỗi (-M)',
+  RECEIVED_AS_OTHER_PRODUCT: 'Nhận thành phụ tùng khác',
 }
 
 /** Trạng thái tồn của một lượng hàng. */

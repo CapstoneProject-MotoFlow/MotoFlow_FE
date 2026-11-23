@@ -142,12 +142,6 @@ export default function PartsSearchPage() {
         onClear={() => search('')}
       />
       <main className="dashboard-content bm-products">
-        <div className="bm-products-heading">
-          <h1>Phụ tùng</h1>
-          <span>
-            <Link to="/dashboard">Trang chủ</Link> › Phụ tùng
-          </span>
-        </div>
         <section className="bm-products-panel">
           <div className="bm-products-panel-heading">
             <h2>Tìm phụ tùng</h2>

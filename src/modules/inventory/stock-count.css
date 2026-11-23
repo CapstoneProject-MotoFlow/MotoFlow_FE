@@ -113,8 +113,8 @@
   flex: 1;
   min-width: 0;
 }
-.count-pick button:not(.product-quick-view-trigger),
-.count-buttons button:not(.product-quick-view-trigger) {
+.count-pick button:not(.mf-btn--primary):not(.product-quick-view-trigger),
+.count-buttons button:not(.mf-btn--primary):not(.product-quick-view-trigger) {
   background: white;
   border: 1px solid #d0d5dd;
   border-radius: 6px;

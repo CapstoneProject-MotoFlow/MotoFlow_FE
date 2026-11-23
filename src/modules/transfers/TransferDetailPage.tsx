@@ -535,7 +535,7 @@ export default function TransferDetailPage() {
                                 <ul>
                                   {c.events.map((event) => (
                                     <li key={event.id}>
-                                      {resolutionNames[event.resolutionType] ?? event.resolutionType}
+                                      {resolutionNames[event.resolutionType] ?? 'Bước xử lý khác'}
                                       {' · '}{event.quantity}
                                       {event.reason ? ' · ' + event.reason : ''}
                                     </li>

@@ -28,13 +28,6 @@ export default function StaffTransferListPage() {
   const receivingIds = new Set(receiving.tasks.map((task) => task.documentId))
   return (
     <main className="dashboard-content tf-page tf-staff-list">
-      <header>
-        <h1>Lệnh điều chuyển</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Điều chuyển › Lệnh điều
-          chuyển
-        </nav>
-      </header>
       <section>
         <h2>Việc điều chuyển của tôi</h2>
         <div className="tf-list-controls">

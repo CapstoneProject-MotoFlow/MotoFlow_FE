@@ -1,4 +1,3 @@
-import { Breadcrumb } from '../../shared/ui/PageHeader'
 import type { ReactNode } from 'react'
 import { lotStates } from './presentation'
 import './inventory.css'
@@ -15,10 +14,6 @@ export function InventoryHeader({
       <h1>{title}</h1>
       <div className="stock-heading-actions">
         {children}
-        {/* Review T8: breadcrumb bấm được, cùng kiểu với các module khác. */}
-        <Breadcrumb
-          items={[{ label: 'Kho hàng', to: '/inventory' }, { label: title }]}
-        />
       </div>
     </header>
   )

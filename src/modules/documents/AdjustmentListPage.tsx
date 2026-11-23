@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import type { Page } from '../inventory/types'
-import PageHeader from '../../shared/ui/PageHeader'
 import Hint from '../../shared/ui/Hint'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { Card, Pager, Result, Status, Table } from './DocumentUi'
@@ -57,10 +56,6 @@ export default function AdjustmentListPage() {
   )
   return (
     <div className="docs-page">
-      <PageHeader
-        title="Yêu cầu điều chỉnh"
-        breadcrumb={[{ label: 'Chứng từ' }, { label: 'Yêu cầu điều chỉnh' }]}
-      />
       <Card
         title={
           owner
