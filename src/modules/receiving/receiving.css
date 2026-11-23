@@ -30,7 +30,7 @@
   gap: 0.5rem;
 }
 
-.receiving-page button:not(.product-quick-view-trigger) {
+.receiving-page button:not(.mf-btn--primary):not(.product-quick-view-trigger) {
   padding: 0.5rem 0.75rem;
   border: 1px solid #dce2eb;
   border-radius: 0.5rem;

@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -287,6 +288,7 @@ export default function AdjustmentDetailPage() {
   const data = request.data
   return (
     <div className="docs-page">
+      <PageBackLink to="/adjustments" />
       <PageHeader
         title={
           data

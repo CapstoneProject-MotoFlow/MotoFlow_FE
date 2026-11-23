@@ -1,3 +1,4 @@
+import PageBackLink from '../../../shared/ui/PageBackLink'
 /**
  * File: modules/admin/pages/AdminPermissionHistoryPage.tsx
  * Loại: MÀN HÌNH — Lịch sử phân quyền Admin.
@@ -186,6 +187,7 @@ export default function AdminPermissionHistoryPage() {
         }))}
       />
       <main className="dashboard-content history-content">
+        <PageBackLink to="/accounts" />
         <div className="history-page-heading">
           <h1>Lịch sử phân quyền</h1>
         </div>

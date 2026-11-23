@@ -1,3 +1,4 @@
+import PageBackLink from '../../../shared/ui/PageBackLink'
 import { AvailabilityButton } from '../../inventory/StockDetails'
 /**
  * File: modules/catalog/pages/ProductDetailPage.tsx
@@ -142,6 +143,7 @@ export default function ProductDetailPage() {
     s.inTransitQty
   return (
     <main className="dashboard-content product-detail">
+      <PageBackLink to={base} />
       <header>
         <h1>{data?.partName || 'Chi tiết phụ tùng'}</h1>
         {data && damagedVariantBaseSku(data) && (

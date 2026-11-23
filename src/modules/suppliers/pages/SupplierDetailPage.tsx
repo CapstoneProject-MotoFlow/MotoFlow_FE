@@ -1,3 +1,4 @@
+import PageBackLink from '../../../shared/ui/PageBackLink'
 /**
  * File: modules/suppliers/pages/SupplierDetailPage.tsx
  * Loại: MÀN HÌNH — Chi tiết nhà cung cấp.
@@ -90,6 +91,7 @@ export default function SupplierDetailPage() {
   }, [id, revision])
   return (
     <main className="dashboard-content suppliers-page supplier-redesign supplier-detail-page">
+      <PageBackLink to="/owner/suppliers" />
       <div className="suppliers-page-heading">
         <h1>{data?.supplier.supplierName || 'Chi tiết nhà cung cấp'}</h1>
       </div>

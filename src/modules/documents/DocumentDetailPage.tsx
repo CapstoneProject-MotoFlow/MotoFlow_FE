@@ -1,3 +1,4 @@
+import PageBackLink from '../../shared/ui/PageBackLink'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -346,6 +347,7 @@ export default function DocumentDetailPage() {
   const [correction, setCorrection] = useState(false)
   return (
     <div className="docs-page">
+      <PageBackLink to="/documents" />
       <PageHeader
         title={
           request.data

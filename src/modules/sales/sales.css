@@ -555,7 +555,7 @@
   font-size: 16px;
   font-weight: 600;
 }
-.sales-pick-screen button:not(.product-quick-view-trigger),
+.sales-pick-screen button:not(.mf-btn--primary):not(.product-quick-view-trigger),
 .sales-pick-screen .sales-cancel {
   border: 1px solid #d0d5dd;
   border-radius: 7px;
