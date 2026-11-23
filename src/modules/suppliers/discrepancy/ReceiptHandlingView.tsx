@@ -10,6 +10,7 @@ import {
   caseDraftChanged,
   caseDraftError,
   caseLine,
+  receiptHandlingStatus,
   type CaseDraft,
 } from '../discrepancyRules'
 import AcceptanceDialog, { type AcceptanceMode } from './AcceptanceDialog'
@@ -40,6 +41,8 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const { user } = useAuth()
   const [rows, setRows] = useState<Case[]>([])
   const [excess, setExcess] = useState<ExcessLine[]>([])
+  // Graphify #72: false = không tải được hàng thừa (không được coi là không có hàng thừa).
+  const [excessLoaded, setExcessLoaded] = useState(true)
   const [drafts, setDrafts] = useState<Record<number, CaseDraft>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -73,10 +76,11 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
             signal: controller.signal,
           })
           .then(({ data }) => data.lines.filter((line) => line.excessQty > 0))
-          .catch(() => [] as ExcessLine[])
+          .catch(() => null)
         if (!controller.signal.aborted) {
           setRows(cases)
-          setExcess(receipt)
+          setExcess(receipt ?? [])
+          setExcessLoaded(receipt !== null)
           setError('')
         }
       } catch (failure) {
@@ -143,7 +147,11 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const waitingExcess = excess.filter(
     (line) => line.excessDecision === 'AWAITING_OWNER',
   ).length
-  const receiptDone = openCases === 0 && waitingExcess === 0
+  const status = receiptHandlingStatus({
+    openCases,
+    waitingExcess,
+    handlingComplete: excessLoaded ? openCases === 0 && waitingExcess === 0 : null,
+  })
   return (
     <>
       <header className="sd-head">
@@ -176,20 +184,11 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
                 Giao ngày <b>{formatDate(first.deliveryDate)}</b>
               </span>
             )}
-            {!loading && (rows.length > 0 || excess.length > 0) && (
+            {!loading && (rows.length > 0 || excess.length > 0 || !excessLoaded) && (
               <span>
                 Tình trạng phiếu{' '}
-                <b className={receiptDone ? 'sd-receipt-done' : 'sd-receipt-open'}>
-                  {receiptDone
-                    ? 'Đã xử lý xong'
-                    : [
-                        openCases ? openCases + ' hồ sơ sai lệch đang mở' : '',
-                        waitingExcess
-                          ? waitingExcess + ' dòng hàng thừa chờ Owner'
-                          : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
+                <b className={status.done ? 'sd-receipt-done' : 'sd-receipt-open'}>
+                  {status.text}
                 </b>
               </span>
             )}

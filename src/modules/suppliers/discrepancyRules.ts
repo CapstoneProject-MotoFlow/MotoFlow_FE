@@ -231,3 +231,23 @@ export function caseLine(row: Case, draft: CaseDraft) {
     replacementRequiredQty: Number(shownReplacement(row, draft)),
   }
 }
+
+/**
+ * Tình trạng chung của một phiếu nhập trên màn xử lý sai lệch (PM 22/11, Q3).
+ * Graphify #72/#73: không tải được hàng thừa (handlingComplete = null) thì không bao giờ báo "Đã xử lý xong".
+ */
+export function receiptHandlingStatus(input: {
+  openCases: number
+  waitingExcess: number
+  /** BE handlingComplete; null khi không tải được API hàng thừa. */
+  handlingComplete: boolean | null
+}): { done: boolean; text: string } {
+  if (input.handlingComplete === null)
+    return { done: false, text: 'Chưa tải được hàng thừa của phiếu, chưa xác định được' }
+  if (input.handlingComplete) return { done: true, text: 'Đã xử lý xong' }
+  const parts = [
+    input.openCases ? input.openCases + ' hồ sơ sai lệch đang mở' : '',
+    input.waitingExcess ? input.waitingExcess + ' dòng hàng thừa chờ Owner' : '',
+  ].filter(Boolean)
+  return { done: false, text: parts.join(' · ') || 'Chưa xử lý xong' }
+}
