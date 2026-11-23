@@ -1908,11 +1908,14 @@
   font-size: 14px;
 }
 .sales-workspace.pos-page .pos-submit {
-  min-height: 56px;
-  font-size: 18px;
+  /* PM 22/11: hai nút Tạo đơn / Hủy đơn nhỏ lại. */
+  min-height: 44px;
+  font-size: 16px;
 }
 .pos-actions .mf-btn--lg {
   width: 100%;
+  min-height: 42px;
+  font-size: 15px;
 }
 .pos-draft-actions {
   display: grid;
@@ -1933,6 +1936,11 @@
 .pos-draft-actions .pos-draft-save:hover:not(:disabled) {
   border-color: var(--mf-primary);
   background: #eef0ff;
+}
+.pos-draft-actions .pos-preorder-toggle[aria-pressed='true'] {
+  color: #fff;
+  border-color: var(--mf-primary);
+  background: var(--mf-primary);
 }
 .pos-draft-actions .pos-draft-delete {
   background: #fff;

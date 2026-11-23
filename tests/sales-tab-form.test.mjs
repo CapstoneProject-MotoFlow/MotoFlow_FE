@@ -63,7 +63,7 @@ test('the sales form starts from a tab draft and hides the store picker when the
   }
 })
 
-test('a waiting-only order offers a deposit card, only for a customer with a profile', async () => {
+test('a waiting-only wholesale order offers a deposit card, only for a customer with a profile', async () => {
   const server = await createServer({
     configFile: false,
     server: { middlewareMode: true, hmr: false, watch: null },
@@ -96,9 +96,10 @@ test('a waiting-only order offers a deposit card, only for a customer with a pro
       totalDebt: 0,
     }
     const outOfStock = { ...product, sellableQty: 0 }
+    // PM 22/11: tiền cọc (và Đặt trước) chỉ có ở đơn bán buôn.
     const waiting = {
       warehouse: '1',
-      type: 'RETAIL',
+      type: 'WHOLESALE',
       discount: '0',
       note: '',
       lines: [{ product: outOfStock, quantity: 2, nowQty: 0 }],
@@ -109,7 +110,18 @@ test('a waiting-only order offers a deposit card, only for a customer with a pro
     })
     assert.match(withCustomer, /Tiền cọc/)
     assert.match(withCustomer, /Hạn cọc/)
-    assert.match(withCustomer, /Khách đặt trước dù cửa hàng còn hàng/)
+    // PM 22/11: bỏ "Tiền khách đưa", "(không bắt buộc)", ô "Đã nhận đủ" và dòng gợi ý đặt trước.
+    assert.doesNotMatch(withCustomer, /Tiền khách đưa/)
+    assert.doesNotMatch(withCustomer, /không bắt buộc\)/)
+    assert.doesNotMatch(withCustomer, /Đã nhận đủ số tiền này/)
+    assert.doesNotMatch(withCustomer, /Khách đặt trước dù cửa hàng còn hàng/)
+    assert.match(withCustomer, /aria-pressed="false"[^>]*>Đặt trước</)
+
+    const retail = render({
+      initialDraft: { ...waiting, type: 'RETAIL', customer },
+    })
+    assert.doesNotMatch(retail, /Tiền cọc/)
+    assert.doesNotMatch(retail, />Đặt trước</)
 
     // Khách lẻ không có đơn chờ hàng nên không có phần cọc.
     const walkIn = render({ initialDraft: waiting })
@@ -160,7 +172,7 @@ test('a preorder draft sends the whole line to the waiting order even when stock
           createElement(SalesOrderFormView, {
             initialDraft: {
               warehouse: '1',
-              type: 'RETAIL',
+              type: 'WHOLESALE',
               discount: '0',
               note: '',
               customer: {

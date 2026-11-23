@@ -624,3 +624,24 @@
     padding: 16px;
   }
 }
+.sd-receipt-done {
+  color: var(--mf-success);
+}
+.sd-receipt-open {
+  color: #b54708;
+}
+.sd-excess {
+  margin-top: 16px;
+  padding: 16px 20px;
+}
+.sd-excess-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.sd-excess-head h2 {
+  margin: 0;
+  font-size: 16px;
+}

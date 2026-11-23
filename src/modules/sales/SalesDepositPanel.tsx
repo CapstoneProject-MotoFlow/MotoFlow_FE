@@ -30,9 +30,7 @@ export default function SalesDepositPanel({
     [error, setError] = useState(''),
     [amount, setAmount] = useState(''),
     [method, setMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH'),
-    [tendered, setTendered] = useState(''),
     [reference, setReference] = useState(''),
-    [verified, setVerified] = useState(true),
     [expiresOn, setExpiresOn] = useState('')
   // Chặn bấm đúp nút mất cọc: lần gọi thứ hai bị bỏ khi lần đầu chưa xong.
   const forfeiting = useRef(false)
@@ -52,9 +50,7 @@ export default function SalesDepositPanel({
     setError('')
     setAmount('')
     setMethod('CASH')
-    setTendered('')
     setReference('')
-    setVerified(true)
     setExpiresOn(next === 'expiry' ? (deposit?.expiresOn ?? '') : '')
     setDialog(next)
   }
@@ -67,8 +63,9 @@ export default function SalesDepositPanel({
       method,
       reference,
       expiresOn,
-      tendered,
-      verified,
+      // PM 22/11: bỏ "Khách đưa" và ô "Đã nhận đủ": số cọc ghi là số đã nhận.
+      tendered: '',
+      verified: true,
     }
     const problem = validateDeposit(input, todayIso(), {
       requireExpiry: !deposit.expiresOn,
@@ -279,16 +276,6 @@ export default function SalesDepositPanel({
                 Chuyển khoản
               </label>
             </fieldset>
-            {method === 'CASH' && (
-              <label>
-                Khách đưa (đ)
-                <MoneyInput
-                  value={tendered}
-                  onValueChange={setTendered}
-                  placeholder="Để trống nếu khách đưa đúng số cọc"
-                />
-              </label>
-            )}
             {method === 'BANK_TRANSFER' && (
               <label>
                 Mã giao dịch
@@ -299,14 +286,6 @@ export default function SalesDepositPanel({
                 />
               </label>
             )}
-            <label className="sales-deposit-check">
-              <input
-                type="checkbox"
-                checked={verified}
-                onChange={(event) => setVerified(event.target.checked)}
-              />
-              Đã nhận đủ số tiền này
-            </label>
             {!deposit.expiresOn && (
               <label>
                 Hạn cọc

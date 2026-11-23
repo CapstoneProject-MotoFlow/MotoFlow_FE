@@ -28,6 +28,7 @@ const {
   caseDraftChanged,
   caseLine,
   shownReplacement,
+  receiptHandlingStatus,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -309,4 +310,23 @@ test('acceptance types are locked per kind while a request is pending', () => {
     pendingRequests: [{ type: 'WRONG_ITEM', quantity: 2 }],
   })
   assert.deepEqual(acceptanceOpenTypes(row), ['DAMAGED'])
+})
+
+test('receiptHandlingStatus never reports done when the excess lines could not be loaded', () => {
+  assert.deepEqual(
+    receiptHandlingStatus({ openCases: 0, waitingExcess: 0, handlingComplete: null }),
+    { done: false, text: 'Chưa tải được hàng thừa của phiếu, chưa xác định được' },
+  )
+  assert.equal(
+    receiptHandlingStatus({ openCases: 0, waitingExcess: 0, handlingComplete: true }).done,
+    true,
+  )
+  assert.deepEqual(
+    receiptHandlingStatus({ openCases: 1, waitingExcess: 2, handlingComplete: false }),
+    { done: false, text: '1 hồ sơ sai lệch đang mở · 2 dòng hàng thừa chờ Owner' },
+  )
+  assert.deepEqual(
+    receiptHandlingStatus({ openCases: 0, waitingExcess: 0, handlingComplete: false }),
+    { done: false, text: 'Chưa xử lý xong' },
+  )
 })
