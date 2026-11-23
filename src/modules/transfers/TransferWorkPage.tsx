@@ -855,7 +855,7 @@ function WorkEditor({
                                 <input
                                   type="date"
                                   aria-label={'HSD hàng thừa ' + l.sku}
-                                  title="Để trống nếu phụ tùng không có hạn sử dụng: khi Owner duyệt, kho gửi trừ lô nhập trước."
+                                  title="Để trống: khi Owner duyệt, kho gửi trừ lô nhập trước. Có ghi HSD thì kho gửi phải có lô cùng HSD."
                                   value={excessExpiry[l.productId] ?? ''}
                                   disabled={busy}
                                   onChange={(e) =>

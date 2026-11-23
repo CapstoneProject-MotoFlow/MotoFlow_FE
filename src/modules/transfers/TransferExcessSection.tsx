@@ -2,24 +2,47 @@
  * File: modules/transfers/TransferExcessSection.tsx
  * Loại: THÀNH PHẦN — phần "Hàng thừa điều chuyển" trên màn Owner "Chờ duyệt hàng thừa".
  * Công dụng: PM 22/11 (Q7, G3, G4b) + BE #98. Hàng thừa của phiếu nhận điều chuyển chờ Owner như hàng thừa NCC.
- * Nhận: cộng tồn kho nhận, trừ tồn kho gửi (lô cùng HSD bên nhận ghi; không có HSD thì lô nhập trước); kho gửi
- * không đủ tồn khả dụng thì BE chặn (MSG339). Không nhận: không đổi tồn, kho nhận trả hàng về kho gửi ngoài hệ thống.
+ * Nhận: cộng tồn kho nhận, trừ tồn kho gửi (lô cùng HSD bên nhận ghi; không ghi HSD thì lô nhập trước). BE trả sẵn
+ * lô sẽ trừ; dòng không nhận được (MSG339 thiếu tồn, MSG341 không có lô cùng HSD) thì chỉ chọn "Không nhận".
+ * Không nhận: không đổi tồn, kho nhận trả hàng về kho gửi ngoài hệ thống.
+ * Review #73 (73-6): hiện kho gửi, kho nhận và lô sẽ trừ.
  */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { documentCode } from '../../shared/utils/documentCode'
 import { inventoryError } from '../inventory/api'
-import type { Receipt } from './types'
 import './transfers.css'
 
+type PlannedLot = { lotId: number; expiryDate: string | null; quantity: number }
+type PendingLine = {
+  lineId: number
+  productId: number
+  sku: string
+  partName: string
+  excessQty: number
+  expiryDate: string | null
+  lots: PlannedLot[]
+  blockedCode: string | null
+}
 type Pending = {
   receiptId: number
   transferOrderId: number
   sourceStoreId: number
   destStoreId: number
+  sourceStoreName: string
+  destStoreName: string
+  lines: PendingLine[]
 }
 type Choice = 'ACCEPTED' | 'REJECTED'
+
+const blockedLabels: Record<string, string> = {
+  MSG339: 'Kho gửi không đủ tồn khả dụng để nhận.',
+  MSG341: 'Kho gửi không có lô cùng hạn sử dụng còn bán được; kiểm tra lại HSD kho nhận đã ghi.',
+}
+
+const day = (value: string | null) =>
+  value ? value.split('-').reverse().join('/') : null
 
 function PendingReceipt({
   item,
@@ -28,27 +51,11 @@ function PendingReceipt({
   item: Pending
   onDecided: (message: string) => void
 }) {
-  const [receipt, setReceipt] = useState<Receipt>()
   const [choices, setChoices] = useState<Record<number, Choice>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  useEffect(() => {
-    const controller = new AbortController()
-    axiosClient
-      .get<Receipt>(
-        '/transfer-orders/' + item.transferOrderId + '/receipts/' + item.receiptId,
-        { signal: controller.signal },
-      )
-      .then(({ data }) => setReceipt(data))
-      .catch((failure) => {
-        if (!controller.signal.aborted) setError(inventoryError(failure))
-      })
-    return () => controller.abort()
-  }, [item.transferOrderId, item.receiptId])
-  const lines = (receipt?.lines ?? []).filter(
-    (line) => line.excessDecision === 'AWAITING_OWNER' && line.lineId != null,
-  )
-  const ready = lines.length > 0 && lines.every((line) => choices[line.lineId!])
+  const ready =
+    item.lines.length > 0 && item.lines.every((line) => choices[line.lineId])
   async function submit() {
     if (!ready || busy) return
     setBusy(true)
@@ -61,9 +68,9 @@ function PendingReceipt({
           item.receiptId +
           '/excess-decision',
         {
-          lines: lines.map((line) => ({
+          lines: item.lines.map((line) => ({
             lineId: line.lineId,
-            decision: choices[line.lineId!],
+            decision: choices[line.lineId],
           })),
         },
       )
@@ -94,32 +101,50 @@ function PendingReceipt({
           >
             {documentCode('PN', item.receiptId)}
           </Link>
-        </strong>
+        </strong>{' '}
+        <span className="tf-excess-stores">
+          Kho gửi <b>{item.sourceStoreName}</b> → Kho nhận{' '}
+          <b>{item.destStoreName}</b>
+        </span>
       </header>
       {error && <p role="alert">{error}</p>}
-      {!receipt && !error && <p role="status">Đang tải phiếu…</p>}
-      {lines.length > 0 && (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Phụ tùng</th>
-                <th>Số thừa</th>
-                <th>HSD bên nhận ghi</th>
-                <th>Quyết định</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((line) => (
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Phụ tùng</th>
+              <th>Số thừa</th>
+              <th>HSD bên nhận ghi</th>
+              <th>Lô kho gửi sẽ trừ</th>
+              <th>Quyết định</th>
+            </tr>
+          </thead>
+          <tbody>
+            {item.lines.map((line) => {
+              const blocked = line.blockedCode
+                ? (blockedLabels[line.blockedCode] ?? 'Chưa nhận được dòng này.')
+                : ''
+              return (
                 <tr key={line.lineId}>
                   <td>
                     {line.sku} · {line.partName}
                   </td>
                   <td>{line.excessQty}</td>
+                  <td>{day(line.expiryDate) ?? 'Không ghi (trừ lô nhập trước)'}</td>
                   <td>
-                    {line.expiryDate
-                      ? line.expiryDate.split('-').reverse().join('/')
-                      : 'Không có (trừ lô nhập trước)'}
+                    {blocked ? (
+                      <span className="tf-excess-blocked">{blocked}</span>
+                    ) : (
+                      line.lots
+                        .map(
+                          (lot) =>
+                            documentCode('L', lot.lotId) +
+                            (lot.expiryDate ? ' (HSD ' + day(lot.expiryDate) + ')' : '') +
+                            ' × ' +
+                            lot.quantity,
+                        )
+                        .join(', ') || '—'
+                    )}
                   </td>
                   <td>
                     {(
@@ -132,10 +157,10 @@ function PendingReceipt({
                         <input
                           type="radio"
                           name={'excess-' + line.lineId}
-                          checked={choices[line.lineId!] === value}
-                          disabled={busy}
+                          checked={choices[line.lineId] === value}
+                          disabled={busy || (value === 'ACCEPTED' && !!blocked)}
                           onChange={() =>
-                            setChoices({ ...choices, [line.lineId!]: value })
+                            setChoices({ ...choices, [line.lineId]: value })
                           }
                         />{' '}
                         {label}
@@ -143,23 +168,21 @@ function PendingReceipt({
                     ))}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {lines.length > 0 && (
-        <div className="mf-row-actions">
-          <button
-            type="button"
-            className="mf-btn mf-btn--sm mf-btn--primary"
-            disabled={!ready || busy}
-            onClick={() => void submit()}
-          >
-            {busy ? 'Đang lưu…' : 'Xác nhận'}
-          </button>
-        </div>
-      )}
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mf-row-actions">
+        <button
+          type="button"
+          className="mf-btn mf-btn--sm mf-btn--primary"
+          disabled={!ready || busy}
+          onClick={() => void submit()}
+        >
+          {busy ? 'Đang lưu…' : 'Xác nhận'}
+        </button>
+      </div>
     </article>
   )
 }
@@ -191,8 +214,8 @@ export default function TransferExcessSection() {
         <h2>Hàng thừa điều chuyển</h2>
       </header>
       <p className="tf-excess-hint">
-        Nhận: cộng tồn kho nhận và trừ tồn kho gửi (lô cùng hạn sử dụng bên nhận ghi; không có hạn sử dụng thì lô
-        nhập trước). Kho gửi không đủ tồn khả dụng thì hệ thống chặn. Không nhận: tồn kho không đổi, kho nhận trả
+        Nhận: cộng tồn kho nhận và trừ tồn kho gửi (lô cùng hạn sử dụng bên nhận ghi; không ghi hạn sử dụng thì lô
+        nhập trước). Kho gửi không đủ tồn khả dụng thì không nhận được. Không nhận: tồn kho không đổi, kho nhận trả
         hàng về kho gửi.
       </p>
       {notice && (

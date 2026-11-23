@@ -666,6 +666,33 @@ export default function PurchaseOrdersPage() {
                 Đã đóng
               </button>
             </div>
+            {staffClosed && (
+              // Review #73 (73-9): BE mặc định 30 ngày gần nhất; chọn ngày để xem đơn cũ hơn.
+              <div className="receiving-filter-row">
+                <label>
+                  Từ ngày{' '}
+                  <input
+                    type="date"
+                    value={createdFrom}
+                    onChange={(event) => {
+                      setCreatedFrom(event.target.value)
+                      setPage(0)
+                    }}
+                  />
+                </label>
+                <label>
+                  Đến ngày{' '}
+                  <input
+                    type="date"
+                    value={createdTo}
+                    onChange={(event) => {
+                      setCreatedTo(event.target.value)
+                      setPage(0)
+                    }}
+                  />
+                </label>
+              </div>
+            )}
           </div>
         )}
         {!staff && (

@@ -1317,3 +1317,11 @@ p.tf-validation-hint {
   margin-right: 12px;
   white-space: nowrap;
 }
+.tf-excess-stores {
+  color: #667085;
+  font-size: 13px;
+}
+.tf-excess-blocked {
+  color: #b42318;
+  font-size: 13px;
+}

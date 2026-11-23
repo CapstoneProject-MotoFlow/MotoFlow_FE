@@ -45,6 +45,8 @@ export type StockDocument = {
   value?: number
   transferOrderId: number | null
   discrepancyCaseId: number | null
+  /** BE #98: phiếu nhập NCC gốc của phiếu trả NCC, để mở màn xử lý sai lệch. */
+  discrepancyReceiptId?: number | null
 }
 
 type StockDocumentLine = {
@@ -85,35 +87,24 @@ const outKinds = [
   'STOCK_COUNT',
 ]
 
-/** Mã phiếu theo cùng kiểu các màn khác; BE chỉ đặt sẵn mã cho đơn bán, phiếu nhập và lệnh điều chuyển. */
-function stockDocumentCode(row: Pick<StockDocument, 'sourceType' | 'sourceId' | 'code'>) {
-  switch (row.sourceType) {
-    case 'SALES_ORDER':
-      return documentCode('SO', row.sourceId)
-    case 'GOODS_RECEIPT_NOTE':
-      return documentCode('PN', row.sourceId)
-    case 'TRANSFER_ORDER':
-      return documentCode('DC', row.sourceId)
-    case 'STOCK_COUNT':
-      return documentCode('KK', row.sourceId)
-    case 'ADJUSTMENT_REQUEST':
-      return 'Điều chỉnh #' + row.sourceId
-    case 'DISCREPANCY_RESOLUTION_EVENT':
-      return 'Trả NCC #' + row.sourceId
-    default:
-      return row.code
-  }
+/** Review #73 (73-4) + BE #98: BE trả sẵn mã hiển thị (SO-, PN-, DC-, KK-, DCH-, TNCC-), cũng là mã tìm được bằng q. */
+function stockDocumentCode(row: Pick<StockDocument, 'code'>) {
+  return row.code
 }
 
 /** Màn nghiệp vụ gốc của phiếu; null khi vai trò không mở được màn đó. */
 function stockDocumentSource(
-  row: Pick<StockDocument, 'sourceType' | 'sourceId' | 'kind' | 'transferOrderId'>,
+  row: Pick<
+    StockDocument,
+    'sourceType' | 'sourceId' | 'kind' | 'transferOrderId' | 'discrepancyReceiptId'
+  >,
   role: string,
 ): string | null {
   const staff = role === 'STAFF'
   switch (row.sourceType) {
     case 'SALES_ORDER':
-      return '/sales-orders/' + row.sourceId
+      // Review #73 (73-5): Staff chỉ mở được đơn mình được giao lấy hàng (BE trả 403 với đơn khác).
+      return staff ? null : '/sales-orders/' + row.sourceId
     case 'GOODS_RECEIPT_NOTE':
       return row.transferOrderId != null
         ? '/transfer-orders/' + row.transferOrderId + '/receipts/' + row.sourceId
@@ -125,7 +116,12 @@ function stockDocumentSource(
     case 'ADJUSTMENT_REQUEST':
       return staff ? null : '/adjustments/' + row.sourceId
     case 'DISCREPANCY_RESOLUTION_EVENT':
-      return staff ? null : '/supplier-discrepancies'
+      // Review #73 (73-5): mở thẳng màn xử lý sai lệch của phiếu nhập gốc.
+      return staff
+        ? null
+        : row.discrepancyReceiptId != null
+          ? '/supplier-discrepancies?receipt=' + row.discrepancyReceiptId
+          : '/supplier-discrepancies'
     default:
       return null
   }
