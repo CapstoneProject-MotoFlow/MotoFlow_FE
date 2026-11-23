@@ -40,7 +40,6 @@ export default function ProfilePage() {
     <main className="dashboard-content profile-info-content">
       <div className="profile-password-heading">
         <h1>Thông tin cá nhân</h1>
-        <Link to="/dashboard">Trang chủ</Link>
       </div>
       {error ? (
         <div className="dashboard-banner error-banner" role="alert">

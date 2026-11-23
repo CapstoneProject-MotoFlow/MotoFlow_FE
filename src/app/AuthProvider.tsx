@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../shared/hooks/useAuth'
 import type { AuthUser } from '../shared/types/auth'
+import { homePath } from '../shared/utils/roles'
 import { logout, restoreSession } from '../modules/auth/services/authService'
 import axiosClient from '../shared/api/axiosClient'
 import { clearAllSalesTabs } from '../modules/sales/salesTabsStore'
@@ -130,7 +131,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser((current) =>
           current ? { ...current, mustChangePassword: false } : current,
         )
-        navigate('/dashboard')
+        navigate(homePath(user))
       },
     }),
     [user, signedOutByChoice, navigate],

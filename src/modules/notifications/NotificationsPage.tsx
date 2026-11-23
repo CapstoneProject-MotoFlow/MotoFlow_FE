@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import {
   useNotifications,
@@ -53,12 +53,6 @@ export default function NotificationsPage() {
   }
   return (
     <main className="notifications-page">
-      <header className="notifications-heading">
-        <h1>Thông báo</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › Thông báo
-        </nav>
-      </header>
       <section className="notifications-panel">
         <header>
           <h2>Thông báo của bạn</h2>

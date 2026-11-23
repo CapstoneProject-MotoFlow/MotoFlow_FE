@@ -99,10 +99,6 @@ export default function SalesTabsWorkspace({
       <main className="inventory-workspace sales-workspace pos-page">
         <PageHeader
           title="Tạo đơn bán"
-          breadcrumb={[
-            { label: 'Đơn bán', to: '/sales-orders' },
-            { label: 'Tạo mới' },
-          ]}
         />
         {storeSelect}
         <p role="status">Chọn cửa hàng để bắt đầu bán.</p>

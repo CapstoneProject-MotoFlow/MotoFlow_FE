@@ -2,7 +2,6 @@ import { useState } from 'react'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useCompleteLots, useInventoryData, useInventoryScope } from './api'
 import {
-  InventoryHeader,
   InventoryNotice,
   InventoryPanel,
   Pagination,
@@ -82,7 +81,6 @@ export default function InventoryMovementsPage() {
   ]
   return (
     <main className="inventory-workspace inventory-screen">
-      <InventoryHeader title="Lịch sử xuất nhập" />
       <section className="stock-panel stock-movement-filters">
         <div className="stock-filters">
           <WarehouseFilter

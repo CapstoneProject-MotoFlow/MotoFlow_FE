@@ -121,7 +121,6 @@ export default function InventoryPeriodsPage() {
   if (!id) {
     return (
       <main className="inventory-workspace inventory-screen period-screen">
-        <InventoryHeader title="Kỳ kho" />
         <InventoryNotice loading={periods.loading} error={periods.error} onRetry={periods.reload} />
         <section className="stock-panel">
           <header className="stock-panel-heading"><h2>Các kỳ kho</h2></header>

@@ -60,6 +60,9 @@ const groups: { label: string; icon: IconName; labels: string[] }[] = [
     labels: ['Phụ tùng', 'Nhóm phụ tùng', 'Dòng xe', 'Nhà cung cấp'],
   },
 ]
+/** PM 22/11: "Tạo đơn bán" là mục riêng trên sidebar (BM + Owner), không nằm trong nhóm Bán hàng. */
+const createSalesOrderHref = '/sales-orders/new'
+
 /** BusinessSidebarNav: Dựng menu nghiệp vụ dạng nhóm mở/đóng; lọc mục theo quyền; xử lý mục chưa có màn nghiệp vụ hoàn chỉnh. */
 export default function BusinessSidebarNav({
   owner,
@@ -109,6 +112,8 @@ export default function BusinessSidebarNav({
       : location.pathname === href ||
         (href !== '/owner/inventory' &&
           href !== '/inventory' &&
+          // Tạo đơn bán là mục riêng trên sidebar, không làm sáng mục Đơn bán.
+          location.pathname !== createSalesOrderHref &&
           location.pathname.startsWith(href + '/'))
   // Review C5: chỉ mở một nhóm mỗi lúc (accordion) để menu không bị đẩy xuống dưới thẻ phạm vi.
   const [open, setOpen] = useState<string[]>(() => {
@@ -198,6 +203,11 @@ export default function BusinessSidebarNav({
     >
       {link({ label: 'Tổng quan', href: '/dashboard', icon: 'grid' })}
       {link(find('Thông báo'))}
+      {link({
+        label: 'Tạo đơn bán',
+        href: createSalesOrderHref,
+        icon: 'plus',
+      })}
       {group('Bán hàng')}
       {link(find('Công nợ'))}
       {link(find('Đơn nhập hàng'))}

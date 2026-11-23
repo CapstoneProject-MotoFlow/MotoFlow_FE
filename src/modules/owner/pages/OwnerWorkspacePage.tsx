@@ -130,15 +130,6 @@ export default function OwnerWorkspacePage({
   }
   return (
     <main className="dashboard-content owner-content parts-page">
-      <div className="parts-heading">
-        <h1 className="dashboard-greeting">
-          {inventory ? 'Tồn kho' : 'Phụ tùng'}
-        </h1>
-        <span>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          {inventory ? 'Tồn kho' : 'Phụ tùng'}
-        </span>
-      </div>
       <section className="owner-panel">
         <header className="parts-panel-heading">
           <h2>{inventory ? 'Tra cứu tồn kho' : 'Tìm phụ tùng'}</h2>

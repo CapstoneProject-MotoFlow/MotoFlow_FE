@@ -6,7 +6,7 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
-import { canCoordinateTransfers } from '../../shared/utils/roles'
+import { canCoordinateTransfers, homePath } from '../../shared/utils/roles'
 import { requestedPathFrom } from '../../shared/utils/requestedPath'
 import AuthLayout from '../layouts/AuthLayout'
 import DashboardLayout from '../layouts/DashboardLayout'
@@ -304,7 +304,7 @@ function RootRedirect() {
           ? '/login'
           : user.mustChangePassword
             ? '/change-password'
-            : (from ?? '/dashboard')
+            : (from ?? homePath(user))
       }
       replace
     />

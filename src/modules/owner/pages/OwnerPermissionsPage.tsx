@@ -13,7 +13,6 @@ import {
  * Đường dẫn: /owner/catalog-permissions.
  * Công dụng: Bảng quyền danh mục/giá của BM; lọc cửa hàng, công tắc và popup xác nhận (lý do không bắt buộc); lưu API; hiển thị thay đổi thành công trong phiên. Không phải toàn bộ lịch sử từ máy chủ.
  */
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
 import { useEffect, useState } from 'react'
 import axiosClient from '../../../shared/api/axiosClient'
@@ -94,13 +93,6 @@ export default function OwnerPermissionsPage() {
     <main className="dashboard-content owner-permissions-page">
       <header className="owner-permissions-heading">
         <h1>Quyền danh mục và giá</h1>
-        <nav aria-label="Đường dẫn">
-          <Link to="/dashboard">Trang chủ</Link>
-          <span>›</span>
-          <span>Giá bán</span>
-          <span>›</span>
-          <span>Quyền danh mục và giá</span>
-        </nav>
       </header>
       <div className="owner-permissions-filter">
         <select

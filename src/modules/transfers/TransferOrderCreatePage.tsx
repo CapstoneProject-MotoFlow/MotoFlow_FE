@@ -130,10 +130,6 @@ export default function TransferOrderCreatePage() {
     <main className="dashboard-content tf-page tf-repl-create tf-order-create">
       <header>
         <h1>Tạo lệnh điều chuyển</h1>
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> ›{' '}
-          <Link to="/transfer-orders">Lệnh điều chuyển</Link> › Tạo mới
-        </nav>
       </header>
       <InventoryNotice error={error || request.error || stores.error} />
       <form

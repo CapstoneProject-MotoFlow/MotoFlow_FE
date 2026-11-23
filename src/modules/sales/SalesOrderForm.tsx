@@ -746,18 +746,6 @@ export function SalesOrderFormView({
               ? 'Đơn nháp ' + draftOrder.code
               : 'Tạo đơn bán'
         }
-        breadcrumb={
-          draftOrder
-            ? [
-                { label: 'Đơn bán', to: '/sales-orders' },
-                { label: 'Nháp', to: salesDraftsPath },
-                { label: draftOrder.code },
-              ]
-            : [
-                { label: 'Đơn bán', to: '/sales-orders' },
-                { label: editing ? 'Chỉnh sửa' : 'Tạo mới' },
-              ]
-        }
       />
       {tabBar}
       <form

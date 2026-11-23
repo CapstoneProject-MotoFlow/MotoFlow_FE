@@ -5,7 +5,6 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
 import Icon from '../../shared/ui/Icon'
-import PageHeader from '../../shared/ui/PageHeader'
 import { formatDateTime } from '../../shared/utils/format'
 import ServerDraftList from '../../shared/ui/ServerDraftList'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
@@ -545,10 +544,6 @@ export default function PurchaseOrdersPage() {
           : 'dashboard-content receiving-page'
       }
     >
-      <PageHeader
-        title="Đơn nhập hàng"
-        breadcrumb={[{ label: 'Nhập hàng' }, { label: 'Đơn nhập hàng' }]}
-      />
       {assigned && (
         <p className="mf-success-notice" role="status">
           {assigned}

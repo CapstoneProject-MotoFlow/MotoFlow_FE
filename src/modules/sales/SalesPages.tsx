@@ -55,41 +55,29 @@ import { useSearchBox } from '../../shared/hooks/useSearchBox'
 export { SalesOrderFormView }
 import './sales.css'
 
-function Header({
-  title,
-  breadcrumb = title,
-}: {
-  title: string
-  breadcrumb?: ReactNode
-}) {
-  return (
-    <header className="stock-heading">
-      <div>
-        <h1>{title}</h1>
-      </div>
-      <div className="stock-heading-actions">
-        <nav>
-          <Link to="/dashboard">Trang chủ</Link> › {breadcrumb}
-        </nav>
-      </div>
-    </header>
-  )
-}
+/**
+ * Shell: khung trang bán hàng. PM 22/11: không còn breadcrumb; trang danh sách đã có tiêu đề ở thẻ bên dưới
+ * thì không truyền title (không hiện dòng tiêu đề trang).
+ */
 function Shell({
   title,
   children,
-  breadcrumb,
   backTo,
 }: {
-  title: string
+  title?: string
   children: ReactNode
-  breadcrumb?: ReactNode
   backTo?: string
 }) {
   return (
     <main className="inventory-workspace sales-workspace">
       {backTo && <PageBackLink to={backTo} />}
-      <Header title={title} breadcrumb={breadcrumb} />
+      {title && (
+        <header className="stock-heading">
+          <div>
+            <h1>{title}</h1>
+          </div>
+        </header>
+      )}
       {children}
     </main>
   )
@@ -210,7 +198,7 @@ export function SalesOrderListPage({
   )
   if (drafts)
     return (
-      <Shell title="Đơn bán">
+      <Shell>
         <InventoryPanel title="Đơn nháp của tôi" action={createAction}>
           {tabBar}
           <SalesDraftTab scope={scope} />
@@ -218,7 +206,7 @@ export function SalesOrderListPage({
       </Shell>
     )
   return (
-    <Shell title={staff ? 'Đơn được giao lấy hàng' : 'Đơn bán'}>
+    <Shell>
       <InventoryPanel
         title={staff ? 'Việc lấy hàng của tôi' : 'Danh sách đơn bán'}
         action={createAction}
@@ -648,11 +636,6 @@ export function SalesOrderDetailView({
   return (
     <Shell
       title={'Đơn bán' + (order ? ' ' + order.code : '')}
-      breadcrumb={
-        <>
-          <Link to="/sales-orders">Đơn bán</Link> › {order?.code ?? id}
-        </>
-      }
     >
       <div
         className={'sales-detail-layout' + (staff ? ' sales-detail-staff' : '')}
@@ -1166,8 +1149,7 @@ export function RecordPickedView({
   const navigate = useNavigate(),
     lock = useRef(false),
     awaitingStock = order?.status === 'AWAITING_STOCK'
-  const [busy, setBusy] = useState(false),
-    [saved, setSaved] = useState('')
+  const [busy, setBusy] = useState(false)
   const [lines, setLines] = useState<SalesLine[]>(() =>
       [...(order?.lines ?? [])].map((line) => ({
         ...line,
@@ -1198,15 +1180,6 @@ export function RecordPickedView({
   return (
     <Shell
       title={'Ghi số đã lấy' + (order ? ' ' + order.code : '')}
-      breadcrumb={
-        <>
-          Việc lấy hàng ›{' '}
-          <Link to={'/sales-orders/' + (order?.id ?? id)}>
-            {order?.code ?? id}
-          </Link>{' '}
-          › Lấy hàng
-        </>
-      }
     >
       <div className="sales-pick-screen">
         <InventoryPanel
@@ -1383,7 +1356,6 @@ export function RecordPickedView({
             · thiếu <strong>{shortage}</strong> dòng. Còn{' '}
             {lines.length - recorded} dòng chưa ghi.
           </p>
-          {saved && <p role="status">{saved}</p>}
           <div className="sales-pick-actions">
             <Link
               className="sales-cancel"
@@ -1391,64 +1363,6 @@ export function RecordPickedView({
             >
               Hủy
             </Link>
-            <details className="sales-pick-drafts">
-              <summary>Bản nháp trên máy</summary>{' '}
-              <button
-                disabled={!editable || busy}
-                onClick={() => {
-                  if (!order) return
-                  sessionStorage.setItem(
-                    'sales-pick-' + order.id + '-' + order.version,
-                    JSON.stringify(
-                      lines.map((l) => ({
-                        productId: l.productId,
-                        picked: l.picked,
-                        short: l.short,
-                        shortReason: l.shortReason,
-                      })),
-                    ),
-                  )
-                  setSaved('Đã lưu tạm trên trình duyệt này. Chưa gửi số nhặt.')
-                }}
-              >
-                Lưu tạm trên máy
-              </button>
-              <button
-                disabled={!editable || busy}
-                onClick={() => {
-                  if (!order) return
-                  try {
-                    const data = JSON.parse(
-                      sessionStorage.getItem(
-                        'sales-pick-' + order.id + '-' + order.version,
-                      ) ?? 'null',
-                    )
-                    if (Array.isArray(data)) {
-                      setLines((previous) =>
-                        previous.map((l) => {
-                          const draft = data.find(
-                            (d) => d.productId === l.productId,
-                          )
-                          return draft
-                            ? {
-                                ...l,
-                                picked: draft.picked,
-                                short: draft.short,
-                                shortReason: draft.shortReason,
-                              }
-                            : l
-                        }),
-                      )
-                      setSaved('Đã khôi phục bản nháp trên máy.')
-                    }
-                  } catch {
-                    setError('Không đọc được bản nháp.')
-                  }
-                }}
-              >
-                Khôi phục bản nháp
-              </button>
-            </details>
             <button
               disabled={
                 !editable ||
@@ -1475,9 +1389,6 @@ export function RecordPickedView({
                         shortReason: l.shortReason?.trim() || null,
                       })),
                     },
-                  )
-                  sessionStorage.removeItem(
-                    'sales-pick-' + order.id + '-' + order.version,
                   )
                   navigate('/sales-orders/' + order.id, { replace: true })
                 } catch (error) {
@@ -1554,14 +1465,7 @@ export function UnmetDemandPage() {
     !(p.get('from') && p.get('to') && p.get('from')! > p.get('to')!),
   )
   return (
-    <Shell
-      title="Đơn chưa đáp ứng đủ"
-      breadcrumb={
-        <>
-          <Link to="/sales-orders">Đơn bán</Link> › Đơn chưa đáp ứng đủ
-        </>
-      }
-    >
+    <Shell>
       <div
         className={'sales-unmet' + (scope.owner ? ' sales-unmet-owner' : '')}
       >

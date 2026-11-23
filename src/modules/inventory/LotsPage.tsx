@@ -4,7 +4,6 @@ import SearchableFilter from '../../shared/ui/SearchableFilter'
 import Hint from '../../shared/ui/Hint'
 import { useInventoryData, useInventoryScope } from './api'
 import {
-  InventoryHeader,
   InventoryNotice,
   InventoryPanel,
   Pagination,
@@ -105,7 +104,6 @@ export default function LotsPage() {
   ]
   return (
     <main className="inventory-workspace inventory-screen inventory-lots-screen">
-      <InventoryHeader title="Lô hàng" />
       {/* Góp ý cô Hoài: nói rõ lô chỉ phục vụ tính giá vốn. */}
       <Hint>
         Lô dùng để tính giá vốn và theo dõi hạn dùng. Khi xuất, hệ thống trừ lô

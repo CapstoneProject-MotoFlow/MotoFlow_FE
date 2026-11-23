@@ -8,7 +8,6 @@ import Icon from '../../shared/ui/Icon'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { useInventoryData, useInventoryScope } from './api'
 import {
-  InventoryHeader,
   InventoryNotice,
   InventoryPanel,
   Pagination,
@@ -391,7 +390,6 @@ export default function InventoryPage() {
         value={filters.q}
         onChange={(value) => scope.filter({ q: value }, true)}
       />
-      <InventoryHeader title="Tồn kho" />
       <section className="stock-summary-card" aria-label="Tổng quan tồn kho">
         {scope.owner && (
           <nav className="stock-value-tiles" aria-label="Giá trị tồn theo kho">

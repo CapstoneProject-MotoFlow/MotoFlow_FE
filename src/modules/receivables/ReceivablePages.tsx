@@ -61,7 +61,6 @@ export function ReceivableListPage() {
     <main className="dashboard-content rv-page rv-list-page">
       <PageHeader
         title="Công nợ khách hàng"
-        breadcrumb={[{ label: 'Công nợ' }, { label: 'Công nợ khách hàng' }]}
         actions={
           scope.owner && (
             <button

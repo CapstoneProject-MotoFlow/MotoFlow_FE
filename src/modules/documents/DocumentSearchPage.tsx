@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useInventoryData, useInventoryScope } from '../inventory/api'
 import type { Page } from '../inventory/types'
-import PageHeader from '../../shared/ui/PageHeader'
 import { useSearchBox } from '../../shared/hooks/useSearchBox'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { Card, Pager, Result, Status, Table } from './DocumentUi'
@@ -52,10 +51,6 @@ export default function DocumentSearchPage() {
   )
   return (
     <div className="docs-page">
-      <PageHeader
-        title="Tra cứu chứng từ"
-        breadcrumb={[{ label: 'Chứng từ' }, { label: 'Tra cứu chứng từ' }]}
-      />
       <Card title={owner ? 'Chứng từ của chuỗi' : 'Chứng từ · ' + warehouse}>
         <div className="docs-filters">
           <label className="docs-search">
