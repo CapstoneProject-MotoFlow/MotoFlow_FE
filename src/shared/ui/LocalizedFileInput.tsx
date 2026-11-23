@@ -40,6 +40,17 @@ export default function LocalizedFileInput({
   const input = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<File[]>([])
   const [viewing, setViewing] = useState<number>()
+  // Review #72 (72-3): form.reset() xóa ô input nhưng không xóa state; nghe sự kiện reset của form để bỏ danh sách.
+  useEffect(() => {
+    const form = input.current?.form
+    if (!form) return
+    const clear = () => {
+      setViewing(undefined)
+      setFiles([])
+    }
+    form.addEventListener('reset', clear)
+    return () => form.removeEventListener('reset', clear)
+  }, [])
   const previews = useMemo(
     () =>
       files.map((file) => ({

@@ -1258,6 +1258,8 @@ export function SalesOrderFormView({
                 onClick={() => {
                   setType(value)
                   setDiscount('0')
+                  // Review #72 (72-4): đổi loại giá thì tắt Đặt trước, không tự bật lại khi quay về bán buôn.
+                  if (value !== type) setPreorder(false)
                 }}
               >
                 {value === 'RETAIL' ? 'Bán lẻ' : 'Bán buôn'}
