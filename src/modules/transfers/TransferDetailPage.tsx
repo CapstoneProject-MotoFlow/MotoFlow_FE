@@ -20,6 +20,8 @@ import './transfers.css'
 import { canConfirmExcess, receiptAcceptsResult } from './transferRules'
 import { useReturnQuantities } from './useReturnQuantities'
 import { resolutionNames } from './types'
+import TransferWrongItemSection from './TransferWrongItemSection'
+import ReceiverMiscountAction from './ReceiverMiscountAction'
 import ReceivingAssignment from '../operations/ReceivingAssignment'
 import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingCreatePath } from '../operations/receivingTaskModel'
@@ -53,8 +55,73 @@ type Closing = {
     /** BE #98 */
     damagedQty?: number
     pendingExcessQty?: number
+    /** PM 23/11: khi đóng, cộng lại kho gửi (không giao bù), tính là mất, hàng thừa tự chấp nhận. */
+    toSourceQty?: number
+    toLossQty?: number
+    excessToAcceptQty?: number
+    wrongItemQty?: number
+    wrongPendingQty?: number
+    wrongAwaitingOwnerQty?: number
+    receiverMiscounted?: boolean
   }[]
 }
+/** Lý do đóng phiếu bị chặn (blockedBy của closing-preview). */
+const closeBlockers: Record<string, string> = {
+  MSG221: 'Còn số lượng chưa có kết quả cuối',
+  MSG222: 'Chưa xác nhận hàng thừa',
+  MSG223: 'Kho nguồn không đủ tồn cho phần thừa',
+  MSG225: 'Còn phiếu nhận hoặc trả chưa xác nhận',
+  MSG336: 'Kho nhận chưa xác nhận xử lý sai lệch',
+  MSG337: 'Số hàng đi đường không khớp kết quả đối soát',
+  MSG339:
+    'Kho gửi không đủ tồn khả dụng cho hàng thừa sẽ chấp nhận (không tính hàng đang giữ cho đơn bán)',
+  MSG340: 'Còn yêu cầu trả hàng hoặc điều chỉnh đang xử lý',
+  MSG348: 'Còn hàng nhận sau chưa tới',
+  MSG341: 'Kho gửi không có lô cùng hạn sử dụng cho hàng thừa sẽ chấp nhận',
+  MSG342:
+    'Còn hàng giao sai chưa xử lý: lập phiếu nhận hàng giao sai và chờ Owner xác nhận',
+}
+type TransferEvent = Transfer['discrepancies'][number]['events'][number]
+
+/** Tên bước xử lý; Nhận sau chưa tới là sự kiện LATE_DELIVERY_RECEIVED chưa xác nhận. */
+function eventName(event: TransferEvent) {
+  if (event.resolutionType === 'LATE_DELIVERY_RECEIVED' && !event.confirmedAt)
+    return 'Nhận sau (chờ hàng)'
+  if (event.resolutionType === 'NO_REPLACEMENT')
+    return event.confirmedAt
+      ? 'Không cần giao bù, đã trả lại kho gửi'
+      : 'Không cần giao bù'
+  if (event.resolutionType === 'RECEIVED_AS_OTHER_PRODUCT')
+    return (
+      'Phiếu nhận hàng giao sai: ' +
+      (event.receivedSku ?? 'phụ tùng khác') +
+      (event.status === 'CONFIRMED'
+        ? ' · Owner đã xác nhận'
+        : event.status === 'CANCELLED'
+          ? ' · Đã hủy'
+          : ' · Chờ Owner xác nhận')
+    )
+  return resolutionNames[event.resolutionType] ?? 'Bước xử lý khác'
+}
+
+function miscountEvent(order: Transfer, productId: number) {
+  return order.discrepancies
+    .filter((item) => item.productId === productId)
+    .flatMap((item) => item.events)
+    .find((event) => event.resolutionType === 'RECEIVER_MISCOUNT')
+}
+
+/** Tổng một cột của closing-preview, kèm danh sách SKU có số. */
+function closingSummary(
+  data: Closing,
+  key: 'toSourceQty' | 'toLossQty' | 'excessToAcceptQty',
+) {
+  const rows = data.lines.filter((line) => (line[key] ?? 0) > 0)
+  return rows.length
+    ? rows.map((line) => line.sku + ' x' + line[key]).join(', ')
+    : 'Không có'
+}
+
 export default function TransferDetailPage() {
   const { id } = useParams(),
     scope = useInventoryScope(),
@@ -104,9 +171,10 @@ export default function TransferDetailPage() {
     awaitingArrival =
       moving &&
       !pendingReceipt &&
-      // Staff không thấy số chưa xử lý (null): để BE quyết định còn nhận được không.
+      // Staff không thấy số chưa xử lý (null): để BE quyết định còn nhận được không. PM 23/11: phần thiếu (kể cả
+      // Nhận sau) còn đi đường thì còn chờ hàng; hàng giao sai không đến muộn được.
       !!d?.lines.some(
-        (line) => line.unresolvedQty == null || line.unresolvedQty > 0,
+        (line) => line.unresolvedQty == null || (line.shortageQty ?? 0) > 0,
       ),
     // Nhân viên đang giữ việc nhận hàng của lệnh này thì lập phiếu nhận ngay từ trang chi tiết.
     staffReceiving = useReceivingTasks(
@@ -135,13 +203,17 @@ export default function TransferDetailPage() {
     !!d &&
     d.status === 'RECONCILING' &&
     !d.discrepancyAcknowledgedAt &&
-    // Review #73 (73-1): cùng điều kiện MSG336 của BE, kể cả lệnh chỉ có hàng giao sai.
-    (d.lines.some(
-      (line) => (line.damagedQty ?? 0) > 0 || (line.unresolvedQty ?? 0) > 0,
-    ) ||
-      d.discrepancies.some((item) => (item.wrongItemQty ?? 0) > 0))
+    // Cùng điều kiện MSG336 của BE (PM 23/11, B-6): còn thiếu, hỏng hoặc giao sai.
+    d.lines.some(
+      (line) =>
+        (line.shortageQty ?? 0) > 0 ||
+        (line.damagedQty ?? 0) > 0 ||
+        (line.wrongItemQty ?? 0) > 0,
+    )
   // Review #73 (73-2): còn phiếu nhận chưa xác nhận thì BE từ chối (MSG29), nên chưa hiện nút.
   const canAcknowledge = needsAcknowledgement && !pendingReceipt
+  // PM 23/11 (B-5): chỉ Owner, khi lệnh đang đối soát, sửa dòng theo "Bên nhận kiểm sai".
+  const miscountAllowed = !!scope.owner && d?.status === 'RECONCILING'
   // Sau khi kho nhận xác nhận, BE chỉ cho Owner đóng phiếu.
   const ownerOnlyClose =
     !!d?.discrepancyAcknowledgedAt && scope.user?.role !== 'OWNER'
@@ -232,7 +304,7 @@ export default function TransferDetailPage() {
           !actions.some((act) => act.primary) &&
           !(
             coordinationInHead &&
-            ((coordinator && unresolvedLines.length > 0) ||
+            ((!!(dest || scope.owner) && unresolvedLines.length > 0) ||
               (source && !!returns.data?.length))
           ),
       }
@@ -294,7 +366,8 @@ export default function TransferDetailPage() {
               {coordinationInHead && (
                 <CoordinationAction
                   inHead
-                  canDecide={coordinator}
+                  // PM 23/11: BM kho nhận (hoặc Owner) chọn Nhận sau / Không cần giao bù.
+                  canDecide={dest || scope.owner}
                   canReturn={source && !!returns.data?.length}
                   returnLines={returns.data ?? []}
                   id={d.id}
@@ -379,32 +452,57 @@ export default function TransferDetailPage() {
                     <th>Kế hoạch</th>
                     <th>Đã soạn</th>
                     <th>Đã xuất</th>
-                    <th>Đã nhận</th>
+                    <th>Đạt</th>
                     <th>Hỏng</th>
+                    <th>Giao sai</th>
                     <th>Thiếu</th>
-                    <th>Đã trả</th>
+                    <th>Không giao bù</th>
                     <th>Mất</th>
-                    <th>Chưa xử lý</th>
+                    <th>Chờ quyết</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {d.lines.map((l) => (
-                    <tr key={l.productId}>
-                      <td>
-                        {l.sku}
-                        <small>{l.partName}</small>
-                      </td>
-                      <td>{l.plannedQty}</td>
-                      <td>{l.preparedQty ?? 'Chưa ghi'}</td>
-                      <td>{l.dispatchedQty ?? 'Chưa xuất'}</td>
-                      <td>{l.receivedQty ?? '—'}</td>
-                      <td>{l.damagedQty ?? '—'}</td>
-                      <td>{l.shortageQty ?? '—'}</td>
-                      <td>{l.returnedQty ?? '—'}</td>
-                      <td>{l.lossQty ?? '—'}</td>
-                      <td>{l.unresolvedQty ?? '—'}</td>
-                    </tr>
-                  ))}
+                  {d.lines.map((l) => {
+                    const miscount = l.receiverMiscounted
+                      ? miscountEvent(d, l.productId)
+                      : undefined
+                    return (
+                      <tr key={l.productId}>
+                        <td>
+                          {l.sku}
+                          <small>{l.partName}</small>
+                          {l.receiverMiscounted && (
+                            <small className="tf-line-flag">
+                              Owner sửa: bên nhận kiểm sai
+                              {miscount?.reason ? ' · ' + miscount.reason : ''}
+                            </small>
+                          )}
+                        </td>
+                        <td>{l.plannedQty}</td>
+                        <td>{l.preparedQty ?? 'Chưa ghi'}</td>
+                        <td>{l.dispatchedQty ?? 'Chưa xuất'}</td>
+                        <td>{l.receivedQty ?? '—'}</td>
+                        <td>{l.damagedQty ?? '—'}</td>
+                        <td>
+                          {l.wrongItemQty ?? '—'}
+                          {(l.wrongAwaitingOwnerQty ?? 0) > 0 && (
+                            <small>
+                              {l.wrongAwaitingOwnerQty} chờ Owner xác nhận
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          {l.shortageQty ?? '—'}
+                          {(l.latePendingQty ?? 0) > 0 && (
+                            <small>{l.latePendingQty} nhận sau</small>
+                          )}
+                        </td>
+                        <td>{l.noReplacementQty ?? '—'}</td>
+                        <td>{l.lossQty ?? '—'}</td>
+                        <td>{l.unresolvedQty ?? '—'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -548,11 +646,19 @@ export default function TransferDetailPage() {
               )}
             </ol>
           </section>
-          {d.status === 'RECONCILING' && !coordinator && (
+          {d.status === 'RECONCILING' && !coordinator && !dest && (
             <p className="tf-note" role="status">
-              Chủ cửa hàng đang xử lý phần thiếu.
+              Kho nhận và Owner đang xử lý sai lệch.
             </p>
           )}
+          {dest &&
+            d.status === 'RECONCILING' &&
+            unresolvedLines.length > 0 && (
+              <p className="tf-note" role="status">
+                Phần thiếu chưa chọn Nhận sau hoặc Không cần giao bù sẽ tính là
+                mất khi Owner đóng phiếu.
+              </p>
+            )}
           {d.discrepancies.length > 0 && (
             <section>
               <h2>Sai lệch</h2>
@@ -566,13 +672,14 @@ export default function TransferDetailPage() {
                     <tr>
                       <th>Phụ tùng</th>
                       <th>Đã xuất</th>
-                      <th>Đã nhận</th>
+                      <th>Đạt</th>
                       <th>Thiếu</th>
+                      <th>Giao sai</th>
                       <th>Thừa</th>
-                      <th>Đã xử lý</th>
-                      <th>Còn lại</th>
+                      <th>Chờ quyết</th>
                       <th>Trạng thái</th>
                       <th>Chi tiết</th>
+                      {miscountAllowed && <th>Owner</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -580,19 +687,15 @@ export default function TransferDetailPage() {
                       const line = d.lines.find(
                         (item) => item.productId === c.productId,
                       )
-                      const resolved = c.events.reduce(
-                        (total, event) => total + event.quantity,
-                        0,
-                      )
                       return (
                         <tr key={c.id}>
                           <td>{line?.sku ?? '—'} · {line?.partName ?? 'Phụ tùng'}</td>
                           <td>{line?.dispatchedQty ?? '—'}</td>
                           <td>{line?.receivedQty ?? '—'}</td>
-                          <td>{c.shortQty}</td>
+                          <td>{line?.shortageQty ?? c.shortQty}</td>
+                          <td>{line?.wrongItemQty ?? c.wrongItemQty ?? 0}</td>
                           <td>{line?.extraReceivedQty ?? '—'}</td>
-                          <td>{resolved}</td>
-                          <td><strong>{Math.max(0, c.shortQty - resolved)}</strong></td>
+                          <td><strong>{line?.unresolvedQty ?? '—'}</strong></td>
                           <td>{states[c.status] ?? c.status}</td>
                           <td>
                             {c.events.length ? (
@@ -601,15 +704,33 @@ export default function TransferDetailPage() {
                                 <ul>
                                   {c.events.map((event) => (
                                     <li key={event.id}>
-                                      {resolutionNames[event.resolutionType] ?? 'Bước xử lý khác'}
+                                      {eventName(event)}
                                       {' · '}{event.quantity}
                                       {event.reason ? ' · ' + event.reason : ''}
+                                      {event.recordedBy ? ' · ' + event.recordedBy.fullName : ''}
                                     </li>
                                   ))}
                                 </ul>
                               </details>
                             ) : '—'}
                           </td>
+                          {miscountAllowed && (
+                            <td>
+                              {c.status === 'OPEN' && line && !line.receiverMiscounted ? (
+                                <ReceiverMiscountAction
+                                  orderId={d.id}
+                                  caseId={c.id}
+                                  line={line}
+                                  onSaved={(message) => {
+                                    setSuccess(message)
+                                    setRevision((n) => n + 1)
+                                  }}
+                                />
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                          )}
                         </tr>
                       )
                     })}
@@ -618,6 +739,14 @@ export default function TransferDetailPage() {
               </div>
             </section>
           )}
+          <TransferWrongItemSection
+            order={d}
+            canRecord={d.status === 'RECONCILING' && (dest || scope.owner)}
+            onDone={(message) => {
+              setSuccess(message)
+              setRevision((n) => n + 1)
+            }}
+          />
           {action && (
             <TransferAction
               title={
@@ -723,23 +852,27 @@ export default function TransferDetailPage() {
                     ? 'Mọi số lượng đã có kết quả cuối. Xác nhận đóng phiếu?'
                     : 'Chưa thể đóng: ' +
                       closing.data.blockedBy
-                        .map(
-                          (code) =>
-                            (
-                              ({
-                                MSG221: 'Còn số lượng chưa có kết quả cuối',
-                                MSG222: 'Chưa xác nhận hàng thừa',
-                                MSG223: 'Kho nguồn không đủ tồn cho phần thừa',
-                                MSG225: 'Còn phiếu nhận hoặc trả chưa xác nhận',
-                                MSG336: 'Kho nhận chưa xác nhận xử lý sai lệch',
-                                MSG337: 'Số hàng đi đường không khớp kết quả đối soát',
-                                MSG338: 'Còn hàng thừa chưa duyệt',
-                                MSG340: 'Còn yêu cầu trả hàng hoặc điều chỉnh đang xử lý',
-                              }) as Record<string, string>
-                            )[code] ?? code,
-                        )
+                        .map((code) => closeBlockers[code] ?? code)
                         .join('; ')}
                 </p>
+              )}
+              {action === 'close' && closing.data && (
+                <ul className="tf-close-summary">
+                  <li>
+                    Cộng lại kho gửi (không cần giao bù):{' '}
+                    <strong>{closingSummary(closing.data, 'toSourceQty')}</strong>
+                  </li>
+                  <li>
+                    Tính là mất:{' '}
+                    <strong>{closingSummary(closing.data, 'toLossQty')}</strong>
+                  </li>
+                  <li>
+                    Hàng thừa sẽ chấp nhận:{' '}
+                    <strong>
+                      {closingSummary(closing.data, 'excessToAcceptQty')}
+                    </strong>
+                  </li>
+                </ul>
               )}
               {action === 'close' && closing.data && (
                 <div className="tf-table">
@@ -749,14 +882,12 @@ export default function TransferDetailPage() {
                         {[
                           'Phụ tùng',
                           'Đã xuất',
-                          'Đã nhận',
+                          'Đạt',
                           'Hỏng',
-                          'Đã trả',
-                          'Mất',
-                          'Chưa xử lý',
-                          'Thừa nhận',
-                          'Thừa xuất',
-                          'Thừa chờ duyệt',
+                          'Giao sai',
+                          'Không giao bù',
+                          'Tính là mất',
+                          'Thừa sẽ chấp nhận',
                           'Tồn nguồn',
                         ].map((h) => (
                           <th key={h}>{h}</th>
@@ -771,12 +902,10 @@ export default function TransferDetailPage() {
                             l.dispatchedQty,
                             l.receivedQty,
                             l.damagedQty ?? 0,
-                            l.returnedQty,
-                            l.lossQty,
-                            l.unresolvedQty,
-                            l.extraReceivedQty,
-                            l.extraDispatchedQty,
-                            l.pendingExcessQty ?? 0,
+                            l.wrongItemQty ?? 0,
+                            l.toSourceQty ?? 0,
+                            l.toLossQty ?? 0,
+                            l.excessToAcceptQty ?? 0,
                             l.sourceSellableQty,
                           ].map((v, i) => (
                             <td key={i}>{v}</td>
@@ -798,9 +927,16 @@ export default function TransferDetailPage() {
           message={
             'Xác nhận kho ' +
             d.destStoreName +
-            ' đã xử lý xong phần hàng hỏng/thiếu của lệnh ' +
+            ' đã xử lý xong phần hàng hỏng/thiếu/giao sai của lệnh ' +
             documentCode('DC', d.id) +
-            ': kho nhận chỉ giữ số hàng đạt, lệnh vẫn ở trạng thái đối soát và Owner được báo để đóng phiếu.'
+            ': kho nhận chỉ giữ số hàng đạt, lệnh vẫn ở trạng thái đối soát và Owner được báo để đóng phiếu.' +
+            (unresolvedLines.length
+              ? ' Phần thiếu chưa chọn Nhận sau hoặc Không cần giao bù sẽ tính là mất khi Owner đóng phiếu: ' +
+                unresolvedLines
+                  .map((line) => line.sku + ' x' + line.quantity)
+                  .join(', ') +
+                '.'
+              : '')
           }
           onCancel={() => setAcknowledging(false)}
           onConfirm={async () => {

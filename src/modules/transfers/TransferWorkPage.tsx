@@ -334,11 +334,13 @@ function WorkEditor({
         : order?.destStoreId) &&
     receipt.status === 'AWAITING_CONFIRMATION'
   const isReturnReceipt = receipt?.receiptType === 'RETURN_TO_SOURCE'
+  // PM 23/11 (plan bản 2): chỉ đạt + hỏng là hàng của phụ tùng này, khớp BE; giao sai là phụ tùng khác nên không
+  // trừ vào thiếu, không cộng vào thừa và không bị giới hạn bởi số trên phiếu.
   const receivedQty = (productId: number) => {
-    const { qty, wrong, damaged } = values[productId]
-    return qty + wrong + damaged
+    const { qty, damaged } = values[productId]
+    return qty + damaged
   }
-  // Kế hoạch 14/11 việc 11: Thiếu = Đã xuất − Đạt − Giao sai − Hư hỏng (tối thiểu 0), Thừa = phần vượt.
+  // Thiếu = Đã xuất − Đạt − Hư hỏng (tối thiểu 0), Thừa = Đạt + Hư hỏng − số trên phiếu.
   type ReceiptLine = Receipt['lines'][number]
   const deliveredOf = (l: ReceiptLine) =>
     canRecord ? receivedQty(l.productId) : l.deliveredQty
@@ -839,7 +841,7 @@ function WorkEditor({
                             'documentQty' in l &&
                             receivedQty(l.productId) > l.documentQty && (
                               <small className="tf-validation-hint">
-                                Đạt, giao sai và hư hỏng không được vượt số trên phiếu.
+                                Đạt và hư hỏng không được vượt số trên phiếu.
                               </small>
                             )}
                         </td>

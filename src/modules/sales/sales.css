@@ -1114,24 +1114,11 @@
 .sales-split-total strong {
   font-variant-numeric: tabular-nums;
 }
-.sales-split-fill {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.sales-split-fill button {
-  padding: 5px 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
-  background: #fff;
-  color: #465fff;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.sales-split-fill button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.sales-split-heading {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #344054;
 }
 @media (max-width: 560px) {
   .sales-split-parts {
@@ -2015,6 +2002,11 @@
   color: var(--mf-primary);
   font-size: 12px;
   cursor: pointer;
+}
+.sales-settle-note {
+  margin: 0 0 12px;
+  color: var(--mf-muted);
+  font-size: 13px;
 }
 .sales-settle-choice {
   display: flex;

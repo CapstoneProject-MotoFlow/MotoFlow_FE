@@ -6,9 +6,12 @@ import { inventoryError } from '../inventory/api'
 import { today, money } from '../inventory/presentation'
 import { discountedPrice, salesTotal, type SalesOrder } from './salesModel'
 import {
+  creditPrepaymentBody,
+  creditPrepaymentFigures,
+  fullPaymentFigures,
+  fullPaymentState,
   splitPaymentBody,
   splitPaymentErrorField,
-  splitPaymentFigures,
   type SplitPaymentField,
 } from './splitPayment'
 import { paymentMethodLabels } from '../../shared/labels/status'
@@ -52,8 +55,11 @@ export default function SalesSettlementDialog({
     ),
     [verified, setVerified] = useState(false),
     [agreed, setAgreed] = useState(false)
-  // Thu tiền: người bán tự gõ từng khoản (ban đầu để trống); khách đưa trống nghĩa là bằng tiền mặt.
+  // Góp ý 23/11: Thanh toán luôn thu đủ, tiền mặt thu = payableNow − chuyển khoản; khách đưa trống nghĩa là bằng
+  // tiền mặt. Ghi nợ có thể kèm trả trước (3b), người bán gõ tiền mặt và chuyển khoản trả trước.
   const payable = order.payableNow ?? 0
+  const remaining = order.remainingPayable ?? 0
+  const splitMode = action === 'payment' || action === 'credit'
   const [paymentText, setPaymentText] = useState({
       cashText: '',
       tenderedText: '',
@@ -69,7 +75,11 @@ export default function SalesSettlementDialog({
       message: string
     } | null>(null)
   const paymentState = { ...paymentText, reference }
-  const figures = splitPaymentFigures(paymentState, payable)
+  const prepayment = creditPrepaymentFigures(paymentState, remaining)
+  const figures =
+    action === 'credit'
+      ? prepayment
+      : fullPaymentFigures(paymentState, payable)
   const { cash, transfer } = figures
   // Lỗi BE gắn vào ô được ưu tiên; lỗi tự kiểm chỉ hiện sau khi bấm Ghi hoặc sau khi sửa ô đó.
   const fieldError = (field: SplitPaymentField) =>
@@ -135,13 +145,116 @@ export default function SalesSettlementDialog({
   const shortLines = order.lines.filter(
     (l) => Number(delivered[l.productId]) < l.requested,
   )
+  // Khung tiền mặt + chuyển khoản, dùng cho Thanh toán (tiền mặt tự tính) và phần trả trước của Ghi nợ (tự gõ).
+  const splitParts = (
+    <div className="sales-split-parts">
+      <fieldset className="sales-split-part">
+        <legend>Tiền mặt</legend>
+        {action === 'credit' ? (
+          <label>
+            Số tiền
+            <div className="sales-payment-amount">
+              <input
+                inputMode="numeric"
+                aria-label="Số tiền mặt trả trước"
+                value={formatSplitInput(paymentText.cashText)}
+                onChange={(e) => {
+                  const value = digitsOnly(e.target.value)
+                  setPaymentText((p) => ({
+                    ...p,
+                    cashText: value,
+                    tenderedText:
+                      Number(value || 0) === 0 ? '' : p.tenderedText,
+                  }))
+                  touch('cash', 'total')
+                  setServerError(null)
+                }}
+              />
+              <span>đ</span>
+            </div>
+            <FieldError message={fieldError('cash')} />
+          </label>
+        ) : (
+          <p className="sales-split-change">
+            <span>Tiền mặt thu</span>
+            <strong>{money.format(cash)}</strong>
+          </p>
+        )}
+        {cash > 0 && (
+          <label>
+            Khách đưa
+            <div className="sales-payment-amount">
+              <input
+                inputMode="numeric"
+                aria-label="Số tiền khách đưa"
+                placeholder={formatSplitInput(String(cash))}
+                value={formatSplitInput(paymentText.tenderedText)}
+                onChange={(e) => {
+                  const value = digitsOnly(e.target.value)
+                  setPaymentText((p) => ({ ...p, tenderedText: value }))
+                  touch('tendered')
+                  setServerError(null)
+                }}
+              />
+              <span>đ</span>
+            </div>
+            <FieldError message={fieldError('tendered')} />
+          </label>
+        )}
+        {cash > 0 && (
+          <p className="sales-split-change">
+            <span>Tiền thối</span>
+            <strong>{money.format(figures.check.change)}</strong>
+          </p>
+        )}
+      </fieldset>
+      <fieldset className="sales-split-part">
+        <legend>Chuyển khoản</legend>
+        <label>
+          Số tiền
+          <div className="sales-payment-amount">
+            <input
+              inputMode="numeric"
+              aria-label="Số tiền chuyển khoản"
+              placeholder="0"
+              value={formatSplitInput(paymentText.transferText)}
+              onChange={(e) => {
+                const value = digitsOnly(e.target.value)
+                setPaymentText((p) => ({ ...p, transferText: value }))
+                touch('transfer', 'total')
+                setServerError(null)
+              }}
+            />
+            <span>đ</span>
+          </div>
+          <FieldError message={fieldError('transfer')} />
+        </label>
+        <label>
+          Mã giao dịch{' '}
+          {transfer > 0 && <span className="sales-required">*</span>}
+          <input
+            required={transfer > 0}
+            name="reference"
+            maxLength={100}
+            value={reference}
+            onChange={(e) => {
+              setReference(e.target.value)
+              touch('reference')
+              setServerError(null)
+            }}
+          />
+          <FieldError message={fieldError('reference')} />
+        </label>
+      </fieldset>
+    </div>
+  )
   return (
     <FormDialog
       className={
         'sales-transaction-dialog' +
         (action === 'confirm'
           ? ' sales-confirm-dialog'
-          : action === 'payment'
+          : action === 'payment' || action === 'credit'
             ? ' sales-payment-dialog'
             : '')
       }
@@ -170,7 +283,7 @@ export default function SalesSettlementDialog({
         onInput={validation.onInput}
         onSubmit={async (e) => {
           e.preventDefault()
-          if (action === 'payment') {
+          if (splitMode) {
             setAttempted(true)
             if (!figures.check.valid) return
           }
@@ -212,7 +325,10 @@ export default function SalesSettlementDialog({
             }
           } else if (action === 'payment') {
             path = 'payments/split'
-            body = splitPaymentBody(paymentState, payable)
+            body = splitPaymentBody(
+              fullPaymentState(paymentState, payable),
+              payable,
+            )
           } else if (action === 'refund') {
             const value = Number(amount),
               limit = order.refundable
@@ -245,7 +361,7 @@ export default function SalesSettlementDialog({
             }
             body = {
               version: order.version,
-              creditAmount: order.remainingPayable,
+              ...creditPrepaymentBody(paymentState, remaining),
               dueDate: text('dueDate'),
               customerAgreed: agreed,
             }
@@ -293,7 +409,7 @@ export default function SalesSettlementDialog({
             onClose(action === 'confirm' ? 'payment' : undefined)
           } catch (error) {
             const field =
-              action === 'payment' && isAxiosError(error)
+              splitMode && isAxiosError(error)
                 ? splitPaymentErrorField(error.response?.data ?? {})
                 : null
             if (field) setServerError({ field, message: inventoryError(error) })
@@ -304,9 +420,13 @@ export default function SalesSettlementDialog({
           }
         }}
       >
-        {(action === 'payment' || action === 'credit') && (
+        {(order.actions?.canRecordCredit || action === 'credit') && (
           // BH3 (GVHD 20/11): xác nhận xong mở thẳng hộp này; đầu hộp chọn Thanh toán hoặc Ghi nợ.
-          <div className="sales-settle-choice" role="group" aria-label="Cách khách trả">
+          <div
+            className="sales-settle-choice"
+            role="group"
+            aria-label="Cách khách trả"
+          >
             <button
               type="button"
               aria-pressed={action === 'payment'}
@@ -315,24 +435,24 @@ export default function SalesSettlementDialog({
             >
               Thanh toán
             </button>
-            {order.actions?.canRecordCredit || action === 'credit' ? (
-              <button
-                type="button"
-                aria-pressed={action === 'credit'}
-                disabled={busy}
-                onClick={() => action !== 'credit' && onCredit?.()}
-              >
-                Ghi nợ {money.format(order.remainingPayable ?? 0)}
-              </button>
-            ) : (
-              <small>
-                {order.customerId
-                  ? 'Không thể ghi nợ: khách hàng hiện chưa đủ điều kiện mua chịu.'
-                  : 'Không thể ghi nợ: khách lẻ không được mua chịu.'}
-              </small>
-            )}
+            <button
+              type="button"
+              aria-pressed={action === 'credit'}
+              disabled={busy}
+              onClick={() => action !== 'credit' && onCredit?.()}
+            >
+              Ghi nợ {money.format(remaining)}
+            </button>
           </div>
         )}
+        {action === 'payment' &&
+          !order.actions?.canRecordCredit &&
+          order.customerId && (
+            // Góp ý 23/11: không ghi nợ được thì bỏ cả thanh chọn; khách lẻ không hiện gì.
+            <p className="sales-settle-note">
+              Khách hàng này không đủ điều kiện mua chịu
+            </p>
+          )}
         {error && (
           <div role="alert" className="stock-error">
             {error}
@@ -520,136 +640,13 @@ export default function SalesSettlementDialog({
                 <dd>{money.format(order.remainingPayable ?? 0)}</dd>
               </div>
             </dl>
-            <div className="sales-split-parts">
-              <fieldset className="sales-split-part">
-                <legend>Tiền mặt</legend>
-                <label>
-                  Số tiền thu
-                  <div className="sales-payment-amount">
-                    <input
-                      inputMode="numeric"
-                      aria-label="Số tiền mặt thu"
-                      value={formatSplitInput(paymentText.cashText)}
-                      onChange={(e) => {
-                        const value = digitsOnly(e.target.value)
-                        setPaymentText((p) => ({
-                          ...p,
-                          cashText: value,
-                          // Tiền mặt về 0 thì khách đưa không còn ý nghĩa: xóa để không để lại số cũ.
-                          tenderedText:
-                            Number(value || 0) === 0 ? '' : p.tenderedText,
-                        }))
-                        touch('cash', 'total')
-                        setServerError(null)
-                      }}
-                    />
-                    <span>đ</span>
-                  </div>
-                  <FieldError message={fieldError('cash')} />
-                </label>
-                <label>
-                  Khách đưa
-                  <div className="sales-payment-amount">
-                    <input
-                      inputMode="numeric"
-                      aria-label="Số tiền khách đưa"
-                      disabled={cash === 0}
-                      placeholder={formatSplitInput(paymentText.cashText)}
-                      value={formatSplitInput(paymentText.tenderedText)}
-                      onChange={(e) => {
-                        const value = digitsOnly(e.target.value)
-                        setPaymentText((p) => ({ ...p, tenderedText: value }))
-                        touch('tendered')
-                        setServerError(null)
-                      }}
-                    />
-                    <span>đ</span>
-                  </div>
-                  <FieldError message={fieldError('tendered')} />
-                </label>
-                <p className="sales-split-change">
-                  <span>Tiền thối</span>
-                  <strong>{money.format(figures.check.change)}</strong>
-                </p>
-              </fieldset>
-              <fieldset className="sales-split-part">
-                <legend>Chuyển khoản</legend>
-                <label>
-                  Số tiền
-                  <div className="sales-payment-amount">
-                    <input
-                      inputMode="numeric"
-                      aria-label="Số tiền chuyển khoản"
-                      value={formatSplitInput(paymentText.transferText)}
-                      onChange={(e) => {
-                        const value = digitsOnly(e.target.value)
-                        setPaymentText((p) => ({ ...p, transferText: value }))
-                        touch('transfer', 'total')
-                        setServerError(null)
-                      }}
-                    />
-                    <span>đ</span>
-                  </div>
-                  <FieldError message={fieldError('transfer')} />
-                </label>
-                <label>
-                  Mã giao dịch{' '}
-                  {transfer > 0 && <span className="sales-required">*</span>}
-                  <input
-                    required={transfer > 0}
-                    name="reference"
-                    maxLength={100}
-                    value={reference}
-                    onChange={(e) => {
-                      setReference(e.target.value)
-                      touch('reference')
-                      setServerError(null)
-                    }}
-                  />
-                  <FieldError message={fieldError('reference')} />
-                </label>
-              </fieldset>
-            </div>
+            {splitParts}
             <div className="sales-split-total" aria-live="polite">
               <p>
                 Tổng thu: <strong>{money.format(figures.check.total)}</strong> /
                 còn phải thu <strong>{money.format(payable)}</strong>
               </p>
               <FieldError message={fieldError('total')} />
-              {payable > 0 && (
-                <div className="sales-split-fill">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      // Điền tiền mặt thì khách đưa về trống, để tiền thối tính lại từ tiền mặt mới.
-                      setPaymentText((p) => ({
-                        ...p,
-                        cashText: String(Math.max(0, payable - transfer)),
-                        tenderedText: '',
-                      }))
-                      touch('cash', 'total')
-                      setServerError(null)
-                    }}
-                  >
-                    Điền phần còn lại vào tiền mặt
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      setPaymentText((p) => ({
-                        ...p,
-                        transferText: String(Math.max(0, payable - cash)),
-                      }))
-                      touch('transfer', 'total')
-                      setServerError(null)
-                    }}
-                  >
-                    Điền phần còn lại vào chuyển khoản
-                  </button>
-                </div>
-              )}
             </div>
           </>
         )}
@@ -707,7 +704,16 @@ export default function SalesSettlementDialog({
         )}
         {action === 'credit' && (
           <>
-            <p>Số tiền ghi nợ: {money.format(order.remainingPayable ?? 0)}</p>
+            <h3 className="sales-split-heading">Trả trước (nếu có)</h3>
+            {splitParts}
+            <div className="sales-split-total" aria-live="polite">
+              <p>
+                Số ghi nợ = Còn phải trả {money.format(remaining)} − Trả trước{' '}
+                {money.format(prepayment.check.total)} ={' '}
+                <strong>{money.format(prepayment.credit)}</strong>
+              </p>
+              <FieldError message={fieldError('total')} />
+            </div>
             <label>
               Hạn trả
               <input required name="dueDate" type="date" min={today()} />

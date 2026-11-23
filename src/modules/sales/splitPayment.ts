@@ -86,6 +86,7 @@ const fieldByCode: Record<string, SplitPaymentField> = {
   MSG333: 'total',
   MSG182: 'tendered',
   MSG151: 'reference',
+  MSG347: 'total',
 }
 
 /**
@@ -139,5 +140,69 @@ export function splitPaymentBody(state: SplitPaymentState, payable: number) {
     transactionReference: transfer > 0 ? state.reference.trim() : null,
     expectedPayable: payable,
     evidence: [],
+  }
+}
+
+/**
+ * Góp ý 23/11, chế độ Thanh toán: luôn thu đủ. Người bán chỉ nhập chuyển khoản (mặc định 0) và khách đưa; tiền mặt
+ * thu = payableNow − chuyển khoản. Chuyển khoản vượt payableNow thì chặn ở ô chuyển khoản.
+ */
+export function fullPaymentState(
+  state: SplitPaymentState,
+  payable: number,
+): SplitPaymentState {
+  const transfer = parseSplitAmount(state.transferText) ?? 0
+  return { ...state, cashText: String(Math.max(0, payable - transfer)) }
+}
+
+export function fullPaymentFigures(state: SplitPaymentState, payable: number) {
+  const figures = splitPaymentFigures(fullPaymentState(state, payable), payable)
+  if (figures.transfer <= payable) return figures
+  const errors: SplitPaymentCheck['errors'] = { ...figures.check.errors }
+  delete errors.total
+  errors.transfer = `Chuyển khoản không vượt số còn phải thu ${vnd.format(payable)} đ.`
+  return { ...figures, check: { ...figures.check, errors, valid: false } }
+}
+
+/**
+ * Plan 23/11 (3b), chế độ Ghi nợ: khách có thể trả trước một phần bằng tiền mặt và/hoặc chuyển khoản; số ghi nợ =
+ * còn phải trả − trả trước, phải còn lớn hơn 0 (BE MSG347). Không trả trước thì ghi nợ toàn bộ.
+ */
+export function creditPrepaymentFigures(
+  state: SplitPaymentState,
+  remaining: number,
+) {
+  const figures = splitPaymentFigures(state, remaining)
+  const errors: SplitPaymentCheck['errors'] = { ...figures.check.errors }
+  delete errors.total
+  const prepaid = figures.check.total
+  if (prepaid > 0 && prepaid >= remaining)
+    errors.total = `Trả trước đủ hoặc hơn số còn phải trả ${vnd.format(remaining)} đ. Trả đủ thì dùng Thanh toán.`
+  return {
+    ...figures,
+    credit: Math.max(0, remaining - prepaid),
+    check: {
+      ...figures.check,
+      errors,
+      valid: Object.keys(errors).length === 0,
+    },
+  }
+}
+
+/** Phần trả trước và số ghi nợ gửi kèm POST /sales-orders/{id}/credit. */
+export function creditPrepaymentBody(
+  state: SplitPaymentState,
+  remaining: number,
+) {
+  const { cash, transfer, typedTendered, credit } = creditPrepaymentFigures(
+    state,
+    remaining,
+  )
+  return {
+    creditAmount: credit,
+    cashAmount: cash,
+    tenderedAmount: cash > 0 ? typedTendered : null,
+    transferAmount: transfer,
+    transactionReference: transfer > 0 ? state.reference.trim() : null,
   }
 }

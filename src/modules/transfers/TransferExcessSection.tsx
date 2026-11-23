@@ -2,9 +2,10 @@
  * File: modules/transfers/TransferExcessSection.tsx
  * Loại: THÀNH PHẦN — phần "Hàng thừa điều chuyển" trên màn Owner "Chờ duyệt hàng thừa".
  * Công dụng: PM 22/11 (Q7, G3, G4b) + BE #98. Hàng thừa của phiếu nhận điều chuyển chờ Owner như hàng thừa NCC.
- * Nhận: cộng tồn kho nhận, trừ tồn kho gửi (lô cùng HSD bên nhận ghi; không ghi HSD thì lô nhập trước). BE trả sẵn
- * lô sẽ trừ; dòng không nhận được (MSG339 thiếu tồn, MSG341 không có lô cùng HSD) thì chỉ chọn "Không nhận".
- * Không nhận: không đổi tồn, kho nhận trả hàng về kho gửi ngoài hệ thống.
+ * PM 23/11 (plan bản 2): hàng thừa điều chuyển luôn được nhận, không còn "Không nhận" (BE MSG346). Owner đóng phiếu
+ * là tự chấp nhận; Owner có thể chấp nhận sớm ở đây. Chấp nhận: cộng tồn kho nhận, trừ tồn khả dụng kho gửi (lô cùng
+ * HSD bên nhận ghi; không ghi HSD thì lô nhập trước). Dòng kho gửi không cho được (MSG339 thiếu tồn, MSG341 không có
+ * lô cùng HSD) thì cũng chặn đóng phiếu cho tới khi kho gửi có hàng.
  * Review #73 (73-6): hiện kho gửi, kho nhận và lô sẽ trừ.
  */
 import { useEffect, useState } from 'react'
@@ -34,10 +35,9 @@ type Pending = {
   destStoreName: string
   lines: PendingLine[]
 }
-type Choice = 'ACCEPTED' | 'REJECTED'
 
 const blockedLabels: Record<string, string> = {
-  MSG339: 'Kho gửi không đủ tồn khả dụng để nhận.',
+  MSG339: 'Kho gửi không đủ tồn khả dụng (không tính hàng đang giữ cho đơn bán).',
   MSG341: 'Kho gửi không có lô cùng hạn sử dụng còn bán được; kiểm tra lại HSD kho nhận đã ghi.',
 }
 
@@ -51,11 +51,10 @@ function PendingReceipt({
   item: Pending
   onDecided: (message: string) => void
 }) {
-  const [choices, setChoices] = useState<Record<number, Choice>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const ready =
-    item.lines.length > 0 && item.lines.every((line) => choices[line.lineId])
+    item.lines.length > 0 && item.lines.every((line) => !line.blockedCode)
   async function submit() {
     if (!ready || busy) return
     setBusy(true)
@@ -70,12 +69,14 @@ function PendingReceipt({
         {
           lines: item.lines.map((line) => ({
             lineId: line.lineId,
-            decision: choices[line.lineId],
+            decision: 'ACCEPTED',
           })),
         },
       )
       onDecided(
-        'Đã duyệt hàng thừa của ' + documentCode('PN', item.receiptId) + '.',
+        'Đã chấp nhận hàng thừa của ' +
+          documentCode('PN', item.receiptId) +
+          ': tồn kho gửi và kho nhận đã cập nhật.',
       )
     } catch (failure) {
       setError(inventoryError(failure))
@@ -116,7 +117,7 @@ function PendingReceipt({
               <th>Số thừa</th>
               <th>HSD bên nhận ghi</th>
               <th>Lô kho gửi sẽ trừ</th>
-              <th>Quyết định</th>
+              <th>Xử lý</th>
             </tr>
           </thead>
           <tbody>
@@ -147,25 +148,9 @@ function PendingReceipt({
                     )}
                   </td>
                   <td>
-                    {(
-                      [
-                        ['ACCEPTED', 'Nhận'],
-                        ['REJECTED', 'Không nhận'],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <label key={value} className="tf-excess-choice">
-                        <input
-                          type="radio"
-                          name={'excess-' + line.lineId}
-                          checked={choices[line.lineId] === value}
-                          disabled={busy || (value === 'ACCEPTED' && !!blocked)}
-                          onChange={() =>
-                            setChoices({ ...choices, [line.lineId]: value })
-                          }
-                        />{' '}
-                        {label}
-                      </label>
-                    ))}
+                    {blocked
+                      ? 'Chặn đóng phiếu tới khi kho gửi cho được'
+                      : 'Tự chấp nhận khi đóng phiếu'}
                   </td>
                 </tr>
               )
@@ -180,7 +165,7 @@ function PendingReceipt({
           disabled={!ready || busy}
           onClick={() => void submit()}
         >
-          {busy ? 'Đang lưu…' : 'Xác nhận'}
+          {busy ? 'Đang lưu…' : 'Chấp nhận ngay'}
         </button>
       </div>
     </article>
@@ -214,9 +199,9 @@ export default function TransferExcessSection() {
         <h2>Hàng thừa điều chuyển</h2>
       </header>
       <p className="tf-excess-hint">
-        Nhận: cộng tồn kho nhận và trừ tồn kho gửi (lô cùng hạn sử dụng bên nhận ghi; không ghi hạn sử dụng thì lô
-        nhập trước). Kho gửi không đủ tồn khả dụng thì không nhận được. Không nhận: tồn kho không đổi, kho nhận trả
-        hàng về kho gửi.
+        Hàng thừa điều chuyển luôn được nhận: tự chấp nhận khi Owner đóng phiếu, hoặc bấm Chấp nhận ngay. Chấp nhận
+        là cộng tồn kho nhận và trừ tồn khả dụng kho gửi (lô cùng hạn sử dụng bên nhận ghi; không ghi thì lô nhập
+        trước). Kho gửi không đủ tồn hoặc không có lô cùng hạn sử dụng thì chưa chấp nhận được và chặn đóng phiếu.
       </p>
       {notice && (
         <p className="mf-success-notice" role="status">
@@ -225,7 +210,7 @@ export default function TransferExcessSection() {
       )}
       {error && <p role="alert">{error}</p>}
       {items && !items.length && (
-        <p className="receiving-empty-cell">Không có phiếu nhận điều chuyển chờ duyệt hàng thừa.</p>
+        <p className="receiving-empty-cell">Không có phiếu nhận điều chuyển có hàng thừa chờ chấp nhận.</p>
       )}
       {items?.map((item) => (
         <PendingReceipt

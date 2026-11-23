@@ -92,7 +92,9 @@ export const transferResolutionLabels: Record<string, string> = {
   CLOSED_BY_AGREEMENT: 'Đóng theo thỏa thuận',
   RELEASED_FROM_AWAITING_RETURN: 'Giữ lại, không trả',
   ACCEPTED_AS_VARIANT: 'Nhập kho thành mã hàng lỗi (-M)',
-  RECEIVED_AS_OTHER_PRODUCT: 'Nhận thành phụ tùng khác',
+  RECEIVED_AS_OTHER_PRODUCT: 'Phiếu nhận hàng giao sai',
+  NO_REPLACEMENT: 'Không cần giao bù',
+  RECEIVER_MISCOUNT: 'Owner sửa: bên nhận kiểm sai',
 }
 
 /** Sai lệch hàng nhà cung cấp giao: trạng thái hồ sơ. */

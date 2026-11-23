@@ -186,11 +186,16 @@ export default function PrintSheetStandard({ data }: { data: DocumentPrint }) {
               : 'Ghi chú: ' + data.note}
         </p>
       )}
-      <div className="docs-signatures">
-        <strong>Người lập</strong>
-        <strong>Người giao / nhận</strong>
-        <strong>Quản lý cửa hàng</strong>
-      </div>
+      {/* Góp ý 23/11: phiếu thu tiền cọc không có ô ký. */}
+      {!(
+        data.documentType === 'PAYMENT' && payment?.paymentType === 'DEPOSIT'
+      ) && (
+        <div className="docs-signatures">
+          <strong>Người lập</strong>
+          <strong>Người giao / nhận</strong>
+          <strong>Quản lý cửa hàng</strong>
+        </div>
+      )}
       <p className="docs-muted">
         In từ MotoFlow · {formatDateTime(data.printedAt)}
         {data.printedBy && ' · ' + data.printedBy}

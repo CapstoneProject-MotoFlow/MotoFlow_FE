@@ -257,3 +257,18 @@ test('deposit receipt renders its title, type and expiry date', async () => {
   assert.match(html, /Thu tiền cọc/)
   assert.match(html, /30\/11\/2026/)
 })
+
+test('deposit receipt has no signature boxes, other payment receipts keep them', async () => {
+  const file = '/src/modules/documents/print/PrintSheetStandard.tsx'
+  const deposit = await render(file, { data: depositReceipt })
+  assert.doesNotMatch(deposit, /docs-signatures/)
+  const orderPayment = await render(file, {
+    data: {
+      ...depositReceipt,
+      title: 'Phiếu thu',
+      payment: { ...depositReceipt.payment, paymentType: 'ORDER_PAYMENT' },
+    },
+  })
+  assert.match(orderPayment, /docs-signatures/)
+  assert.match(orderPayment, /Người lập/)
+})

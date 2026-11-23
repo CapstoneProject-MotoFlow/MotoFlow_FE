@@ -22,8 +22,23 @@ export type PartLine = {
   unresolvedQty: number | null
   /** BE #98: số hỏng khi nhận (Đã nhận = số đạt); null với Staff. */
   damagedQty?: number | null
-  /** BE #98: số thiếu (gồm phần BM kho nhận đã xác nhận); null với Staff. */
+  /**
+   * PM 23/11: số thiếu = đã xuất − đạt − hỏng − mất − không giao bù; hàng giao sai không tính là thiếu. unresolvedQty
+   * là phần thiếu chưa ai chọn Nhận sau hay Không cần giao bù (Chờ quyết). null với Staff.
+   */
   shortageQty?: number | null
+  /** PM 23/11: giao sai (mặt hàng khác mặt hàng yêu cầu) ghi khi kiểm nhận. */
+  wrongItemQty?: number | null
+  /** Giao sai chưa lập phiếu nhận hàng giao sai. */
+  wrongPendingQty?: number | null
+  /** Giao sai trên phiếu nhận hàng giao sai đang chờ Owner xác nhận. */
+  wrongAwaitingOwnerQty?: number | null
+  /** Không cần giao bù: khi Owner đóng phiếu cộng lại tồn khả dụng kho gửi. */
+  noReplacementQty?: number | null
+  /** Nhận sau: chưa tới. */
+  latePendingQty?: number | null
+  /** Owner đã sửa dòng theo "Bên nhận kiểm sai": kho nhận có đủ số đã xuất. */
+  receiverMiscounted?: boolean | null
 }
 /** UC69 list response. Does not include lines or related documents. */
 export type ReplenishmentRow = {
@@ -118,6 +133,13 @@ export type Transfer = Omit<
       quantity: number
       reason: string | null
       confirmedAt: string | null
+      /** PM 23/11: phiếu nhận hàng giao sai (RECEIVED_AS_OTHER_PRODUCT): phụ tùng thực nhận, HSD, trạng thái. */
+      receivedProductId?: number | null
+      receivedSku?: string | null
+      receivedPartName?: string | null
+      receivedExpiryDate?: string | null
+      status?: 'AWAITING_OWNER' | 'CONFIRMED' | 'CANCELLED' | null
+      recordedBy?: { id: number; fullName: string } | null
     }[]
   }[]
 }

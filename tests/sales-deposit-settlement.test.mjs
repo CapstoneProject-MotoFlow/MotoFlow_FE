@@ -119,10 +119,48 @@ test('settlement payment mode with deposit shows Đã cọc, Đã thu net of dep
     assert.equal(row(html, 'Đã thu'), '0 ₫')
     assert.equal(row(html, 'Còn phải trả'), '7.000.000 ₫')
     assert.doesNotMatch(html, /Còn phải thu/)
-    // Góp ý review 1: cả tiền mặt và chuyển khoản bắt đầu trống, người bán tự gõ.
-    assert.match(html, /aria-label="Số tiền mặt thu"[^>]*value=""/)
+    // Góp ý 23/11: luôn thu đủ; tiền mặt thu = phải trả − chuyển khoản, chỉ nhập khách đưa, không còn nút điền.
+    assert.doesNotMatch(html, /aria-label="Số tiền mặt thu"/)
+    assert.match(html, /<span>Tiền mặt thu<\/span><strong>7\.000\.000\s₫<\/strong>/)
+    assert.match(html, /aria-label="Số tiền khách đưa"/)
     assert.match(html, /<legend>Chuyển khoản<\/legend>/)
-    assert.match(html, /Tổng thu: <strong>0\s₫<\/strong>/)
+    assert.match(html, /Tổng thu: <strong>7\.000\.000\s₫<\/strong>/)
+    assert.doesNotMatch(html, /Điền phần còn lại/)
+  })
+})
+
+test('payment mode hides the Thanh toán / Ghi nợ bar when the customer cannot buy on credit', async () => {
+  await withServer(({ renderDialog }) => {
+    const noCredit = { ...order().actions, canRecordCredit: false }
+    const profile = renderDialog({
+      action: 'payment',
+      order: order({ actions: noCredit }),
+    })
+    assert.doesNotMatch(profile, /sales-settle-choice/)
+    assert.match(profile, /Khách hàng này không đủ điều kiện mua chịu/)
+    const walkIn = renderDialog({
+      action: 'payment',
+      order: order({ actions: noCredit, customerId: null }),
+    })
+    assert.doesNotMatch(walkIn, /sales-settle-choice/)
+    assert.doesNotMatch(walkIn, /điều kiện mua chịu/)
+  })
+})
+
+test('credit mode offers a prepayment and shows the credit left after it', async () => {
+  await withServer(({ renderDialog }) => {
+    const html = renderDialog({ action: 'credit', order: withDeposit() })
+    assert.match(html, /sales-settle-choice/)
+    assert.match(html, /Trả trước \(nếu có\)/)
+    assert.match(html, /aria-label="Số tiền mặt trả trước"/)
+    assert.match(html, /aria-label="Số tiền chuyển khoản"/)
+    // Chưa trả trước: chưa có ô khách đưa, ghi nợ toàn bộ phần còn phải trả.
+    assert.doesNotMatch(html, /aria-label="Số tiền khách đưa"/)
+    assert.match(
+      html.replace(/\u00a0/g, ' '),
+      /Số ghi nợ = Còn phải trả 7\.000\.000 ₫ − Trả trước 0 ₫ = <strong>7\.000\.000 ₫<\/strong>/,
+    )
+    assert.match(html, /name="dueDate"/)
   })
 })
 
