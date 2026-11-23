@@ -100,7 +100,7 @@ async function withDialog(run) {
   }
 }
 
-test('partial release with a deposit suggests the estimated deposit amount', async () => {
+test('partial release with a deposit deducts it automatically, without an amount input (PM 22/11)', async () => {
   await withDialog((render) => {
     // Khách đặt 2, còn bán được 1: mặc định lấy ngay 1 → chưa phải lần cuối.
     const html = render({
@@ -109,9 +109,9 @@ test('partial release with a deposit suggests the estimated deposit amount', asy
         depositOverrides: { remaining: 3_000_000 },
       }),
     })
-    assert.match(html, /Trừ cọc vào đơn này/)
-    assert.match(html, /value="1\.200\.000"/)
+    assert.doesNotMatch(html, /Trừ cọc vào đơn này/)
     assert.match(html, /Cọc còn giữ: 3\.000\.000/)
+    assert.match(html, /Cọc tự trừ vào đơn lấy ngay/)
     assert.doesNotMatch(html, /Đã trả tiền cho khách/)
   })
 })

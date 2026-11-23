@@ -64,12 +64,3 @@
 .pos-deposit input[type='radio'] {
   accent-color: #465fff;
 }
-.pos-preorder {
-  display: grid;
-  gap: 4px;
-  margin: 14px 0 0;
-}
-.pos-preorder small {
-  color: #5b6478;
-  font-size: 12px;
-}

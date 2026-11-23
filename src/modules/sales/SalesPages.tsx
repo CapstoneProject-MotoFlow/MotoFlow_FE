@@ -497,7 +497,15 @@ export function SalesOrderFormPage() {
     </>
   )
 }
+/**
+ * Trang chi tiết đơn. Gắn key theo id để khi chuyển sang đơn khác (vd sau khi chuyển sang soạn) trang dựng lại
+ * và đọc thông báo mới từ location.state.
+ */
 export function SalesOrderDetailPage() {
+  const { id } = useParams()
+  return <SalesOrderDetailContent key={id} />
+}
+function SalesOrderDetailContent() {
   const { id } = useParams()
   const location = useLocation()
   const scope = useInventoryScope()
@@ -571,6 +579,7 @@ export function SalesOrderDetailView({
 }) {
   const staff = role === 'STAFF',
     bm = role === 'BRANCH_MANAGER'
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [refundAmount, setRefundAmount] = useState<number | undefined>()
   const [releaseOpen, setReleaseOpen] = useState(false)
@@ -1111,10 +1120,17 @@ export function SalesOrderDetailView({
           order={order}
           onClose={() => setReleaseOpen(false)}
           onSaved={(message, linked) => {
+            setReleaseOpen(false)
+            // PM 22/11: tách đơn thì mở đơn lấy ngay (đơn mới), kèm link về đơn còn chờ.
+            if (linked.orderId != null && linked.orderId !== order.id) {
+              navigate('/sales-orders/' + linked.orderId, {
+                state: { notice: message, pendingOrderId: linked.pendingOrderId },
+              })
+              return
+            }
             window.dispatchEvent(new CustomEvent('sales-changed', {
               detail: { message, orderId: linked.orderId, pendingOrderId: linked.pendingOrderId },
             }))
-            setReleaseOpen(false)
           }}
         />
       )}

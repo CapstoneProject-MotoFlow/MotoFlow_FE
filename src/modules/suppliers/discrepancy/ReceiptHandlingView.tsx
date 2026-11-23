@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
+import { useAuth } from '../../../shared/hooks/useAuth'
 import EmptyState from '../../../shared/ui/EmptyState'
 import { documentCode } from '../../../shared/utils/documentCode'
 import { formatDate } from '../../../shared/utils/format'
@@ -16,9 +17,29 @@ import CaseActionDialog, { type CaseActionMode } from './CaseActionDialog'
 import CaseCard from './CaseCard'
 import { errorMessage, type Case } from './types'
 
-/** Xử lý sai lệch của một phiếu nhập: mỗi phụ tùng một thẻ, mỗi thẻ lưu hướng xử lý của riêng hồ sơ đó. */
+/** Dòng hàng thừa của phiếu nhập (GET /goods-receipt-notes/{id}): Owner quyết nhận vào kho hay trả nhà cung cấp. */
+type ExcessLine = {
+  id: number
+  sku: string
+  partName: string
+  excessQty: number
+  excessDecision: 'NOT_APPLICABLE' | 'AWAITING_OWNER' | 'ACCEPTED' | 'REJECTED'
+}
+
+const excessDecisionLabels: Record<string, string> = {
+  AWAITING_OWNER: 'Chờ Owner quyết',
+  ACCEPTED: 'Owner nhận vào kho',
+  REJECTED: 'Owner trả nhà cung cấp',
+}
+
+/**
+ * Xử lý sai lệch của một phiếu nhập: mỗi phụ tùng một thẻ, mỗi thẻ lưu hướng xử lý của riêng hồ sơ đó.
+ * PM 22/11: hiện cả dòng hàng thừa; phiếu chỉ xong khi mọi hồ sơ đã đóng và không còn hàng thừa chờ Owner.
+ */
 export default function ReceiptHandlingView({ receiptId }: { receiptId: string }) {
+  const { user } = useAuth()
   const [rows, setRows] = useState<Case[]>([])
+  const [excess, setExcess] = useState<ExcessLine[]>([])
   const [drafts, setDrafts] = useState<Record<number, CaseDraft>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -46,8 +67,16 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           cases.push(...data.items)
           if (!data.items.length || cases.length >= data.totalItems) break
         }
+        // Hàng thừa nằm trên phiếu nhập, không phải hồ sơ sai lệch; lỗi tải phần này không chặn màn hình.
+        const receipt = await axiosClient
+          .get<{ lines: ExcessLine[] }>('/goods-receipt-notes/' + receiptId, {
+            signal: controller.signal,
+          })
+          .then(({ data }) => data.lines.filter((line) => line.excessQty > 0))
+          .catch(() => [] as ExcessLine[])
         if (!controller.signal.aborted) {
           setRows(cases)
+          setExcess(receipt)
           setError('')
         }
       } catch (failure) {
@@ -110,6 +139,11 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   }
 
   const first = rows[0]
+  const openCases = rows.filter((row) => row.status !== 'CLOSED').length
+  const waitingExcess = excess.filter(
+    (line) => line.excessDecision === 'AWAITING_OWNER',
+  ).length
+  const receiptDone = openCases === 0 && waitingExcess === 0
   return (
     <>
       <header className="sd-head">
@@ -142,6 +176,23 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
                 Giao ngày <b>{formatDate(first.deliveryDate)}</b>
               </span>
             )}
+            {!loading && (rows.length > 0 || excess.length > 0) && (
+              <span>
+                Tình trạng phiếu{' '}
+                <b className={receiptDone ? 'sd-receipt-done' : 'sd-receipt-open'}>
+                  {receiptDone
+                    ? 'Đã xử lý xong'
+                    : [
+                        openCases ? openCases + ' hồ sơ sai lệch đang mở' : '',
+                        waitingExcess
+                          ? waitingExcess + ' dòng hàng thừa chờ Owner'
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                </b>
+              </span>
+            )}
           </p>
         </div>
       </header>
@@ -164,7 +215,8 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           <span />
         </section>
       ) : !rows.length ? (
-        !error && (
+        !error &&
+        !excess.length && (
           <section className="sd-panel">
             <EmptyState
               message={
@@ -200,6 +252,39 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
               />
             )
           })}
+        </section>
+      )}
+
+      {!loading && excess.length > 0 && (
+        <section className="sd-panel sd-excess" aria-label="Hàng thừa của phiếu nhập">
+          <header className="sd-excess-head">
+            <h2>Hàng thừa</h2>
+            {waitingExcess > 0 && user?.role === 'OWNER' && (
+              <Link className="mf-btn mf-btn--primary mf-btn--sm" to="/goods-receipt-notes/excess">
+                Quyết định hàng thừa
+              </Link>
+            )}
+          </header>
+          <table className="stock-table">
+            <thead>
+              <tr>
+                <th>Phụ tùng</th>
+                <th>Số thừa</th>
+                <th>Hướng xử lý</th>
+              </tr>
+            </thead>
+            <tbody>
+              {excess.map((line) => (
+                <tr key={line.id}>
+                  <td>
+                    {line.sku} · {line.partName}
+                  </td>
+                  <td>{line.excessQty}</td>
+                  <td>{excessDecisionLabels[line.excessDecision] ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
 

@@ -377,7 +377,10 @@ export function SalesOrderFormView({
     0,
   )
   // Khách đặt trước: mọi dòng chờ hàng, không lấy ngay (nowQty 0). Khách lẻ không đặt trước được.
-  const preorderActive = preorder && !editing && !walkIn && lines.length > 0
+  // PM 22/11: Đặt trước và tiền cọc chỉ có ở đơn bán buôn.
+  const wholesale = type === 'WHOLESALE'
+  const preorderActive =
+    preorder && wholesale && !editing && !walkIn && lines.length > 0
   // Khách lẻ lấy đủ số lượng ngay: không giới hạn theo tồn, không dùng số gợi ý hay số lấy ngay đã nhập.
   const stockSplit = lines.map(({ product, quantity, nowQty }) => ({
     productId: product.id,
@@ -410,7 +413,7 @@ export function SalesOrderFormView({
     !editing && lines.length > 0 && immediateQty === 0 && pendingQty > 0
   // Cọc chỉ được gửi khi đơn chờ có hồ sơ khách và đã nhập số tiền; còn lại bỏ qua.
   const depositActive =
-    allWaiting && !!customer && deposit.amount.trim() !== ''
+    allWaiting && wholesale && !!customer && deposit.amount.trim() !== ''
   const depositError = depositActive
     ? validateDeposit(deposit, todayIso(), { requireExpiry: true })
     : null
@@ -622,13 +625,16 @@ export function SalesOrderFormView({
         try {
           const settled = await axiosClient.post<DepositResult>(
             '/sales-orders/' + waitingId + '/deposits',
-            depositPayload(deposit, 0, { withExpiry: true }),
+            // PM 22/11: bỏ "Tiền khách đưa" và ô "Đã nhận đủ": số cọc ghi là số đã nhận.
+            depositPayload({ ...deposit, tendered: '', verified: true }, 0, {
+              withExpiry: true,
+            }),
           )
           depositRoute = afterDepositRoute(
             {
               ok: true,
               paymentId: settled.data.paymentId,
-              verified: deposit.verified,
+              verified: true,
             },
             waitingId,
           )
@@ -1313,31 +1319,14 @@ export function SalesOrderFormView({
             </div>
           </dl>
 
-          {!editing && !walkIn && (
-            <div className="pos-preorder">
-              <label className="pos-deposit-check">
-                <input
-                  type="checkbox"
-                  checked={preorder}
-                  onChange={(event) => setPreorder(event.target.checked)}
-                />
-                Khách đặt trước (cả đơn chờ hàng, không lấy ngay)
-              </label>
-              <small>
-                Dùng khi khách hẹn hôm khác mới lấy. Đơn chờ không giữ hàng; khi
-                chuyển sang soạn mới kiểm tồn.
-              </small>
-            </div>
-          )}
-
           {/*
             Route tạo đơn bị giới hạn OWNER/BRANCH_MANAGER (RequireRole trong AppRoutes), đúng các vai trò
             BE cho phép ghi cọc, nên không cần chặn thêm ở đây.
           */}
           {/* Khách lẻ không có đơn chờ hàng nên không tới đây: chỉ khách có hồ sơ mới đặt cọc. */}
-          {allWaiting && customer && (
+          {allWaiting && wholesale && customer && (
             <section className="pos-deposit" aria-label="Tiền cọc">
-              <strong>Tiền cọc (không bắt buộc)</strong>
+              <strong>Tiền cọc</strong>
               <>
                   <label className="pos-deposit-field">
                     <span>Số tiền cọc</span>
@@ -1383,22 +1372,7 @@ export function SalesOrderFormView({
                       </label>
                     ))}
                   </div>
-                  {deposit.method === 'CASH' ? (
-                    <label className="pos-deposit-field">
-                      <span>Tiền khách đưa (không bắt buộc)</span>
-                      <MoneyInput
-                        aria-label="Tiền khách đưa"
-                        placeholder="0"
-                        value={deposit.tendered}
-                        onValueChange={(tendered) =>
-                          setDeposit((previous) => ({
-                            ...previous,
-                            tendered,
-                          }))
-                        }
-                      />
-                    </label>
-                  ) : (
+                  {deposit.method === 'BANK_TRANSFER' && (
                     <label className="pos-deposit-field">
                       <span>Mã giao dịch</span>
                       <input
@@ -1414,19 +1388,6 @@ export function SalesOrderFormView({
                       />
                     </label>
                   )}
-                  <label className="pos-deposit-check">
-                    <input
-                      type="checkbox"
-                      checked={deposit.verified}
-                      onChange={(event) =>
-                        setDeposit((previous) => ({
-                          ...previous,
-                          verified: event.target.checked,
-                        }))
-                      }
-                    />
-                    Đã nhận đủ số tiền này
-                  </label>
                   <label className="pos-deposit-field">
                     <span>Hạn cọc</span>
                     <input
@@ -1442,9 +1403,6 @@ export function SalesOrderFormView({
                     />
                   </label>
               </>
-              <p className="pos-deposit-hint">
-                Khách đặt trước dù cửa hàng còn hàng? Tích "Khách đặt trước".
-              </p>
             </section>
           )}
           <div className="pos-actions">
@@ -1455,11 +1413,17 @@ export function SalesOrderFormView({
             )}
             <button
               type="submit"
-              className="mf-btn mf-btn--primary mf-btn--lg pos-submit"
+              className="mf-btn mf-btn--primary pos-submit"
               disabled={busy || !!blocker}
               title={blocker || undefined}
             >
-              {busy ? 'Đang lưu…' : editing ? 'Lưu phiên bản mới' : 'Tạo đơn'}
+              {busy
+                ? 'Đang lưu…'
+                : editing
+                  ? 'Lưu phiên bản mới'
+                  : preorderActive
+                    ? 'Tạo đơn đặt trước'
+                    : 'Tạo đơn'}
             </button>
             {blocker && blocker !== 'Đang tính giá…' && (
               <p className="pos-blocker" role="status">
@@ -1501,6 +1465,19 @@ export function SalesOrderFormView({
                     title={draftBlocker || undefined}
                   >
                     Lưu nháp
+                  </button>
+                )}
+                {!editing && !walkIn && wholesale && (
+                  // PM 22/11: nút Đặt trước thay ô tích "Khách đặt trước"; bấm lần nữa để bỏ.
+                  <button
+                    type="button"
+                    className="mf-btn mf-btn--secondary pos-preorder-toggle"
+                    aria-pressed={preorder}
+                    onClick={() => setPreorder((current) => !current)}
+                    disabled={busy}
+                    title="Khách hẹn hôm khác mới lấy: cả đơn thành đơn chờ hàng, không giữ hàng; khi chuyển sang soạn mới kiểm tồn."
+                  >
+                    {preorder ? '✓ Đặt trước' : 'Đặt trước'}
                   </button>
                 )}
                 {draftOrder && (

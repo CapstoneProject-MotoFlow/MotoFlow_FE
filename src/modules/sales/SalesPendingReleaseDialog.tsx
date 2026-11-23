@@ -1,14 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { isAxiosError } from 'axios'
 import FormDialog from '../../shared/ui/FormDialog'
-import MoneyInput from '../../shared/ui/MoneyInput'
 import axiosClient from '../../shared/api/axiosClient'
 import { formatMoney } from '../../shared/utils/format'
 import { inventoryError } from '../inventory/api'
 import { number } from '../inventory/presentation'
 import type { SalesOrder } from './salesModel'
 import type { OrderDto } from './salesApi'
-import { parseMoney } from './salesDeposit'
 import {
   buildReleaseBody,
   estimateReleaseTotal,
@@ -42,8 +40,6 @@ export default function SalesPendingReleaseDialog({
       ]),
     ),
   )
-  // null = theo số đề nghị của hệ thống; có giá trị = người dùng đã sửa ô "Trừ cọc vào đơn này".
-  const [depositInput, setDepositInput] = useState<string | null>(null)
   const [refundMethod, setRefundMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH')
   const [refundReference, setRefundReference] = useState('')
   const [refundPaid, setRefundPaid] = useState(false)
@@ -92,14 +88,13 @@ export default function SalesPendingReleaseDialog({
     order.discount,
   )
   const isLast = isLastRelease(order.lines, qtyByLineId)
-  const typedDeposit =
-    depositInput == null ? null : (parseMoney(depositInput) ?? 0)
+  // PM 22/11: không nhập số cọc trừ; cọc tự trừ vào đơn lấy ngay, tối đa bằng tổng đơn đó.
   const depositPlan = deposit
     ? releaseDeposit({
         remaining: deposit.remaining,
         estimatedTotal,
         isLast,
-        typed: typedDeposit,
+        typed: null,
       })
     : null
   const refund = depositPlan && isLast ? depositPlan.refund : 0
@@ -113,7 +108,7 @@ export default function SalesPendingReleaseDialog({
     shortCount: shortIds.length,
     isLast,
     deposit,
-    typed: typedDeposit,
+    typed: null,
     max: depositPlan?.max ?? null,
     estimatedTotal,
     refund: refundInput,
@@ -273,6 +268,11 @@ export default function SalesPendingReleaseDialog({
         {deposit && depositPlan && (
           <section className="sales-release-deposit" aria-label="Tiền cọc khi chuyển đơn">
             <p>{`Cọc còn giữ: ${formatMoney(deposit.remaining)}`}</p>
+            {!isLast && (
+              <p className="sales-release-hint">
+                Cọc tự trừ vào đơn lấy ngay, tối đa bằng tổng đơn đó; phần còn lại giữ cho đơn lấy sau.
+              </p>
+            )}
             <p>
               {`Tổng đơn tách (ước tính): ${
                 estimatedTotal == null
@@ -280,23 +280,6 @@ export default function SalesPendingReleaseDialog({
                   : formatMoney(estimatedTotal)
               }`}
             </p>
-            {!isLast && (
-              <label className="sales-release-deposit-field">
-                Trừ cọc vào đơn này
-                <MoneyInput
-                  value={depositInput ?? String(depositPlan.suggested)}
-                  onValueChange={setDepositInput}
-                  onBlur={() => {
-                    if (
-                      depositPlan.max != null &&
-                      typedDeposit != null &&
-                      typedDeposit > depositPlan.max
-                    )
-                      setDepositInput(String(depositPlan.max))
-                  }}
-                />
-              </label>
-            )}
             {isLast && (
               <>
                 <p>{`Trừ hết cọc vào đơn này (ước tính): ${formatMoney(depositPlan.suggested)}`}</p>
