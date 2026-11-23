@@ -76,6 +76,7 @@ const closeBlockers: Record<string, string> = {
   MSG339:
     'Kho gửi không đủ tồn khả dụng cho hàng thừa sẽ chấp nhận (không tính hàng đang giữ cho đơn bán)',
   MSG340: 'Còn yêu cầu trả hàng hoặc điều chỉnh đang xử lý',
+  MSG348: 'Còn hàng nhận sau chưa tới',
   MSG341: 'Kho gửi không có lô cùng hạn sử dụng cho hàng thừa sẽ chấp nhận',
   MSG342:
     'Còn hàng giao sai chưa xử lý: lập phiếu nhận hàng giao sai và chờ Owner xác nhận',

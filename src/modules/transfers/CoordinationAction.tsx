@@ -178,7 +178,7 @@ export default function CoordinationAction({
               <p className="tf-note">
                 {decision === 'NO_REPLACEMENT'
                   ? 'Không cần giao bù: khi Owner đóng phiếu, số này cộng lại tồn khả dụng kho gửi.'
-                  : 'Nhận sau: chờ lần giao tiếp theo; chưa tới khi đóng phiếu thì tính là mất.'}{' '}
+                  : 'Nhận sau: chờ lần giao tiếp theo; Owner chỉ đóng phiếu được khi đã nhận đủ.'}{' '}
                 Phần chưa chọn sẽ tính là mất khi Owner đóng phiếu.
               </p>
               <label>
