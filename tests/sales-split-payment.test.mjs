@@ -20,6 +20,10 @@ const {
   splitPaymentCheck,
   splitPaymentErrorField,
   splitPaymentBody,
+  fullPaymentFigures,
+  fullPaymentState,
+  creditPrepaymentFigures,
+  creditPrepaymentBody,
   MAX_SPLIT_AMOUNT,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
@@ -206,4 +210,96 @@ test('body, typed khách đưa without cash is not sent', () => {
   )
   assert.equal(body.cashAmount, 0)
   assert.equal(body.tenderedAmount, null)
+})
+
+const typed = (over = {}) => ({
+  cashText: '',
+  tenderedText: '',
+  transferText: '',
+  reference: '',
+  ...over,
+})
+
+test('full payment: cash is what the transfer leaves of payableNow', () => {
+  const none = fullPaymentFigures(typed(), 140000)
+  assert.equal(none.cash, 140000)
+  assert.equal(none.check.valid, true)
+  const part = fullPaymentFigures(
+    typed({ transferText: '100000', reference: 'FT1', tenderedText: '50000' }),
+    140000,
+  )
+  assert.equal(part.cash, 40000)
+  assert.equal(part.check.change, 10000)
+  assert.equal(part.check.total, 140000)
+  const body = splitPaymentBody(
+    fullPaymentState(typed({ transferText: '100000', reference: 'FT1' }), 140000),
+    140000,
+  )
+  assert.equal(body.cashAmount, 40000)
+  assert.equal(body.transferAmount, 100000)
+  assert.equal(body.expectedPayable, 140000)
+})
+
+test('full payment: a transfer covering it all leaves no cash, more than payable is refused on the transfer', () => {
+  const all = fullPaymentFigures(
+    typed({ transferText: '140000', reference: 'FT1' }),
+    140000,
+  )
+  assert.equal(all.cash, 0)
+  assert.equal(all.check.valid, true)
+  const over = fullPaymentFigures(
+    typed({ transferText: '150000', reference: 'FT1' }),
+    140000,
+  )
+  assert.equal(over.check.valid, false)
+  assert.match(over.check.errors.transfer, /140\.000/)
+  assert.equal(over.check.errors.total, undefined)
+  const short = fullPaymentFigures(typed({ tenderedText: '100000' }), 140000)
+  assert.equal(short.check.valid, false)
+  assert.ok(short.check.errors.tendered)
+})
+
+test('credit prepayment: nothing paid now puts it all on credit', () => {
+  const r = creditPrepaymentFigures(typed(), 285000)
+  assert.equal(r.check.valid, true)
+  assert.equal(r.credit, 285000)
+  assert.deepEqual(creditPrepaymentBody(typed(), 285000), {
+    creditAmount: 285000,
+    cashAmount: 0,
+    tenderedAmount: null,
+    transferAmount: 0,
+    transactionReference: null,
+  })
+})
+
+test('credit prepayment: cash and transfer paid now leave the rest on credit', () => {
+  const state = typed({
+    cashText: '200000',
+    tenderedText: '250000',
+    transferText: '50000',
+    reference: ' FT7 ',
+  })
+  const r = creditPrepaymentFigures(state, 285000)
+  assert.equal(r.check.valid, true)
+  assert.equal(r.credit, 35000)
+  assert.equal(r.check.change, 50000)
+  assert.deepEqual(creditPrepaymentBody(state, 285000), {
+    creditAmount: 35000,
+    cashAmount: 200000,
+    tenderedAmount: 250000,
+    transferAmount: 50000,
+    transactionReference: 'FT7',
+  })
+})
+
+test('credit prepayment: paying it all or more is a payment, not credit', () => {
+  const all = creditPrepaymentFigures(typed({ cashText: '285000' }), 285000)
+  assert.equal(all.check.valid, false)
+  assert.match(all.check.errors.total, /Thanh toán/)
+  const transferNoRef = creditPrepaymentFigures(
+    typed({ transferText: '1000' }),
+    285000,
+  )
+  assert.ok(transferNoRef.check.errors.reference)
+  assert.equal(splitPaymentErrorField({ code: 'MSG347' }), 'total')
 })
