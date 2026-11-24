@@ -93,6 +93,7 @@ export type OrderDto = {
     remainingPayable: number
     refundable: number
     payableNow: number
+    unverifiedCount?: number
     /** Cọc đã đưa vào đơn này khi nhả đơn chờ; đã nằm trong netCollected. */
     depositApplied?: number
     credit: { amount: number | null } | null
@@ -195,6 +196,7 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     payableNow: dto.money?.payableNow,
     refundable: dto.money?.refundable,
     remainingPayable: dto.money?.remainingPayable,
+    unverifiedCount: dto.money?.unverifiedCount,
     depositApplied: dto.money?.depositApplied ?? 0,
     deposit: dto.deposit ?? null,
     actions: dto.actions,
