@@ -13,6 +13,14 @@ export type DashboardAccount = {
   status: 'ACTIVE' | 'LOCKED'
   state: AccountState
   lastLoginAt: string | null
+  lastSession: LastSession | null
+}
+/** Phiên đăng nhập mới nhất của tài khoản (BE: AccountResponse.LastSession); null nếu chưa từng đăng nhập. */
+export type LastSession = {
+  signedInAt: string
+  ipAddress: string | null
+  device: string | null
+  status: 'ACTIVE' | 'SIGNED_OUT' | 'EXPIRED'
 }
 export type Account = DashboardAccount & {
   phone: string | null
