@@ -556,6 +556,18 @@ function SalesOrderDetailContent() {
     </>
   )
 }
+
+/** Lý do nút "Ghi nhận bán chịu" đang mờ mà người bán cần biết; null khi không có gì để nói. */
+function creditBlockReason(order: SalesOrder): string | null {
+  if (order.actions?.canRecordCredit) return null
+  if (!order.customerId) return 'Khách lẻ không được mua chịu'
+  if (order.status === 'CONFIRMED' && (order.unverifiedCount ?? 0) > 0)
+    return 'Còn khoản tiền chờ xác minh'
+  // Còn lại chỉ có thể là hồ sơ khách chưa ELIGIBLE, khi đơn đã xác nhận và còn phải trả.
+  const creditableMoney =
+    order.status === 'CONFIRMED' && (order.remainingPayable ?? 0) > 0
+  return creditableMoney ? 'Khách chưa đủ điều kiện mua chịu' : null
+}
 export function SalesOrderDetailView({
   order,
   id,
@@ -597,6 +609,7 @@ export function SalesOrderDetailView({
   }, [order?.status, pendingPayment])
   const steps = ['AWAITING_PICKING', 'PICKED', 'CONFIRMED', 'COMPLETED']
   const stage = order ? steps.indexOf(order.status) : -1
+  const creditReason = order ? creditBlockReason(order) : null
   const financial =
     order?.total ??
     (order
@@ -705,21 +718,16 @@ export function SalesOrderDetailView({
                         </button>
                         <button
                           disabled={!order.actions?.canRecordCredit}
-                          title={
-                            !order.actions?.canRecordCredit && !order.customerId
-                              ? 'Khách lẻ không được mua chịu'
-                              : undefined
-                          }
+                          title={creditReason ?? undefined}
                           onClick={() => setAction('credit')}
                         >
                           Ghi nhận bán chịu
                         </button>
-                        {!order.actions?.canRecordCredit &&
-                          !order.customerId && (
-                            <small className="sales-action-reason">
-                              Khách lẻ không được mua chịu
-                            </small>
-                          )}
+                        {creditReason && (
+                          <small className="sales-action-reason">
+                            {creditReason}
+                          </small>
+                        )}
                         </>
                       )}
                     {(order.actions?.canCancel ?? mayCancel(order)) && (

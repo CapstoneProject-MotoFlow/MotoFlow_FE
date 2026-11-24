@@ -163,6 +163,7 @@
 
 /* ---------- Bảng danh sách ---------- */
 .sd-table-scroll {
+  position: relative;
   overflow-x: auto;
 }
 .sd-table-scroll[aria-busy='true'] {

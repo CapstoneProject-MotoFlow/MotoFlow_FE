@@ -466,3 +466,70 @@ test('the waiting-stock tab and deposit filter appear for managers only', async 
     await server.close()
   }
 })
+test('a disabled credit button says why: walk-in, or a customer without credit eligibility', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { SalesOrderDetailView } = await server.ssrLoadModule(
+      '/src/modules/sales/SalesPages.tsx',
+    )
+    const order = (overrides) => ({
+      id: 9,
+      code: 'SO-9',
+      version: 1,
+      storeName: 'Kho',
+      customerName: 'Khách',
+      customerId: 5,
+      priceType: 'RETAIL',
+      discount: 0,
+      status: 'CONFIRMED',
+      createdAt: '2026-11-08',
+      actions: { canRecordPayment: true, canRecordCredit: false, canCancel: false },
+      netPaid: 0,
+      credit: 0,
+      total: 500000,
+      remainingPayable: 500000,
+      unverifiedCount: 0,
+      payableNow: 500000,
+      lines: [],
+      payments: [],
+      versions: [],
+      events: [],
+      ...overrides,
+    })
+    const render = (o) =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(SalesOrderDetailView, { order: o, role: 'BRANCH_MANAGER' }),
+        ),
+      )
+    const reason = 'Khách chưa đủ điều kiện mua chịu'
+    const ineligible = render(order())
+    assert.match(ineligible, new RegExp(`<small class="sales-action-reason">${reason}</small>`))
+    assert.match(ineligible, new RegExp(`title="${reason}"`))
+    assert.match(
+      render(order({ customerId: null, customerName: 'Khách lẻ' })),
+      /Khách lẻ không được mua chịu/,
+    )
+    // A payment still waits for verification: say that, not the profile.
+    const waiting = render(order({ unverifiedCount: 1 }))
+    const waitingReason = 'Còn khoản tiền chờ xác minh'
+    assert.match(waiting, new RegExp(`<small class="sales-action-reason">${waitingReason}</small>`))
+    assert.match(waiting, new RegExp(`title="${waitingReason}"`))
+    assert.doesNotMatch(waiting, /đủ điều kiện mua chịu/)
+    // Nothing left to pay: credit is not the reason, so say nothing.
+    assert.doesNotMatch(render(order({ remainingPayable: 0 })), /đủ điều kiện mua chịu/)
+    assert.doesNotMatch(render(order({ status: 'PICKED' })), /đủ điều kiện mua chịu/)
+    // A customer who may take credit has an enabled button and no reason.
+    const eligible = render(order({ actions: { canRecordPayment: true, canRecordCredit: true } }))
+    assert.doesNotMatch(eligible, /sales-action-reason/)
+    assert.doesNotMatch(eligible, /đủ điều kiện mua chịu/)
+  } finally {
+    await server.close()
+  }
+})
