@@ -14,7 +14,13 @@ const source = ts.transpileModule(
     },
   },
 ).outputText
-const { countFromDto, countScope, canCancelCount } = await import(
+const {
+  countFromDto,
+  countScope,
+  canCancelCount,
+  needsDifferenceReason,
+  differenceReasonLabel,
+} = await import(
   'data:text/javascript;base64,' + Buffer.from(source).toString('base64')
 )
 test('count DTO maps scope, zero, recount and null private values without inventing unit costs or submission state', () => {
@@ -76,4 +82,32 @@ test('confirmed count returned for recount cannot be cancelled', () => {
   assert.equal(canCancelCount({ status: 'DRAFT', confirmedAt: null }), true)
   for (const status of ['AWAITING_APPROVAL', 'COMPLETED', 'CANCELLED'])
     assert.equal(canCancelCount({ status, confirmedAt: null }), false)
+})
+
+test('a damage-only change needs a difference reason like BE MSG236, except on OPENING counts and uncounted lines', () => {
+  const damageOnly = { countedQty: 5, difference: 0, damagedChange: 1 }
+  const diffOnly = { countedQty: 3, difference: -2, damagedChange: 0 }
+  const clean = { countedQty: 5, difference: 0, damagedChange: 0 }
+  const uncounted = { countedQty: null, difference: null, damagedChange: null }
+  assert.equal(needsDifferenceReason(damageOnly, false), true)
+  assert.equal(needsDifferenceReason(diffOnly, false), true)
+  assert.equal(needsDifferenceReason(clean, false), false)
+  assert.equal(needsDifferenceReason(uncounted, false), false)
+  assert.equal(needsDifferenceReason(damageOnly, true), false)
+  assert.equal(needsDifferenceReason(diffOnly, true), false)
+})
+
+test('difference reason label shows what changed on the line', () => {
+  assert.equal(
+    differenceReasonLabel({ difference: -2, damagedChange: 0 }),
+    'Chênh lệch −2',
+  )
+  assert.equal(
+    differenceReasonLabel({ difference: 0, damagedChange: 1 }),
+    'Chênh lệch 0 · hỏng +1',
+  )
+  assert.equal(
+    differenceReasonLabel({ difference: 3, damagedChange: -2 }),
+    'Chênh lệch +3 · hỏng −2',
+  )
 })

@@ -65,6 +65,8 @@ export type CountDto = CountRow & {
     damagedQty?: number
     bookDamagedQty?: number | null
     difference: number | null
+    /** Damaged minus book damaged; null while uncounted or hidden from the counter. */
+    damagedChange: number | null
     differenceValue: number | null
     reason: string | null
     recountRequested: boolean
@@ -72,6 +74,34 @@ export type CountDto = CountRow & {
     countedAt: string | null
   }[]
 }
+/** Mirrors BE MSG236: a counted line of a non-OPENING count needs a reason when its quantity or its damaged quantity changed. */
+export function needsDifferenceReason(
+  line: Pick<CountDto['lines'][number], 'countedQty' | 'difference' | 'damagedChange'>,
+  opening: boolean,
+) {
+  return (
+    !opening &&
+    line.countedQty != null &&
+    ((line.difference ?? 0) !== 0 || (line.damagedChange ?? 0) !== 0)
+  )
+}
+
+function signedQty(value: number) {
+  return value > 0 ? '+' + value : value < 0 ? '−' + -value : '0'
+}
+
+/** Reason field label showing what changed on the line, e.g. "Chênh lệch −2" or "Chênh lệch 0 · hỏng +1". */
+export function differenceReasonLabel(
+  line: Pick<CountDto['lines'][number], 'difference' | 'damagedChange'>,
+) {
+  const damaged = line.damagedChange ?? 0
+  return (
+    'Chênh lệch ' +
+    signedQty(line.difference ?? 0) +
+    (damaged !== 0 ? ' · hỏng ' + signedQty(damaged) : '')
+  )
+}
+
 export function countScope(type: string, note: string | null) {
   return type === 'WHOLE'
     ? 'Toàn kho'
