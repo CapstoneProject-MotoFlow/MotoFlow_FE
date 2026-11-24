@@ -322,6 +322,12 @@
 .receiving-discrepancy-panel small {
   color: #667085;
 }
+.receiving-discrepancy-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
 
 .receiving-panel .receiving-receipt-cards {
   display: grid;

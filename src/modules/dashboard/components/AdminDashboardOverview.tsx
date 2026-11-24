@@ -7,13 +7,16 @@
 import { MetricCard, StoreStatusPanel } from './DashboardWidgets'
 import type { DashboardData } from '../types/dashboardTypes'
 import type {
+  AccountState,
   DashboardAccount,
+  LastSession,
   PermissionHistoryItem,
 } from '../../../shared/types/account'
 
 import { Link } from 'react-router-dom'
 import { recentAccounts } from '../utils/recentAccounts'
 import { roleNames } from '../../../shared/utils/roles'
+import { formatIpAddress } from '../../../shared/utils/format'
 import { managerPermissionLabel } from '../../owner/managerPermissions'
 
 /** AdminDashboardOverview: Khối tổng quan Admin: chỉ số tài khoản/cửa hàng, lịch sử và đăng nhập gần đây. */
@@ -211,6 +214,21 @@ function RecentLoginPanel({
   onClear: () => void
 }) {
   const recent = recentAccounts(accounts, selectedAccount)
+  const sessionStatus: Record<LastSession['status'], string> = {
+    ACTIVE: 'Đang hoạt động',
+    SIGNED_OUT: 'Đã đăng xuất',
+    EXPIRED: 'Hết hạn',
+  }
+  const sessionBadge: Record<LastSession['status'], string> = {
+    ACTIVE: 'mf-badge--success',
+    SIGNED_OUT: 'mf-badge--muted',
+    EXPIRED: 'mf-badge--warning',
+  }
+  const accountState: Record<AccountState, string> = {
+    ACTIVE: 'Tài khoản hoạt động',
+    TEMPORARILY_LOCKED: 'Tạm khóa',
+    LOCKED: 'Đã khóa',
+  }
   const date = (value: string) => {
     const parts = new Intl.DateTimeFormat('vi-VN', {
       day: '2-digit',
@@ -231,7 +249,7 @@ function RecentLoginPanel({
       <div className="panel-heading">
         <h2>
           {selectedAccount === null
-            ? 'Tài khoản đăng nhập gần đây'
+            ? 'Phiên đăng nhập gần đây'
             : 'Tài khoản đã chọn'}
         </h2>
         {selectedAccount !== null && (
@@ -248,7 +266,9 @@ function RecentLoginPanel({
                 <th>Người dùng</th>
                 <th>Vai trò</th>
                 <th>Đăng nhập lúc</th>
-                <th>Trạng thái tài khoản</th>
+                <th>Địa chỉ IP</th>
+                <th>Thiết bị</th>
+                <th>Phiên</th>
               </tr>
             </thead>
             <tbody>
@@ -266,18 +286,31 @@ function RecentLoginPanel({
                     <strong>{account.fullName}</strong>
                     <small>{account.username}</small>
                   </td>
-                  <td>{roleNames[account.role]}</td>
+                  <td>
+                    {roleNames[account.role]}
+                    <small>{accountState[account.state]}</small>
+                  </td>
                   <td className="date-cell">
                     {account.lastLoginAt
                       ? date(account.lastLoginAt)
                       : 'Chưa đăng nhập'}
                   </td>
+                  <td>{formatIpAddress(account.lastSession?.ipAddress)}</td>
                   <td>
-                    {account.state === 'ACTIVE'
-                      ? 'Đang hoạt động'
-                      : account.state === 'TEMPORARILY_LOCKED'
-                        ? 'Tạm khóa'
-                        : 'Đã khóa'}
+                    {account.lastSession?.device || (
+                      <span className="session-unavailable">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {account.lastSession ? (
+                      <span
+                        className={`mf-badge ${sessionBadge[account.lastSession.status]}`}
+                      >
+                        {sessionStatus[account.lastSession.status]}
+                      </span>
+                    ) : (
+                      <span className="session-unknown">Chưa đăng nhập</span>
+                    )}
                   </td>
                 </tr>
               ))}

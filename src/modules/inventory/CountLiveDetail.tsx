@@ -3,7 +3,13 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryPanel, InventoryNotice } from './components'
-import { countFromDto, canCancelCount, type CountDto } from './countApi'
+import {
+  countFromDto,
+  canCancelCount,
+  differenceReasonLabel,
+  needsDifferenceReason,
+  type CountDto,
+} from './countApi'
 import type { Assignment } from './countAssignment'
 import {
   stockCountStatusLabels as countStateNames,
@@ -99,6 +105,8 @@ export default function CountLiveDetail() {
     )
     setError('')
   }
+  // BE skips difference reasons for OPENING counts (BR-86).
+  const opening = d?.countType === 'OPENING'
   async function save() {
     if (lock.current || !d) return
     lock.current = true
@@ -112,7 +120,7 @@ export default function CountLiveDetail() {
             ? {
                 removedLineIds: selected,
                 reasons: d.lines
-                  .filter((l) => l.difference != null && l.difference !== 0)
+                  .filter((l) => needsDifferenceReason(l, opening))
                   .map((l) => ({
                     lineId: l.id,
                     reason: reasons[l.id]?.trim(),
@@ -145,10 +153,7 @@ export default function CountLiveDetail() {
               (l) => l.countedQty != null || selected.includes(l.id),
             ) &&
             d.lines.every(
-              (l) =>
-                l.difference == null ||
-                l.difference === 0 ||
-                !!reasons[l.id]?.trim(),
+              (l) => !needsDifferenceReason(l, opening) || !!reasons[l.id]?.trim(),
             )
           : true
   // Lý do ngắn bên cạnh nút Xác nhận khi xác minh chưa đủ điều kiện (theo đúng thứ tự kiểm tra của valid).
@@ -158,14 +163,13 @@ export default function CountLiveDetail() {
         ? 'Đếm hoặc bỏ chọn các dòng chưa đếm để xác nhận.'
         : selected.length >= d.lines.length
           ? 'Không thể bỏ hết mọi dòng của phiếu.'
-          : d.lines.some(
-                (l) =>
-                  l.difference != null &&
-                  l.difference !== 0 &&
-                  !reasons[l.id]?.trim(),
-              )
-            ? 'Nhập lý do cho mọi dòng chênh lệch để xác nhận.'
-            : ''
+          : d.confirmedAt && selected.length > 0
+            ? 'Phiếu đếm lại phải đếm đủ các dòng, không được bỏ dòng chưa đếm.'
+            : d.lines.some(
+                  (l) => needsDifferenceReason(l, opening) && !reasons[l.id]?.trim(),
+                )
+              ? 'Nhập lý do cho mọi dòng chênh lệch để xác nhận.'
+              : ''
       : ''
   const openingReady = d?.countType !== 'OPENING' || openingCosts.data?.complete === true
   return (
@@ -429,12 +433,12 @@ export default function CountLiveDetail() {
               >
                 <InventoryNotice error={error} />
                 {action === 'confirm' && (
-                  <Hint>Mỗi dòng chênh lệch cần ghi lý do.</Hint>
+                  <Hint>Mỗi dòng chênh lệch số lượng hoặc thay đổi hàng hỏng cần ghi lý do.</Hint>
                 )}
                 <fieldset disabled={busy}>
                   {action === 'confirm' &&
                     d.lines
-                      .filter((l) => l.countedQty == null || l.difference !== 0)
+                      .filter((l) => l.countedQty == null || needsDifferenceReason(l, opening))
                       .map((l) => (
                         <div key={l.id}>
                           {l.sku} · {l.partName}
@@ -456,7 +460,7 @@ export default function CountLiveDetail() {
                           ) : (
                             <label>
                               <span>
-                                Lý do chênh lệch {l.difference}{' '}
+                                {differenceReasonLabel(l)}{' '}
                                 <span className="required">*</span>
                               </span>
                               <textarea

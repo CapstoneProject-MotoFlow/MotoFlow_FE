@@ -1435,20 +1435,38 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
                         </strong>
                         <small>
                           Phiếu nhập{' '}
-                          {documentCode('PN', row.goodsReceiptNoteId)} · Thiếu{' '}
-                          {row.shortQty} · Giao sai {row.wrongItemQty} · Hỏng{' '}
-                          {row.damagedQty} · Từ chối nhận thừa{' '}
-                          {row.rejectedExcessQty}
-                          {row.status !== 'CLOSED' &&
-                            Boolean(
-                              row.outstandingReturnQty ||
-                              row.outstandingReplacementQty,
-                            ) &&
-                            ' · Còn phải trả ' +
-                              (row.outstandingReturnQty ?? 0) +
-                              ' · Còn phải giao bù ' +
-                              (row.outstandingReplacementQty ?? 0)}
+                          {documentCode('PN', row.goodsReceiptNoteId)}
                         </small>
+                        {/* Cùng kiểu nhãn số với màn xử lý sai lệch: chỉ hiện loại có số lượng. */}
+                        <span className="receiving-discrepancy-chips">
+                          {(
+                            [
+                              ['Thiếu', row.shortQty],
+                              ['Giao sai', row.wrongItemQty],
+                              ['Hỏng', row.damagedQty],
+                              ['Thừa từ chối', row.rejectedExcessQty],
+                            ] as const
+                          )
+                            .filter(([, quantity]) => quantity > 0)
+                            .map(([label, quantity]) => (
+                              <span key={label} className="mf-badge mf-badge--muted">
+                                {label} {quantity}
+                              </span>
+                            ))}
+                          {row.status !== 'CLOSED' &&
+                            (
+                              [
+                                ['Còn phải trả', row.outstandingReturnQty ?? 0],
+                                ['Còn phải giao bù', row.outstandingReplacementQty ?? 0],
+                              ] as const
+                            )
+                              .filter(([, quantity]) => quantity > 0)
+                              .map(([label, quantity]) => (
+                                <span key={label} className="mf-badge mf-badge--warning">
+                                  {label} {quantity}
+                                </span>
+                              ))}
+                        </span>
                       </div>
                       {row.status && (
                         <span

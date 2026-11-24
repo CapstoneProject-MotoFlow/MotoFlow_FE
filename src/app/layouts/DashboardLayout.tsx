@@ -51,6 +51,7 @@ export default function DashboardLayout() {
   const phone = usePhoneLayout(setDrawerOpen)
   const sidebarRef = useRef<HTMLElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
   const drawerShown = phone && drawerOpen
   // Trên điện thoại menu luôn đầy đủ nhãn; thu gọn chỉ áp dụng cho máy tính/máy tính bảng.
   const menuCollapsed = collapsed && !phone
@@ -59,17 +60,22 @@ export default function DashboardLayout() {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     sidebarRef.current?.focus()
-    function closeDrawer() {
-      setDrawerOpen(false)
-      toggleRef.current?.focus()
-    }
+    const toggle = toggleRef.current
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') closeDrawer()
+      if (event.key === 'Escape') {
+        restoreFocus.current = true
+        setDrawerOpen(false)
+      }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previousOverflow
+      // Trả focus về nút ☰ sau khi DOM đã bỏ inert (cleanup chạy sau khi React commit).
+      if (restoreFocus.current) {
+        restoreFocus.current = false
+        toggle?.focus()
+      }
     }
   }, [drawerShown])
   if (!user) return null
@@ -140,12 +146,12 @@ export default function DashboardLayout() {
           className="sidebar-backdrop"
           aria-hidden="true"
           onClick={() => {
+            restoreFocus.current = true
             setDrawerOpen(false)
-            toggleRef.current?.focus()
           }}
         />
       )}
-      <div className="dashboard-main">
+      <div className="dashboard-main" inert={drawerShown}>
         <header className="dashboard-header">
           <div className="header-tools">
             <button

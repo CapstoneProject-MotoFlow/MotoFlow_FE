@@ -381,7 +381,7 @@ function Editor({
         </div>
       )}
       <div className="stock-table-scroll">
-        <table className="stock-table">
+        <table className="stock-table count-record-table">
           <thead>
             <tr>
               <th>Phụ tùng / Lô</th>
