@@ -295,8 +295,9 @@ export function decisionReturnMax(row: Case, kind: ReturnKind) {
   return returnLimits(row, kind).max
 }
 
-/** PM Q2: số giao bù BM được tự lưu = thiếu + trả sai + trả hỏng, không quá hạn mức. */
+/** PM Q2: số giao bù BM được tự lưu = thiếu + trả sai + trả hỏng, không quá hạn mức; phiếu giao bù thì 0. */
 export function standardReplacement(row: Case, wrong: number, damaged: number) {
+  if (row.replacementDelivery) return 0
   return Math.min(row.shortQty + wrong + damaged, row.replacementLimitQty)
 }
 

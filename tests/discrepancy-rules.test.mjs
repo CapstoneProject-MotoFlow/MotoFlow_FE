@@ -36,6 +36,7 @@ const {
   decisionLine,
   decisionSaveButtons,
   standardReplacement,
+  decisionNumbers,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -456,4 +457,16 @@ test('an open case with no direction yet only says it is undecided (review 25/11
   const decided = { ...row, decisionStatus: 'DECIDED' }
   assert.match(caseStatusLabel(decided), /Chờ NCC giao bù 2/)
   assert.equal(summaryBoxes(decided).length, 3)
+})
+
+test('a replacement delivery never asks for another replacement by default', () => {
+  const row = fresh({
+    replacementDelivery: true,
+    shortQty: 1,
+    damagedQty: 1,
+    replacementLimitQty: 2,
+    decisionStatus: 'UNDECIDED',
+  })
+  assert.equal(standardReplacement(row, 0, 1), 0)
+  assert.equal(decisionNumbers(row, decisionDraft(row)).replacement, 0)
 })
