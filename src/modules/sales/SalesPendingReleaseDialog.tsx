@@ -28,7 +28,10 @@ export default function SalesPendingReleaseDialog({
   /** GVHD 24/11: số gợi ý theo phụ tùng (readyQty của màn Đơn chưa đáp ứng đủ, đã chia cho đơn cũ trước). */
   preset?: Record<number, number>
   onClose: () => void
-  onSaved: (message: string, linkedOrders: { orderId?: number; pendingOrderId?: number }) => void
+  onSaved: (
+    message: string,
+    linkedOrders: { orderId?: number; pendingOrderId?: number },
+  ) => void
 }) {
   const [quantities, setQuantities] = useState<Record<number, string>>(() =>
     Object.fromEntries(
@@ -40,14 +43,17 @@ export default function SalesPendingReleaseDialog({
             Math.min(
               line.requested,
               line.sellableQty ?? line.requested,
-              preset?.[line.productId] ?? line.requested,
+              // Có số gợi ý từ màn Đơn chưa đáp ứng đủ thì dòng không có trong gợi ý để 0, không soạn hết.
+              preset ? Math.floor(preset[line.productId] ?? 0) : line.requested,
             ),
           ),
         ),
       ]),
     ),
   )
-  const [refundMethod, setRefundMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH')
+  const [refundMethod, setRefundMethod] = useState<'CASH' | 'BANK_TRANSFER'>(
+    'CASH',
+  )
   const [refundReference, setRefundReference] = useState('')
   const [refundPaid, setRefundPaid] = useState(false)
   // BE báo MSG328 (có cọc thừa mà FE không ước tính được): buộc hiện khối hoàn tiền.
@@ -82,7 +88,8 @@ export default function SalesPendingReleaseDialog({
         releaseLines[index].nowQty >= 0 &&
         releaseLines[index].nowQty <=
           Math.min(line.requested, line.sellableQty ?? line.requested),
-    ) && releaseLines.some((line) => line.nowQty > 0)
+    ) &&
+    releaseLines.some((line) => line.nowQty > 0)
   const missingLineIds = order.lines.some((line) => line.lineId == null)
   const shortIds = shortLines(order.lines, qtyByLineId)
 
@@ -153,7 +160,9 @@ export default function SalesPendingReleaseDialog({
         .filter(Boolean)
         .join(' · ')
       onSaved(
-        message ? `Đã chuyển sang soạn: ${message}.` : 'Đã chuyển đơn sang soạn.',
+        message
+          ? `Đã chuyển sang soạn: ${message}.`
+          : 'Đã chuyển đơn sang soạn.',
         {
           orderId: soldId ?? data.id,
           pendingOrderId: waitingId ?? undefined,
@@ -222,8 +231,7 @@ export default function SalesPendingReleaseDialog({
             <tbody>
               {order.lines.map((line) => {
                 const now = Number(quantities[line.productId] ?? 0)
-                const short =
-                  line.sellableQty != null && now > line.sellableQty
+                const short = line.sellableQty != null && now > line.sellableQty
                 return (
                   <tr
                     key={line.productId}
@@ -248,7 +256,10 @@ export default function SalesPendingReleaseDialog({
                       <input
                         type="number"
                         min="0"
-                        max={Math.min(line.requested, line.sellableQty ?? line.requested)}
+                        max={Math.min(
+                          line.requested,
+                          line.sellableQty ?? line.requested,
+                        )}
                         step="1"
                         aria-label={'Lấy ngay ' + line.sku}
                         value={quantities[line.productId] ?? ''}
@@ -273,11 +284,15 @@ export default function SalesPendingReleaseDialog({
           </table>
         </div>
         {deposit && depositPlan && (
-          <section className="sales-release-deposit" aria-label="Tiền cọc khi chuyển đơn">
+          <section
+            className="sales-release-deposit"
+            aria-label="Tiền cọc khi chuyển đơn"
+          >
             <p>{`Cọc còn giữ: ${formatMoney(deposit.remaining)}`}</p>
             {!isLast && (
               <p className="sales-release-hint">
-                Cọc tự trừ vào đơn lấy ngay, tối đa bằng tổng đơn đó; phần còn lại giữ cho đơn lấy sau.
+                Cọc tự trừ vào đơn lấy ngay, tối đa bằng tổng đơn đó; phần còn
+                lại giữ cho đơn lấy sau.
               </p>
             )}
             <p>
@@ -291,7 +306,8 @@ export default function SalesPendingReleaseDialog({
               <>
                 <p>{`Trừ hết cọc vào đơn này (ước tính): ${formatMoney(depositPlan.suggested)}`}</p>
                 <p className="sales-release-hint">
-                  Lần chuyển cuối: hệ thống trừ hết cọc còn lại, tối đa bằng tổng đơn.
+                  Lần chuyển cuối: hệ thống trừ hết cọc còn lại, tối đa bằng
+                  tổng đơn.
                 </p>
                 {(refund > 0 || forceRefund) && (
                   <fieldset className="sales-release-refund">
@@ -302,7 +318,8 @@ export default function SalesPendingReleaseDialog({
                     </legend>
                     {forceRefund && (
                       <p role="status" className="sales-release-hint">
-                        Hệ thống báo tiền cọc vượt tổng đơn. Vui lòng nhập cách trả lại khách phần thừa rồi gửi lại.
+                        Hệ thống báo tiền cọc vượt tổng đơn. Vui lòng nhập cách
+                        trả lại khách phần thừa rồi gửi lại.
                       </p>
                     )}
                     {forceRefund && (
@@ -317,7 +334,9 @@ export default function SalesPendingReleaseDialog({
                       <select
                         value={refundMethod}
                         onChange={(event) =>
-                          setRefundMethod(event.target.value as 'CASH' | 'BANK_TRANSFER')
+                          setRefundMethod(
+                            event.target.value as 'CASH' | 'BANK_TRANSFER',
+                          )
                         }
                       >
                         <option value="CASH">Tiền mặt</option>
@@ -331,7 +350,9 @@ export default function SalesPendingReleaseDialog({
                           required
                           maxLength={100}
                           value={refundReference}
-                          onChange={(event) => setRefundReference(event.target.value)}
+                          onChange={(event) =>
+                            setRefundReference(event.target.value)
+                          }
                         />
                       </label>
                     )}
@@ -340,7 +361,9 @@ export default function SalesPendingReleaseDialog({
                         type="checkbox"
                         required
                         checked={refundPaid}
-                        onChange={(event) => setRefundPaid(event.target.checked)}
+                        onChange={(event) =>
+                          setRefundPaid(event.target.checked)
+                        }
                       />
                       Đã trả tiền cho khách
                     </label>
