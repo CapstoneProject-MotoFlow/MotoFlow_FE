@@ -3,7 +3,8 @@
  * Loại: THÀNH PHẦN — phần "Hàng giao sai" trên chi tiết lệnh điều chuyển.
  * Công dụng: PM 23/11 (plan bản 2), GVHD 24/11 (phần C). Giao sai = giao nhầm mặt hàng khác mặt hàng yêu cầu, không
  * tính là thiếu. Với mỗi dòng có hàng giao sai, BM kho nhận chọn một trong hai (có thể chia):
- * - "Nhập kho (lập phiếu nhận)": phụ tùng thực nhận, số lượng, HSD, ảnh. Tồn chưa đổi cho tới khi BM kho gửi xác nhận;
+ * - "Nhập kho (lập phiếu nhận)": phụ tùng thực nhận, số lượng, ảnh (PM 25/11, R-04: không điền HSD; kho gửi trừ lô
+ *   nhập trước). Tồn chưa đổi cho tới khi BM kho gửi xác nhận;
  *   kho gửi cũng có thể từ chối (ghi lý do), khi đó số hàng đó quay lại "chưa xử lý".
  * - "Hoàn trả": trả lại kho gửi, không đổi tồn (hàng chưa rời sổ kho gửi).
  * Owner chỉ xem; thấy kho nhận ghi sai thì dùng "Bên nhận kiểm sai" ở bảng Sai lệch.
@@ -93,7 +94,6 @@ function WrongItemDialog({
   const pending = line.wrongPendingQty ?? 0
   const [product, setProduct] = useState<ProductOption>()
   const [quantity, setQuantity] = useState(String(pending))
-  const [expiry, setExpiry] = useState('')
   const [reason, setReason] = useState('')
   const qty = Number(quantity)
   const qtyError =
@@ -109,7 +109,6 @@ function WrongItemDialog({
         productId: line.productId,
         receivedProductId: product!.id,
         quantity: qty,
-        expiryDate: expiry || null,
         reason: reason.trim() || null,
         files: await uploadedPhotos(form, 'wrongItemPhotos'),
       })}
@@ -148,14 +147,6 @@ function WrongItemDialog({
         onChange={setQuantity}
         error={qtyError}
       />
-      <label>
-        Hạn sử dụng (nếu có)
-        <input
-          type="date"
-          value={expiry}
-          onChange={(event) => setExpiry(event.target.value)}
-        />
-      </label>
       <label>
         Ghi chú
         <input
