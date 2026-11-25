@@ -2274,6 +2274,10 @@
   gap: 4px;
   font-size: 13px;
 }
+/* Review 25/11 (R-13): lỗi ngày dự kiến nằm riêng một dòng dưới ô ngày và nút, không bị ép cạnh nút. */
+.sales-expected-ready .sales-expected-error {
+  flex-basis: 100%;
+}
 .sales-wait-short {
   display: inline-flex;
   align-items: center;

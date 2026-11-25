@@ -1453,6 +1453,11 @@ function ExpectedReadyDate({
       </p>
     ) : null
   const save = async (date: string) => {
+    // Review 25/11 (R-13): ô ngày vẫn gõ tay được ngày đã qua dù có min, nên chặn trước khi gửi (cùng câu MSG349).
+    if (date && date < todayIso()) {
+      setError('Ngày dự kiến có hàng phải từ hôm nay trở đi.')
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -1481,7 +1486,11 @@ function ExpectedReadyDate({
           min={todayIso()}
           value={value}
           className={overdue ? 'sales-expected-overdue' : undefined}
-          onChange={(e) => setValue(e.target.value)}
+          aria-invalid={!!error || undefined}
+          onChange={(e) => {
+            setValue(e.target.value)
+            setError('')
+          }}
         />
       </label>
       <button
@@ -1496,9 +1505,9 @@ function ExpectedReadyDate({
         <small className="sales-expected-overdue">Đã quá ngày dự kiến.</small>
       )}
       {error && (
-        <small className="pos-warn" role="alert">
+        <p className="pos-warn sales-expected-error" role="alert">
           {error}
-        </small>
+        </p>
       )}
     </div>
   )
