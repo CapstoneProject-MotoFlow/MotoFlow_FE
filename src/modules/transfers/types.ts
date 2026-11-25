@@ -31,11 +31,11 @@ export type PartLine = {
   wrongItemQty?: number | null
   /** Giao sai chưa lập phiếu nhận hàng giao sai và chưa hoàn trả. */
   wrongPendingQty?: number | null
-  /** GVHD 24/11: giao sai trên phiếu nhận hàng giao sai đang chờ BM kho gửi xác nhận. */
+  /** GVHD 24/11: giao sai trên phiếu nhận hàng giao sai hoặc hoàn trả (review 25/11) đang chờ BM kho gửi xác nhận. */
   wrongAwaitingSourceQty?: number | null
   /** GVHD 24/11: giao sai trên phiếu kho gửi đã xác nhận (đã nhập kho nhận). */
   wrongConfirmedQty?: number | null
-  /** GVHD 24/11: giao sai đã hoàn trả kho gửi (không đổi tồn). */
+  /** GVHD 24/11: giao sai đã hoàn trả, kho gửi đã xác nhận nhận lại (không đổi tồn). */
   wrongReturnedQty?: number | null
   /** Không cần giao bù: khi Owner đóng phiếu cộng lại tồn khả dụng kho gửi. */
   noReplacementQty?: number | null
@@ -141,10 +141,13 @@ export type Transfer = Omit<
       resolutionType: string
       quantity: number
       reason: string | null
+      /** Lúc ghi (review 25/11, R-02: dựng "Lịch sử đối soát"). */
+      occurredAt?: string | null
       confirmedAt: string | null
       /**
        * PM 23/11: phiếu nhận hàng giao sai (RECEIVED_AS_OTHER_PRODUCT): phụ tùng thực nhận, HSD, trạng thái.
        * GVHD 24/11: hoàn trả (WRONG_ITEM_RETURNED) cũng có phụ tùng thực nhận; phiếu bị từ chối có lý do.
+       * Review 25/11 (R-14): hoàn trả cũng chờ BM kho gửi xác nhận (đã nhận lại) hoặc từ chối, nên cũng có trạng thái.
        */
       receivedProductId?: number | null
       receivedSku?: string | null

@@ -6,6 +6,8 @@
  * đổi. BM kho gửi xác nhận: Y trừ ở tồn khả dụng kho gửi (lô cùng HSD bên nhận ghi; không ghi HSD thì lô nhập trước),
  * cộng vào kho nhận. Hoặc từ chối kèm lý do. Kho gửi không đủ tồn khả dụng (không tính hàng đang giữ cho đơn bán) thì
  * BE báo MSG339, không có lô cùng HSD thì MSG341. Owner chỉ xem.
+ * Review 25/11 (R-14): việc kho nhận hoàn trả hàng giao sai cũng nằm ở đây; BM kho gửi xác nhận đã nhận lại (tồn không
+ * đổi) hoặc từ chối kèm lý do, khi đó số lượng quay về "chưa xử lý".
  */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -38,6 +40,8 @@ type PendingWrongItem = {
   lots: PlannedLot[]
   blockedCode: string | null
   attachments?: Evidence[]
+  /** RECEIVED_AS_OTHER_PRODUCT: phiếu nhận; WRONG_ITEM_RETURNED: hoàn trả (không trừ lô). */
+  resolutionType?: string
 }
 
 const day = (value: string | null) =>
@@ -71,6 +75,7 @@ function PendingRow({
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
+  const handBack = item.resolutionType === 'WRONG_ITEM_RETURNED'
   const blocked = blockedText(item)
   const lotText = item.lots
     .map(
@@ -94,17 +99,25 @@ function PendingRow({
           '/confirm',
       )
       onDone(
-        'Đã xác nhận: cộng ' +
-          item.quantity +
-          ' ' +
-          item.receivedSku +
-          ' vào ' +
-          item.destStoreName +
-          ', trừ ' +
-          item.quantity +
-          ' ở ' +
-          item.sourceStoreName +
-          '.',
+        handBack
+          ? 'Đã xác nhận nhận lại ' +
+              item.quantity +
+              ' ' +
+              item.receivedSku +
+              ' ' +
+              item.destStoreName +
+              ' hoàn trả. Tồn không đổi.'
+          : 'Đã xác nhận: cộng ' +
+              item.quantity +
+              ' ' +
+              item.receivedSku +
+              ' vào ' +
+              item.destStoreName +
+              ', trừ ' +
+              item.quantity +
+              ' ở ' +
+              item.sourceStoreName +
+              '.',
       )
     } catch (failure) {
       setError(inventoryError(failure))
@@ -127,14 +140,21 @@ function PendingRow({
         {item.sku} · {item.partName}
       </td>
       <td>
+        {handBack && <strong>Hoàn trả: </strong>}
         {item.receivedSku} · {item.receivedPartName}
         {item.reason && <small>{item.reason}</small>}
         <DebtEvidence files={item.attachments} />
       </td>
       <td>{item.quantity}</td>
-      <td>{day(item.expiryDate) ?? 'Không ghi (trừ lô nhập trước)'}</td>
       <td>
-        {blocked ? (
+        {handBack
+          ? '—'
+          : (day(item.expiryDate) ?? 'Không ghi (trừ lô nhập trước)')}
+      </td>
+      <td>
+        {handBack ? (
+          'Không trừ lô (hàng chưa rời sổ kho gửi)'
+        ) : blocked ? (
           <span className="tf-excess-blocked">{blocked}</span>
         ) : (
           lotText || '—'
@@ -170,7 +190,11 @@ function PendingRow({
         )}
         {rejecting && (
           <TransferAction
-            title="Từ chối phiếu nhận hàng giao sai"
+            title={
+              handBack
+                ? 'Từ chối việc hoàn trả hàng giao sai'
+                : 'Từ chối phiếu nhận hàng giao sai'
+            }
             path={
               '/transfer-orders/' +
               item.transferOrderId +
@@ -184,7 +208,9 @@ function PendingRow({
             onSaved={() => {
               setRejecting(false)
               onDone(
-                'Đã từ chối phiếu nhận ' +
+                (handBack
+                  ? 'Đã từ chối việc hoàn trả '
+                  : 'Đã từ chối phiếu nhận ') +
                   item.quantity +
                   ' ' +
                   item.receivedSku +
@@ -207,17 +233,29 @@ function PendingRow({
         {/* Test 23/11 T-09: xác nhận đổi tồn hai kho, phải hỏi lại trước khi gửi. */}
         {asking && (
           <ConfirmDialog
-            title="Xác nhận hàng giao sai"
+            title={
+              handBack
+                ? 'Xác nhận đã nhận lại hàng hoàn trả'
+                : 'Xác nhận hàng giao sai'
+            }
             message={
-              <p>
-                {/* GVHD 24/11 (C5): chỉ hai ý, cộng ở đâu và trừ ở đâu. */}
-                Cộng {item.quantity}{' '}
-                {partLabel(item.receivedSku, item.receivedPartName)} vào{' '}
-                {item.destStoreName}, trừ {item.quantity} ở{' '}
-                {item.sourceStoreName}
-                {lotText ? ' (' + lotText + ')' : ''}. Thao tác không hoàn tác
-                được.
-              </p>
+              handBack ? (
+                <p>
+                  {item.sourceStoreName} đã nhận lại {item.quantity}{' '}
+                  {partLabel(item.receivedSku, item.receivedPartName)} từ{' '}
+                  {item.destStoreName}. Tồn không đổi.
+                </p>
+              ) : (
+                <p>
+                  {/* GVHD 24/11 (C5): chỉ hai ý, cộng ở đâu và trừ ở đâu. */}
+                  Cộng {item.quantity}{' '}
+                  {partLabel(item.receivedSku, item.receivedPartName)} vào{' '}
+                  {item.destStoreName}, trừ {item.quantity} ở{' '}
+                  {item.sourceStoreName}
+                  {lotText ? ' (' + lotText + ')' : ''}. Thao tác không hoàn tác
+                  được.
+                </p>
+              )
             }
             onCancel={() => setAsking(false)}
             onConfirm={confirm}
@@ -267,7 +305,7 @@ export default function TransferWrongItemPendingSection({
       </header>
       <p className="tf-excess-hint">
         {canAct
-          ? 'Kho nhận đã lập phiếu nhận hàng giao sai từ lệnh kho bạn gửi; tồn chưa đổi. Xác nhận: cộng vào kho nhận, trừ ở tồn khả dụng kho bạn (lô cùng hạn sử dụng bên nhận ghi, không ghi thì lô nhập trước). Không đúng thì Từ chối và ghi lý do.'
+          ? 'Kho nhận đã lập phiếu nhận hàng giao sai hoặc hoàn trả hàng giao sai từ lệnh kho bạn gửi; tồn chưa đổi. Phiếu nhận, khi xác nhận: cộng vào kho nhận, trừ ở tồn khả dụng kho bạn (lô cùng hạn sử dụng bên nhận ghi, không ghi thì lô nhập trước). Hoàn trả, khi xác nhận: kho bạn đã nhận lại hàng, tồn không đổi. Không đúng thì Từ chối và ghi lý do.'
           : 'Kho nhận đã lập phiếu nhận hàng giao sai; tồn chưa đổi cho tới khi BM kho gửi xác nhận. Owner chỉ xem; thấy kho nhận ghi sai thì mở lệnh và dùng "Bên nhận kiểm sai" ở bảng Sai lệch.'}
       </p>
       {notice && (

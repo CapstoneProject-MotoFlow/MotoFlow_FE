@@ -108,7 +108,10 @@ test('the receiving BM records a wrong item receipt or hands it back, and sees i
     assert.doesNotMatch(out, />Xác nhận<\/button>/)
     assert.doesNotMatch(out, />Từ chối<\/button>/)
     assert.match(out, /Giao sai 2 · Chưa xử lý 1 · Chờ kho gửi xác nhận 1/)
-    assert.match(out, /Nhập kho: 1 × MA-PHANH-SAU · Má phanh sau · HSD 01\/03\/2027 · Chờ kho gửi xác nhận · Lê B/)
+    assert.match(
+      out,
+      /Nhập kho: 1 × MA-PHANH-SAU · Má phanh sau · HSD 01\/03\/2027 · Chờ kho gửi xác nhận · Lê B/,
+    )
     assert.match(out, />Nhập kho \(lập phiếu nhận\)<\/button>/)
     assert.match(out, />Hoàn trả<\/button>/)
   })
@@ -174,6 +177,48 @@ test('the source BM confirms or rejects a wrong item receipt from the order page
         onDone: () => {},
       }),
     )
+    assert.doesNotMatch(confirmed, />Xác nhận<\/button>/)
+  })
+})
+
+test('the source BM confirms or rejects a hand-back too (review 25/11, R-14)', async () => {
+  await withModules(({ Section, html }) => {
+    const handBack = {
+      ...awaiting,
+      id: 92,
+      resolutionType: 'WRONG_ITEM_RETURNED',
+      receivedExpiryDate: null,
+    }
+    const out = html(
+      createElement(Section, {
+        order: order([line()], [handBack]),
+        canRecord: false,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.match(
+      out,
+      /Hoàn trả: 1 × MA-PHANH-SAU · Má phanh sau · Chờ kho gửi xác nhận · Lê B<\/p><div class="mf-row-actions"><button[^>]*>Xác nhận<\/button><button[^>]*>Từ chối<\/button>/,
+    )
+    const confirmed = html(
+      createElement(Section, {
+        order: order(
+          [line()],
+          [
+            {
+              ...handBack,
+              status: 'CONFIRMED',
+              confirmedAt: '2026-11-25T09:00:00',
+            },
+          ],
+        ),
+        canRecord: false,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.match(confirmed, /Kho gửi đã xác nhận nhận lại/)
     assert.doesNotMatch(confirmed, />Xác nhận<\/button>/)
   })
 })

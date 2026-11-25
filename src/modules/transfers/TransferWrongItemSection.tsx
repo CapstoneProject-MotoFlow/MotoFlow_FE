@@ -35,6 +35,13 @@ const statusLabels: Record<string, string> = {
   REJECTED: 'Kho gửi từ chối',
   CANCELLED: 'Đã hủy (bên nhận kiểm sai)',
 }
+// Review 25/11 (R-14): hoàn trả cũng chờ kho gửi xác nhận đã nhận lại hoặc từ chối; tồn không đổi.
+const returnStatusLabels: Record<string, string> = {
+  ...statusLabels,
+  CONFIRMED: 'Kho gửi đã xác nhận nhận lại',
+}
+const isHandBack = (event: { resolutionType: string }) =>
+  event.resolutionType === 'WRONG_ITEM_RETURNED'
 
 /** Ảnh người dùng chọn trong ô {@code name}, tải lên trước khi gửi (tối đa 10). */
 async function uploadedPhotos(form: HTMLFormElement, name: string) {
@@ -267,7 +274,11 @@ function RejectDialog({
   const [reason, setReason] = useState('')
   return (
     <TransferAction
-      title="Từ chối phiếu nhận hàng giao sai"
+      title={
+        isHandBack(event)
+          ? 'Từ chối việc hoàn trả hàng giao sai'
+          : 'Từ chối phiếu nhận hàng giao sai'
+      }
       path={
         '/transfer-orders/' + order.id + '/wrong-items/' + event.id + '/reject'
       }
@@ -276,7 +287,9 @@ function RejectDialog({
       onClose={onClose}
       onSaved={() =>
         onSaved(
-          'Đã từ chối phiếu nhận ' +
+          (isHandBack(event)
+            ? 'Đã từ chối việc hoàn trả '
+            : 'Đã từ chối phiếu nhận ') +
             event.quantity +
             ' ' +
             (event.receivedSku ?? 'phụ tùng giao sai') +
@@ -354,17 +367,23 @@ export default function TransferWrongItemSection({
           '/confirm',
       )
       onDone(
-        'Đã xác nhận: cộng ' +
-          event.quantity +
-          ' ' +
-          (event.receivedSku ?? 'phụ tùng giao sai') +
-          ' vào ' +
-          order.destStoreName +
-          ', trừ ' +
-          event.quantity +
-          ' ở ' +
-          order.sourceStoreName +
-          '.',
+        isHandBack(event)
+          ? 'Đã xác nhận nhận lại ' +
+              event.quantity +
+              ' ' +
+              (event.receivedSku ?? 'phụ tùng giao sai') +
+              ' kho nhận hoàn trả. Tồn không đổi.'
+          : 'Đã xác nhận: cộng ' +
+              event.quantity +
+              ' ' +
+              (event.receivedSku ?? 'phụ tùng giao sai') +
+              ' vào ' +
+              order.destStoreName +
+              ', trừ ' +
+              event.quantity +
+              ' ở ' +
+              order.sourceStoreName +
+              '.',
       )
     } catch (failure) {
       setConfirmError(inventoryError(failure))
@@ -377,7 +396,7 @@ export default function TransferWrongItemSection({
       <h2>
         Hàng giao sai{' '}
         {/* PM 23/11 (UI-01): giải thích chuyển vào biểu tượng (i), bỏ đoạn mô tả. */}
-        <InfoTip text="Giao sai là giao nhầm mặt hàng khác mặt hàng đặt, không tính là thiếu. Kho nhận chọn Nhập kho (lập phiếu nhận, kho gửi xác nhận) hoặc Hoàn trả cho từng phần; xử lý hết mới đóng phiếu được." />
+        <InfoTip text="Giao sai là giao nhầm mặt hàng khác mặt hàng đặt, không tính là thiếu. Kho nhận chọn Nhập kho (lập phiếu nhận) hoặc Hoàn trả cho từng phần, kho gửi xác nhận hoặc từ chối; xử lý hết mới đóng phiếu được." />
       </h2>
       {lines.map((line) => (
         <article className="tf-wrong-item" key={line.productId}>
@@ -410,8 +429,11 @@ export default function TransferWrongItemSection({
                   {event.receivedExpiryDate
                     ? ' · HSD ' + day(event.receivedExpiryDate)
                     : ''}
-                  {event.resolutionType === 'RECEIVED_AS_OTHER_PRODUCT' &&
-                    ' · ' + (statusLabels[event.status ?? ''] ?? event.status)}
+                  {event.status &&
+                    ' · ' +
+                      ((isHandBack(event) ? returnStatusLabels : statusLabels)[
+                        event.status
+                      ] ?? event.status)}
                   {event.status === 'REJECTED' && event.rejectionReason
                     ? ': ' + event.rejectionReason
                     : ''}
@@ -470,15 +492,27 @@ export default function TransferWrongItemSection({
       )}
       {asking && (
         <ConfirmDialog
-          title="Xác nhận hàng giao sai"
+          title={
+            isHandBack(asking)
+              ? 'Xác nhận đã nhận lại hàng hoàn trả'
+              : 'Xác nhận hàng giao sai'
+          }
           message={
-            <p>
-              {/* GVHD 24/11 (C5): chỉ hai ý, cộng ở đâu và trừ ở đâu. */}
-              Cộng {asking.quantity}{' '}
-              {partLabel(asking.receivedSku, asking.receivedPartName)} vào{' '}
-              {order.destStoreName}, trừ {asking.quantity} ở{' '}
-              {order.sourceStoreName}. Thao tác không hoàn tác được.
-            </p>
+            isHandBack(asking) ? (
+              <p>
+                {order.sourceStoreName} đã nhận lại {asking.quantity}{' '}
+                {partLabel(asking.receivedSku, asking.receivedPartName)} từ{' '}
+                {order.destStoreName}. Tồn không đổi.
+              </p>
+            ) : (
+              <p>
+                {/* GVHD 24/11 (C5): chỉ hai ý, cộng ở đâu và trừ ở đâu. */}
+                Cộng {asking.quantity}{' '}
+                {partLabel(asking.receivedSku, asking.receivedPartName)} vào{' '}
+                {order.destStoreName}, trừ {asking.quantity} ở{' '}
+                {order.sourceStoreName}. Thao tác không hoàn tác được.
+              </p>
+            )
           }
           onCancel={() => setAsking(undefined)}
           onConfirm={() => confirm(asking)}

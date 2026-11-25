@@ -20,7 +20,9 @@ import './transfers.css'
 import {
   canConfirmExcess,
   EXCESS_TIP,
+  openWrongItems,
   receiptAcceptsResult,
+  reconciliationTimeline,
   WRONG_ITEM_TIP,
 } from './transferRules'
 import InfoTip from '../../shared/ui/InfoTip'
@@ -286,6 +288,10 @@ export default function TransferDetailPage() {
   const reconciliationFiles = (d?.attachments ?? []).filter(
     (file) => file.purpose === 'RECONCILIATION',
   )
+  // Review 25/11 (R-03): hàng giao sai còn chặn đóng phiếu, hiện sẵn cạnh nút đóng / xác nhận đối soát.
+  const wrongOpen = openWrongItems(d?.lines ?? [])
+  // Review 25/11 (R-02, plan C5): kho nhận báo gì, kho gửi xác nhận hay từ chối, ai làm lúc nào.
+  const timeline = d ? reconciliationTimeline(d) : []
   // Sau khi kho nhận gửi yêu cầu đối soát, BE chỉ cho Owner đóng phiếu.
   const ownerOnlyClose =
     !!d?.discrepancyAcknowledgedAt && scope.user?.role !== 'OWNER'
@@ -468,6 +474,27 @@ export default function TransferDetailPage() {
               )}
               {closeAction && <HeadButton key="close" action={closeAction} />}
             </CardHead>
+            {d.status === 'RECONCILING' &&
+              (!!closeAction || canConfirmReconciliation) &&
+              wrongOpen.total > 0 && (
+                <p className="tf-note" role="status">
+                  Còn {wrongOpen.total} hàng giao sai chưa xử lý xong (
+                  {wrongOpen.skus.join(', ')}):{' '}
+                  {[
+                    wrongOpen.pending > 0 &&
+                      wrongOpen.pending + ' chưa có phiếu nhận hay hoàn trả',
+                    wrongOpen.awaiting > 0 &&
+                      wrongOpen.awaiting + ' chờ kho gửi xác nhận',
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                  . Xử lý hết mới{' '}
+                  {canConfirmReconciliation
+                    ? 'xác nhận đối soát'
+                    : 'đóng phiếu'}{' '}
+                  được.
+                </p>
+              )}
             <div className="tf-detail-meta">
               <div>
                 <span>Kho nguồn</span>
@@ -870,6 +897,23 @@ export default function TransferDetailPage() {
               )}
             </ol>
           </section>
+          {timeline.length > 0 && (
+            <section>
+              <h2>Lịch sử đối soát</h2>
+              <ol className="tf-order-history">
+                {timeline.map((entry) => (
+                  <li key={entry.key}>
+                    <strong>{entry.title}</strong>
+                    <span>
+                      {dateTime(entry.at)}
+                      {entry.by ? ' · ' + entry.by : ''}
+                    </span>
+                    {entry.detail && <small>{entry.detail}</small>}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           {action && (
             <TransferAction
               title={
