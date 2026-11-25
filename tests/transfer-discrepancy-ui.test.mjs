@@ -1,4 +1,5 @@
-// PM 23/11 (plan bản 2): giao sai tách khỏi thiếu, Owner chỉ xác nhận, "Bên nhận kiểm sai".
+// PM 23/11 (plan bản 2): giao sai tách khỏi thiếu, "Bên nhận kiểm sai". GVHD 24/11: kho gửi xác nhận hoặc từ chối,
+// kho nhận nhập kho hoặc hoàn trả.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createElement } from 'react'
@@ -25,7 +26,7 @@ function line(overrides = {}) {
     shortageQty: 2,
     wrongItemQty: 2,
     wrongPendingQty: 1,
-    wrongAwaitingOwnerQty: 1,
+    wrongAwaitingSourceQty: 1,
     noReplacementQty: 0,
     latePendingQty: 0,
     receiverMiscounted: false,
@@ -62,7 +63,7 @@ const awaiting = {
   receivedSku: 'MA-PHANH-SAU',
   receivedPartName: 'Má phanh sau',
   receivedExpiryDate: '2027-03-01',
-  status: 'AWAITING_OWNER',
+  status: 'AWAITING_SOURCE',
   recordedBy: { id: 3, fullName: 'Lê B' },
 }
 
@@ -87,12 +88,13 @@ async function withModules(run) {
   }
 }
 
-test('the receiving BM records a wrong item receipt and sees it wait for the Owner', async () => {
+test('the receiving BM records a wrong item receipt or hands it back, and sees it wait for the source', async () => {
   await withModules(({ Section, html }) => {
     const out = html(
       createElement(Section, {
         order: order([line()], [awaiting]),
         canRecord: true,
+        canReturn: true,
         onDone: () => {},
       }),
     )
@@ -102,34 +104,66 @@ test('the receiving BM records a wrong item receipt and sees it wait for the Own
       /<h2>Hàng giao sai <span class="mf-info-tip"[^>]*title="Giao sai là giao nhầm/,
     )
     assert.doesNotMatch(out, /<p class="tf-note">Giao sai là/)
-    // Không phải Owner thì không có nút xác nhận.
+    // Kho nhận không xác nhận hay từ chối phiếu của mình.
     assert.doesNotMatch(out, />Xác nhận<\/button>/)
-    assert.match(out, /Giao sai 2 · Chưa lập phiếu 1 · Chờ Owner xác nhận 1/)
-    assert.match(out, /1 × MA-PHANH-SAU · Má phanh sau · HSD 01\/03\/2027 · Chờ Owner xác nhận · Lê B/)
-    assert.match(out, />Lập phiếu nhận hàng giao sai<\/button>/)
-    // Không còn cách "Trả về kho gửi" cho hàng giao sai.
-    assert.doesNotMatch(out, /Trả về kho gửi/)
+    assert.doesNotMatch(out, />Từ chối<\/button>/)
+    assert.match(out, /Giao sai 2 · Chưa xử lý 1 · Chờ kho gửi xác nhận 1/)
+    assert.match(
+      out,
+      /Nhập kho: 1 × MA-PHANH-SAU · Má phanh sau · HSD 01\/03\/2027 · Chờ kho gửi xác nhận · Lê B/,
+    )
+    assert.match(out, />Nhập kho \(lập phiếu nhận\)<\/button>/)
+    assert.match(out, />Hoàn trả<\/button>/)
   })
 })
 
-test('the Owner confirms a wrong item receipt from the order page (test 23/11 T-04)', async () => {
+test('the source BM confirms or rejects a wrong item receipt from the order page (GVHD 24/11)', async () => {
   await withModules(({ Section, html }) => {
     const out = html(
       createElement(Section, {
         order: order([line()], [awaiting]),
-        canRecord: true,
+        canRecord: false,
         canConfirm: true,
         onDone: () => {},
       }),
     )
     assert.match(
       out,
-      /Chờ Owner xác nhận · Lê B<button[^>]*>Xác nhận<\/button>/,
+      /Chờ kho gửi xác nhận · Lê B<\/p><div class="mf-row-actions"><button[^>]*>Xác nhận<\/button><button[^>]*>Từ chối<\/button>/,
     )
+    // Kho gửi không lập phiếu hay hoàn trả thay kho nhận.
+    assert.doesNotMatch(out, />Hoàn trả<\/button>/)
+    const rejected = html(
+      createElement(Section, {
+        order: order(
+          [line({ wrongPendingQty: 2, wrongAwaitingSourceQty: 0 })],
+          [
+            {
+              ...awaiting,
+              status: 'REJECTED',
+              rejectionReason: 'Kho không xuất mặt hàng này',
+            },
+            {
+              ...awaiting,
+              id: 91,
+              resolutionType: 'WRONG_ITEM_RETURNED',
+              status: null,
+              receivedExpiryDate: null,
+            },
+          ],
+        ),
+        canRecord: false,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.match(rejected, /Kho gửi từ chối: Kho không xuất mặt hàng này/)
+    assert.match(rejected, /Hoàn trả: 1 × MA-PHANH-SAU · Má phanh sau · Lê B/)
+    assert.doesNotMatch(rejected, />Xác nhận<\/button>/)
     const confirmed = html(
       createElement(Section, {
         order: order(
-          [line({ wrongPendingQty: 0, wrongAwaitingOwnerQty: 0 })],
+          [line({ wrongPendingQty: 0, wrongAwaitingSourceQty: 0 })],
           [
             {
               ...awaiting,
@@ -147,6 +181,48 @@ test('the Owner confirms a wrong item receipt from the order page (test 23/11 T-
   })
 })
 
+test('the source BM confirms or rejects a hand-back too (review 25/11, R-14)', async () => {
+  await withModules(({ Section, html }) => {
+    const handBack = {
+      ...awaiting,
+      id: 92,
+      resolutionType: 'WRONG_ITEM_RETURNED',
+      receivedExpiryDate: null,
+    }
+    const out = html(
+      createElement(Section, {
+        order: order([line()], [handBack]),
+        canRecord: false,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.match(
+      out,
+      /Hoàn trả: 1 × MA-PHANH-SAU · Má phanh sau · Chờ kho gửi xác nhận · Lê B<\/p><div class="mf-row-actions"><button[^>]*>Xác nhận<\/button><button[^>]*>Từ chối<\/button>/,
+    )
+    const confirmed = html(
+      createElement(Section, {
+        order: order(
+          [line()],
+          [
+            {
+              ...handBack,
+              status: 'CONFIRMED',
+              confirmedAt: '2026-11-25T09:00:00',
+            },
+          ],
+        ),
+        canRecord: false,
+        canConfirm: true,
+        onDone: () => {},
+      }),
+    )
+    assert.match(confirmed, /Kho gửi đã xác nhận nhận lại/)
+    assert.doesNotMatch(confirmed, />Xác nhận<\/button>/)
+  })
+})
+
 test('nothing to record once every wrong item has a receipt, or for a store that may not record', async () => {
   await withModules(({ Section, html }) => {
     const done = html(
@@ -156,7 +232,7 @@ test('nothing to record once every wrong item has a receipt, or for a store that
         onDone: () => {},
       }),
     )
-    assert.doesNotMatch(done, />Lập phiếu nhận hàng giao sai<\/button>/)
+    assert.doesNotMatch(done, />Nhập kho \(lập phiếu nhận\)<\/button>/)
     const source = html(
       createElement(Section, {
         order: order([line()]),
@@ -164,7 +240,8 @@ test('nothing to record once every wrong item has a receipt, or for a store that
         onDone: () => {},
       }),
     )
-    assert.doesNotMatch(source, />Lập phiếu nhận hàng giao sai<\/button>/)
+    assert.doesNotMatch(source, />Nhập kho \(lập phiếu nhận\)<\/button>/)
+    assert.doesNotMatch(source, />Hoàn trả<\/button>/)
     const none = html(
       createElement(Section, {
         order: order([line({ wrongItemQty: 0, wrongPendingQty: 0 })]),

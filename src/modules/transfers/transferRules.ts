@@ -129,3 +129,158 @@ export const EXCESS_TIP =
 /** PM 24/11: thông báo ghi "mã · tên" phụ tùng; thiếu tên thì chỉ mã. */
 export const partLabel = (sku?: string | null, name?: string | null) =>
   [sku, name].filter(Boolean).join(' · ') || 'phụ tùng khác'
+
+type Person = { fullName: string } | null | undefined
+type TimelineEvent = {
+  id: number
+  resolutionType: string
+  quantity: number
+  reason: string | null
+  occurredAt?: string | null
+  confirmedAt: string | null
+  receivedSku?: string | null
+  status?: string | null
+  recordedBy?: Person
+  confirmedBy?: Person
+  rejectedBy?: Person
+  rejectedAt?: string | null
+  rejectionReason?: string | null
+}
+export type TimelineEntry = {
+  key: string
+  at: string
+  title: string
+  by: string | null
+  detail: string | null
+}
+
+/**
+ * Review 25/11 (R-02, plan C5): "Lịch sử đối soát" của lệnh, cũ trước: kho nhận gửi yêu cầu đối soát, lập phiếu nhận
+ * hàng giao sai hoặc hoàn trả, kho gửi xác nhận hoặc từ chối, kho gửi xác nhận đối soát, Owner đóng phiếu.
+ */
+export function reconciliationTimeline(order: {
+  discrepancyAcknowledgedAt?: string | null
+  discrepancyAcknowledgedBy?: Person
+  reconciliationNote?: string | null
+  reconciliationConfirmedAt?: string | null
+  reconciliationConfirmedBy?: Person
+  closedAt: string | null
+  closedBy: Person
+  discrepancies: { productId: number; events: TimelineEvent[] }[]
+  lines: { productId: number; sku: string }[]
+}): TimelineEntry[] {
+  const entries: TimelineEntry[] = []
+  const skuOf = new Map(order.lines.map((line) => [line.productId, line.sku]))
+  const name = (person: Person) => person?.fullName ?? null
+  for (const item of order.discrepancies) {
+    const ordered = skuOf.get(item.productId) ?? ''
+    for (const event of item.events) {
+      const wrong =
+        event.quantity +
+        ' × ' +
+        (event.receivedSku ?? 'phụ tùng khác') +
+        (ordered ? ' (giao kèm ' + ordered + ')' : '')
+      const handBack = event.resolutionType === 'WRONG_ITEM_RETURNED'
+      if (handBack || event.resolutionType === 'RECEIVED_AS_OTHER_PRODUCT') {
+        if (event.occurredAt)
+          entries.push({
+            key: event.id + ':recorded',
+            at: event.occurredAt,
+            title:
+              (handBack
+                ? 'Kho nhận hoàn trả hàng giao sai: '
+                : 'Kho nhận lập phiếu nhận hàng giao sai: ') + wrong,
+            by: name(event.recordedBy),
+            detail: event.reason,
+          })
+        if (event.status === 'CONFIRMED' && event.confirmedAt)
+          entries.push({
+            key: event.id + ':confirmed',
+            at: event.confirmedAt,
+            title:
+              (handBack
+                ? 'Kho gửi xác nhận đã nhận lại: '
+                : 'Kho gửi xác nhận phiếu nhận hàng giao sai: ') + wrong,
+            by: name(event.confirmedBy),
+            detail: null,
+          })
+        if (event.status === 'REJECTED' && event.rejectedAt)
+          entries.push({
+            key: event.id + ':rejected',
+            at: event.rejectedAt,
+            title:
+              (handBack
+                ? 'Kho gửi từ chối việc hoàn trả: '
+                : 'Kho gửi từ chối phiếu nhận hàng giao sai: ') + wrong,
+            by: name(event.rejectedBy),
+            detail: event.rejectionReason ?? null,
+          })
+      } else if (
+        event.resolutionType === 'RECEIVER_MISCOUNT' &&
+        event.occurredAt
+      ) {
+        entries.push({
+          key: event.id + ':miscount',
+          at: event.occurredAt,
+          title: 'Owner sửa dòng ' + ordered + ': bên nhận kiểm sai',
+          by: name(event.recordedBy),
+          detail: event.reason,
+        })
+      }
+    }
+  }
+  if (order.discrepancyAcknowledgedAt)
+    entries.push({
+      key: 'acknowledged',
+      at: order.discrepancyAcknowledgedAt,
+      title: 'Kho nhận gửi yêu cầu đối soát',
+      by: name(order.discrepancyAcknowledgedBy),
+      detail: order.reconciliationNote ?? null,
+    })
+  if (order.reconciliationConfirmedAt)
+    entries.push({
+      key: 'reconciled',
+      at: order.reconciliationConfirmedAt,
+      title: 'Kho gửi xác nhận đối soát',
+      by: name(order.reconciliationConfirmedBy),
+      detail: null,
+    })
+  if (entries.length && order.closedAt)
+    entries.push({
+      key: 'closed',
+      at: order.closedAt,
+      title: 'Owner đóng phiếu',
+      by: name(order.closedBy),
+      detail: null,
+    })
+  return entries.sort((a, b) => (a.at === b.at ? 0 : a.at < b.at ? -1 : 1))
+}
+
+/**
+ * Review 25/11 (R-03): hàng giao sai còn chặn đóng phiếu (MSG342), để hiện sẵn cạnh nút đóng: chưa lập phiếu hay
+ * hoàn trả, và đang chờ kho gửi xác nhận.
+ */
+export function openWrongItems(
+  lines: {
+    sku: string
+    wrongPendingQty?: number | null
+    wrongAwaitingSourceQty?: number | null
+  }[],
+) {
+  const pending = lines.reduce((sum, l) => sum + (l.wrongPendingQty ?? 0), 0)
+  const awaiting = lines.reduce(
+    (sum, l) => sum + (l.wrongAwaitingSourceQty ?? 0),
+    0,
+  )
+  const skus = lines
+    .filter(
+      (l) => (l.wrongPendingQty ?? 0) + (l.wrongAwaitingSourceQty ?? 0) > 0,
+    )
+    .map(
+      (l) =>
+        l.sku +
+        ' x' +
+        ((l.wrongPendingQty ?? 0) + (l.wrongAwaitingSourceQty ?? 0)),
+    )
+  return { pending, awaiting, total: pending + awaiting, skus }
+}

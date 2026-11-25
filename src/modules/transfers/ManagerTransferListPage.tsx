@@ -7,6 +7,7 @@ import type { Page } from '../inventory/types'
 import { canCoordinateTransfers } from '../../shared/utils/roles'
 import { states, type TransferRow } from './types'
 import ReceivingAssignment from '../operations/ReceivingAssignment'
+import TransferWrongItemPendingSection from './TransferWrongItemPendingSection'
 import { documentCode as code } from '../../shared/utils/documentCode'
 import './transfers.css'
 import { matchesSearch } from '../../shared/utils/searchText'
@@ -60,6 +61,11 @@ export default function ManagerTransferListPage() {
     ) ?? []
   return (
     <main className="dashboard-content tf-page tf-manager-list">
+      {/* GVHD 24/11: BM kho gửi xác nhận hoặc từ chối phiếu nhận hàng giao sai của lệnh kho mình gửi. */}
+      {/* Review 25/11: BM chưa gán kho thì BE trả 403, nên không hiện. */}
+      {scope.user?.role === 'BRANCH_MANAGER' && scope.user.storeId != null && (
+        <TransferWrongItemPendingSection canAct />
+      )}
       <section>
         <div className="tf-list-heading">
           <h2>Lệnh điều chuyển giữa các kho</h2>
