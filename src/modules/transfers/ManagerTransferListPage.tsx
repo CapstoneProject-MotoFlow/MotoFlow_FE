@@ -62,7 +62,8 @@ export default function ManagerTransferListPage() {
   return (
     <main className="dashboard-content tf-page tf-manager-list">
       {/* GVHD 24/11: BM kho gửi xác nhận hoặc từ chối phiếu nhận hàng giao sai của lệnh kho mình gửi. */}
-      {scope.user?.role === 'BRANCH_MANAGER' && (
+      {/* Review 25/11: BM chưa gán kho thì BE trả 403, nên không hiện. */}
+      {scope.user?.role === 'BRANCH_MANAGER' && scope.user.storeId != null && (
         <TransferWrongItemPendingSection canAct />
       )}
       <section>

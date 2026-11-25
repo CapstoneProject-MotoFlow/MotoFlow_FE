@@ -259,10 +259,9 @@ export default function TransferDetailPage() {
     (coordinator || source || dest)
   // GVHD 24/11: lệnh đang đối soát mà còn hàng thiếu/hỏng/giao sai: BM kho nhận "Gửi yêu cầu đối soát" (ghi chú, ảnh),
   // BM kho gửi xác nhận đối soát, rồi Owner mới đóng phiếu.
-  const needsAcknowledgement =
+  const reconcilingWithDiscrepancy =
     !!d &&
     d.status === 'RECONCILING' &&
-    !d.discrepancyAcknowledgedAt &&
     // Cùng điều kiện MSG336 của BE (PM 23/11, B-6): còn thiếu, hỏng hoặc giao sai.
     d.lines.some(
       (line) =>
@@ -270,8 +269,12 @@ export default function TransferDetailPage() {
         (line.damagedQty ?? 0) > 0 ||
         (line.wrongItemQty ?? 0) > 0,
     )
+  const needsAcknowledgement =
+    reconcilingWithDiscrepancy && !d?.discrepancyAcknowledgedAt
   // Review #73 (73-2): còn phiếu nhận chưa xác nhận thì BE từ chối (MSG29), nên chưa hiện nút.
-  const canAcknowledge = needsAcknowledgement && !pendingReceipt
+  // Review 25/11: gửi lại được (thêm ghi chú, ảnh) cho tới khi kho gửi xác nhận (MSG365 sau đó).
+  const canAcknowledge =
+    reconcilingWithDiscrepancy && !d?.reconciliationConfirmedAt && !pendingReceipt
   // PM 23/11 (B-5): chỉ Owner, khi lệnh đang đối soát, sửa dòng theo "Bên nhận kiểm sai".
   const miscountAllowed = !!scope.owner && d?.status === 'RECONCILING'
   // GVHD 24/11: kho gửi xác nhận yêu cầu đối soát của kho nhận.
@@ -348,7 +351,9 @@ export default function TransferDetailPage() {
     if (dest && canAcknowledge)
       actions.push({
         key: 'acknowledge',
-        label: 'Gửi yêu cầu đối soát',
+        label: d?.discrepancyAcknowledgedAt
+          ? 'Gửi lại yêu cầu đối soát'
+          : 'Gửi yêu cầu đối soát',
         icon: 'check',
         onClick: () => {
           setAckError('')
