@@ -39,7 +39,10 @@ export default function DecisionTable({
   rows: Case[]
   owner: boolean
   busy: boolean
-  onSave: (lines: ReturnType<typeof decisionLine>[], note: string) => Promise<boolean>
+  onSave: (
+    lines: ReturnType<typeof decisionLine>[],
+    note: string,
+  ) => Promise<boolean>
   onApprove: () => Promise<boolean>
   onReject: (reason: string) => Promise<boolean>
 }) {
@@ -47,27 +50,56 @@ export default function DecisionTable({
   const [note, setNote] = useState('')
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
-  const decidable = rows.filter((row) => row.status === 'OPEN')
+  // Dòng chỉ có hàng thừa bị từ chối thì không có gì để chốt (review 25/11).
+  const decidable = rows.filter(
+    (row) =>
+      row.status === 'OPEN' &&
+      row.shortQty + row.wrongItemQty + row.damagedQty > 0,
+  )
   // Dòng chưa chốt và còn sửa được thì mở sẵn.
   const editing = decidable.filter(
     (row) =>
       row.canHandle &&
       !row.decisionLocked &&
-      (drafts[row.id] !== undefined || (row.decisionStatus ?? 'UNDECIDED') === 'UNDECIDED'),
+      (drafts[row.id] !== undefined ||
+        (row.decisionStatus ?? 'UNDECIDED') === 'UNDECIDED'),
   )
   const draftOf = (row: Case) => drafts[row.id] ?? decisionDraft(row)
-  const errors = editing.map((row) => decisionDraftError(row, draftOf(row))).filter(Boolean)
-  const needsOwner = editing.some((row) => decisionNeedsOwner(row, draftOf(row), owner))
+  // Chỉ gửi dòng người dùng đã chọn hoặc đã sửa, không tự chốt dòng chưa xem (review 25/11).
+  const picked = editing.filter((row) => drafts[row.id] !== undefined)
+  const errors = picked
+    .map((row) => decisionDraftError(row, draftOf(row)))
+    .filter(Boolean)
+  const needsOwner = picked.some((row) =>
+    decisionNeedsOwner(row, draftOf(row), owner),
+  )
+  const replacesDecided = picked.some(
+    (row) =>
+      row.decisionStatus === 'DECIDED' &&
+      decisionNeedsOwner(row, draftOf(row), owner),
+  )
   const awaiting = decidable.filter((row) => row.canApproveDecision).length
 
+  function toggle(row: Case, on: boolean) {
+    setDrafts((previous) => {
+      const next = { ...previous }
+      if (on) next[row.id] = draftOf(row)
+      else delete next[row.id]
+      return next
+    })
+  }
+
   function patch(row: Case, value: Partial<DecisionDraft>) {
-    setDrafts((previous) => ({ ...previous, [row.id]: { ...draftOf(row), ...value } }))
+    setDrafts((previous) => ({
+      ...previous,
+      [row.id]: { ...draftOf(row), ...value },
+    }))
   }
 
   async function save() {
-    if (!editing.length || errors.length || busy) return
+    if (!picked.length || errors.length || busy) return
     const saved = await onSave(
-      editing.map((row) => decisionLine(row, draftOf(row))),
+      picked.map((row) => decisionLine(row, draftOf(row))),
       note.trim(),
     )
     if (saved) {
@@ -91,7 +123,9 @@ export default function DecisionTable({
         <h2 id="sd-decision-title">Hướng đề xuất xử lý với NCC</h2>
         {owner && awaiting > 0 && (
           <div className="sd-actions-buttons">
-            <span className="mf-badge mf-badge--info">{awaiting} dòng chờ Owner duyệt</span>
+            <span className="mf-badge mf-badge--info">
+              {awaiting} dòng chờ Owner duyệt
+            </span>
             <button
               type="button"
               className="mf-btn mf-btn--sm mf-btn--primary"
@@ -136,6 +170,7 @@ export default function DecisionTable({
         <table className="stock-table sd-decision-table">
           <thead>
             <tr>
+              <th aria-label="Chọn dòng để lưu" />
               <th>Phụ tùng</th>
               <th>Thiếu</th>
               <th>Giao sai</th>
@@ -153,11 +188,23 @@ export default function DecisionTable({
               const open = editing.includes(row)
               const draft = draftOf(row)
               const shown = decisionNumbers(row, draft)
-              const error = open ? decisionDraftError(row, draft) : ''
+              const chosen = open && drafts[row.id] !== undefined
+              const error = chosen ? decisionDraftError(row, draft) : ''
               const status = row.decisionStatus ?? 'UNDECIDED'
               const keep = draft.type === 'ACCEPT_NO_REPLACEMENT'
               return (
                 <tr key={row.id} className={open ? 'is-editing' : undefined}>
+                  <td>
+                    {open && (
+                      <input
+                        type="checkbox"
+                        aria-label={'Chọn dòng ' + row.sku}
+                        checked={chosen}
+                        disabled={busy}
+                        onChange={(event) => toggle(row, event.target.checked)}
+                      />
+                    )}
+                  </td>
                   <td>
                     <b>{row.sku}</b>
                     <br />
@@ -206,7 +253,9 @@ export default function DecisionTable({
                         aria-label={'Trả hàng sai ' + row.sku}
                         value={draft.wrong}
                         disabled={busy}
-                        onChange={(event) => patch(row, { wrong: event.target.value })}
+                        onChange={(event) =>
+                          patch(row, { wrong: event.target.value })
+                        }
                       />
                     ) : (
                       shown.wrong
@@ -221,7 +270,9 @@ export default function DecisionTable({
                         aria-label={'Trả hàng hỏng ' + row.sku}
                         value={draft.damaged}
                         disabled={busy}
-                        onChange={(event) => patch(row, { damaged: event.target.value })}
+                        onChange={(event) =>
+                          patch(row, { damaged: event.target.value })
+                        }
                       />
                     ) : (
                       shown.damaged
@@ -236,7 +287,9 @@ export default function DecisionTable({
                         aria-label={'NCC giao bù ' + row.sku}
                         value={draft.replacement ?? String(shown.replacement)}
                         disabled={busy}
-                        onChange={(event) => patch(row, { replacement: event.target.value })}
+                        onChange={(event) =>
+                          patch(row, { replacement: event.target.value })
+                        }
                       />
                     ) : (
                       shown.replacement
@@ -249,7 +302,7 @@ export default function DecisionTable({
                     {status === 'DECIDED' && row.approvedByName && (
                       <small> · Owner duyệt</small>
                     )}
-                    {open && decisionNeedsOwner(row, draft, owner) && (
+                    {chosen && decisionNeedsOwner(row, draft, owner) && (
                       <small className="sd-muted">
                         <br />
                         Cần Owner duyệt
@@ -274,22 +327,24 @@ export default function DecisionTable({
                         🔒
                       </span>
                     )}
-                    {open && drafts[row.id] !== undefined && status !== 'UNDECIDED' && (
-                      <button
-                        type="button"
-                        className="mf-btn mf-btn--link"
-                        disabled={busy}
-                        onClick={() =>
-                          setDrafts((previous) => {
-                            const next = { ...previous }
-                            delete next[row.id]
-                            return next
-                          })
-                        }
-                      >
-                        Hủy
-                      </button>
-                    )}
+                    {open &&
+                      drafts[row.id] !== undefined &&
+                      status !== 'UNDECIDED' && (
+                        <button
+                          type="button"
+                          className="mf-btn mf-btn--link"
+                          disabled={busy}
+                          onClick={() =>
+                            setDrafts((previous) => {
+                              const next = { ...previous }
+                              delete next[row.id]
+                              return next
+                            })
+                          }
+                        >
+                          Hủy
+                        </button>
+                      )}
                   </td>
                 </tr>
               )
@@ -312,15 +367,20 @@ export default function DecisionTable({
           <button
             type="button"
             className="mf-btn mf-btn--primary"
-            disabled={busy || errors.length > 0}
+            disabled={busy || !picked.length || errors.length > 0}
             onClick={() => void save()}
           >
             {decisionSaveLabel(needsOwner)}
+            {picked.length > 0 && ` (${picked.length} dòng)`}
           </button>
           <p className="sd-muted">
-            {needsOwner
-              ? 'Dòng "Trả hàng lỗi, yêu cầu giao bù" với giao bù = thiếu + trả sai + trả hỏng được lưu ngay; các dòng còn lại chờ Owner duyệt. Chưa duyệt thì hàng chưa chuyển sang chờ trả NCC.'
-              : 'Lưu xong, hàng trả chuyển sang chờ trả NCC; sau đó mới ghi nhận đã trả và nhập hàng giao bù bằng phiếu nhập mới.'}
+            {!picked.length
+              ? 'Đánh dấu hoặc sửa các dòng muốn chốt rồi bấm lưu.'
+              : replacesDecided
+                ? 'Dòng đã chốt giữ hướng cũ đến khi Owner duyệt hướng mới; Owner không duyệt thì giữ nguyên hướng cũ.'
+                : needsOwner
+                  ? 'Dòng "Trả hàng lỗi, yêu cầu giao bù" với giao bù = thiếu + trả sai + trả hỏng được lưu ngay; các dòng còn lại chờ Owner duyệt. Chưa duyệt thì hàng chưa chuyển sang chờ trả NCC.'
+                  : 'Lưu xong, hàng trả chuyển sang chờ trả NCC; sau đó mới ghi nhận đã trả và nhập hàng giao bù bằng phiếu nhập mới.'}
           </p>
         </div>
       )}
