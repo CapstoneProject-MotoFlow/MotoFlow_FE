@@ -79,6 +79,10 @@ export default function DecisionTable({
       decisionNeedsOwner(row, draftOf(row), owner),
   )
   const awaiting = decidable.filter((row) => row.canApproveDecision).length
+  // Review 25/11 (R-11, plan B6): nút "Sửa" ở góc trên mở lại mọi dòng đã chốt còn sửa được.
+  const reopenable = decidable.filter(
+    (row) => row.canHandle && !row.decisionLocked && !editing.includes(row),
+  )
   const buttons = decisionSaveButtons(needsOwner, owner)
   const cannotSave = busy || !picked.length || errors.length > 0
   const count = picked.length > 0 ? ` (${picked.length} dòng)` : ''
@@ -92,6 +96,16 @@ export default function DecisionTable({
       const next = { ...previous }
       if (on) next[row.id] = draftOf(row)
       else delete next[row.id]
+      return next
+    })
+  }
+
+  function editAll() {
+    setDrafts((previous) => {
+      const next = { ...previous }
+      reopenable.forEach((row) => {
+        next[row.id] = next[row.id] ?? decisionDraft(row)
+      })
       return next
     })
   }
@@ -128,6 +142,16 @@ export default function DecisionTable({
     <section className="sd-decision" aria-labelledby="sd-decision-title">
       <header className="sd-excess-head">
         <h2 id="sd-decision-title">Hướng đề xuất xử lý với NCC</h2>
+        {reopenable.length > 0 && (
+          <button
+            type="button"
+            className="mf-btn mf-btn--sm mf-btn--secondary sd-decision-edit-all"
+            disabled={busy}
+            onClick={editAll}
+          >
+            Sửa
+          </button>
+        )}
         {owner && awaiting > 0 && (
           <div className="sd-actions-buttons">
             <span className="mf-badge mf-badge--info">

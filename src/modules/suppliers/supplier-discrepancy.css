@@ -642,6 +642,10 @@
   gap: 12px;
   margin-bottom: 8px;
 }
+/* Review 25/11 (R-11): nút Sửa của bảng hướng xử lý nằm sát phải tiêu đề. */
+.sd-excess-head .sd-decision-edit-all {
+  margin-left: auto;
+}
 .sd-excess-head h2 {
   margin: 0;
   font-size: 16px;
