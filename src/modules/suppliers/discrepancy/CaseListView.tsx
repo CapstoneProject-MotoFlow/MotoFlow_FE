@@ -6,7 +6,7 @@ import { documentCode } from '../../../shared/utils/documentCode'
 import { formatDateTime } from '../../../shared/utils/format'
 import { useInventoryScope } from '../../inventory/api'
 import { purchaseOrderSearch } from '../../receiving/receivingPresentation'
-import { errorMessage, type Case } from './types'
+import { decisionStatusLabels, errorMessage, type Case } from './types'
 
 const pageSize = 20
 
@@ -20,6 +20,8 @@ export default function CaseListView({
 }) {
   const scope = useInventoryScope()
   const [status, setStatus] = useState('OPEN')
+  // GVHD 24/11: lọc theo hướng xử lý; Owner dùng "Chờ Owner duyệt".
+  const [decisionStatus, setDecisionStatus] = useState('')
   const [purchaseOrderQuery, setPurchaseOrderQuery] = useState(() =>
     /^[1-9]\d*$/.test(initialPurchaseOrder)
       ? documentCode('DNH', Number(initialPurchaseOrder))
@@ -40,6 +42,7 @@ export default function CaseListView({
   const dateRangeError = !!fromDate && !!toDate && fromDate > toDate
   const filtered =
     status !== 'OPEN' ||
+    !!decisionStatus ||
     !!scope.storeId ||
     !!purchaseOrderQuery ||
     !!supplierId ||
@@ -58,6 +61,7 @@ export default function CaseListView({
           {
             params: {
               status: status || undefined,
+              decisionStatus: decisionStatus || undefined,
               storeId: scope.storeId || undefined,
               purchaseOrderId: purchaseOrderId || undefined,
               supplierId: supplierId || undefined,
@@ -85,7 +89,7 @@ export default function CaseListView({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [page, status, scope.storeId, purchaseOrderId, invalidOrder, supplierId, productQuery, fromDate, toDate, dateRangeError])
+  }, [page, status, decisionStatus, scope.storeId, purchaseOrderId, invalidOrder, supplierId, productQuery, fromDate, toDate, dateRangeError])
 
   // Danh sách NCC cho bộ lọc: Owner đọc danh mục NCC; BM không có quyền đó nên lấy từ đơn nhập hàng của kho mình.
   useEffect(() => {
@@ -125,6 +129,7 @@ export default function CaseListView({
 
   function reset() {
     setStatus('OPEN')
+    setDecisionStatus('')
     setPurchaseOrderQuery('')
     setSupplierId('')
     setProductQuery('')
@@ -161,6 +166,21 @@ export default function CaseListView({
             <option value="OPEN">Đang mở</option>
             <option value="CLOSED">Đã đóng</option>
             <option value="">Tất cả</option>
+          </select>
+        </label>
+        <label className="sd-field">
+          <span>Hướng xử lý</span>
+          <select
+            value={decisionStatus}
+            onChange={(event) => {
+              setDecisionStatus(event.target.value)
+              setPage(0)
+            }}
+          >
+            <option value="">Tất cả</option>
+            <option value="UNDECIDED">{decisionStatusLabels.UNDECIDED}</option>
+            <option value="AWAITING_OWNER">{decisionStatusLabels.AWAITING_OWNER}</option>
+            <option value="DECIDED">{decisionStatusLabels.DECIDED}</option>
           </select>
         </label>
         {scope.owner && (
@@ -367,8 +387,17 @@ export default function CaseListView({
                           ) : (
                             <span className="mf-badge mf-badge--info">Đang mở</span>
                           )}
-                          {!!row.pendingRequests?.length && (
-                            <span className="mf-badge mf-badge--warning">Chờ Owner duyệt</span>
+                          {open && row.decisionStatus && row.decisionStatus !== 'DECIDED' && (
+                            <span
+                              className={
+                                'mf-badge ' +
+                                (row.decisionStatus === 'AWAITING_OWNER'
+                                  ? 'mf-badge--info'
+                                  : 'mf-badge--warning')
+                              }
+                            >
+                              {decisionStatusLabels[row.decisionStatus]}
+                            </span>
                           )}
                         </span>
                       </td>

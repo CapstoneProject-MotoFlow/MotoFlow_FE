@@ -28,6 +28,9 @@ export function noticeTarget(
   // refId của thông báo sai lệch là phiếu nhận: mở thẳng màn xử lý của phiếu đó.
   if (role === 'OWNER' && notice.type === 'SUPPLIER_DISCREPANCY_OPENED')
     return { path: '/supplier-discrepancies?receipt=' + id }
+  // GVHD 24/11: hướng xử lý chờ Owner duyệt / đã duyệt / không duyệt: mở bảng hướng xử lý của phiếu.
+  if (notice.type?.startsWith('DISCREPANCY_DECISION_') && role !== 'STAFF')
+    return { path: '/supplier-discrepancies?receipt=' + id }
   // Staff được giao việc nhận hàng (SUPPLIER_RECEIVING / TRANSFER_RECEIVING): mở thẳng màn lập phiếu nhận.
   // Việc chuẩn bị hàng xuất cũng gắn TRANSFER_ORDER nên phân biệt theo nội dung "nhận hàng".
   if (role === 'STAFF' && notice.type === 'TASK_ASSIGNED') {

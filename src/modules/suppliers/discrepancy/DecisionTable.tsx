@@ -1,0 +1,329 @@
+import { useState } from 'react'
+import {
+  decisionDraft,
+  decisionDraftError,
+  decisionLine,
+  decisionNeedsOwner,
+  decisionNumbers,
+  decisionOptions,
+  decisionReturnMax,
+  decisionSaveLabel,
+  type DecisionDraft,
+} from '../discrepancyRules'
+import {
+  decisionLabels,
+  decisionStatusLabels,
+  type Case,
+  type DecisionStatus,
+} from './types'
+
+const statusBadge: Record<DecisionStatus, string> = {
+  UNDECIDED: 'mf-badge--warning',
+  AWAITING_OWNER: 'mf-badge--info',
+  DECIDED: 'mf-badge--success',
+}
+
+/**
+ * GVHD 24/11: hướng đề xuất xử lý với NCC của cả phiếu nhập trong một bảng. Dòng chưa chốt mở sẵn để nhập; dòng
+ * đã chốt hoặc chờ Owner bấm "Sửa". Dưới bảng chỉ có một nút: "Lưu hướng xử lý", hoặc "Đề nghị Owner duyệt" khi BM
+ * chọn hướng cần Owner (PM Q2). Owner thấy thêm "Duyệt" / "Không duyệt" khi có dòng chờ duyệt.
+ */
+export default function DecisionTable({
+  rows,
+  owner,
+  busy,
+  onSave,
+  onApprove,
+  onReject,
+}: {
+  rows: Case[]
+  owner: boolean
+  busy: boolean
+  onSave: (lines: ReturnType<typeof decisionLine>[], note: string) => Promise<boolean>
+  onApprove: () => Promise<boolean>
+  onReject: (reason: string) => Promise<boolean>
+}) {
+  const [drafts, setDrafts] = useState<Record<number, DecisionDraft>>({})
+  const [note, setNote] = useState('')
+  const [rejecting, setRejecting] = useState(false)
+  const [reason, setReason] = useState('')
+  const decidable = rows.filter((row) => row.status === 'OPEN')
+  // Dòng chưa chốt và còn sửa được thì mở sẵn.
+  const editing = decidable.filter(
+    (row) =>
+      row.canHandle &&
+      !row.decisionLocked &&
+      (drafts[row.id] !== undefined || (row.decisionStatus ?? 'UNDECIDED') === 'UNDECIDED'),
+  )
+  const draftOf = (row: Case) => drafts[row.id] ?? decisionDraft(row)
+  const errors = editing.map((row) => decisionDraftError(row, draftOf(row))).filter(Boolean)
+  const needsOwner = editing.some((row) => decisionNeedsOwner(row, draftOf(row), owner))
+  const awaiting = decidable.filter((row) => row.canApproveDecision).length
+
+  function patch(row: Case, value: Partial<DecisionDraft>) {
+    setDrafts((previous) => ({ ...previous, [row.id]: { ...draftOf(row), ...value } }))
+  }
+
+  async function save() {
+    if (!editing.length || errors.length || busy) return
+    const saved = await onSave(
+      editing.map((row) => decisionLine(row, draftOf(row))),
+      note.trim(),
+    )
+    if (saved) {
+      setDrafts({})
+      setNote('')
+    }
+  }
+
+  async function reject() {
+    if (!reason.trim() || busy) return
+    if (await onReject(reason.trim())) {
+      setRejecting(false)
+      setReason('')
+    }
+  }
+
+  if (!decidable.length) return null
+  return (
+    <section className="sd-decision" aria-labelledby="sd-decision-title">
+      <header className="sd-excess-head">
+        <h2 id="sd-decision-title">Hướng đề xuất xử lý với NCC</h2>
+        {owner && awaiting > 0 && (
+          <div className="sd-actions-buttons">
+            <span className="mf-badge mf-badge--info">{awaiting} dòng chờ Owner duyệt</span>
+            <button
+              type="button"
+              className="mf-btn mf-btn--sm mf-btn--primary"
+              disabled={busy}
+              onClick={() => void onApprove()}
+            >
+              Duyệt
+            </button>
+            <button
+              type="button"
+              className="mf-btn mf-btn--sm mf-btn--secondary"
+              disabled={busy}
+              onClick={() => setRejecting((value) => !value)}
+            >
+              Không duyệt
+            </button>
+          </div>
+        )}
+      </header>
+      {rejecting && (
+        <div className="sd-reject">
+          <label className="sd-field">
+            <span>Lý do không duyệt</span>
+            <input
+              value={reason}
+              maxLength={255}
+              autoFocus
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="mf-btn mf-btn--sm mf-btn--danger"
+            disabled={busy || !reason.trim()}
+            onClick={() => void reject()}
+          >
+            Gửi lại cho BM
+          </button>
+        </div>
+      )}
+      <div className="sd-decision-scroll">
+        <table className="stock-table sd-decision-table">
+          <thead>
+            <tr>
+              <th>Phụ tùng</th>
+              <th>Thiếu</th>
+              <th>Giao sai</th>
+              <th>Hỏng</th>
+              <th>Hướng xử lý</th>
+              <th>Trả hàng sai</th>
+              <th>Trả hàng hỏng</th>
+              <th>NCC giao bù</th>
+              <th>Trạng thái</th>
+              <th aria-label="Sửa" />
+            </tr>
+          </thead>
+          <tbody>
+            {decidable.map((row) => {
+              const open = editing.includes(row)
+              const draft = draftOf(row)
+              const shown = decisionNumbers(row, draft)
+              const error = open ? decisionDraftError(row, draft) : ''
+              const status = row.decisionStatus ?? 'UNDECIDED'
+              const keep = draft.type === 'ACCEPT_NO_REPLACEMENT'
+              return (
+                <tr key={row.id} className={open ? 'is-editing' : undefined}>
+                  <td>
+                    <b>{row.sku}</b>
+                    <br />
+                    <small>{row.partName}</small>
+                    {error && (
+                      <small className="sd-field-error" role="alert">
+                        <br />
+                        {error}
+                      </small>
+                    )}
+                  </td>
+                  <td>{row.shortQty}</td>
+                  <td>{row.wrongItemQty}</td>
+                  <td>{row.damagedQty}</td>
+                  <td>
+                    {open ? (
+                      <select
+                        aria-label={'Hướng xử lý ' + row.sku}
+                        value={draft.type}
+                        disabled={busy}
+                        onChange={(event) =>
+                          patch(row, {
+                            type: event.target.value as DecisionDraft['type'],
+                            replacement: undefined,
+                          })
+                        }
+                      >
+                        {decisionOptions(row).map((type) => (
+                          <option key={type} value={type}>
+                            {decisionLabels[type]}
+                          </option>
+                        ))}
+                      </select>
+                    ) : row.decisionType ? (
+                      decisionLabels[row.decisionType]
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>
+                    {open && !keep && row.wrongItemQty > 0 ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={decisionReturnMax(row, 'WRONG_ITEM')}
+                        aria-label={'Trả hàng sai ' + row.sku}
+                        value={draft.wrong}
+                        disabled={busy}
+                        onChange={(event) => patch(row, { wrong: event.target.value })}
+                      />
+                    ) : (
+                      shown.wrong
+                    )}
+                  </td>
+                  <td>
+                    {open && !keep && row.damagedQty > 0 ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={decisionReturnMax(row, 'DAMAGED')}
+                        aria-label={'Trả hàng hỏng ' + row.sku}
+                        value={draft.damaged}
+                        disabled={busy}
+                        onChange={(event) => patch(row, { damaged: event.target.value })}
+                      />
+                    ) : (
+                      shown.damaged
+                    )}
+                  </td>
+                  <td>
+                    {open && draft.type === 'RETURN_AND_REPLACE' ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={row.replacementLimitQty}
+                        aria-label={'NCC giao bù ' + row.sku}
+                        value={draft.replacement ?? String(shown.replacement)}
+                        disabled={busy}
+                        onChange={(event) => patch(row, { replacement: event.target.value })}
+                      />
+                    ) : (
+                      shown.replacement
+                    )}
+                  </td>
+                  <td>
+                    <span className={'mf-badge ' + statusBadge[status]}>
+                      {decisionStatusLabels[status]}
+                    </span>
+                    {status === 'DECIDED' && row.approvedByName && (
+                      <small> · Owner duyệt</small>
+                    )}
+                    {open && decisionNeedsOwner(row, draft, owner) && (
+                      <small className="sd-muted">
+                        <br />
+                        Cần Owner duyệt
+                      </small>
+                    )}
+                  </td>
+                  <td>
+                    {!open && row.canHandle && !row.decisionLocked && (
+                      <button
+                        type="button"
+                        className="mf-btn mf-btn--link"
+                        aria-label={'Sửa hướng xử lý ' + row.sku}
+                        title="Sửa"
+                        disabled={busy}
+                        onClick={() => patch(row, {})}
+                      >
+                        ✎
+                      </button>
+                    )}
+                    {!open && row.decisionLocked && (
+                      <span title="Đã trả hàng, giao bù hoặc nhận vào kho nên không sửa hướng được">
+                        🔒
+                      </span>
+                    )}
+                    {open && drafts[row.id] !== undefined && status !== 'UNDECIDED' && (
+                      <button
+                        type="button"
+                        className="mf-btn mf-btn--link"
+                        disabled={busy}
+                        onClick={() =>
+                          setDrafts((previous) => {
+                            const next = { ...previous }
+                            delete next[row.id]
+                            return next
+                          })
+                        }
+                      >
+                        Hủy
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {editing.length > 0 && (
+        <div className="sd-decision-save">
+          <label className="sd-field sd-plan-note">
+            <span>Ghi chú</span>
+            <input
+              value={note}
+              maxLength={255}
+              placeholder="Không bắt buộc"
+              disabled={busy}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="mf-btn mf-btn--primary"
+            disabled={busy || errors.length > 0}
+            onClick={() => void save()}
+          >
+            {decisionSaveLabel(needsOwner)}
+          </button>
+          <p className="sd-muted">
+            {needsOwner
+              ? 'Dòng "Trả hàng lỗi, yêu cầu giao bù" với giao bù = thiếu + trả sai + trả hỏng được lưu ngay; các dòng còn lại chờ Owner duyệt. Chưa duyệt thì hàng chưa chuyển sang chờ trả NCC.'
+              : 'Lưu xong, hàng trả chuyển sang chờ trả NCC; sau đó mới ghi nhận đã trả và nhập hàng giao bù bằng phiếu nhập mới.'}
+          </p>
+        </div>
+      )}
+    </section>
+  )
+}

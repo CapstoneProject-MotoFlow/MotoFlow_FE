@@ -1,5 +1,10 @@
 // Chỉ import kiểu: file này được test bằng cách chuyển TypeScript sang JS (tests/discrepancy-rules.test.mjs).
-import type { AcceptanceType, Case, GoodsKind } from './discrepancy/types'
+import type {
+  AcceptanceType,
+  Case,
+  DecisionType,
+  GoodsKind,
+} from './discrepancy/types'
 
 /** Loại hàng mà BM nhập số trực tiếp trong thẻ hồ sơ. Hàng thừa bị từ chối chỉ ghi nhận ở hộp "Ghi nhận đã trả". */
 export type ReturnKind = 'WRONG_ITEM' | 'DAMAGED'
@@ -130,7 +135,9 @@ export function caseStatusParts(row: Case) {
   if (row.outstandingReturnQty > 0) parts.push(`Còn phải trả ${row.outstandingReturnQty}`)
   const replacement = Math.max(row.outstandingReplacementQty, row.openReplacementQty)
   if (replacement > 0) parts.push(`Chờ NCC giao bù ${replacement}`)
-  if (row.pendingRequests?.length) parts.push('Chờ Owner duyệt')
+  if (row.decisionStatus === 'UNDECIDED') parts.push('Chưa chốt hướng xử lý')
+  if (row.decisionStatus === 'AWAITING_OWNER' || row.pendingRequests?.length)
+    parts.push('Chờ Owner duyệt')
   return parts
 }
 
@@ -250,4 +257,125 @@ export function receiptHandlingStatus(input: {
     input.waitingExcess ? input.waitingExcess + ' dòng hàng thừa chờ Owner' : '',
   ].filter(Boolean)
   return { done: false, text: parts.join(' · ') || 'Chưa xử lý xong' }
+}
+
+// ---- GVHD 24/11: hướng xử lý cả phiếu trong một bảng ------------------------------------------------------------
+
+/** Một dòng của bảng hướng xử lý đang sửa; replacement chưa sửa thì dùng số chuẩn = thiếu + trả sai + trả hỏng. */
+export type DecisionDraft = {
+  type: DecisionType
+  wrong: string
+  damaged: string
+  replacement?: string
+}
+
+/** Hướng (3) chỉ có khi dòng có hàng giao sai hoặc hàng hỏng. */
+export function decisionOptions(row: Case): DecisionType[] {
+  const options: DecisionType[] = ['RETURN_NO_REPLACEMENT', 'RETURN_AND_REPLACE']
+  if (row.wrongItemQty + row.damagedQty > 0) options.push('ACCEPT_NO_REPLACEMENT')
+  return options
+}
+
+/** Số trả tối đa của một loại: phần đang trả + phần còn giữ chưa quyết định. */
+export function decisionReturnMax(row: Case, kind: ReturnKind) {
+  return returnLimits(row, kind).max
+}
+
+/** PM Q2: số giao bù BM được tự lưu = thiếu + trả sai + trả hỏng, không quá hạn mức. */
+export function standardReplacement(row: Case, wrong: number, damaged: number) {
+  return Math.min(row.shortQty + wrong + damaged, row.replacementLimitQty)
+}
+
+/** Bản nháp ban đầu của một dòng: hướng đang đề nghị, đang chốt, hoặc mặc định "trả hết, giao bù đủ". */
+export function decisionDraft(row: Case): DecisionDraft {
+  if (row.decisionStatus === 'AWAITING_OWNER' && row.decisionType)
+    return {
+      type: row.decisionType,
+      wrong: String(row.proposedWrongReturnQty ?? 0),
+      damaged: String(row.proposedDamagedReturnQty ?? 0),
+      replacement: String(row.proposedReplacementQty ?? 0),
+    }
+  if (row.decisionStatus === 'DECIDED' && row.decisionType)
+    return {
+      type: row.decisionType,
+      wrong: String(row.wrongReturnRequiredQty),
+      damaged: String(row.damagedReturnRequiredQty),
+      replacement:
+        row.decisionType === 'RETURN_AND_REPLACE' ? String(row.replacementRequiredQty) : '0',
+    }
+  return {
+    type: 'RETURN_AND_REPLACE',
+    wrong: String(decisionReturnMax(row, 'WRONG_ITEM')),
+    damaged: String(decisionReturnMax(row, 'DAMAGED')),
+  }
+}
+
+/** Số đang hiển thị của từng ô theo hướng đã chọn: (3) không trả gì, (1) và (3) không giao bù. */
+export function decisionNumbers(row: Case, draft: DecisionDraft) {
+  const keep = draft.type === 'ACCEPT_NO_REPLACEMENT'
+  const wrong = keep ? 0 : count(draft.wrong)
+  const damaged = keep ? 0 : count(draft.damaged)
+  const replacement =
+    draft.type !== 'RETURN_AND_REPLACE'
+      ? 0
+      : draft.replacement !== undefined
+        ? count(draft.replacement)
+        : standardReplacement(row, wrong, damaged)
+  return { wrong, damaged, replacement }
+}
+
+/** Câu lỗi của một dòng (rỗng nếu hợp lệ), cùng các điều kiện MSG35, MSG193, MSG354 của BE. */
+export function decisionDraftError(row: Case, draft: DecisionDraft) {
+  const notInt = 'Nhập số nguyên từ 0 trở lên.'
+  if (draft.type !== 'ACCEPT_NO_REPLACEMENT') {
+    if (row.wrongItemQty > 0 && !digits.test(draft.wrong.trim())) return notInt
+    if (row.damagedQty > 0 && !digits.test(draft.damaged.trim())) return notInt
+  }
+  if (
+    draft.type === 'RETURN_AND_REPLACE' &&
+    draft.replacement !== undefined &&
+    !digits.test(draft.replacement.trim())
+  )
+    return notInt
+  const { wrong, damaged, replacement } = decisionNumbers(row, draft)
+  if (wrong > decisionReturnMax(row, 'WRONG_ITEM'))
+    return `Trả hàng giao sai tối đa ${decisionReturnMax(row, 'WRONG_ITEM')}.`
+  if (damaged > decisionReturnMax(row, 'DAMAGED'))
+    return `Trả hàng hỏng tối đa ${decisionReturnMax(row, 'DAMAGED')}.`
+  if (draft.type === 'RETURN_AND_REPLACE') {
+    if (replacement > row.replacementLimitQty)
+      return `NCC giao bù tối đa ${row.replacementLimitQty}.`
+    if (replacement < replacementMin(row))
+      return `NCC giao bù tối thiểu ${replacementMin(row)}. Không cần giao bù thì chọn "Trả hàng, không cần giao bù".`
+    if (wrong + damaged + replacement === 0 && row.shortQty === 0)
+      return 'Chưa có gì để trả hay giao bù: chọn "Nhận hàng lỗi, không giao bù".'
+  }
+  if (draft.type === 'RETURN_NO_REPLACEMENT' && wrong + damaged + row.shortQty === 0)
+    return 'Chưa có gì để trả: chọn hướng khác.'
+  return ''
+}
+
+/** PM Q2: BM tự lưu chỉ hướng (2) với giao bù chuẩn; còn lại phải Owner duyệt. Owner lưu là chốt luôn. */
+export function decisionNeedsOwner(row: Case, draft: DecisionDraft, owner: boolean) {
+  if (owner) return false
+  if (draft.type !== 'RETURN_AND_REPLACE') return true
+  const { wrong, damaged, replacement } = decisionNumbers(row, draft)
+  return replacement !== standardReplacement(row, wrong, damaged)
+}
+
+/** Dòng gửi PUT /goods-receipt-notes/{id}/discrepancies. */
+export function decisionLine(row: Case, draft: DecisionDraft) {
+  const { wrong, damaged, replacement } = decisionNumbers(row, draft)
+  return {
+    caseId: row.id,
+    decisionType: draft.type,
+    wrongReturnQty: wrong,
+    damagedReturnQty: damaged,
+    replacementRequiredQty: replacement,
+  }
+}
+
+/** Nhãn nút lưu duy nhất dưới bảng. */
+export function decisionSaveLabel(needsOwner: boolean) {
+  return needsOwner ? 'Đề nghị Owner duyệt' : 'Lưu hướng xử lý'
 }

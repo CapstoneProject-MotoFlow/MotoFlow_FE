@@ -646,3 +646,41 @@
   margin: 0;
   font-size: 16px;
 }
+
+/* GVHD 24/11: bảng hướng đề xuất xử lý với NCC của cả phiếu, một nút lưu. */
+.sd-decision {
+  display: grid;
+  gap: 12px;
+}
+.sd-decision-scroll {
+  overflow-x: auto;
+}
+.sd-decision-table td,
+.sd-decision-table th {
+  vertical-align: top;
+  white-space: nowrap;
+}
+.sd-decision-table td:first-child {
+  white-space: normal;
+  min-width: 160px;
+}
+.sd-decision-table input[type='number'] {
+  width: 72px;
+}
+.sd-decision-table select {
+  max-width: 230px;
+}
+.sd-decision-table tr.is-editing td {
+  background: color-mix(in srgb, var(--mf-primary, #2563eb) 5%, transparent);
+}
+.sd-decision-save,
+.sd-reject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.sd-decision-save .sd-muted {
+  flex-basis: 100%;
+  margin: 0;
+}
