@@ -237,6 +237,10 @@ export function SalesOrderFormView({
     initialDraft?.preorder ?? false,
   )
   const [error, setError] = useState('')
+  // GVHD 24/11: ngày cửa hàng dự kiến có hàng cho phần chờ (không bắt buộc, từ hôm nay trở đi).
+  const [expectedReady, setExpectedReady] = useState(
+    initialDraft?.expectedReady ?? '',
+  )
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [now] = useState(() => formatDateTime(new Date()))
 
@@ -269,8 +273,20 @@ export function SalesOrderFormView({
         ? { deposit }
         : {}),
       ...(preorder && !walkIn ? { preorder: true } : {}),
+      ...(expectedReady ? { expectedReady } : {}),
     })
-  }, [customer, walkIn, warehouse, type, discount, note, lines, deposit, preorder])
+  }, [
+    customer,
+    walkIn,
+    warehouse,
+    type,
+    discount,
+    note,
+    lines,
+    deposit,
+    preorder,
+    expectedReady,
+  ])
 
   // F3: đưa con trỏ về ô tìm phụ tùng (thói quen của phần mềm bán hàng phổ biến).
   useEffect(() => {
@@ -573,6 +589,8 @@ export function SalesOrderFormView({
               ? 'Không có phần nào để bán hoặc chờ hàng. Nhập số lấy ngay để tạo đơn.'
               : depositError
               ? depositError
+              : canCreatePendingRemainder && expectedReady && expectedReady < todayIso()
+              ? 'Ngày dự kiến có hàng phải từ hôm nay trở đi.'
               : previewError
               ? previewError
               : !pricePreview
@@ -609,6 +627,7 @@ export function SalesOrderFormView({
     const request = body()
     return {
       ...request,
+      expectedReadyDate: expectedReady || null,
       lines: orderLinesWithNowQty(
         request.lines as { productId: number; quantity: number }[],
         new Map(stockSplit.map((line) => [line.productId, line.takeNow])),
@@ -1334,6 +1353,22 @@ export function SalesOrderFormView({
             </div>
           </dl>
 
+          {canCreatePendingRemainder && (pendingQty > 0 || preorderActive) && (
+            <section className="pos-deposit pos-expected-ready" aria-label="Ngày dự kiến có hàng">
+              <label className="pos-deposit-field">
+                <span>Ngày dự kiến có hàng</span>
+                <input
+                  type="date"
+                  min={todayIso()}
+                  value={expectedReady}
+                  onChange={(event) => setExpectedReady(event.target.value)}
+                />
+              </label>
+              <small>
+                Không bắt buộc. Quá ngày này mà đơn chờ chưa đủ hàng thì màn Đơn chưa đáp ứng đủ báo quá hạn.
+              </small>
+            </section>
+          )}
           {/*
             Route tạo đơn bị giới hạn OWNER/BRANCH_MANAGER (RequireRole trong AppRoutes), đúng các vai trò
             BE cho phép ghi cọc, nên không cần chặn thêm ở đây.

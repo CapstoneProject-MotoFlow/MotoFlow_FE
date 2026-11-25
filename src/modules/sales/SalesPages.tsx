@@ -36,8 +36,9 @@ import {
   type OrderDto,
   type SalesPaymentType,
   type UnmetRow,
+  type WaitingState,
 } from './salesApi'
-import { depositBadge, depositStatusLabels } from './salesDeposit'
+import { depositBadge, depositStatusLabels, todayIso } from './salesDeposit'
 import SalesDepositPanel from './SalesDepositPanel'
 import { viewDate } from './salesDepositDate'
 import SalesSettlementDialog from './SalesSettlementDialog'
@@ -501,6 +502,8 @@ function SalesOrderDetailContent() {
     notice?: string
     primaryOrderId?: number
     pendingOrderId?: number
+    /** GVHD 24/11: số gợi ý chuyển sang soạn theo phụ tùng, từ màn Đơn chưa đáp ứng đủ. */
+    releaseQty?: Record<number, number>
   } | null
   const [revision, setRevision] = useState(0),
     [notice, setNotice] = useState(initialNotice?.notice ?? ''),
@@ -582,7 +585,12 @@ export function SalesOrderDetailView({
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [refundAmount, setRefundAmount] = useState<number | undefined>()
-  const [releaseOpen, setReleaseOpen] = useState(false)
+  const location = useLocation()
+  // Màn Đơn chưa đáp ứng đủ mở thẳng hộp chuyển sang soạn (?action=release). Đọc một lần lúc mở trang, vì
+  // hiệu ứng bên dưới xóa ?action khỏi URL ngay sau đó.
+  const [releaseOpen, setReleaseOpen] = useState(
+    () => params.get('action') === 'release' && !!order?.actions?.canRelease,
+  )
   const [pendingPayment, setPendingPayment] = useState(false)
   const [action, setAction] = useState<string | undefined>(() =>
     params.get('action') === 'assign' && order?.actions?.canAssignPicker
@@ -787,10 +795,16 @@ export function SalesOrderDetailView({
               </div>
             </div>
             {order?.status === 'AWAITING_STOCK' && (
-              <p className="sales-awaiting-stock-note" role="status">
-                Đơn đang chờ phần hàng còn thiếu. Khi có hàng, chuyển sang soạn
-                để tiếp tục.
-              </p>
+              <div className="sales-awaiting-stock-note" role="status">
+                <p>
+                  Đơn đang chờ phần hàng còn thiếu. Khi có hàng, chuyển sang
+                  soạn để tiếp tục.
+                </p>
+                <ExpectedReadyDate
+                  order={order}
+                  editable={!staff && !!order.actions?.canRelease}
+                />
+              </div>
             )}
             {order?.deposit?.status === 'EXPIRED' && (
               <p className="sales-deposit-banner" role="status">
@@ -1109,6 +1123,10 @@ export function SalesOrderDetailView({
       {releaseOpen && order && (
         <SalesPendingReleaseDialog
           order={order}
+          preset={
+            (location.state as { releaseQty?: Record<number, number> } | null)
+              ?.releaseQty
+          }
           onClose={() => setReleaseOpen(false)}
           onSaved={(message, linked) => {
             setReleaseOpen(false)
@@ -1415,11 +1433,111 @@ export function RecordPickedView({
     </Shell>
   )
 }
+/** GVHD 24/11: ngày cửa hàng dự kiến có hàng cho đơn chờ; BM và Owner sửa hoặc xóa được. */
+function ExpectedReadyDate({
+  order,
+  editable,
+}: {
+  order: SalesOrder
+  editable: boolean
+}) {
+  const [value, setValue] = useState(order.expectedReadyDate ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const overdue =
+    !!order.expectedReadyDate && order.expectedReadyDate < todayIso()
+  if (!editable)
+    return order.expectedReadyDate ? (
+      <p className={overdue ? 'sales-expected-overdue' : undefined}>
+        Ngày dự kiến có hàng: {viewDate(order.expectedReadyDate)}
+      </p>
+    ) : null
+  const save = async (date: string) => {
+    // Review 25/11 (R-13): ô ngày vẫn gõ tay được ngày đã qua dù có min, nên chặn trước khi gửi (cùng câu MSG349).
+    if (date && date < todayIso()) {
+      setError('Ngày dự kiến có hàng phải từ hôm nay trở đi.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await axiosClient.put('/sales-orders/' + order.id + '/expected-ready-date', {
+        expectedReadyDate: date || null,
+      })
+      window.dispatchEvent(
+        new CustomEvent('sales-changed', {
+          detail: date
+            ? 'Đã lưu ngày dự kiến có hàng ' + viewDate(date) + '.'
+            : 'Đã bỏ ngày dự kiến có hàng.',
+        }),
+      )
+    } catch (cause) {
+      setError(inventoryError(cause))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="sales-expected-ready">
+      <label>
+        Ngày dự kiến có hàng
+        <input
+          type="date"
+          min={todayIso()}
+          value={value}
+          className={overdue ? 'sales-expected-overdue' : undefined}
+          aria-invalid={!!error || undefined}
+          onChange={(e) => {
+            setValue(e.target.value)
+            setError('')
+          }}
+        />
+      </label>
+      <button
+        type="button"
+        className="mf-btn mf-btn--sm mf-btn--secondary"
+        disabled={busy || value === (order.expectedReadyDate ?? '')}
+        onClick={() => void save(value)}
+      >
+        {busy ? 'Đang lưu…' : 'Lưu ngày'}
+      </button>
+      {overdue && (
+        <small className="sales-expected-overdue">Đã quá ngày dự kiến.</small>
+      )}
+      {error && (
+        <p className="pos-warn sales-expected-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * GVHD 24/11: các tab của màn Đơn chưa đáp ứng đủ. Tab mặc định gồm cả đơn đã đủ hàng (review 25/11: ghi rõ trên nhãn
+ * để người dùng không hiểu nhầm).
+ */
+const waitingTabs: { value: string; label: string }[] = [
+  { value: '', label: 'Đang chờ + Đã đủ' },
+  { value: 'READY', label: 'Đã đủ hàng' },
+  { value: 'RELEASED', label: 'Đã lấy hàng' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
+]
+const waitingStateLabels: Record<WaitingState, string> = {
+  WAITING: 'Đang chờ',
+  READY: 'Đã đủ hàng',
+  RELEASED: 'Đã lấy hàng',
+  CANCELLED: 'Đã hủy',
+}
+
 export function UnmetDemandPage() {
   const [replenishment, setReplenishment] = useState<UnmetRow>()
+  const navigate = useNavigate()
   const scope = useInventoryScope(),
     p = scope.params,
-    page = Math.max(0, Number(p.get('page')) || 0)
+    page = Math.max(0, Number(p.get('page')) || 0),
+    tab = p.get('state') ?? '',
+    active = tab === '' || tab === 'READY' || tab === 'WAITING'
   const search = useSearchBox(p.get('q') ?? '', (value) =>
     scope.filter({ q: value }, true),
   )
@@ -1466,6 +1584,7 @@ export function UnmetDemandPage() {
       q: p.get('q') ?? '',
       from: p.get('from') ?? '',
       to: p.get('to') ?? '',
+      state: tab,
       page,
       size: 20,
     },
@@ -1567,83 +1686,151 @@ export function UnmetDemandPage() {
                 : undefined)
             }
           />
+          <div className="sales-unmet-tabs" role="tablist" aria-label="Trạng thái đơn chờ">
+            {waitingTabs.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                role="tab"
+                aria-selected={tab === item.value}
+                className={tab === item.value ? 'active' : undefined}
+                onClick={() => scope.filter({ state: item.value })}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           <p className="sales-unmet-description">
-            Nhu cầu được tổng hợp tự động từ đơn hoàn tất giao thiếu, đơn đã
-            hủy và đơn đang chờ hàng; mặc định 30 ngày gần nhất.{' '}
-            <Link to="/sales-orders?status=AWAITING_STOCK">Xem đơn chờ hàng</Link>
+            Chỉ gồm đơn khách đồng ý chờ hàng. Hàng về được chia cho đơn chờ
+            theo thứ tự tạo đơn, đơn cũ trước; đơn đủ hàng cho mọi dòng hiện
+            "Đã đủ hàng". Đơn đã lấy hàng và đã hủy mặc định 30 ngày gần nhất.
           </p>
           <div className="stock-table-scroll">
             <table className="stock-table">
               <thead>
                 <tr>
-                  <th>Đơn bán</th>
+                  <th>Đơn chờ</th>
                   {scope.owner && <th>Cửa hàng</th>}
                   <th>Khách hàng</th>
                   <th>Phụ tùng</th>
-                  <th>Số lượng thiếu</th>
-                  <th>Còn bán được</th>
-                  <th>Ngày phát sinh</th>
+                  <th>Khách cần</th>
+                  {active && <th>Lấy được ngay</th>}
+                  <th>Ngày dự kiến có hàng</th>
+                  <th>{tab === 'CANCELLED' ? 'Ngày hủy' : 'Ngày tạo'}</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {data.data?.items.map((row) => (
-                  <tr key={row.orderId + '-' + row.productId}>
+                  <tr
+                    key={row.orderId + '-' + row.lineId}
+                    className={row.orderReady ? 'sales-unmet-ready' : undefined}
+                  >
                     <td>
                       <Link to={'/sales-orders/' + row.orderId}>
                         SO-{row.orderId}
                       </Link>
-                      {row.orderStatus === 'AWAITING_STOCK' && (
-                        <span className="sales-status sales-status-AWAITING_STOCK">
-                          Đang chờ hàng
-                        </span>
-                      )}
+                      <span
+                        className={'sales-status sales-unmet-state-' + row.state}
+                      >
+                        {waitingStateLabels[row.state]}
+                      </span>
                     </td>
                     {scope.owner && <td>{row.storeName}</td>}
-                    <td>{row.customerName ?? 'Khách lẻ'}</td>
+                    <td>
+                      {row.customerName ?? 'Khách lẻ'}
+                      {row.customerPhone && (
+                        <small>
+                          <a href={'tel:' + row.customerPhone}>
+                            {row.customerPhone}
+                          </a>
+                        </small>
+                      )}
+                    </td>
                     <td>
                       {row.partName}
                       <small>{row.sku}</small>
                     </td>
                     <td>
-                      <strong>{row.missingQty}</strong>{' '}
+                      <strong>{row.requestedQty}</strong>{' '}
                       <span className="sales-unmet-unit">{row.baseUnit}</span>
                     </td>
-                    <td>{row.sellableQty}</td>
+                    {active && (
+                      <td>
+                        {row.readyQty}
+                        {row.readyQty < row.requestedQty && (
+                          <small>còn bán được {row.sellableQty}</small>
+                        )}
+                      </td>
+                    )}
+                    <td className={row.overdue ? 'sales-expected-overdue' : undefined}>
+                      {row.expectedReadyDate ? viewDate(row.expectedReadyDate) : '—'}
+                      {row.overdue && <small>Quá hạn</small>}
+                    </td>
                     <td>{dateTime(row.occurredAt)}</td>
                     <td>
                       <div className="mf-row-actions sales-unmet-actions">
-                        <Link
-                          className="mf-btn mf-btn--sm mf-btn--primary"
-                          to={
-                            '/sales-orders/new?productId=' +
-                            row.productId +
-                            '&quantity=' +
-                            row.missingQty +
-                            '&storeId=' +
-                            row.storeId +
-                            (row.customerId
-                              ? '&customerId=' + row.customerId
-                              : '')
-                          }
-                        >
-                          Lập đơn bán
-                        </Link>
-                        <button
-                          type="button"
-                          className="mf-btn mf-btn--sm mf-btn--secondary"
-                          onClick={() => setReplenishment(row)}
-                        >
-                          Yêu cầu bổ sung
-                        </button>
+                        {active && row.readyQty > 0 && (
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--sm mf-btn--primary"
+                            onClick={async () => {
+                              // Review 25/11 (R-08): lấy đủ dòng của đơn (có thể nằm ở trang khác), lỗi thì dùng trang đang xem.
+                              let items = (data.data?.items ?? []).filter(
+                                (item) => item.orderId === row.orderId,
+                              )
+                              try {
+                                const { data: all } = await axiosClient.get<Page<UnmetRow>>(
+                                  '/unmet-demand',
+                                  { params: { orderId: row.orderId, size: 100 } },
+                                )
+                                if (all.items.length) items = all.items
+                              } catch {
+                                // giữ số của trang đang xem
+                              }
+                              navigate(
+                                '/sales-orders/' + row.orderId + '?action=release',
+                                {
+                                  state: {
+                                    releaseQty: Object.fromEntries(
+                                      items.map((item) => [item.productId, item.readyQty]),
+                                    ),
+                                  },
+                                },
+                              )
+                            }}
+                          >
+                            {row.orderReady ? 'Chuyển sang soạn' : 'Soạn phần có hàng'}
+                          </button>
+                        )}
+                        {active && !row.orderReady && (
+                          <button
+                            type="button"
+                            className="mf-btn mf-btn--sm mf-btn--secondary"
+                            onClick={() => setReplenishment(row)}
+                          >
+                            Yêu cầu bổ sung
+                          </button>
+                        )}
+                        {!active && (
+                          <Link
+                            className="mf-btn mf-btn--sm mf-btn--secondary"
+                            to={'/sales-orders/' + row.orderId}
+                          >
+                            Xem đơn
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
                 {data.data && !data.data.items.length && (
                   <tr>
-                    <td colSpan={scope.owner ? 8 : 7} className="stock-empty">
-                      Không có đơn chưa đáp ứng đủ phù hợp.
+                    <td
+                      colSpan={(scope.owner ? 8 : 7) + (active ? 1 : 0)}
+                      className="stock-empty"
+                    >
+                      Không có đơn chờ phù hợp.
                     </td>
                   </tr>
                 )}

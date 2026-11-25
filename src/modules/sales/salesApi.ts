@@ -104,6 +104,9 @@ export type OrderDto = {
   history: { action: string; actorName: string | null; occurredAt: string }[]
   /** BE #79: đơn này tách từ đơn nào ("Tách từ BH-xxx"). */
   splitFromOrderId?: number | null
+  /** GVHD 24/11: đơn từng chờ hàng; ngày dự kiến có hàng (YYYY-MM-DD) nếu có. */
+  waitedForStock?: boolean
+  expectedReadyDate?: string | null
   split?: OrderSplit | null
   lines: {
     id?: number
@@ -176,6 +179,7 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
     id: dto.id,
     code: 'SO-' + dto.id,
     splitFromOrderId: dto.splitFromOrderId ?? null,
+    expectedReadyDate: dto.expectedReadyDate ?? null,
     version: dto.version,
     status: dto.status,
     storeId: dto.storeId,
@@ -253,4 +257,18 @@ export type UnmetRow = {
   occurredAt: string
   /** Góp ý UI 21/11: 'AWAITING_STOCK' là đơn chờ hàng, chưa giao gì (occurredAt là ngày tạo). */
   orderStatus: SalesStatus
+  /** GVHD 24/11: chỉ còn đơn từng chờ hàng, theo 4 trạng thái. */
+  state: WaitingState
+  customerPhone: string | null
+  /** Dòng của đơn chờ, để chuyển sang soạn từng phần. */
+  lineId: number
+  requestedQty: number
+  /** Phần dòng này lấy được ngay sau khi chia hàng cho các đơn chờ cũ hơn (BR-90). */
+  readyQty: number
+  orderReady: boolean
+  /** YYYY-MM-DD */
+  expectedReadyDate: string | null
+  overdue: boolean
 }
+
+export type WaitingState = 'WAITING' | 'READY' | 'RELEASED' | 'CANCELLED'
