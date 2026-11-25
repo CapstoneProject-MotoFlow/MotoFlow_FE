@@ -34,7 +34,7 @@ const {
   decisionDraftError,
   decisionNeedsOwner,
   decisionLine,
-  decisionSaveLabel,
+  decisionSaveButtons,
   standardReplacement,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
@@ -366,7 +366,8 @@ test('mặc định chưa chốt: trả hết, giao bù = thiếu + trả sai + 
   })
   assert.equal(decisionDraftError(undecided, draft), '')
   assert.equal(decisionNeedsOwner(undecided, draft, false), false)
-  assert.equal(decisionSaveLabel(false), 'Lưu hướng xử lý')
+  assert.equal(decisionSaveButtons(false, false).save.blocked, '')
+  assert.match(decisionSaveButtons(false, false).propose.blocked, /không cần Owner/)
   assert.equal(standardReplacement(undecided, 3, 0), 5)
 })
 
@@ -374,7 +375,10 @@ test("(2') giao bù khác chuẩn thì BM phải đề nghị Owner; Owner lưu 
   const draft = { ...decisionDraft(undecided), damaged: '0', replacement: '6' }
   assert.equal(decisionNeedsOwner(undecided, draft, false), true)
   assert.equal(decisionNeedsOwner(undecided, draft, true), false)
-  assert.equal(decisionSaveLabel(true), 'Đề nghị Owner duyệt')
+  assert.match(decisionSaveButtons(true, false).save.blocked, /phải qua Owner/)
+  assert.equal(decisionSaveButtons(true, false).propose.label, 'Đề nghị Owner xử lý')
+  assert.equal(decisionSaveButtons(true, false).propose.blocked, '')
+  assert.equal(decisionSaveButtons(false, true).propose, null)
   assert.match(decisionDraftError(undecided, { ...draft, replacement: '1' }), /tối thiểu 2/)
   assert.match(decisionDraftError(undecided, { ...draft, replacement: '7' }), /tối đa 6/)
 })
@@ -429,4 +433,27 @@ test('dòng chờ Owner mở lại đúng số đề nghị; dòng đã chốt m
     replacementRequiredQty: 5,
   })
   assert.equal(decisionDraft(decided).replacement, '5')
+})
+
+test('an open case with no direction yet only says it is undecided (review 25/11, R-05)', () => {
+  const row = fresh({
+    shortQty: 2,
+    damagedQty: 1,
+    damagedUndecidedQty: 1,
+    heldUndecidedQty: 1,
+    replacementRequiredQty: 2,
+    openReplacementQty: 2,
+    decisionStatus: 'UNDECIDED',
+  })
+  assert.equal(caseStatusLabel(row), 'Chưa quyết định')
+  assert.deepEqual(
+    summaryBoxes(row).map((box) => box.title),
+    ['Sai lệch khi nhận', 'Đang giữ tại kho, chưa quyết định'],
+  )
+  const owing = { ...row, outstandingReturnQty: 2, excessOutstandingReturnQty: 2 }
+  assert.equal(caseStatusLabel(owing), 'Chưa quyết định · Còn phải trả 2')
+  assert.equal(summaryBoxes(owing).length, 3)
+  const decided = { ...row, decisionStatus: 'DECIDED' }
+  assert.match(caseStatusLabel(decided), /Chờ NCC giao bù 2/)
+  assert.equal(summaryBoxes(decided).length, 3)
 })

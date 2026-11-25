@@ -99,7 +99,7 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   /** Lưu, duyệt hoặc không duyệt hướng xử lý: BE trả lại mọi hồ sơ của phiếu. */
   async function decide(
     request: () => Promise<{ data: Case[] }>,
-    message: string,
+    message: string | ((rows: Case[]) => string),
   ): Promise<boolean> {
     if (saving) return false
     setSaveError('')
@@ -108,7 +108,7 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
     try {
       const { data } = await request()
       setRows(data)
-      setNotice(message)
+      setNotice(typeof message === 'string' ? message : message(data))
       return true
     } catch (failure) {
       setSaveError(errorMessage(failure))
@@ -122,7 +122,15 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const saveDecisions = (lines: ReturnType<typeof decisionLine>[], note: string) =>
     decide(
       () => axiosClient.put<Case[]>(base, { lines, note: note || undefined }),
-      'Đã lưu hướng xử lý. Dòng cần Owner duyệt đã được gửi Owner.',
+      // Review 25/11 (R-12): chỉ nói đã gửi Owner khi thật sự có dòng chờ Owner.
+      (data) =>
+        data.some(
+          (row) =>
+            row.decisionStatus === 'AWAITING_OWNER' &&
+            lines.some((line) => line.caseId === row.id),
+        )
+          ? 'Đã lưu hướng xử lý. Dòng cần Owner duyệt đã được gửi Owner.'
+          : 'Đã lưu hướng xử lý.',
     )
   const approveDecisions = () =>
     decide(() => axiosClient.post<Case[]>(base + '/approve', {}), 'Đã duyệt hướng xử lý.')

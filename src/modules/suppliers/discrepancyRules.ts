@@ -94,6 +94,14 @@ export function acceptanceOpenTypes(row: Case): AcceptanceType[] {
   return types
 }
 
+/**
+ * Review 25/11 (R-05, plan B7): hồ sơ đang mở chưa có hướng xử lý thì chỉ báo "Chưa quyết định", không nêu số giao bù
+ * hay số phải trả (BE chưa chuyển hàng sang chờ trả khi chưa chốt).
+ */
+function undecided(row: Case) {
+  return row.status === 'OPEN' && row.decisionStatus === 'UNDECIDED'
+}
+
 /** Ba hộp tóm tắt của thẻ: nhận / đang giữ / còn phải trả, mỗi hộp tách Giao sai và Hỏng. */
 export function summaryBoxes(row: Case): SummaryBox[] {
   const received: Metric[] = [
@@ -112,30 +120,36 @@ export function summaryBoxes(row: Case): SummaryBox[] {
   ]
   if (row.excessOutstandingReturnQty > 0)
     owed.push(['Thừa từ chối', row.excessOutstandingReturnQty])
-  return [
+  const boxes: SummaryBox[] = [
     { title: 'Sai lệch khi nhận', parts: received, warn: false },
     {
       title: 'Đang giữ tại kho, chưa quyết định',
       parts: held,
       warn: row.heldUndecidedQty > 0,
     },
-    {
+  ]
+  // Chưa chốt hướng thì ẩn hộp phải trả, trừ khi thật sự còn hàng phải trả (vd. hàng thừa đã từ chối).
+  if (!undecided(row) || row.outstandingReturnQty > 0)
+    boxes.push({
       title: 'Còn phải trả nhà cung cấp',
       parts: owed,
       warn: row.outstandingReturnQty > 0,
-    },
-  ]
+    })
+  return boxes
 }
 
 /** Các việc còn dở của hồ sơ đang mở; rỗng khi đã xử lý đủ. */
 export function caseStatusParts(row: Case) {
+  if (undecided(row))
+    return row.outstandingReturnQty > 0
+      ? ['Chưa quyết định', `Còn phải trả ${row.outstandingReturnQty}`]
+      : ['Chưa quyết định']
   const parts: string[] = []
   if (row.heldUndecidedQty > 0)
     parts.push(`Đang giữ ${row.heldUndecidedQty}, chờ quyết định`)
   if (row.outstandingReturnQty > 0) parts.push(`Còn phải trả ${row.outstandingReturnQty}`)
   const replacement = Math.max(row.outstandingReplacementQty, row.openReplacementQty)
   if (replacement > 0) parts.push(`Chờ NCC giao bù ${replacement}`)
-  if (row.decisionStatus === 'UNDECIDED') parts.push('Chưa chốt hướng xử lý')
   if (row.decisionStatus === 'AWAITING_OWNER' || row.pendingRequests?.length)
     parts.push('Chờ Owner duyệt')
   return parts
@@ -376,6 +390,25 @@ export function decisionLine(row: Case, draft: DecisionDraft) {
 }
 
 /** Nhãn nút lưu duy nhất dưới bảng. */
-export function decisionSaveLabel(needsOwner: boolean) {
-  return needsOwner ? 'Đề nghị Owner duyệt' : 'Lưu hướng xử lý'
+/**
+ * Review 25/11 (R-06, plan B3): hai nút cố định. BM: "Lưu hướng xử lý" bị khóa khi có dòng phải qua Owner, "Đề nghị
+ * Owner xử lý" bị khóa khi không dòng nào cần; mỗi nút khóa kèm lý do. Owner lưu là chốt nên chỉ có nút lưu.
+ */
+export function decisionSaveButtons(needsOwner: boolean, owner: boolean) {
+  return {
+    save: {
+      label: 'Lưu hướng xử lý',
+      blocked: needsOwner
+        ? 'Có dòng phải qua Owner duyệt (hướng (1), (3) hoặc giao bù khác chuẩn), bấm "Đề nghị Owner xử lý".'
+        : '',
+    },
+    propose: owner
+      ? null
+      : {
+          label: 'Đề nghị Owner xử lý',
+          blocked: needsOwner
+            ? ''
+            : 'Các dòng đã chọn không cần Owner duyệt, bấm "Lưu hướng xử lý".',
+        },
+  }
 }

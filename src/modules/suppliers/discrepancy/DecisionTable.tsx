@@ -7,7 +7,7 @@ import {
   decisionNumbers,
   decisionOptions,
   decisionReturnMax,
-  decisionSaveLabel,
+  decisionSaveButtons,
   type DecisionDraft,
 } from '../discrepancyRules'
 import {
@@ -79,6 +79,13 @@ export default function DecisionTable({
       decisionNeedsOwner(row, draftOf(row), owner),
   )
   const awaiting = decidable.filter((row) => row.canApproveDecision).length
+  const buttons = decisionSaveButtons(needsOwner, owner)
+  const cannotSave = busy || !picked.length || errors.length > 0
+  const count = picked.length > 0 ? ` (${picked.length} dòng)` : ''
+  // Lý do nút bị khóa, hiện ngay cạnh nút (chỉ khi đã chọn dòng).
+  const blockedReason = picked.length
+    ? buttons.save.blocked || buttons.propose?.blocked || ''
+    : ''
 
   function toggle(row: Case, on: boolean) {
     setDrafts((previous) => {
@@ -366,13 +373,33 @@ export default function DecisionTable({
           </label>
           <button
             type="button"
-            className="mf-btn mf-btn--primary"
-            disabled={busy || !picked.length || errors.length > 0}
+            className={
+              'mf-btn' + (buttons.save.blocked ? '' : ' mf-btn--primary')
+            }
+            disabled={cannotSave || !!buttons.save.blocked}
             onClick={() => void save()}
           >
-            {decisionSaveLabel(needsOwner)}
-            {picked.length > 0 && ` (${picked.length} dòng)`}
+            {buttons.save.label}
+            {!buttons.save.blocked && count}
           </button>
+          {buttons.propose && (
+            <button
+              type="button"
+              className={
+                'mf-btn' + (buttons.propose.blocked ? '' : ' mf-btn--primary')
+              }
+              disabled={cannotSave || !!buttons.propose.blocked}
+              onClick={() => void save()}
+            >
+              {buttons.propose.label}
+              {!buttons.propose.blocked && count}
+            </button>
+          )}
+          {blockedReason && (
+            <small className="sd-muted" role="status">
+              {blockedReason}
+            </small>
+          )}
           <p className="sd-muted">
             {!picked.length
               ? 'Đánh dấu hoặc sửa các dòng muốn chốt rồi bấm lưu.'
