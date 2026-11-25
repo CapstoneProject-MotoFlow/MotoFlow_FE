@@ -1,17 +1,20 @@
 /**
  * File: modules/transfers/TransferWrongItemPendingSection.tsx
- * Loại: THÀNH PHẦN — phần "Hàng giao sai điều chuyển" trên màn Owner "Chờ duyệt hàng thừa".
- * Công dụng: PM 23/11 (plan bản 2). BM kho nhận đã lập phiếu nhận hàng giao sai (phụ tùng thực nhận Y), tồn chưa
- * đổi. Owner chỉ xác nhận, không có từ chối: Y trừ ở tồn khả dụng kho gửi (lô cùng HSD bên nhận ghi; không ghi HSD
- * thì lô nhập trước), cộng vào kho nhận; phụ tùng yêu cầu không đổi. Kho gửi không đủ tồn khả dụng (không tính hàng
- * đang giữ cho đơn bán) thì BE báo MSG339, không có lô cùng HSD thì MSG341. Owner thấy kho nhận ghi sai thì dùng
- * "Bên nhận kiểm sai" ở bảng Sai lệch của lệnh.
+ * Loại: THÀNH PHẦN — hộp "Chờ xác nhận hàng giao sai" (BM kho gửi, trang Lệnh điều chuyển) và phần xem của Owner
+ * (màn "Chờ duyệt hàng thừa").
+ * Công dụng: GVHD 24/11 (phần C). BM kho nhận đã lập phiếu nhận hàng giao sai (phụ tùng thực nhận Y, ảnh), tồn chưa
+ * đổi. BM kho gửi xác nhận: Y trừ ở tồn khả dụng kho gửi (lô cùng HSD bên nhận ghi; không ghi HSD thì lô nhập trước),
+ * cộng vào kho nhận. Hoặc từ chối kèm lý do. Kho gửi không đủ tồn khả dụng (không tính hàng đang giữ cho đơn bán) thì
+ * BE báo MSG339, không có lô cùng HSD thì MSG341. Owner chỉ xem.
  */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { documentCode } from '../../shared/utils/documentCode'
+import DebtEvidence from '../receivables/DebtEvidence'
+import type { Evidence } from '../receivables/types'
+import TransferAction from './TransferAction'
 import { inventoryError } from '../inventory/api'
 import { partLabel } from './transferRules'
 import './transfers.css'
@@ -34,6 +37,7 @@ type PendingWrongItem = {
   sourceSellableQty: number
   lots: PlannedLot[]
   blockedCode: string | null
+  attachments?: Evidence[]
 }
 
 const day = (value: string | null) =>
@@ -55,13 +59,17 @@ function blockedText(item: PendingWrongItem) {
 
 function PendingRow({
   item,
+  canAct,
   onDone,
 }: {
   item: PendingWrongItem
+  canAct: boolean
   onDone: (message: string) => void
 }) {
   const [busy, setBusy] = useState(false)
   const [asking, setAsking] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
+  const [reason, setReason] = useState('')
   const [error, setError] = useState('')
   const blocked = blockedText(item)
   const lotText = item.lots
@@ -86,11 +94,17 @@ function PendingRow({
           '/confirm',
       )
       onDone(
-        'Đã xác nhận ' +
-          item.receivedSku +
-          ' × ' +
+        'Đã xác nhận: cộng ' +
           item.quantity +
-          ': tồn kho gửi và kho nhận đã cập nhật.',
+          ' ' +
+          item.receivedSku +
+          ' vào ' +
+          item.destStoreName +
+          ', trừ ' +
+          item.quantity +
+          ' ở ' +
+          item.sourceStoreName +
+          '.',
       )
     } catch (failure) {
       setError(inventoryError(failure))
@@ -115,6 +129,7 @@ function PendingRow({
       <td>
         {item.receivedSku} · {item.receivedPartName}
         {item.reason && <small>{item.reason}</small>}
+        <DebtEvidence files={item.attachments} />
       </td>
       <td>{item.quantity}</td>
       <td>{day(item.expiryDate) ?? 'Không ghi (trừ lô nhập trước)'}</td>
@@ -131,30 +146,77 @@ function PendingRow({
         )}
       </td>
       <td>
-        <div className="mf-row-actions">
-          <button
-            type="button"
-            className="mf-btn mf-btn--sm mf-btn--primary"
-            disabled={busy || !!blocked}
-            onClick={() => setAsking(true)}
+        {canAct ? (
+          <div className="mf-row-actions">
+            <button
+              type="button"
+              className="mf-btn mf-btn--sm mf-btn--primary"
+              disabled={busy || !!blocked}
+              onClick={() => setAsking(true)}
+            >
+              Xác nhận
+            </button>
+            <button
+              type="button"
+              className="mf-btn mf-btn--sm"
+              disabled={busy}
+              onClick={() => setRejecting(true)}
+            >
+              Từ chối
+            </button>
+          </div>
+        ) : (
+          <small>Chờ {item.sourceStoreName} xác nhận</small>
+        )}
+        {rejecting && (
+          <TransferAction
+            title="Từ chối phiếu nhận hàng giao sai"
+            path={
+              '/transfer-orders/' +
+              item.transferOrderId +
+              '/wrong-items/' +
+              item.eventId +
+              '/reject'
+            }
+            disabled={!reason.trim()}
+            payload={() => ({ reason: reason.trim() })}
+            onClose={() => setRejecting(false)}
+            onSaved={() => {
+              setRejecting(false)
+              onDone(
+                'Đã từ chối phiếu nhận ' +
+                  item.quantity +
+                  ' ' +
+                  item.receivedSku +
+                  '. ' +
+                  item.destStoreName +
+                  ' được báo để lập lại hoặc hoàn trả.',
+              )
+            }}
           >
-            Xác nhận
-          </button>
-        </div>
+            <label>
+              Lý do từ chối
+              <textarea
+                maxLength={255}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+          </TransferAction>
+        )}
         {/* Test 23/11 T-09: xác nhận đổi tồn hai kho, phải hỏi lại trước khi gửi. */}
         {asking && (
           <ConfirmDialog
             title="Xác nhận hàng giao sai"
             message={
               <p>
-                {/* PM 24/11: thông báo ghi cả tên phụ tùng, không chỉ mã. */}
-                {item.sourceStoreName} trừ {item.quantity}{' '}
-                {partLabel(item.receivedSku, item.receivedPartName)}
-                {lotText ? ' (' + lotText + ')' : ''}, {item.destStoreName} cộng{' '}
-                {item.quantity}{' '}
-                {partLabel(item.receivedSku, item.receivedPartName)}. Phụ tùng
-                yêu cầu {partLabel(item.sku, item.partName)} không đổi. Thao tác
-                không hoàn tác được.
+                {/* GVHD 24/11 (C5): chỉ hai ý, cộng ở đâu và trừ ở đâu. */}
+                Cộng {item.quantity}{' '}
+                {partLabel(item.receivedSku, item.receivedPartName)} vào{' '}
+                {item.destStoreName}, trừ {item.quantity} ở{' '}
+                {item.sourceStoreName}
+                {lotText ? ' (' + lotText + ')' : ''}. Thao tác không hoàn tác
+                được.
               </p>
             }
             onCancel={() => setAsking(false)}
@@ -166,7 +228,12 @@ function PendingRow({
   )
 }
 
-export default function TransferWrongItemPendingSection() {
+export default function TransferWrongItemPendingSection({
+  canAct = false,
+}: {
+  /** BM kho gửi xác nhận hoặc từ chối; Owner chỉ xem (GVHD 24/11). */
+  canAct?: boolean
+}) {
   const [items, setItems] = useState<PendingWrongItem[]>()
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -187,18 +254,21 @@ export default function TransferWrongItemPendingSection() {
       })
     return () => controller.abort()
   }, [revision])
+  // BM kho gửi: hộp chỉ hiện khi có phiếu chờ mình (hoặc vừa xử lý xong một phiếu).
+  if (canAct && items && !items.length && !notice && !error) return null
   return (
     <section className="receiving-panel tf-excess-section">
       <header className="receiving-panel-head">
-        <h2>Hàng giao sai điều chuyển</h2>
+        <h2>
+          {canAct
+            ? 'Chờ xác nhận hàng giao sai'
+            : 'Hàng giao sai điều chuyển (chờ kho gửi xác nhận)'}
+        </h2>
       </header>
       <p className="tf-excess-hint">
-        Kho nhận đã lập phiếu nhận hàng giao sai; tồn chưa đổi. Xác nhận: trừ
-        phụ tùng thực nhận ở tồn khả dụng kho gửi (lô cùng hạn sử dụng bên nhận
-        ghi, không ghi thì lô nhập trước) và cộng vào kho nhận; phụ tùng yêu cầu
-        không đổi. Kho gửi không đủ tồn khả dụng (không tính hàng đang giữ cho
-        đơn bán) thì chưa xác nhận được. Thấy kho nhận ghi sai thì mở lệnh và
-        dùng "Bên nhận kiểm sai" ở bảng Sai lệch.
+        {canAct
+          ? 'Kho nhận đã lập phiếu nhận hàng giao sai từ lệnh kho bạn gửi; tồn chưa đổi. Xác nhận: cộng vào kho nhận, trừ ở tồn khả dụng kho bạn (lô cùng hạn sử dụng bên nhận ghi, không ghi thì lô nhập trước). Không đúng thì Từ chối và ghi lý do.'
+          : 'Kho nhận đã lập phiếu nhận hàng giao sai; tồn chưa đổi cho tới khi BM kho gửi xác nhận. Owner chỉ xem; thấy kho nhận ghi sai thì mở lệnh và dùng "Bên nhận kiểm sai" ở bảng Sai lệch.'}
       </p>
       {notice && (
         <p className="mf-success-notice" role="status">
@@ -222,7 +292,7 @@ export default function TransferWrongItemPendingSection() {
                 <th>Số lượng</th>
                 <th>HSD bên nhận ghi</th>
                 <th>Lô kho gửi sẽ trừ</th>
-                <th>Xác nhận</th>
+                <th>{canAct ? 'Xác nhận' : 'Trạng thái'}</th>
               </tr>
             </thead>
             <tbody>
@@ -230,6 +300,7 @@ export default function TransferWrongItemPendingSection() {
                 <PendingRow
                   key={item.eventId + ':' + revision}
                   item={item}
+                  canAct={canAct}
                   onDone={(message) => {
                     setNotice(message)
                     setRevision((n) => n + 1)
