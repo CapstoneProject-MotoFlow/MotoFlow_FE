@@ -20,10 +20,13 @@ import './salesRelease.css'
 
 export default function SalesPendingReleaseDialog({
   order,
+  preset,
   onClose,
   onSaved,
 }: {
   order: SalesOrder
+  /** GVHD 24/11: số gợi ý theo phụ tùng (readyQty của màn Đơn chưa đáp ứng đủ, đã chia cho đơn cũ trước). */
+  preset?: Record<number, number>
   onClose: () => void
   onSaved: (message: string, linkedOrders: { orderId?: number; pendingOrderId?: number }) => void
 }) {
@@ -34,7 +37,11 @@ export default function SalesPendingReleaseDialog({
         String(
           Math.max(
             0,
-            Math.min(line.requested, line.sellableQty ?? line.requested),
+            Math.min(
+              line.requested,
+              line.sellableQty ?? line.requested,
+              preset?.[line.productId] ?? line.requested,
+            ),
           ),
         ),
       ]),

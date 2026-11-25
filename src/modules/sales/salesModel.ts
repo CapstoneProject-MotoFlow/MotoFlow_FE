@@ -34,6 +34,8 @@ export type SalesLine = {
 export type SalesOrder = {
   /** BE #79: đơn gốc khi đơn này được tách ra (đơn chờ hàng hoặc đơn bán nhả từ đơn chờ). */
   splitFromOrderId?: number | null
+  /** GVHD 24/11: ngày dự kiến có hàng của đơn chờ (YYYY-MM-DD). */
+  expectedReadyDate?: string | null
   nextAction?: string | null
   payments?: {
     id: number

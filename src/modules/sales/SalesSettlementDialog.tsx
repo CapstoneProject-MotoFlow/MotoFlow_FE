@@ -101,6 +101,9 @@ export default function SalesSettlementDialog({
       order.lines.map((l) => [l.productId, String(l.picked ?? 0)]),
     ),
   )
+  // GVHD 24/11: khách chờ phần kho soạn thiếu (chỉ khách có hồ sơ; BE tạo đơn chờ mới cho phần đó).
+  const [waitShort, setWaitShort] = useState<Record<number, boolean>>({})
+  const canWaitShort = order.customerId != null
   const validation = useFormValidation()
   const lock = useRef(false),
     [paymentId, setPaymentId] = useState<number>()
@@ -301,6 +304,10 @@ export default function SalesSettlementDialog({
             const lines = order.lines.map((l) => ({
               productId: l.productId,
               deliveredQty: Number(delivered[l.productId]),
+              waitForShort:
+                canWaitShort &&
+                !!waitShort[l.productId] &&
+                Number(delivered[l.productId]) < l.requested,
             }))
             if (
               lines.some(
@@ -404,7 +411,11 @@ export default function SalesSettlementDialog({
               data.completionBlockedMessage
                 ? 'Đã ghi nhận tiền. Chưa hoàn tất: ' +
                     data.completionBlockedMessage
-                : 'Đã lưu ' + titles[action].toLowerCase() + '.',
+                : action === 'confirm' && data.split?.waitingOrderId
+                  ? 'Đã xác nhận đơn. Phần thiếu chuyển sang đơn chờ SO-' +
+                    data.split.waitingOrderId +
+                    '.'
+                  : 'Đã lưu ' + titles[action].toLowerCase() + '.',
             )
             onClose(action === 'confirm' ? 'payment' : undefined)
           } catch (error) {
@@ -479,6 +490,7 @@ export default function SalesSettlementDialog({
                     <th>Yêu cầu</th>
                     <th>Đã lấy</th>
                     <th>Giao</th>
+                    {canWaitShort && <th>Khách chờ phần thiếu</th>}
                     <th>Thành tiền</th>
                   </tr>
                 </thead>
@@ -522,6 +534,29 @@ export default function SalesSettlementDialog({
                           message={validation.errors['Số giao ' + l.sku]}
                         />
                       </td>
+                      {canWaitShort && (
+                        <td>
+                          {Number(delivered[l.productId]) < l.requested ? (
+                            <label className="sales-wait-short">
+                              <input
+                                type="checkbox"
+                                checked={!!waitShort[l.productId]}
+                                onChange={(e) =>
+                                  setWaitShort({
+                                    ...waitShort,
+                                    [l.productId]: e.target.checked,
+                                  })
+                                }
+                              />{' '}
+                              Chờ{' '}
+                              {l.requested -
+                                (Number(delivered[l.productId]) || 0)}
+                            </label>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      )}
                       <td>
                         {l.retailPrice == null ||
                         !Number.isInteger(Number(delivered[l.productId]))

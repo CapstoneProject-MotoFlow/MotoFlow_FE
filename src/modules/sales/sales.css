@@ -2208,3 +2208,78 @@
   color: #b42318;
   font-size: 13px;
 }
+
+/* GVHD 24/11: màn Đơn chưa đáp ứng đủ theo 4 trạng thái đơn chờ; ngày dự kiến quá hạn tô đỏ. */
+.sales-unmet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.sales-unmet-tabs button {
+  padding: 6px 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  background: #fff;
+  color: #344054;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sales-unmet-tabs button.active {
+  border-color: #1570ef;
+  background: #eff8ff;
+  color: #175cd3;
+}
+.sales-unmet .sales-status {
+  display: inline-block;
+  margin-left: 6px;
+}
+.sales-unmet-state-READY {
+  background: #ecfdf3;
+  color: #067647;
+}
+.sales-unmet-state-WAITING {
+  background: #fffaeb;
+  color: #b54708;
+}
+.sales-unmet-state-RELEASED {
+  background: #eff8ff;
+  color: #175cd3;
+}
+.sales-unmet-state-CANCELLED {
+  background: #f2f4f7;
+  color: #475467;
+}
+.sales-unmet-ready td {
+  background: #f6fef9;
+}
+.sales-unmet td small {
+  display: block;
+  color: #667085;
+}
+.sales-expected-overdue,
+.sales-unmet td.sales-expected-overdue small {
+  color: #d92d20;
+  font-weight: 600;
+}
+.sales-expected-ready {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.sales-expected-ready label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.sales-wait-short {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.pos-expected-ready small {
+  color: #667085;
+}
