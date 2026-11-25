@@ -1513,9 +1513,12 @@ function ExpectedReadyDate({
   )
 }
 
-/** GVHD 24/11: các tab của màn Đơn chưa đáp ứng đủ; "Đang chờ" gồm cả đơn đã đủ hàng. */
+/**
+ * GVHD 24/11: các tab của màn Đơn chưa đáp ứng đủ. Tab mặc định gồm cả đơn đã đủ hàng (review 25/11: ghi rõ trên nhãn
+ * để người dùng không hiểu nhầm).
+ */
 const waitingTabs: { value: string; label: string }[] = [
-  { value: '', label: 'Đang chờ' },
+  { value: '', label: 'Đang chờ + Đã đủ' },
   { value: 'READY', label: 'Đã đủ hàng' },
   { value: 'RELEASED', label: 'Đã lấy hàng' },
   { value: 'CANCELLED', label: 'Đã hủy' },
@@ -1771,20 +1774,31 @@ export function UnmetDemandPage() {
                           <button
                             type="button"
                             className="mf-btn mf-btn--sm mf-btn--primary"
-                            onClick={() =>
+                            onClick={async () => {
+                              // Review 25/11 (R-08): lấy đủ dòng của đơn (có thể nằm ở trang khác), lỗi thì dùng trang đang xem.
+                              let items = (data.data?.items ?? []).filter(
+                                (item) => item.orderId === row.orderId,
+                              )
+                              try {
+                                const { data: all } = await axiosClient.get<Page<UnmetRow>>(
+                                  '/unmet-demand',
+                                  { params: { orderId: row.orderId, size: 100 } },
+                                )
+                                if (all.items.length) items = all.items
+                              } catch {
+                                // giữ số của trang đang xem
+                              }
                               navigate(
                                 '/sales-orders/' + row.orderId + '?action=release',
                                 {
                                   state: {
                                     releaseQty: Object.fromEntries(
-                                      (data.data?.items ?? [])
-                                        .filter((item) => item.orderId === row.orderId)
-                                        .map((item) => [item.productId, item.readyQty]),
+                                      items.map((item) => [item.productId, item.readyQty]),
                                     ),
                                   },
                                 },
                               )
-                            }
+                            }}
                           >
                             {row.orderReady ? 'Chuyển sang soạn' : 'Soạn phần có hàng'}
                           </button>
