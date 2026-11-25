@@ -1,121 +1,37 @@
-import { Fragment, useId, type ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  acceptanceOpenTypes,
-  caseDraftFieldErrors,
-  caseStatusLabel,
-  isCaseSettled,
-  replacementMax,
-  replacementMin,
-  returnLimits,
-  shownReplacement,
-  summaryBoxes,
-  type CaseDraft,
-} from '../discrepancyRules'
+import { caseStatusLabel, isCaseSettled, summaryBoxes } from '../discrepancyRules'
 import type { AcceptanceMode } from './AcceptanceDialog'
 import type { CaseActionMode } from './CaseActionDialog'
 import { acceptanceLabels, type Case } from './types'
 
-function QuantityField({
-  label,
-  value,
-  min,
-  max,
-  hint,
-  error,
-  errorId,
-  changed,
-  disabled,
-  onChange,
-}: {
-  label: string
-  value: string
-  min: number
-  max: number
-  /** Chú thích sàn: đã trả (hàng giao sai / hỏng) hoặc tối thiểu (giao bù). Luôn màu xám. */
-  hint?: string
-  /** Lỗi của chính ô này; lỗi ô khác không đổi viền hay màu ô này. */
-  error: string
-  errorId: string
-  changed: boolean
-  disabled: boolean
-  onChange: (value: string) => void
-}) {
-  return (
-    <label className="sd-qty-field">
-      <span>{label}</span>
-      <span className="sd-qty-input">
-        <input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          required
-          value={value}
-          disabled={disabled}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className={changed ? 'is-changed' : undefined}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <small>/ {max}</small>
-      </span>
-      {error && (
-        <small id={errorId} className="sd-field-error">
-          {error}
-        </small>
-      )}
-      {hint && <small className="sd-qty-hint">{hint}</small>}
-    </label>
-  )
-}
-
-/** Một hồ sơ sai lệch của phiếu nhập: ba hộp tóm tắt, ô nhập hướng xử lý và các nút việc của hồ sơ. */
+/**
+ * Một hồ sơ sai lệch của phiếu nhập: ba hộp tóm tắt và các nút hành động. GVHD 24/11: hướng xử lý nhập ở bảng chung
+ * (DecisionTable); hành động (ghi nhận đã trả, nhập hàng giao bù) chỉ có khi hướng đã chốt.
+ */
 export default function CaseCard({
   row,
-  draft,
-  saveError,
-  dirty,
   saving,
-  onDraft,
-  onSave,
-  onUndo,
   onAction,
   onAcceptance,
 }: {
   row: Case
-  draft: CaseDraft
-  /** Lỗi khi lưu lần gần nhất của chính hồ sơ này. */
-  saveError: string
-  /** Có thay đổi số lượng chưa lưu so với hướng xử lý đang lưu trên BE (chỉ ghi chú không tính). */
-  dirty: boolean
   saving: boolean
-  onDraft: (patch: Partial<CaseDraft>) => void
-  onSave: () => void
-  onUndo: () => void
   onAction: (mode: CaseActionMode) => void
   onAcceptance: (mode: AcceptanceMode) => void
 }) {
-  const idBase = useId()
-  const fieldErrors = caseDraftFieldErrors(row, draft)
-  const invalid = !!(fieldErrors.wrong || fieldErrors.damaged || fieldErrors.replacement)
-  const editing = row.status === 'OPEN' && row.canHandle
-  const disabled = !editing || saving
   const settled = isCaseSettled(row)
-  const replaceMax = replacementMax(row)
-  const replaceMin = replacementMin(row)
-  const replacement = shownReplacement(row, draft)
-  const wrongLimit = returnLimits(row, 'WRONG_ITEM')
-  const damagedLimit = returnLimits(row, 'DAMAGED')
-  const showWrong = row.wrongItemQty > 0
-  const showDamaged = row.damagedQty > 0
-  const showReplacement = !row.replacementDelivery && replaceMax > 0
-  const hasPlan = showWrong || showDamaged || showReplacement
-  const openTypes = acceptanceOpenTypes(row)
+  const decided = row.decisionStatus === undefined || row.decisionStatus === 'DECIDED'
   const notes: string[] = []
   const actions: ReactNode[] = []
 
-  if (row.openReplacementQty > 0 && row.purchaseOrderId) {
+  if (row.status === 'OPEN' && !decided)
+    notes.push(
+      row.decisionStatus === 'AWAITING_OWNER'
+        ? 'Hướng xử lý đang chờ Owner duyệt'
+        : 'Chốt hướng xử lý ở bảng trên trước khi trả hàng hoặc nhập giao bù',
+    )
+  if (decided && row.openReplacementQty > 0 && row.purchaseOrderId) {
     if (row.canCreateReplacement)
       actions.push(
         <Link
@@ -123,7 +39,7 @@ export default function CaseCard({
           className="mf-btn mf-btn--sm mf-btn--secondary"
           to={'/purchase-orders/' + row.purchaseOrderId + '?replacement=' + row.id}
         >
-          Nhập hàng giao bù
+          Nhập hàng giao bù (phiếu nhập mới)
         </Link>,
       )
     else notes.push('BM nhận hàng giao bù')
@@ -143,19 +59,6 @@ export default function CaseCard({
       )
     else notes.push('BM ghi nhận hàng đã trả NCC')
   }
-  // NH7a: BM đề nghị Owner xử lý hàng lỗi / giao sai đang giữ (BE #80).
-  if (row.canRequestAcceptance && !row.canApproveAcceptance && openTypes.length > 0)
-    actions.push(
-      <button
-        key="request"
-        type="button"
-        className="mf-btn mf-btn--sm mf-btn--secondary"
-        disabled={saving}
-        onClick={() => onAcceptance('request')}
-      >
-        Đề nghị Owner xử lý
-      </button>,
-    )
   if (row.canApproveAcceptance && row.damagedUndecidedQty > 0)
     actions.push(
       <button
@@ -180,9 +83,9 @@ export default function CaseCard({
         Nhận hàng giao sai
       </button>,
     )
-  if (!row.canApproveAcceptance && !row.canRequestAcceptance && row.heldUndecidedQty > 0)
-    notes.push('Owner duyệt nhận hàng lỗi / hàng giao sai')
-  if (row.openReplacementQty > 0) {
+  if (decided && !row.canApproveAcceptance && row.heldUndecidedQty > 0)
+    notes.push('Owner nhận hàng lỗi / hàng giao sai vào kho')
+  if (decided && row.openReplacementQty > 0) {
     if (row.canWaiveReplacement)
       actions.push(
         <button
@@ -242,101 +145,8 @@ export default function CaseCard({
       </div>
 
       <div className="sd-work">
-        {hasPlan && (
-          <fieldset className="sd-plan" disabled={disabled}>
-            <legend>Hướng xử lý với nhà cung cấp</legend>
-            <div className="sd-plan-fields">
-              {showWrong && (
-                <QuantityField
-                  label="Trả NCC · hàng giao sai"
-                  value={draft.wrong}
-                  min={wrongLimit.floor}
-                  max={wrongLimit.max}
-                  hint={wrongLimit.floor > 0 ? `Đã trả ${wrongLimit.floor}` : undefined}
-                  error={fieldErrors.wrong}
-                  errorId={idBase + '-wrong'}
-                  changed={Number(draft.wrong) !== row.wrongReturnRequiredQty}
-                  disabled={disabled}
-                  onChange={(wrong) => onDraft({ wrong })}
-                />
-              )}
-              {showDamaged && (
-                <QuantityField
-                  label="Trả NCC · hàng hỏng"
-                  value={draft.damaged}
-                  min={damagedLimit.floor}
-                  max={damagedLimit.max}
-                  hint={damagedLimit.floor > 0 ? `Đã trả ${damagedLimit.floor}` : undefined}
-                  error={fieldErrors.damaged}
-                  errorId={idBase + '-damaged'}
-                  changed={Number(draft.damaged) !== row.damagedReturnRequiredQty}
-                  disabled={disabled}
-                  onChange={(damaged) => onDraft({ damaged })}
-                />
-              )}
-              {showReplacement && (
-                <QuantityField
-                  label="NCC giao bù"
-                  value={replacement}
-                  min={replaceMin}
-                  max={replaceMax}
-                  hint={replaceMin > 0 ? `Tối thiểu ${replaceMin}` : undefined}
-                  error={fieldErrors.replacement}
-                  errorId={idBase + '-replacement'}
-                  changed={Number(replacement) !== row.replacementRequiredQty}
-                  disabled={disabled}
-                  onChange={(value) => onDraft({ replacement: value })}
-                />
-              )}
-              <label className="sd-field sd-plan-note">
-                <span>Ghi chú</span>
-                <input
-                  value={draft.note}
-                  maxLength={255}
-                  placeholder="Không bắt buộc"
-                  disabled={disabled}
-                  onChange={(event) => onDraft({ note: event.target.value })}
-                />
-              </label>
-            </div>
-            {editing && (
-              <p className="sd-muted">
-                Phần không trả sẽ giữ tại kho để Owner nhận vào kho hoặc đề nghị xử lý.
-              </p>
-            )}
-          </fieldset>
-        )}
         <div className="sd-actions">
-          <div className="sd-actions-buttons">
-            {editing && hasPlan && (
-              <>
-                {dirty && (
-                  <button
-                    type="button"
-                    className="mf-btn mf-btn--secondary"
-                    disabled={saving}
-                    onClick={onUndo}
-                  >
-                    Hoàn tác
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="mf-btn mf-btn--primary"
-                  disabled={saving || !dirty || invalid}
-                  onClick={onSave}
-                >
-                  Lưu hướng xử lý
-                </button>
-              </>
-            )}
-            {actions}
-          </div>
-          {saveError && (
-            <p role="alert" className="sd-error sd-role-note">
-              {saveError}
-            </p>
-          )}
+          <div className="sd-actions-buttons">{actions}</div>
           {notes.length > 0 && <p className="sd-muted sd-role-note">{notes.join(' · ')}</p>}
           <button
             type="button"
