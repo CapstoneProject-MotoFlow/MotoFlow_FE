@@ -526,6 +526,18 @@ test('parseTabs keeps the preorder flag only when it is true', () => {
   assert.equal('preorder' in parsed.tabs[2].draft, false)
 })
 
+test('parseTabs keeps a well-formed expected ready date so switching tabs does not lose it', () => {
+  const parsed = parseTabs(
+    rawState([
+      rawTab(1, { lines: [], expectedReady: '2026-12-01' }),
+      rawTab(2, { lines: [], expectedReady: '01/12/2026' }),
+    ]),
+  )
+  assert.equal(parsed.tabs[0].draft.expectedReady, '2026-12-01')
+  assert.equal('expectedReady' in parsed.tabs[1].draft, false)
+  assert.equal(isTabDirty(parsed.tabs[0]), true)
+})
+
 test('parseTabs drops a customer with a numeric id but no string customerName', () => {
   const missingName = parseTabs(
     rawState([rawTab(1, { lines: [], customer: { id: 7 } })]),

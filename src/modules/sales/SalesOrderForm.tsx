@@ -238,7 +238,9 @@ export function SalesOrderFormView({
   )
   const [error, setError] = useState('')
   // GVHD 24/11: ngày cửa hàng dự kiến có hàng cho phần chờ (không bắt buộc, từ hôm nay trở đi).
-  const [expectedReady, setExpectedReady] = useState('')
+  const [expectedReady, setExpectedReady] = useState(
+    initialDraft?.expectedReady ?? '',
+  )
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [now] = useState(() => formatDateTime(new Date()))
 
@@ -271,8 +273,20 @@ export function SalesOrderFormView({
         ? { deposit }
         : {}),
       ...(preorder && !walkIn ? { preorder: true } : {}),
+      ...(expectedReady ? { expectedReady } : {}),
     })
-  }, [customer, walkIn, warehouse, type, discount, note, lines, deposit, preorder])
+  }, [
+    customer,
+    walkIn,
+    warehouse,
+    type,
+    discount,
+    note,
+    lines,
+    deposit,
+    preorder,
+    expectedReady,
+  ])
 
   // F3: đưa con trỏ về ô tìm phụ tùng (thói quen của phần mềm bán hàng phổ biến).
   useEffect(() => {

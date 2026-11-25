@@ -46,6 +46,8 @@ export type TabDraft = {
   deposit?: TabDeposit
   /** Khách đặt trước: cả đơn đi thành đơn chờ hàng, không lấy ngay (chỉ lưu khi bật). */
   preorder?: boolean
+  /** Ngày dự kiến có hàng của phần chờ (yyyy-mm-dd), giữ khi đổi tab. */
+  expectedReady?: string
 }
 export type SalesTab = { id: string; seq: number; draft: TabDraft }
 export type SalesTabsState = {
@@ -189,7 +191,8 @@ export function isTabDirty(tab: SalesTab): boolean {
     (draft.deposit?.amount ?? '').trim() !== '' ||
     draft.type === 'WHOLESALE' ||
     hasDiscountInput(draft.discount) ||
-    draft.preorder === true
+    draft.preorder === true ||
+    !!draft.expectedReady
   )
 }
 
@@ -259,6 +262,11 @@ function sanitizeDraft(
   const customer = sanitizeCustomer(raw.customer)
   const deposit = sanitizeDeposit(raw.deposit)
   const preorder = raw.preorder === true
+  const expectedReady =
+    typeof raw.expectedReady === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(raw.expectedReady)
+      ? raw.expectedReady
+      : ''
   return {
     ...(customer ? { customer } : {}),
     warehouse: textOr(raw.warehouse, base.warehouse),
@@ -268,6 +276,7 @@ function sanitizeDraft(
     lines,
     ...(deposit ? { deposit } : {}),
     ...(preorder ? { preorder: true } : {}),
+    ...(expectedReady ? { expectedReady } : {}),
   }
 }
 
