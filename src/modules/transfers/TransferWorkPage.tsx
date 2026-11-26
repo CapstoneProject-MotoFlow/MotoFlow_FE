@@ -308,15 +308,6 @@ function WorkEditor({
     ),
     [files, setFiles] = useState<File[]>([]),
     [inspectionNote, setInspectionNote] = useState(receipt?.inspectionNote ?? ''),
-    // PM 22/11 + BE #98: HSD của hàng thừa để Owner duyệt trừ đúng lô kho gửi; trống = lô nhập trước (FIFO).
-    [excessExpiry, setExcessExpiry] = useState<Record<number, string>>(() =>
-      Object.fromEntries(
-        (receipt?.lines ?? []).map((line) => [
-          line.productId,
-          line.expiryDate ?? '',
-        ]),
-      ),
-    ),
     [reason, setReason] = useState(''),
     [action, setAction] = useState(''),
     [busy, setBusy] = useState(false),
@@ -449,10 +440,8 @@ function WorkEditor({
                   passedQty: values[l.productId].qty,
                   damagedQty: values[l.productId].damaged,
                   wrongItemQty: values[l.productId].wrong,
-                  expiryDate:
-                    'documentQty' in l && excessOf(l) > 0
-                      ? excessExpiry[l.productId] || null
-                      : null,
+                  // PM 25/11 (review R-04): không điền HSD cho hàng thừa; Owner duyệt thì kho gửi trừ lô nhập trước.
+                  expiryDate: null,
                 })),
               }
             : {
@@ -744,9 +733,6 @@ function WorkEditor({
                           <small>
                             {l.storageArea} / {l.binLocation} · Tồn kho{' '}
                             {l.sellableQty}
-                            {l.barcodes?.length
-                              ? ' · Mã vạch: ' + l.barcodes.join(', ')
-                              : ''}
                             {l.sellableQty < l.plannedQty && (
                               <small className="tf-validation-hint">
                                 Kho nguồn thiếu {l.plannedQty - l.sellableQty}{' '}
@@ -890,19 +876,6 @@ function WorkEditor({
                           <td>{shortOf(l)}</td>
                           <td>
                             {excessOf(l)}
-                            {canRecord && excessOf(l) > 0 && (
-                              <ExcessExpiryButton
-                                sku={l.sku}
-                                value={excessExpiry[l.productId] ?? ''}
-                                disabled={busy}
-                                onChange={(value) =>
-                                  setExcessExpiry({
-                                    ...excessExpiry,
-                                    [l.productId]: value,
-                                  })
-                                }
-                              />
-                            )}
                           </td>
                           {canRecord && (
                             <td>
@@ -1008,48 +981,5 @@ function WorkEditor({
         </TransferAction>
       )}
     </>
-  )
-}
-
-/**
- * PM 24/11: HSD hàng thừa là nút "Điền HSD" thay cho ô ngày luôn hiện; bấm mới hiện ô ngày.
- * Để trống: khi Owner duyệt, kho gửi trừ lô nhập trước. Có ghi HSD thì kho gửi phải có lô cùng HSD.
- */
-function ExcessExpiryButton({
-  sku,
-  value,
-  disabled,
-  onChange,
-}: {
-  sku: string
-  value: string
-  disabled: boolean
-  onChange: (value: string) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  return (
-    <span className="tf-excess-expiry">
-      {editing ? (
-        <input
-          type="date"
-          aria-label={'HSD hàng thừa ' + sku}
-          value={value}
-          disabled={disabled}
-          autoFocus
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={() => setEditing(false)}
-        />
-      ) : (
-        <button
-          type="button"
-          className="mf-btn mf-btn--sm"
-          disabled={disabled}
-          title="Để trống: khi Owner duyệt, kho gửi trừ lô nhập trước. Có ghi HSD thì kho gửi phải có lô cùng HSD."
-          onClick={() => setEditing(true)}
-        >
-          {value ? 'HSD ' + value.split('-').reverse().join('/') : 'Điền HSD'}
-        </button>
-      )}
-    </span>
   )
 }

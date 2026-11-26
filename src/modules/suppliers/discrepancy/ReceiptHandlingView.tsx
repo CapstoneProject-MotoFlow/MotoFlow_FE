@@ -5,17 +5,11 @@ import { useAuth } from '../../../shared/hooks/useAuth'
 import EmptyState from '../../../shared/ui/EmptyState'
 import { documentCode } from '../../../shared/utils/documentCode'
 import { formatDate } from '../../../shared/utils/format'
-import {
-  caseDraft,
-  caseDraftChanged,
-  caseDraftError,
-  caseLine,
-  receiptHandlingStatus,
-  type CaseDraft,
-} from '../discrepancyRules'
+import { decisionLine, receiptHandlingStatus } from '../discrepancyRules'
 import AcceptanceDialog, { type AcceptanceMode } from './AcceptanceDialog'
 import CaseActionDialog, { type CaseActionMode } from './CaseActionDialog'
 import CaseCard from './CaseCard'
+import DecisionTable from './DecisionTable'
 import { errorMessage, type Case } from './types'
 
 /**
@@ -38,7 +32,8 @@ const excessDecisionLabels: Record<string, string> = {
 }
 
 /**
- * Xử lý sai lệch của một phiếu nhập: mỗi phụ tùng một thẻ, mỗi thẻ lưu hướng xử lý của riêng hồ sơ đó.
+ * Xử lý sai lệch của một phiếu nhập. GVHD 24/11: bước 1 chốt hướng xử lý cả phiếu trong một bảng (DecisionTable),
+ * bước 2 mỗi phụ tùng một thẻ với các hành động khi hướng đã chốt.
  * PM 22/11: hiện cả dòng hàng thừa; phiếu chỉ xong khi mọi hồ sơ đã đóng và không còn hàng thừa chờ Owner.
  */
 export default function ReceiptHandlingView({ receiptId }: { receiptId: string }) {
@@ -47,13 +42,11 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const [excess, setExcess] = useState<ExcessLine[]>([])
   // null = không tải được API hàng thừa (không được coi là không có hàng thừa).
   const [handlingComplete, setHandlingComplete] = useState<boolean | null>(null)
-  const [drafts, setDrafts] = useState<Record<number, CaseDraft>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  /** Lỗi lưu hướng xử lý, hiện trong đúng thẻ của hồ sơ vừa lưu. */
-  const [saveError, setSaveError] = useState<{ id: number; message: string }>()
+  const [saveError, setSaveError] = useState('')
   const [action, setAction] = useState<{ row: Case; mode: CaseActionMode }>()
   const [acceptance, setAcceptance] = useState<{ row: Case; mode: AcceptanceMode }>()
 
@@ -98,54 +91,54 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
     return () => controller.abort()
   }, [receiptId])
 
-  function patchDraft(row: Case, patch: Partial<CaseDraft>) {
-    setDrafts((previous) => ({
-      ...previous,
-      [row.id]: { ...(previous[row.id] ?? caseDraft(row)), ...patch },
-    }))
-  }
-
-  function discardDraft(id: number) {
-    setDrafts((previous) => {
-      const next = { ...previous }
-      delete next[id]
-      return next
-    })
-  }
-
   function replaceRow(row: Case, message: string) {
     setRows((previous) => previous.map((item) => (item.id === row.id ? row : item)))
-    discardDraft(row.id)
     setNotice(message)
   }
 
-  async function save(row: Case) {
-    const draft = drafts[row.id]
-    if (
-      !draft ||
-      saving ||
-      !row.canHandle ||
-      caseDraftError(row, draft) ||
-      !caseDraftChanged(row, draft)
-    )
-      return
-    setSaveError(undefined)
+  /** Lưu, duyệt hoặc không duyệt hướng xử lý: BE trả lại mọi hồ sơ của phiếu. */
+  async function decide(
+    request: () => Promise<{ data: Case[] }>,
+    message: string | ((rows: Case[]) => string),
+  ): Promise<boolean> {
+    if (saving) return false
+    setSaveError('')
     setNotice('')
     setSaving(true)
     try {
-      const { data } = await axiosClient.put<Case[]>(
-        '/goods-receipt-notes/' + receiptId + '/discrepancies',
-        { lines: [caseLine(row, draft)], note: draft.note.trim() },
-      )
+      const { data } = await request()
       setRows(data)
-      discardDraft(row.id)
-      setNotice('Đã lưu hướng xử lý ' + row.sku + '.')
+      setNotice(typeof message === 'string' ? message : message(data))
+      return true
     } catch (failure) {
-      setSaveError({ id: row.id, message: errorMessage(failure) })
+      setSaveError(errorMessage(failure))
+      return false
     } finally {
       setSaving(false)
     }
   }
+
+  const base = '/goods-receipt-notes/' + receiptId + '/discrepancies'
+  const saveDecisions = (lines: ReturnType<typeof decisionLine>[], note: string) =>
+    decide(
+      () => axiosClient.put<Case[]>(base, { lines, note: note || undefined }),
+      // Review 25/11 (R-12): chỉ nói đã gửi Owner khi thật sự có dòng chờ Owner.
+      (data) =>
+        data.some(
+          (row) =>
+            row.decisionStatus === 'AWAITING_OWNER' &&
+            lines.some((line) => line.caseId === row.id),
+        )
+          ? 'Đã lưu hướng xử lý. Dòng cần Owner duyệt đã được gửi Owner.'
+          : 'Đã lưu hướng xử lý.',
+    )
+  const approveDecisions = () =>
+    decide(() => axiosClient.post<Case[]>(base + '/approve', {}), 'Đã duyệt hướng xử lý.')
+  const rejectDecisions = (reason: string) =>
+    decide(
+      () => axiosClient.post<Case[]>(base + '/reject', { reason }),
+      'Đã gửi lại cho BM chọn hướng khác.',
+    )
 
   const first = rows[0]
   const openCases = rows.filter((row) => row.status !== 'CLOSED').length
@@ -234,26 +227,35 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           </section>
         )
       ) : (
-        <section className="sd-panel">
-          {rows.map((row) => {
-            const draft = drafts[row.id]
-            return (
+        <>
+          <section className="sd-panel">
+            <DecisionTable
+              key={rows.map((row) => row.id + ':' + row.decisionStatus).join(',')}
+              rows={rows}
+              owner={user?.role === 'OWNER'}
+              busy={saving}
+              onSave={saveDecisions}
+              onApprove={approveDecisions}
+              onReject={rejectDecisions}
+            />
+            {saveError && (
+              <p role="alert" className="sd-error">
+                {saveError}
+              </p>
+            )}
+          </section>
+          <section className="sd-panel" aria-label="Hành động theo hướng đã chốt">
+            {rows.map((row) => (
               <CaseCard
                 key={row.id}
                 row={row}
-                draft={draft ?? caseDraft(row)}
-                saveError={saveError?.id === row.id ? saveError.message : ''}
-                dirty={!!draft && caseDraftChanged(row, draft)}
                 saving={saving}
-                onDraft={(patch) => patchDraft(row, patch)}
-                onSave={() => void save(row)}
-                onUndo={() => discardDraft(row.id)}
                 onAction={(mode) => setAction({ row, mode })}
                 onAcceptance={(mode) => setAcceptance({ row, mode })}
               />
-            )
-          })}
-        </section>
+            ))}
+          </section>
+        </>
       )}
 
       {!loading && excess.length > 0 && (

@@ -3,6 +3,26 @@ import { apiMessage } from '../supplierService'
 
 export type AcceptanceType = 'DAMAGED' | 'WRONG_ITEM'
 
+/** GVHD 24/11: hướng xử lý với NCC của một dòng sai lệch (BE DecisionType). */
+export type DecisionType =
+  | 'RETURN_NO_REPLACEMENT'
+  | 'RETURN_AND_REPLACE'
+  | 'ACCEPT_NO_REPLACEMENT'
+
+export type DecisionStatus = 'UNDECIDED' | 'AWAITING_OWNER' | 'DECIDED'
+
+export const decisionLabels: Record<DecisionType, string> = {
+  RETURN_NO_REPLACEMENT: 'Trả hàng, không cần giao bù',
+  RETURN_AND_REPLACE: 'Trả hàng lỗi, yêu cầu giao bù',
+  ACCEPT_NO_REPLACEMENT: 'Nhận hàng lỗi, không giao bù',
+}
+
+export const decisionStatusLabels: Record<DecisionStatus, string> = {
+  UNDECIDED: 'Chưa chốt',
+  AWAITING_OWNER: 'Chờ Owner duyệt',
+  DECIDED: 'Đã chốt',
+}
+
 /** Loại hàng đã trả nhà cung cấp (goodsKind của phiếu trả). Hàng thừa bị từ chối chỉ có khi ghi nhận trả. */
 export type GoodsKind = 'WRONG_ITEM' | 'DAMAGED' | 'REJECTED_EXCESS'
 
@@ -90,6 +110,20 @@ export type Case = {
   canApproveAcceptance?: boolean
   pendingRequests?: PendingRequest[]
   events?: CaseEvent[]
+  /** GVHD 24/11 (V26): hướng đã chốt hoặc đang đề nghị Owner, và số đề nghị khi chờ Owner. */
+  decisionType?: DecisionType | null
+  decisionStatus?: DecisionStatus
+  proposedWrongReturnQty?: number | null
+  proposedDamagedReturnQty?: number | null
+  proposedReplacementQty?: number | null
+  needsOwner?: boolean
+  decidedByName?: string | null
+  decidedAt?: string | null
+  approvedByName?: string | null
+  approvedAt?: string | null
+  /** Đã có trả hàng, giao bù, nhận vào kho hoặc bỏ giao bù: không sửa hướng được nữa (BE MSG355). */
+  decisionLocked?: boolean
+  canApproveDecision?: boolean
 }
 
 export function errorMessage(error: unknown) {

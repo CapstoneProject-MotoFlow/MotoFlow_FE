@@ -20,7 +20,9 @@ import './transfers.css'
 import {
   canConfirmExcess,
   EXCESS_TIP,
+  openWrongItems,
   receiptAcceptsResult,
+  reconciliationTimeline,
   WRONG_ITEM_TIP,
 } from './transferRules'
 import InfoTip from '../../shared/ui/InfoTip'
@@ -67,7 +69,9 @@ type Closing = {
     excessToAcceptQty?: number
     wrongItemQty?: number
     wrongPendingQty?: number
-    wrongAwaitingOwnerQty?: number
+    wrongAwaitingSourceQty?: number
+    wrongConfirmedQty?: number
+    wrongReturnedQty?: number
     receiverMiscounted?: boolean
   }[]
 }
@@ -77,7 +81,7 @@ const closeBlockers: Record<string, string> = {
   MSG222: 'Chưa xác nhận hàng thừa',
   MSG223: 'Kho nguồn không đủ tồn cho phần thừa',
   MSG225: 'Còn phiếu nhận hoặc trả chưa xác nhận',
-  MSG336: 'Kho nhận chưa xác nhận xử lý sai lệch',
+  MSG336: 'Kho nhận chưa gửi yêu cầu đối soát',
   MSG337: 'Số hàng đi đường không khớp kết quả đối soát',
   MSG339:
     'Kho gửi không đủ tồn khả dụng cho hàng thừa sẽ chấp nhận (không tính hàng đang giữ cho đơn bán)',
@@ -85,7 +89,8 @@ const closeBlockers: Record<string, string> = {
   MSG348: 'Còn hàng nhận sau chưa tới',
   MSG341: 'Kho gửi không có lô cùng hạn sử dụng cho hàng thừa sẽ chấp nhận',
   MSG342:
-    'Còn hàng giao sai chưa xử lý: lập phiếu nhận hàng giao sai và chờ Owner xác nhận',
+    'Còn hàng giao sai chưa xử lý: lập phiếu nhận (chờ kho gửi xác nhận) hoặc ghi hoàn trả',
+  MSG363: 'Kho gửi chưa xác nhận đối soát',
 }
 type TransferEvent = Transfer['discrepancies'][number]['events'][number]
 
@@ -102,12 +107,46 @@ function eventName(event: TransferEvent) {
       'Phiếu nhận hàng giao sai: ' +
       (event.receivedSku ?? 'phụ tùng khác') +
       (event.status === 'CONFIRMED'
-        ? ' · Owner đã xác nhận'
+        ? ' · Kho gửi đã xác nhận'
         : event.status === 'CANCELLED'
           ? ' · Đã hủy'
-          : ' · Chờ Owner xác nhận')
+          : event.status === 'REJECTED'
+            ? ' · Kho gửi từ chối' +
+              (event.rejectionReason ? ': ' + event.rejectionReason : '')
+            : ' · Chờ kho gửi xác nhận')
     )
+  // GVHD 24/11: hàng giao sai trả lại kho gửi, tồn không đổi.
+  if (event.resolutionType === 'WRONG_ITEM_RETURNED')
+    return 'Hoàn trả hàng giao sai: ' + (event.receivedSku ?? 'phụ tùng khác')
   return resolutionNames[event.resolutionType] ?? 'Bước xử lý khác'
+}
+
+/**
+ * GVHD 24/11 (R3): giao sai thành mặt hàng gì, lấy từ phiếu nhận (chờ hoặc đã xác nhận) và hoàn trả của dòng, ví dụ
+ * "XICH-XE x1 nhập kho, XICH-XE x1 hoàn trả".
+ */
+function wrongParts(order: Transfer, productId: number) {
+  return order.discrepancies
+    .filter((item) => item.productId === productId)
+    .flatMap((item) => item.events)
+    .filter(
+      (event) =>
+        event.resolutionType === 'WRONG_ITEM_RETURNED' ||
+        (event.resolutionType === 'RECEIVED_AS_OTHER_PRODUCT' &&
+          (event.status === 'AWAITING_SOURCE' || event.status === 'CONFIRMED')),
+    )
+    .map(
+      (event) =>
+        (event.receivedSku ?? 'phụ tùng khác') +
+        ' x' +
+        event.quantity +
+        (event.resolutionType === 'WRONG_ITEM_RETURNED'
+          ? ' hoàn trả'
+          : event.status === 'CONFIRMED'
+            ? ' nhập kho'
+            : ' chờ kho gửi'),
+    )
+    .join(', ')
 }
 
 function miscountEvent(order: Transfer, productId: number) {
@@ -145,6 +184,7 @@ export default function TransferDetailPage() {
     [action, setAction] = useState(''),
     [success, setSuccess] = useState(''),
     [acknowledging, setAcknowledging] = useState(false),
+    [confirmingReconciliation, setConfirmingReconciliation] = useState(false),
     [ackError, setAckError] = useState(''),
     navigate = useNavigate()
   const openReceipt = (receiptId: number) =>
@@ -219,12 +259,11 @@ export default function TransferDetailPage() {
     d.status === 'RECONCILING' &&
     d.discrepancies.length > 0 &&
     (coordinator || source || dest)
-  // PM 22/11 + BE #98: lệnh đang đối soát mà còn hàng hỏng/thiếu chưa xử lý: BM kho nhận "Xác nhận xử lý"
-  // (coi như đã nhận đủ, không đổi trạng thái), Owner được báo rồi mới đóng phiếu.
-  const needsAcknowledgement =
+  // GVHD 24/11: lệnh đang đối soát mà còn hàng thiếu/hỏng/giao sai: BM kho nhận "Gửi yêu cầu đối soát" (ghi chú, ảnh),
+  // BM kho gửi xác nhận đối soát, rồi Owner mới đóng phiếu.
+  const reconcilingWithDiscrepancy =
     !!d &&
     d.status === 'RECONCILING' &&
-    !d.discrepancyAcknowledgedAt &&
     // Cùng điều kiện MSG336 của BE (PM 23/11, B-6): còn thiếu, hỏng hoặc giao sai.
     d.lines.some(
       (line) =>
@@ -232,11 +271,28 @@ export default function TransferDetailPage() {
         (line.damagedQty ?? 0) > 0 ||
         (line.wrongItemQty ?? 0) > 0,
     )
+  const needsAcknowledgement =
+    reconcilingWithDiscrepancy && !d?.discrepancyAcknowledgedAt
   // Review #73 (73-2): còn phiếu nhận chưa xác nhận thì BE từ chối (MSG29), nên chưa hiện nút.
-  const canAcknowledge = needsAcknowledgement && !pendingReceipt
+  // Review 25/11: gửi lại được (thêm ghi chú, ảnh) cho tới khi kho gửi xác nhận (MSG365 sau đó).
+  const canAcknowledge =
+    reconcilingWithDiscrepancy && !d?.reconciliationConfirmedAt && !pendingReceipt
   // PM 23/11 (B-5): chỉ Owner, khi lệnh đang đối soát, sửa dòng theo "Bên nhận kiểm sai".
   const miscountAllowed = !!scope.owner && d?.status === 'RECONCILING'
-  // Sau khi kho nhận xác nhận, BE chỉ cho Owner đóng phiếu.
+  // GVHD 24/11: kho gửi xác nhận yêu cầu đối soát của kho nhận.
+  const canConfirmReconciliation =
+    source &&
+    d?.status === 'RECONCILING' &&
+    !!d.discrepancyAcknowledgedAt &&
+    !d.reconciliationConfirmedAt
+  const reconciliationFiles = (d?.attachments ?? []).filter(
+    (file) => file.purpose === 'RECONCILIATION',
+  )
+  // Review 25/11 (R-03): hàng giao sai còn chặn đóng phiếu, hiện sẵn cạnh nút đóng / xác nhận đối soát.
+  const wrongOpen = openWrongItems(d?.lines ?? [])
+  // Review 25/11 (R-02, plan C5): kho nhận báo gì, kho gửi xác nhận hay từ chối, ai làm lúc nào.
+  const timeline = d ? reconciliationTimeline(d) : []
+  // Sau khi kho nhận gửi yêu cầu đối soát, BE chỉ cho Owner đóng phiếu.
   const ownerOnlyClose =
     !!d?.discrepancyAcknowledgedAt && scope.user?.role !== 'OWNER'
   // Mọi thao tác của lệnh nằm một chỗ ở góc phải tiêu đề thẻ; mỗi vai trò chỉ có một nút chính (nền xanh).
@@ -301,11 +357,24 @@ export default function TransferDetailPage() {
     if (dest && canAcknowledge)
       actions.push({
         key: 'acknowledge',
-        label: 'Xác nhận xử lý',
+        label: d?.discrepancyAcknowledgedAt
+          ? 'Gửi lại yêu cầu đối soát'
+          : 'Gửi yêu cầu đối soát',
         icon: 'check',
         onClick: () => {
           setAckError('')
           setAcknowledging(true)
+        },
+        primary: !actions.some((act) => act.primary),
+      })
+    if (canConfirmReconciliation)
+      actions.push({
+        key: 'confirm-reconciliation',
+        label: 'Xác nhận đối soát',
+        icon: 'check',
+        onClick: () => {
+          setAckError('')
+          setConfirmingReconciliation(true)
         },
         primary: !actions.some((act) => act.primary),
       })
@@ -352,17 +421,19 @@ export default function TransferDetailPage() {
       )}
       {coordinator && needsAcknowledgement && (
         <p className="tf-note" role="status">
-          Kho nhận chưa xác nhận xử lý hàng hỏng/thiếu/giao sai. Owner đóng phiếu sau khi kho nhận xác nhận.
+          Kho nhận chưa gửi yêu cầu đối soát hàng thiếu/hỏng/giao sai. Owner đóng phiếu sau khi kho gửi xác nhận đối soát.
         </p>
       )}
       {dest && needsAcknowledgement && pendingReceipt && (
         <p className="tf-note" role="status">
-          Xác nhận phiếu nhận điều chuyển trước, sau đó mới xác nhận xử lý sai lệch.
+          Xác nhận phiếu nhận điều chuyển trước, sau đó mới gửi yêu cầu đối soát.
         </p>
       )}
       {coordinator && ownerOnlyClose && moving && (
         <p className="tf-note" role="status">
-          Kho nhận đã xác nhận xử lý. Chỉ Owner đóng phiếu.
+          {d?.reconciliationConfirmedAt
+            ? 'Hai kho đã đối soát. Chỉ Owner đóng phiếu.'
+            : 'Kho nhận đã gửi yêu cầu đối soát, chờ kho gửi xác nhận. Chỉ Owner đóng phiếu.'}
         </p>
       )}
       {d && (
@@ -403,6 +474,27 @@ export default function TransferDetailPage() {
               )}
               {closeAction && <HeadButton key="close" action={closeAction} />}
             </CardHead>
+            {d.status === 'RECONCILING' &&
+              (!!closeAction || canConfirmReconciliation) &&
+              wrongOpen.total > 0 && (
+                <p className="tf-note" role="status">
+                  Còn {wrongOpen.total} hàng giao sai chưa xử lý xong (
+                  {wrongOpen.skus.join(', ')}):{' '}
+                  {[
+                    wrongOpen.pending > 0 &&
+                      wrongOpen.pending + ' chưa có phiếu nhận hay hoàn trả',
+                    wrongOpen.awaiting > 0 &&
+                      wrongOpen.awaiting + ' chờ kho gửi xác nhận',
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                  . Xử lý hết mới{' '}
+                  {canConfirmReconciliation
+                    ? 'xác nhận đối soát'
+                    : 'đóng phiếu'}{' '}
+                  được.
+                </p>
+              )}
             <div className="tf-detail-meta">
               <div>
                 <span>Kho nguồn</span>
@@ -414,9 +506,21 @@ export default function TransferDetailPage() {
               </div>
               {d.discrepancyAcknowledgedAt && (
                 <div>
-                  <span>Kho nhận xác nhận xử lý</span>
+                  <span>Kho nhận gửi yêu cầu đối soát</span>
                   <strong>{d.discrepancyAcknowledgedBy?.fullName ?? '—'}</strong>
                   <small>{dateTime(d.discrepancyAcknowledgedAt)}</small>
+                  {d.reconciliationNote && <small>{d.reconciliationNote}</small>}
+                </div>
+              )}
+              {d.discrepancyAcknowledgedAt && (
+                <div>
+                  <span>Kho gửi xác nhận đối soát</span>
+                  <strong>
+                    {d.reconciliationConfirmedBy?.fullName ?? 'Chưa xác nhận'}
+                  </strong>
+                  {d.reconciliationConfirmedAt && (
+                    <small>{dateTime(d.reconciliationConfirmedAt)}</small>
+                  )}
                 </div>
               )}
               <div>
@@ -476,10 +580,12 @@ export default function TransferDetailPage() {
                     <th>Đã xuất</th>
                     <th>Đạt</th>
                     <th>Hỏng</th>
+                    {/* GVHD 24/11: tách rõ thiếu mặt hàng đặt và giao sai thành mặt hàng khác. */}
+                    <th>Thiếu (mặt hàng đặt)</th>
                     <th>
-                      Giao sai <InfoTip text={WRONG_ITEM_TIP} />
+                      Giao sai (mặt hàng khác){' '}
+                      <InfoTip text={WRONG_ITEM_TIP} />
                     </th>
-                    <th>Thiếu</th>
                     <th>
                       Thừa <InfoTip text={EXCESS_TIP} />
                     </th>
@@ -511,17 +617,18 @@ export default function TransferDetailPage() {
                         <td>{passedOf(l) ?? '—'}</td>
                         <td>{l.damagedQty ?? '—'}</td>
                         <td>
-                          {l.wrongItemQty ?? '—'}
-                          {(l.wrongAwaitingOwnerQty ?? 0) > 0 && (
-                            <small>
-                              {l.wrongAwaitingOwnerQty} chờ Owner xác nhận
-                            </small>
-                          )}
-                        </td>
-                        <td>
                           {received ? (l.shortageQty ?? '—') : '—'}
                           {(l.latePendingQty ?? 0) > 0 && (
                             <small>{l.latePendingQty} nhận sau</small>
+                          )}
+                        </td>
+                        <td>
+                          {l.wrongItemQty ?? '—'}
+                          {wrongParts(d, l.productId) && (
+                            <small>{wrongParts(d, l.productId)}</small>
+                          )}
+                          {(l.wrongPendingQty ?? 0) > 0 && (
+                            <small>{l.wrongPendingQty} chưa xử lý</small>
                           )}
                         </td>
                         <td>{l.extraReceivedQty || (received ? 0 : '—')}</td>
@@ -538,7 +645,7 @@ export default function TransferDetailPage() {
           {/* PM 23/11 (UI-02): Sai lệch + Hàng giao sai đặt trên Các lần nhận hàng. */}
           {d.status === 'RECONCILING' && !coordinator && !dest && (
             <p className="tf-note" role="status">
-              Kho nhận và Owner đang xử lý sai lệch.
+              Kho nhận và kho gửi đang đối soát sai lệch.
             </p>
           )}
           {d.discrepancies.length > 0 && (
@@ -555,9 +662,10 @@ export default function TransferDetailPage() {
                       <th>Phụ tùng</th>
                       <th>Đã xuất</th>
                       <th>Đạt</th>
-                      <th>Thiếu</th>
+                      <th>Thiếu (mặt hàng đặt)</th>
                       <th>
-                        Giao sai <InfoTip text={WRONG_ITEM_TIP} />
+                        Giao sai (mặt hàng khác){' '}
+                        <InfoTip text={WRONG_ITEM_TIP} />
                       </th>
                       <th>
                         Thừa <InfoTip text={EXCESS_TIP} />
@@ -579,7 +687,12 @@ export default function TransferDetailPage() {
                           <td>{line?.dispatchedQty ?? '—'}</td>
                           <td>{(line && passedOf(line)) ?? '—'}</td>
                           <td>{line?.shortageQty ?? c.shortQty}</td>
-                          <td>{line?.wrongItemQty ?? c.wrongItemQty ?? 0}</td>
+                          <td>
+                            {line?.wrongItemQty ?? c.wrongItemQty ?? 0}
+                            {wrongParts(d, c.productId) && (
+                              <small>{wrongParts(d, c.productId)}</small>
+                            )}
+                          </td>
                           <td>{line?.extraReceivedQty ?? '—'}</td>
                           <td><strong>{line?.unresolvedQty ?? '—'}</strong></td>
                           <td>{states[c.status] ?? c.status}</td>
@@ -628,12 +741,19 @@ export default function TransferDetailPage() {
           <TransferWrongItemSection
             order={d}
             canRecord={d.status === 'RECONCILING' && (dest || scope.owner)}
-            canConfirm={d.status === 'RECONCILING' && !!scope.owner}
+            canReturn={d.status === 'RECONCILING' && dest}
+            canConfirm={d.status === 'RECONCILING' && source}
             onDone={(message) => {
               setSuccess(message)
               setRevision((n) => n + 1)
             }}
           />
+          {reconciliationFiles.length > 0 && (
+            <section>
+              <h2>Ảnh yêu cầu đối soát</h2>
+              <DebtEvidence files={reconciliationFiles} />
+            </section>
+          )}
           <section>
             <h2>Các lần nhận hàng</h2>
             {d.receipts.length > 0 && (
@@ -684,7 +804,11 @@ export default function TransferDetailPage() {
           </section>
           <section>
             <h2>Lô đã xuất</h2>
-            <DebtEvidence files={d.attachments} />
+            <DebtEvidence
+              files={d.attachments.filter(
+                (file) => file.purpose !== 'RECONCILIATION',
+              )}
+            />
             {d.extraDispatchConfirmedAt && (
               <p className="tf-note">
                 Xác nhận hàng gửi dư: {d.extraDispatchConfirmedBy?.fullName} ·{' '}
@@ -773,6 +897,23 @@ export default function TransferDetailPage() {
               )}
             </ol>
           </section>
+          {timeline.length > 0 && (
+            <section>
+              <h2>Lịch sử đối soát</h2>
+              <ol className="tf-order-history">
+                {timeline.map((entry) => (
+                  <li key={entry.key}>
+                    <strong>{entry.title}</strong>
+                    <span>
+                      {dateTime(entry.at)}
+                      {entry.by ? ' · ' + entry.by : ''}
+                    </span>
+                    {entry.detail && <small>{entry.detail}</small>}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           {action && (
             <TransferAction
               title={
@@ -947,42 +1088,106 @@ export default function TransferDetailPage() {
         </>
       )}
       {acknowledging && d && (
-        <ConfirmDialog
-          title="Xác nhận xử lý sai lệch"
-          confirmLabel="Xác nhận xử lý"
-          message={
-            'Xác nhận kho ' +
-            d.destStoreName +
-            ' đã xử lý xong phần hàng hỏng/thiếu/giao sai của lệnh ' +
-            documentCode('DC', d.id) +
-            ': kho nhận chỉ giữ số hàng đạt, lệnh vẫn ở trạng thái đối soát và Owner được báo để đóng phiếu.' +
-            (unresolvedLines.length
+        <TransferAction
+          title="Gửi yêu cầu đối soát"
+          path={'/transfer-orders/' + d.id + '/discrepancy-acknowledgement'}
+          payload={async (form) => {
+            const fields = new FormData(form)
+            const files = fields
+              .getAll('reconciliationPhotos')
+              .filter(
+                (file): file is File => file instanceof File && file.size > 0,
+              )
+            if (files.length > 10) throw new Error('Chọn tối đa 10 ảnh.')
+            const uploaded = []
+            for (const file of files) uploaded.push(await uploadAttachment(file))
+            return {
+              note: String(fields.get('reconciliationNote') ?? '').trim() || null,
+              files: uploaded,
+            }
+          }}
+          onClose={() => setAcknowledging(false)}
+          onSaved={() => {
+            setAcknowledging(false)
+            setSuccess(
+              'Đã gửi yêu cầu đối soát. ' +
+                d.sourceStoreName +
+                ' được báo để xác nhận.',
+            )
+            setRevision((n) => n + 1)
+          }}
+        >
+          <p className="tf-note">
+            Gửi {d.sourceStoreName} bảng sai lệch của lệnh{' '}
+            {documentCode('DC', d.id)}: thiếu (mặt hàng đặt), hỏng, giao sai
+            (mặt hàng khác). Kho gửi xác nhận rồi Owner mới đóng phiếu.
+            {unresolvedLines.length
               ? ' Phần thiếu chưa chọn Nhận sau hoặc Không cần giao bù sẽ tính là mất khi Owner đóng phiếu: ' +
                 unresolvedLines
                   .map((line) => line.sku + ' x' + line.quantity)
                   .join(', ') +
                 '.'
-              : '')
+              : ''}
+          </p>
+          <ul className="tf-note">
+            {d.lines
+              .filter(
+                (line) =>
+                  (line.shortageQty ?? 0) > 0 ||
+                  (line.damagedQty ?? 0) > 0 ||
+                  (line.wrongItemQty ?? 0) > 0,
+              )
+              .map((line) => (
+                <li key={line.productId}>
+                  {line.sku}: thiếu {line.shortageQty ?? 0}, hỏng{' '}
+                  {line.damagedQty ?? 0}, giao sai {line.wrongItemQty ?? 0}
+                  {wrongParts(d, line.productId)
+                    ? ' (' + wrongParts(d, line.productId) + ')'
+                    : ''}
+                </li>
+              ))}
+          </ul>
+          <label>
+            Ghi chú
+            <input name="reconciliationNote" maxLength={255} />
+          </label>
+          <div>
+            <span>Ảnh (không bắt buộc)</span>
+            <LocalizedFileInput
+              name="reconciliationPhotos"
+              aria-label="Ảnh yêu cầu đối soát"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+            />
+          </div>
+        </TransferAction>
+      )}
+      {confirmingReconciliation && d && (
+        <ConfirmDialog
+          title="Xác nhận đối soát"
+          confirmLabel="Xác nhận đối soát"
+          message={
+            'Xác nhận ' +
+            d.sourceStoreName +
+            ' đồng ý bảng sai lệch ' +
+            d.destStoreName +
+            ' đã gửi cho lệnh ' +
+            documentCode('DC', d.id) +
+            '. Sau đó Owner đóng được phiếu.' +
+            (d.reconciliationNote ? ' Ghi chú kho nhận: ' + d.reconciliationNote : '')
           }
-          onCancel={() => setAcknowledging(false)}
+          onCancel={() => setConfirmingReconciliation(false)}
           onConfirm={async () => {
             try {
               await axiosClient.post(
-                '/transfer-orders/' + d.id + '/discrepancy-acknowledgement',
+                '/transfer-orders/' + d.id + '/reconciliation-confirmation',
               )
-              setSuccess('Đã xác nhận xử lý sai lệch. Owner đã được báo để đóng phiếu.')
+              setSuccess('Đã xác nhận đối soát. Owner đã được báo để đóng phiếu.')
               setRevision((n) => n + 1)
             } catch (failure) {
-              // Review #73 (73-2): MSG29 = còn phiếu nhận/trả hoặc yêu cầu điều chỉnh đang xử lý.
-              const code = (failure as { response?: { data?: { code?: string } } })
-                .response?.data?.code
-              setAckError(
-                code === 'MSG29'
-                  ? 'Chưa xác nhận được: lệnh còn phiếu nhận, phiếu trả hoặc yêu cầu điều chỉnh đang xử lý. Hoàn tất các phiếu đó rồi xác nhận lại.'
-                  : inventoryError(failure),
-              )
+              setAckError(inventoryError(failure))
             } finally {
-              setAcknowledging(false)
+              setConfirmingReconciliation(false)
             }
           }}
         />

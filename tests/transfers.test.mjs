@@ -30,6 +30,8 @@ const {
   hasExistingPurchase,
   receiptShortage,
   receiptExcess,
+  reconciliationTimeline,
+  openWrongItems,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -255,4 +257,101 @@ test('receipt results lock after submission and unlock only for recount', () => 
   assert.equal(receiptAcceptsResult('AWAITING_RECOUNT'), true)
   assert.equal(receiptAcceptsResult('AWAITING_CONFIRMATION'), false)
   assert.equal(receiptAcceptsResult('CONFIRMED'), false)
+})
+
+test('the reconciliation history lists who did what, oldest first (review 25/11, R-02)', () => {
+  const entries = reconciliationTimeline({
+    discrepancyAcknowledgedAt: '2026-11-25T10:00:00',
+    discrepancyAcknowledgedBy: { fullName: 'BM nhận' },
+    reconciliationNote: 'Thiếu 1, giao sai 2',
+    reconciliationConfirmedAt: '2026-11-25T11:00:00',
+    reconciliationConfirmedBy: { fullName: 'BM gửi' },
+    closedAt: '2026-11-25T12:00:00',
+    closedBy: { fullName: 'Owner' },
+    lines: [{ productId: 7, sku: 'MA-PHANH' }],
+    discrepancies: [
+      {
+        productId: 7,
+        events: [
+          {
+            id: 1,
+            resolutionType: 'WRONG_ITEM_RETURNED',
+            quantity: 1,
+            reason: null,
+            occurredAt: '2026-11-25T09:00:00',
+            confirmedAt: null,
+            receivedSku: 'XICH',
+            status: 'REJECTED',
+            recordedBy: { fullName: 'BM nhận' },
+            rejectedBy: { fullName: 'BM gửi' },
+            rejectedAt: '2026-11-25T09:30:00',
+            rejectionReason: 'Chưa nhận lại',
+          },
+          {
+            id: 2,
+            resolutionType: 'RECEIVED_AS_OTHER_PRODUCT',
+            quantity: 2,
+            reason: null,
+            occurredAt: '2026-11-25T09:40:00',
+            confirmedAt: '2026-11-25T09:50:00',
+            receivedSku: 'XICH',
+            status: 'CONFIRMED',
+            recordedBy: { fullName: 'BM nhận' },
+            confirmedBy: { fullName: 'BM gửi' },
+          },
+          {
+            id: 3,
+            resolutionType: 'NO_REPLACEMENT',
+            quantity: 1,
+            reason: null,
+            occurredAt: '2026-11-25T09:45:00',
+            confirmedAt: null,
+          },
+        ],
+      },
+    ],
+  })
+  assert.deepEqual(
+    entries.map((entry) => [entry.title, entry.by]),
+    [
+      [
+        'Kho nhận hoàn trả hàng giao sai: 1 × XICH (giao kèm MA-PHANH)',
+        'BM nhận',
+      ],
+      ['Kho gửi từ chối việc hoàn trả: 1 × XICH (giao kèm MA-PHANH)', 'BM gửi'],
+      [
+        'Kho nhận lập phiếu nhận hàng giao sai: 2 × XICH (giao kèm MA-PHANH)',
+        'BM nhận',
+      ],
+      [
+        'Kho gửi xác nhận phiếu nhận hàng giao sai: 2 × XICH (giao kèm MA-PHANH)',
+        'BM gửi',
+      ],
+      ['Kho nhận gửi yêu cầu đối soát', 'BM nhận'],
+      ['Kho gửi xác nhận đối soát', 'BM gửi'],
+      ['Owner đóng phiếu', 'Owner'],
+    ],
+  )
+  assert.equal(entries[1].detail, 'Chưa nhận lại')
+  assert.equal(entries[4].detail, 'Thiếu 1, giao sai 2')
+  assert.deepEqual(
+    reconciliationTimeline({
+      closedAt: '2026-11-25T12:00:00',
+      closedBy: { fullName: 'Owner' },
+      lines: [],
+      discrepancies: [],
+    }),
+    [],
+  )
+})
+
+test('wrong items still blocking the close are counted beside the button (review 25/11, R-03)', () => {
+  assert.deepEqual(
+    openWrongItems([
+      { sku: 'A', wrongPendingQty: 1, wrongAwaitingSourceQty: 2 },
+      { sku: 'B', wrongPendingQty: 0, wrongAwaitingSourceQty: 0 },
+      { sku: 'C', wrongPendingQty: null, wrongAwaitingSourceQty: 1 },
+    ]),
+    { pending: 1, awaiting: 3, total: 4, skus: ['A x3', 'C x1'] },
+  )
 })

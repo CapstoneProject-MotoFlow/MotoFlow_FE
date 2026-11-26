@@ -12,7 +12,6 @@ type ProductInfo = {
   brand?: string
   baseUnit?: string
   specifications?: string | null
-  barcodes?: string[]
   retailPrice?: number | null
   stock?: { availableQty: number } | null
   imageUrls?: string[]
@@ -116,7 +115,6 @@ export default function ProductQuickView({
                 {product.brand && <div><dt>Thương hiệu</dt><dd>{product.brand}</dd></div>}
                 {product.baseUnit && <div><dt>Đơn vị</dt><dd>{product.baseUnit}</dd></div>}
                 {product.specifications && <div><dt>Quy cách</dt><dd>{product.specifications}</dd></div>}
-                {!!product.barcodes?.length && <div><dt>Mã vạch</dt><dd>{product.barcodes.join(' · ')}</dd></div>}
                 {product.retailPrice != null && <div><dt>Giá bán lẻ</dt><dd>{product.retailPrice.toLocaleString('vi-VN')} ₫</dd></div>}
                 {!blindCount && product.stock && <div><dt>Có thể bán</dt><dd>{product.stock.availableQty.toLocaleString('vi-VN')}</dd></div>}
               </dl>
