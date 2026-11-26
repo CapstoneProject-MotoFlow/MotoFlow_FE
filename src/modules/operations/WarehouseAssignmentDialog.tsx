@@ -19,14 +19,12 @@ export default function WarehouseAssignmentDialog({
   taskType,
   documentId,
   title = 'Giao việc kho',
-  excludeSelf = false,
   onClose,
   onSaved,
 }: {
   taskType: WarehouseTaskType
   documentId: number
   title?: string
-  excludeSelf?: boolean
   onClose: () => void
   onSaved?: (name: string) => void
 }) {
@@ -41,8 +39,7 @@ export default function WarehouseAssignmentDialog({
       revision,
       Number.isSafeInteger(documentId) && documentId > 0,
     ),
-    eligibleAssignees =
-      r.data?.eligibleAssignees.filter((p) => !excludeSelf || !p.self) ?? [],
+    eligibleAssignees = r.data?.eligibleAssignees ?? [],
     choice =
       selected ??
       (eligibleAssignees.some(
@@ -62,7 +59,7 @@ export default function WarehouseAssignmentDialog({
       formId="warehouse-assignment"
       busy={busy}
       submitLabel="Xác nhận giao việc"
-      submitDisabled={r.loading || !r.data?.canAssign || (excludeSelf && !eligibleAssignees.length)}
+      submitDisabled={r.loading || !r.data?.canAssign}
       onClose={onClose}
     >
       <form
@@ -121,13 +118,7 @@ export default function WarehouseAssignmentDialog({
             {r.data.blockedMessage && (
               <p role="status">{r.data.blockedMessage}</p>
             )}
-            {r.data.noticeMessage && (
-              <p>
-                {excludeSelf
-                  ? 'Phiếu đầu kỳ đang giao cho quản lý. Hãy chuyển việc đếm cho một nhân viên của kho.'
-                  : r.data.noticeMessage}
-              </p>
-            )}
+            {r.data.noticeMessage && <p>{r.data.noticeMessage}</p>}
             <label>
               {taskType === 'SUPPLIER_RECEIVING' ||
               taskType === 'TRANSFER_RECEIVING'

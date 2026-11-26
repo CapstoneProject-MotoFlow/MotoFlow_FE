@@ -244,7 +244,6 @@ export default function CountLiveDetail() {
               )}
               {open &&
                 own &&
-                (!opening || staff) &&
                 !submitted &&
                 (needsStart ? (
                   <button
@@ -399,7 +398,6 @@ export default function CountLiveDetail() {
             <WarehouseAssignmentDialog
               taskType="COUNTING"
               documentId={d.id}
-              excludeSelf={opening}
               onClose={() => setAction('')}
               onSaved={() => setRevision((n) => n + 1)}
             />

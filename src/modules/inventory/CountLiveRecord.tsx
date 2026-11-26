@@ -36,17 +36,13 @@ export default function CountLiveRecord() {
       <InventoryHeader title="Ghi số đếm" />
       <InventoryNotice loading={r.loading} error={r.error} />
       {r.data && (r.data.countType === 'OPENING' ? (
-        scope.user?.role === 'STAFF' ? (
-          <OpeningEditor
-            key={id + ':' + revision}
-            data={r.data}
-            onSaved={() => setRevision((n) => n + 1)}
-          />
-        ) : (
-          <p className="count-unavailable">
-            Nhân viên được giao sẽ ghi số đếm đầu kỳ. Vui lòng quay lại phiếu để giao việc hoặc xác minh kết quả.
-          </p>
-        )
+        <OpeningEditor
+          key={id + ':' + revision}
+          data={r.data}
+          manager={scope.user?.role === 'BRANCH_MANAGER'}
+          userId={scope.user?.id}
+          onSaved={() => setRevision((n) => n + 1)}
+        />
       ) : (
         <Editor
           key={id + ':' + revision}
@@ -68,11 +64,16 @@ type OpeningLine = {
   damagedQty: string
 }
 
+/** K1 (PM 26/11): BM được tự nhận việc đếm đầu kỳ, tự ghi số rồi tự xác minh như các phiếu khác. */
 function OpeningEditor({
   data,
+  manager,
+  userId,
   onSaved,
 }: {
   data: CountDto
+  manager: boolean
+  userId?: number
   onSaved: () => void
 }) {
   const [rows, setRows] = useState<OpeningLine[]>(() => data.lines.map((line) => ({
@@ -87,8 +88,16 @@ function OpeningEditor({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [blocked, setBlocked] = useState(false)
   const lock = useRef(false)
-  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities
+  // Chỉ BM đọc được /warehouse-tasks; Staff chỉ mở được phiếu mình được giao, BE chặn phần còn lại (MSG05).
+  const assignment = useInventoryData<Assignment & { current: { assigneeId: number; assigneeName: string; status: string } | null }>(
+    '/warehouse-tasks', { taskType: 'COUNTING', documentId: data.id }, 0, manager,
+  )
+  const allowed = !manager || assignment.data?.current?.assigneeId === userId
+  const alreadySent = sent || assignment.data?.current?.status === 'RESULT_SUBMITTED'
+  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities && allowed && !alreadySent && !blocked
   const valid = rows.length > 0 && rows.every((row, index) => {
     const quantity = Number(row.countedQty)
     const damaged = Number(row.damagedQty)
@@ -98,7 +107,7 @@ function OpeningEditor({
   })
 
   async function act(action: 'start' | 'save' | 'submit') {
-    if (lock.current || (action !== 'start' && (!editable || !valid)) || (action === 'submit' && !confirmed)) return
+    if (lock.current || !allowed || (action !== 'start' && (!editable || !valid)) || (action === 'submit' && !confirmed)) return
     lock.current = true
     setBusy(true)
     setError('')
@@ -119,14 +128,19 @@ function OpeningEditor({
       })
       if (action === 'submit') {
         await axiosClient.post(`/stock-counts/${data.id}/submit`)
+        // Không nạp lại phiếu: trạng thái vẫn COUNTING nên form sẽ mở lại; giữ khóa tại chỗ như màn đếm thường.
+        setSent(true)
         setNotice('Đã gửi số đếm đầu kỳ cho quản lý xác nhận.')
         refreshNotifications()
-      } else {
-        setNotice('Đã lưu số đếm đầu kỳ.')
+        return
       }
+      setNotice('Đã lưu số đếm đầu kỳ.')
       onSaved()
     } catch (failure) {
       setError(inventoryError(failure))
+      if (isAxiosError<{ code?: string }>(failure) && ['MSG235', 'MSG238'].includes(failure.response?.data?.code ?? '')) {
+        setBlocked(true)
+      }
     } finally {
       lock.current = false
       setBusy(false)
@@ -134,9 +148,11 @@ function OpeningEditor({
   }
 
   return <InventoryPanel title={documentCode('KK', data.id) + ' · ' + data.storeName}>
-    <InventoryNotice error={error} />
+    <InventoryNotice loading={assignment.loading} error={error || assignment.error} />
     {notice && <p className="stock-notice" role="status">{notice}</p>}
-    {(data.status === 'DRAFT' || data.awaitingBookQuantities) && <div className="stock-notice">
+    {alreadySent && <p className="stock-notice">Đã gửi kết quả. Quản lý cần yêu cầu đếm lại trước khi sửa.</p>}
+    {!allowed && <p className="count-unavailable">Chỉ người được giao mới có thể ghi số đếm.</p>}
+    {(data.status === 'DRAFT' || data.awaitingBookQuantities) && allowed && <div className="stock-notice">
       <p>Kiểm kê đầu kỳ không có số sổ sách. Bắt đầu đếm để nhập số lượng thực tế và hạn sử dụng.</p>
       <button className="count-primary" disabled={busy || data.countDate > today()} onClick={() => void act('start')}>Bắt đầu đếm</button>
     </div>}

@@ -125,14 +125,16 @@ test('live count screens respect blind counting and opening count roles', async 
     assert.match(owner, /123[.,]456[.,]789/)
 
     const opening = { ...data, countType: 'OPENING' }
+    // K1 (PM 26/11): BM được giao việc đếm đầu kỳ tự ghi số như phiếu thường.
     const managerOpening = render(Detail, 'BRANCH_MANAGER', opening)
     assert.match(managerOpening, /Giao \/ đổi người đếm/)
-    assert.doesNotMatch(managerOpening, /Ghi số đếm|Bắt đầu đếm/)
+    assert.match(managerOpening, /Ghi số đếm/)
     assert.match(manager, /Ghi số đếm/)
 
     const managerOpeningRecord = render(Record, 'BRANCH_MANAGER', opening)
-    assert.match(managerOpeningRecord, /Nhân viên được giao sẽ ghi số đếm đầu kỳ/)
-    assert.doesNotMatch(managerOpeningRecord, /Lưu tạm|Gửi quản lý xác nhận/)
+    assert.match(managerOpeningRecord, /Lưu tạm/)
+    assert.match(managerOpeningRecord, /Gửi quản lý xác nhận/)
+    assert.doesNotMatch(managerOpeningRecord, /Chỉ người được giao mới có thể ghi số đếm/)
     assert.match(render(Record, 'STAFF', opening), /Gửi quản lý xác nhận/)
   } finally {
     await server.close()
