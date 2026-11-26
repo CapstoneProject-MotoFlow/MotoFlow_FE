@@ -36,13 +36,17 @@ export default function CountLiveRecord() {
       <InventoryHeader title="Ghi số đếm" />
       <InventoryNotice loading={r.loading} error={r.error} />
       {r.data && (r.data.countType === 'OPENING' ? (
-        <OpeningEditor
-          key={id + ':' + revision}
-          data={r.data}
-          manager={scope.user?.role === 'BRANCH_MANAGER'}
-          userId={scope.user?.id}
-          onSaved={() => setRevision((n) => n + 1)}
-        />
+        scope.user?.role === 'STAFF' ? (
+          <OpeningEditor
+            key={id + ':' + revision}
+            data={r.data}
+            onSaved={() => setRevision((n) => n + 1)}
+          />
+        ) : (
+          <p className="count-unavailable">
+            Nhân viên được giao sẽ ghi số đếm đầu kỳ. Vui lòng quay lại phiếu để giao việc hoặc xác minh kết quả.
+          </p>
+        )
       ) : (
         <Editor
           key={id + ':' + revision}
@@ -66,13 +70,9 @@ type OpeningLine = {
 
 function OpeningEditor({
   data,
-  manager,
-  userId,
   onSaved,
 }: {
   data: CountDto
-  manager: boolean
-  userId?: number
   onSaved: () => void
 }) {
   const [rows, setRows] = useState<OpeningLine[]>(() => data.lines.map((line) => ({
@@ -82,17 +82,13 @@ function OpeningEditor({
     countedQty: line.countedQty == null ? '' : String(line.countedQty),
     damagedQty: String(line.damagedQty ?? 0),
   })))
-  const [selected, setSelected] = useState<ProductOption>()
+  const nextRowKey = useRef(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const lock = useRef(false)
-  const assignment = useInventoryData<Assignment & { current: { assigneeId: number; assigneeName: string; status: string } | null }>(
-    '/warehouse-tasks', { taskType: 'COUNTING', documentId: data.id }, 0, manager,
-  )
-  const allowed = !manager || assignment.data?.current?.assigneeId === userId
-  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities && allowed && assignment.data?.current?.status !== 'RESULT_SUBMITTED'
+  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities
   const valid = rows.length > 0 && rows.every((row, index) => {
     const quantity = Number(row.countedQty)
     const damaged = Number(row.damagedQty)
@@ -102,7 +98,7 @@ function OpeningEditor({
   })
 
   async function act(action: 'start' | 'save' | 'submit') {
-    if (lock.current || !allowed || (action !== 'start' && (!editable || !valid)) || (action === 'submit' && !confirmed)) return
+    if (lock.current || (action !== 'start' && (!editable || !valid)) || (action === 'submit' && !confirmed)) return
     lock.current = true
     setBusy(true)
     setError('')
@@ -138,22 +134,30 @@ function OpeningEditor({
   }
 
   return <InventoryPanel title={documentCode('KK', data.id) + ' · ' + data.storeName}>
-    <InventoryNotice loading={assignment.loading} error={error || assignment.error} />
+    <InventoryNotice error={error} />
     {notice && <p className="stock-notice" role="status">{notice}</p>}
-    {!allowed && <p className="count-unavailable">Chỉ người được giao mới có thể ghi số đếm.</p>}
-    {(data.status === 'DRAFT' || data.awaitingBookQuantities) && allowed && <div className="stock-notice">
+    {(data.status === 'DRAFT' || data.awaitingBookQuantities) && <div className="stock-notice">
       <p>Kiểm kê đầu kỳ không có số sổ sách. Bắt đầu đếm để nhập số lượng thực tế và hạn sử dụng.</p>
       <button className="count-primary" disabled={busy || data.countDate > today()} onClick={() => void act('start')}>Bắt đầu đếm</button>
     </div>}
     {editable && <div className="opening-count-add">
-      <ProductPicker selected={selected} excludedIds={[]} label="Thêm phụ tùng" excludeDamagedVariants disabled={busy} onSelect={(product) => {
-        setSelected(product)
-        setRows((previous) => [...previous, { key: `${product.id}-${Date.now()}`, product, expiryDate: '', countedQty: '', damagedQty: '0' }])
-        setConfirmed(false)
-      }} />
+      <ProductPicker
+        excludedIds={[]}
+        label="Thêm phụ tùng"
+        excludeDamagedVariants
+        disabled={busy}
+        onSelect={(product) => {
+          const key = 'new-' + ++nextRowKey.current
+          setRows((previous) => [
+            ...previous,
+            { key, product, expiryDate: '', countedQty: '', damagedQty: '0' },
+          ])
+          setConfirmed(false)
+        }}
+      />
       <p>Mỗi dòng là một phụ tùng và hạn sử dụng. Có thể thêm nhiều lô/hạn dùng cho cùng một phụ tùng.</p>
     </div>}
-    <div className="stock-table-scroll"><table className="stock-table">
+    <div className="stock-table-scroll"><table className="stock-table opening-count-table">
       <thead><tr><th>Phụ tùng</th><th>Hạn sử dụng</th><th>Số đếm thực tế</th><th>Hư hỏng</th>{editable && <th />}</tr></thead>
       <tbody>{rows.map((row) => <tr key={row.key}>
         <td><strong><ProductQuickView productId={row.product.id} sku={row.product.sku} partName={row.product.partName} blindCount /></strong></td>
@@ -164,10 +168,11 @@ function OpeningEditor({
       </tr>)}{!rows.length && <tr><td colSpan={editable ? 5 : 4}>Thêm phụ tùng để bắt đầu lập tồn đầu kỳ.</td></tr>}</tbody>
     </table></div>
     {editable && <div className="stock-notice count-buttons">
-      {error && <p role="alert" className="count-validation-error">{error}</p>}
       <label><input type="checkbox" checked={confirmed} disabled={busy || !valid} onChange={(event) => setConfirmed(event.target.checked)} /> Tôi xác nhận số lượng và hạn sử dụng đã nhập chính xác.</label>
-      <button disabled={busy || !valid} onClick={() => void act('save')}>Lưu tạm</button>
-      <button className="count-primary" disabled={busy || !valid || !confirmed} onClick={() => void act('submit')}>Gửi quản lý xác nhận</button>
+      <div className="count-submit-group">
+        <button disabled={busy || !valid} onClick={() => void act('save')}>Lưu tạm</button>
+        <button className="count-primary" disabled={busy || !valid || !confirmed} onClick={() => void act('submit')}>Gửi quản lý xác nhận</button>
+      </div>
     </div>}
   </InventoryPanel>
 }

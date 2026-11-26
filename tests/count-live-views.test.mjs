@@ -5,7 +5,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
-test('live count screens hide book quantities and values from Staff during blind counting', async () => {
+test('live count screens respect blind counting and opening count roles', async () => {
   const server = await createServer({
     configFile: false,
     server: { middlewareMode: true, hmr: false, watch: null },
@@ -23,6 +23,9 @@ test('live count screens hide book quantities and values from Staff during blind
             return { user: { id: 9, role, storeId: 2 }, owner: role === 'OWNER' }
           }
           export function useInventoryData(path, params, revision, enabled = true) {
+            if (enabled && path === '/warehouse-tasks') {
+              return { loading: false, data: { canAssign: true, current: { assigneeId: 9 } } }
+            }
             return { loading: false, data: enabled && path.startsWith('/stock-counts/') ? data : undefined }
           }
           export function inventoryError(e) { return String(e) }
@@ -120,6 +123,17 @@ test('live count screens hide book quantities and values from Staff during blind
     const owner = render(Detail, 'OWNER')
     assert.match(owner, /Giá trị chênh lệch/)
     assert.match(owner, /123[.,]456[.,]789/)
+
+    const opening = { ...data, countType: 'OPENING' }
+    const managerOpening = render(Detail, 'BRANCH_MANAGER', opening)
+    assert.match(managerOpening, /Giao \/ đổi người đếm/)
+    assert.doesNotMatch(managerOpening, /Ghi số đếm|Bắt đầu đếm/)
+    assert.match(manager, /Ghi số đếm/)
+
+    const managerOpeningRecord = render(Record, 'BRANCH_MANAGER', opening)
+    assert.match(managerOpeningRecord, /Nhân viên được giao sẽ ghi số đếm đầu kỳ/)
+    assert.doesNotMatch(managerOpeningRecord, /Lưu tạm|Gửi quản lý xác nhận/)
+    assert.match(render(Record, 'STAFF', opening), /Gửi quản lý xác nhận/)
   } finally {
     await server.close()
   }
