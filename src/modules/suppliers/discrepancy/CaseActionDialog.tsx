@@ -65,7 +65,7 @@ export function CaseTimeline({ events }: { events?: CaseEvent[] }) {
             {(images.length > 0 || files.length > 0) && (
               <div className="sd-timeline-files">
                 {images.length > 0 && (
-                  <PhotoButton label={'Xem ' + images.length + ' ảnh'} images={images} />
+                  <PhotoButton label="Xem ảnh" images={images} />
                 )}
                 {files.map((file, index) => (
                   <a key={file.id} href={file.downloadUrl!} target="_blank" rel="noreferrer">

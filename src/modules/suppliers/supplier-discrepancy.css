@@ -1,4 +1,8 @@
-/* Sai lệch nhà cung cấp (UC-46): danh sách hồ sơ và xử lý theo phiếu nhập. Chỉ dùng token --mf-* của ui.css. */
+/* Sai lệch nhà cung cấp (UC-46): danh sách hồ sơ và bảng gộp xử lý theo phiếu nhập. Chỉ dùng token --mf-* của ui.css. */
+.admin-dashboard > .dashboard-main > main.supplier-discrepancy-page {
+  width: calc(100% - 40px);
+  max-width: 1440px;
+}
 .supplier-discrepancy-page {
   display: grid;
   gap: 16px;
@@ -33,29 +37,27 @@
   font: inherit;
   font-size: var(--mf-fs-body);
 }
-/* Select: tự vẽ đúng một chevron, tắt mũi tên gốc ở mọi engine, chữ dài không xuống dòng. Trong trang, rule select của
-   ui.css (.admin-dashboard .dashboard-main, mạnh hơn) vẫn quyết định padding/nền; rule này lo phần ui.css không có
-   (-webkit-/-moz-appearance, nowrap) và select trong hộp thoại nằm ngoài .dashboard-main. */
 .supplier-discrepancy-page select:not([multiple]),
 .sd-dialog select:not([multiple]) {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  padding-right: 32px;
+  padding-right: 30px;
   overflow: hidden;
   background: #fff
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%235b6b82' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    no-repeat right 10px center / 16px;
+    no-repeat right 9px center / 16px;
   color: var(--mf-text);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.supplier-discrepancy-page select:not([multiple])::picker-icon,
+.sd-dialog select:not([multiple])::picker-icon {
+  display: none;
+}
 .supplier-discrepancy-page select::-ms-expand,
 .sd-dialog select::-ms-expand {
   display: none;
-}
-.supplier-discrepancy-page select:disabled {
-  background-color: #f3f5f9;
 }
 .supplier-discrepancy-page textarea,
 .sd-dialog textarea {
@@ -65,8 +67,9 @@
 .supplier-discrepancy-page :is(input, select)[aria-invalid='true'] {
   border-color: var(--mf-danger);
 }
-.supplier-discrepancy-page :is(input, select, textarea):disabled {
-  background: #f3f5f9;
+.supplier-discrepancy-page :is(input, select, textarea):disabled,
+.sd-dialog :is(input, select, textarea):disabled {
+  background-color: #f3f5f9;
   color: var(--mf-muted);
 }
 .sd-muted {
@@ -103,39 +106,65 @@
 
 /* ---------- Đầu trang ---------- */
 .sd-head {
+  display: grid;
+  gap: 10px;
+}
+.sd-head-title {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px 24px;
+  align-items: center;
+  gap: 8px 12px;
 }
 .supplier-discrepancy-page .sd-head h1 {
   margin: 0;
-}
-.sd-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-  margin: 6px 0 0;
-  color: var(--mf-muted);
-  font-size: 13px;
-}
-.sd-meta b {
-  color: var(--mf-text);
-  font-weight: 600;
+  text-wrap: balance;
 }
 .sd-lead {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--mf-muted);
   font-size: 13px;
 }
+.sd-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 0;
+  margin: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--mf-border-soft);
+  border-radius: var(--mf-radius);
+  background: #fff;
+}
+.sd-facts > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 18px;
+  border-left: 1px solid var(--mf-border-soft);
+}
+.sd-facts > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.sd-facts dt {
+  color: var(--mf-muted);
+  font-size: var(--mf-fs-small);
+}
+.sd-facts dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sd-panel-error {
+  padding: 0 20px 16px;
+}
 
-/* ---------- Bộ lọc ---------- */
+/* ---------- Bộ lọc trang danh sách ---------- */
 .sd-filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 12px 16px;
-  padding: 16px 20px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px 14px;
+  padding: 14px 18px;
   border: 1px solid var(--mf-border);
   border-radius: var(--mf-radius-lg);
   background: #fff;
@@ -143,7 +172,7 @@
 .sd-field {
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 .sd-field > span {
@@ -185,7 +214,7 @@
   }
 }
 
-/* ---------- Bảng danh sách ---------- */
+/* ---------- Bảng danh sách hồ sơ ---------- */
 .sd-table-scroll {
   position: relative;
   overflow-x: auto;
@@ -195,23 +224,29 @@
 }
 .sd-table {
   width: 100%;
-  min-width: 900px;
   border-collapse: collapse;
   text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 .sd-table thead {
-  background: #f6f7f9;
+  background: #f6f8fb;
 }
 .sd-table :is(th, td) {
-  padding: 12px 16px;
+  padding: 11px 12px;
   border-bottom: 1px solid var(--mf-border-soft);
   vertical-align: middle;
+}
+.sd-table :is(th, td):first-child {
+  padding-left: 18px;
+}
+.sd-table :is(th, td):last-child {
+  padding-right: 18px;
 }
 .sd-table tbody tr:last-child td {
   border-bottom: 0;
 }
 .sd-table tbody tr:hover {
-  background: #fbfcfe;
+  background: #f8faff;
 }
 .sd-table td small {
   display: block;
@@ -236,19 +271,17 @@
 }
 .sd-table td:last-child {
   text-align: right;
+  white-space: nowrap;
 }
 .sd-table .sd-supplier-cell {
-  min-width: 200px;
-}
-.sd-table td .sd-chips {
-  min-width: 120px;
+  min-width: 150px;
 }
 .sd-pagination {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 12px 18px;
   border-top: 1px solid var(--mf-border-soft);
   color: var(--mf-muted);
   font-size: 13px;
@@ -258,17 +291,16 @@
 }
 
 .sd-field-error {
+  margin: 4px 0 0;
   color: var(--mf-danger);
   font-size: var(--mf-fs-small);
   font-weight: 500;
 }
-/* Nhãn hiển thị của ô chọn (không phải ô nhập số). */
 .sd-field-label {
   color: var(--mf-text-2);
   font-size: 13px;
   font-weight: 500;
 }
-/* Nút bị vô hiệu: nền xám, chữ xám đậm (không dùng opacity làm nút tím nhạt). */
 .supplier-discrepancy-page .mf-btn:disabled {
   border-color: #d3d9e4;
   background: #eceff4;
@@ -276,6 +308,7 @@
   opacity: 1;
   cursor: not-allowed;
 }
+
 /* ---------- Hộp thoại ---------- */
 .sd-dialog-subtitle {
   margin: 0 0 12px;
@@ -307,7 +340,6 @@
   color: var(--mf-text);
   font-size: 15px;
 }
-/* Nhóm nút bật/tắt chọn loại hàng (Hàng lỗi / Hàng giao sai). */
 .sd-toggle {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -451,48 +483,7 @@
   font-size: 13px;
 }
 
-/* ---------- Đầu trang màn xử lý theo phiếu (Ezy 26/11) ---------- */
-.sd-head {
-  display: grid;
-  gap: 12px;
-}
-.sd-head-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-}
-.sd-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 0;
-  margin: 0;
-}
-.sd-facts > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  padding: 0 20px;
-  border-left: 1px solid var(--mf-border);
-}
-.sd-facts > div:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-.sd-facts dt {
-  color: var(--mf-muted);
-  font-size: var(--mf-fs-small);
-}
-.sd-facts dd {
-  margin: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.sd-panel-error {
-  padding: 0 20px 16px;
-}
-
-/* ---------- Bảng sai lệch của cả phiếu ---------- */
+/* ---------- Bảng gộp xử lý sai lệch của cả phiếu ---------- */
 .sd-board {
   display: grid;
   container-type: inline-size;
@@ -501,23 +492,24 @@
 .sd-excess-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 14px 18px;
 }
 .sd-board-head h2,
 .sd-excess-head h2 {
-  margin: 0 0 2px;
+  margin: 0;
   font-size: var(--mf-fs-card);
+  text-wrap: balance;
 }
 .sd-approval {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
-  margin: 0 20px 16px;
-  padding: 10px 12px 10px 14px;
+  margin: 0 18px 14px;
+  padding: 10px 14px;
   border: 1px solid #c9d4ff;
   border-radius: var(--mf-radius);
   background: var(--mf-primary-soft);
@@ -528,8 +520,9 @@
   color: var(--mf-primary);
 }
 .sd-approval p {
-  flex: 1 1 220px;
+  flex: 1 1 200px;
   margin: 0;
+  font-size: 14px;
 }
 .sd-approval-buttons {
   display: flex;
@@ -541,9 +534,10 @@
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px 12px;
+  padding-top: 6px;
 }
 .sd-approval-reject .sd-field {
-  flex: 1 1 260px;
+  flex: 1 1 240px;
 }
 .sd-board-scroll {
   overflow-x: auto;
@@ -557,30 +551,30 @@
   text-align: left;
 }
 .sd-grid :is(th, td) {
-  padding: 12px 10px;
+  padding: 12px 8px;
   border-bottom: 1px solid var(--mf-border-soft);
   vertical-align: top;
 }
 .sd-grid :is(th, td):first-child {
-  padding-left: 20px;
+  padding-left: 18px;
 }
 .sd-grid :is(th, td):last-child {
-  padding-right: 20px;
+  padding-right: 18px;
 }
 .sd-grid thead th {
-  padding-top: 10px;
+  padding-top: 8px;
   padding-bottom: 10px;
   background: #f6f8fb;
   color: var(--mf-text-2);
-  font-size: var(--mf-fs-th);
+  font-size: 12px;
   font-weight: 600;
   vertical-align: bottom;
 }
 .sd-grid thead .sd-grid-band th {
-  padding-top: 12px;
-  padding-bottom: 6px;
+  padding-top: 10px;
+  padding-bottom: 5px;
   color: var(--mf-text-2);
-  font-size: var(--mf-fs-small);
+  font-size: 12px;
   font-weight: 600;
   border-bottom: 0;
 }
@@ -591,15 +585,15 @@
 .sd-grid thead .sd-grid-band th[scope] {
   background-image: linear-gradient(var(--mf-border), var(--mf-border));
   background-repeat: no-repeat;
-  background-position: 10px 100%;
-  background-size: calc(100% - 20px) 2px;
+  background-position: 8px 100%;
+  background-size: calc(100% - 16px) 2px;
 }
 .sd-grid thead .sd-grid-band th.sd-band-plan {
   background-image: linear-gradient(var(--mf-primary), var(--mf-primary));
   color: var(--mf-primary);
 }
 .sd-grid thead tr:not(.sd-grid-band) th {
-  padding-top: 8px;
+  padding-top: 6px;
 }
 .sd-grid tbody tr:last-child :is(th, td) {
   border-bottom: 0;
@@ -612,19 +606,22 @@
   background: #fafbff;
 }
 .sd-col-check {
-  width: 44px;
+  width: 38px;
+}
+.sd-col-part {
+  width: auto;
 }
 .sd-col-num {
-  width: 56px;
+  width: 48px;
 }
 .sd-col-plan {
-  width: 66px;
+  width: 58px;
 }
 .sd-col-decision {
-  width: 214px;
+  width: 222px;
 }
 .sd-col-progress {
-  width: 236px;
+  width: 212px;
 }
 .sd-grid input[type='checkbox'] {
   display: block;
@@ -637,12 +634,14 @@
 .sd-grid thead input[type='checkbox'] {
   margin: 0;
 }
+.sd-grid tbody tr {
+  transition: background-color 140ms ease-out;
+}
 .sd-grid tbody tr:not(.is-picked):hover > :is(td, th) {
   background-color: #f8f9fc;
 }
 .sd-grid .sd-cell-part {
   display: table-cell;
-  min-width: 150px;
   font-weight: 400;
 }
 .sd-cell-part b,
@@ -651,6 +650,7 @@
   display: block;
 }
 .sd-cell-part b {
+  font-size: 13.5px;
   font-weight: 700;
 }
 .sd-cell-part span {
@@ -658,59 +658,66 @@
   font-weight: 400;
   color: var(--mf-text-2);
   font-size: 13px;
+  line-height: 1.35;
 }
 .sd-cell-part small {
   margin-top: 4px;
-  color: var(--mf-warning);
+  color: #b45309;
   font-size: var(--mf-fs-small);
+  font-weight: 500;
 }
 .sd-qty-zero {
-  color: #a3aec0;
+  color: #64748b;
 }
 .sd-qty-on {
+  color: var(--mf-text);
   font-weight: 700;
 }
 .sd-grid select {
   width: 100%;
+  font-size: 13px;
 }
 .sd-grid input[type='number'] {
   width: 100%;
-  max-width: 60px;
-  padding: 0 6px;
+  max-width: 52px;
+  padding: 0 5px;
   text-align: right;
 }
 .sd-grid td.sd-num:has(input) {
   padding-top: 8px;
-  padding-right: 6px;
-  padding-left: 6px;
+  padding-right: 4px;
+  padding-left: 4px;
 }
 .sd-grid td.sd-cell-decision:has(select) {
   padding-top: 8px;
 }
 .sd-cell-decision > span {
   display: block;
-  padding-top: 0;
+  font-size: 13.5px;
   font-weight: 500;
+  line-height: 1.35;
 }
 .sd-cell-note {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   color: var(--mf-muted);
   font-size: var(--mf-fs-small);
 }
-.sd-cell-note svg {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
+.sd-cell-note--owner {
+  color: var(--mf-primary);
+  font-weight: 500;
 }
-.sd-field-error {
-  margin: 6px 0 0;
+.sd-cell-note svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
 }
 .supplier-discrepancy-page .sd-cell-edit {
   min-height: 24px;
-  margin-top: 6px;
+  margin-top: 4px;
+  padding-inline: 0;
   font-size: 13px;
 }
 .sd-cell-progress ul {
@@ -720,6 +727,7 @@
   padding: 0;
   color: var(--mf-text-2);
   font-size: 13px;
+  line-height: 1.4;
   list-style: none;
 }
 .sd-cell-progress .mf-badge,
@@ -741,9 +749,8 @@
   white-space: nowrap;
 }
 .sd-next-wait {
-  order: -1;
   flex-basis: 100%;
-  color: var(--mf-text-2);
+  color: var(--mf-muted);
   font-size: var(--mf-fs-small);
 }
 .supplier-discrepancy-page .sd-next-link {
@@ -752,48 +759,48 @@
   font-size: 13px;
 }
 .sd-grid tr.is-editing > :is(td, th) {
-  background: #fcfcfe;
+  background: #fcfdff;
 }
 .sd-grid tr.is-picked > :is(td, th) {
   background: var(--mf-primary-soft);
-}
-.sd-grid tr.is-picked > :first-child {
-  box-shadow: inset 3px 0 0 var(--mf-primary);
 }
 .sd-grid tr.is-closed > :is(td, th) {
   color: var(--mf-muted);
 }
 
-/* Thanh lưu: dính đáy màn khi đã chọn dòng. */
+/* Thanh lưu dính đáy khi có dòng được chọn. */
 .sd-savebar {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) auto;
+  grid-template-columns: minmax(180px, 1fr) auto;
   align-items: end;
   gap: 8px 16px;
-  padding: 14px 20px;
+  padding: 14px 18px;
   border-top: 1px solid var(--mf-border);
   border-radius: 0 0 var(--mf-radius-lg) var(--mf-radius-lg);
   background: #fff;
 }
 .sd-grid tbody tr {
-  scroll-margin-bottom: 160px;
+  scroll-margin-bottom: 140px;
 }
 .sd-savebar.is-active {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  box-shadow: 0 -6px 16px rgb(20 33 58 / 8%);
+  box-shadow: 0 -4px 12px rgb(20 33 58 / 7%);
 }
 .sd-savebar-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px 12px;
+  gap: 8px 10px;
 }
 .sd-savebar-count {
-  color: var(--mf-text-2);
-  font-size: 13px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--mf-primary-soft);
+  color: var(--mf-primary);
+  font-size: 12.5px;
   font-weight: 600;
 }
 .sd-savebar-hint {
@@ -811,9 +818,8 @@
   width: 100px;
 }
 
-/* Màn hẹp (bảng không đủ chỗ): mỗi dòng thành một thẻ. Sáu số (sai lệch + số trả/giao bù) trên một hàng, hướng xử lý
-   và tiến độ chiếm cả chiều ngang; nhãn cột hiện trên giá trị. */
-@container (max-width: 979px) {
+/* Màn hẹp (<= 840px): chuyển thành thẻ gọn; laptop >= 1200px mở sidebar vẫn giữ trọn dạng bảng ngang. */
+@container (max-width: 840px) {
   .sd-grid {
     table-layout: auto;
   }
@@ -828,8 +834,8 @@
   .sd-grid tbody tr {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px 16px;
-    padding: 16px 20px;
+    gap: 10px 12px;
+    padding: 16px 18px;
     border-bottom: 1px solid var(--mf-border);
   }
   .sd-grid tbody tr:last-child {
@@ -870,7 +876,7 @@
   .sd-cell-progress {
     grid-column: 1 / -1;
     order: 2;
-    padding-top: 12px !important;
+    padding-top: 10px !important;
     border-top: 1px dashed var(--mf-border) !important;
   }
   .sd-grid tbody tr.has-check > :is(.sd-cell-decision, .sd-cell-progress) {
@@ -884,7 +890,7 @@
   }
   .sd-grid [data-label]::before {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     color: var(--mf-muted);
     font-size: var(--mf-fs-small);
     font-weight: 500;
@@ -895,7 +901,7 @@
     display: none;
   }
   .sd-grid select {
-    max-width: 420px;
+    max-width: 360px;
   }
   .sd-savebar {
     grid-template-columns: 1fr;
@@ -907,7 +913,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@container (max-width: 560px) {
+@container (max-width: 540px) {
   .sd-grid tbody tr,
   .sd-grid tbody tr.has-check {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -917,12 +923,16 @@
   }
   .sd-grid tbody tr.has-check > .sd-cell-check {
     grid-row: auto;
+    order: -2;
   }
   .sd-grid tbody tr.has-check > .sd-num:nth-child(3) {
     grid-column-start: auto;
   }
 }
 @media (max-width: 600px) {
+  .admin-dashboard > .dashboard-main > main.supplier-discrepancy-page {
+    width: calc(100% - 24px);
+  }
   .sd-savebar {
     grid-template-columns: 1fr;
   }
@@ -931,5 +941,10 @@
   }
   .sd-savebar-actions .mf-btn {
     flex: 1 1 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-grid tbody tr {
+    transition: none;
   }
 }

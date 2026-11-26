@@ -25,9 +25,8 @@ const toneBadge = {
 } as const
 
 /**
- * Bảng sai lệch của cả phiếu nhập (GVHD 24/11, làm lại theo góp ý Ezy 26/11): mỗi phụ tùng một dòng gồm sai lệch khi
- * nhận, hướng xử lý với NCC (nhập được khi chưa chốt hoặc bấm "Sửa"), tiến độ và việc tiếp theo. Thay cho các thẻ ba
- * hộp tóm tắt cũ. Chỉ gửi dòng người dùng đã tích hoặc đã sửa (review 25/11). Hai nút lưu cố định kèm lý do khóa (R-06).
+ * Bảng gộp xử lý sai lệch của cả phiếu nhập (GVHD 24/11):
+ * bước 1 chốt "Hướng đề xuất xử lý với NCC", bước 2 thao tác ngay tại cột "Tiến độ & thao tác".
  */
 export default function DecisionTable({
   rows,
@@ -53,15 +52,15 @@ export default function DecisionTable({
   const [note, setNote] = useState('')
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
-  // Hồ sơ đã đóng xuống cuối bảng.
+
+  // Hồ sơ đã đóng xếp xuống cuối bảng.
   const ordered = [...rows].sort(
     (a, b) => Number(a.status !== 'OPEN') - Number(b.status !== 'OPEN'),
   )
-  // Dòng chỉ có hàng thừa bị từ chối thì không có gì để chốt (review 25/11).
-  const isDecidable = (row: Case) =>
-    row.status === 'OPEN' && row.shortQty + row.wrongItemQty + row.damagedQty > 0
+  // Dòng chỉ có hàng thừa bị từ chối thì không cần chọn hướng xử lý (chỉ trả NCC).
+  const hasCoreDiscrepancy = (row: Case) => row.shortQty + row.wrongItemQty + row.damagedQty > 0
+  const isDecidable = (row: Case) => row.status === 'OPEN' && hasCoreDiscrepancy(row)
   const decidable = rows.filter(isDecidable)
-  // Dòng chưa chốt và còn sửa được thì mở sẵn.
   const editing = decidable.filter(
     (row) =>
       row.canHandle &&
@@ -76,7 +75,6 @@ export default function DecisionTable({
     (row) => row.decisionStatus === 'DECIDED' && decisionNeedsOwner(row, draftOf(row), owner),
   )
   const awaiting = decidable.filter((row) => row.canApproveDecision).length
-  // Review 25/11 (R-11): một nút mở lại mọi dòng đã chốt còn sửa được.
   const reopenable = decidable.filter(
     (row) => row.canHandle && !row.decisionLocked && !editing.includes(row),
   )
@@ -85,6 +83,7 @@ export default function DecisionTable({
   const buttons = decisionSaveButtons(needsOwner, owner)
   const cannotSave = busy || !picked.length || errors.length > 0
   const blockedReason = picked.length ? buttons.save.blocked || buttons.propose?.blocked || '' : ''
+  const showCheckCol = editing.length > 0
 
   function toggle(list: Case[], on: boolean) {
     setDrafts((previous) => {
@@ -135,24 +134,17 @@ export default function DecisionTable({
   }
 
   const hint = !picked.length
-    ? 'Tích chọn dòng muốn chốt, hoặc sửa trực tiếp trên dòng, rồi bấm lưu.'
+    ? 'Tích hoặc sửa dòng cần chốt rồi bấm lưu.'
     : errors.length
-      ? 'Sửa các dòng báo lỗi trước khi lưu.'
+      ? 'Vui lòng sửa các ô báo lỗi trước khi lưu.'
       : replacesDecided
-        ? 'Dòng đã chốt giữ hướng cũ cho đến khi Owner duyệt hướng mới.'
-        : needsOwner
-          ? 'Dòng ghi “Cần Owner duyệt” sẽ chờ Owner. Hàng chỉ chuyển sang chờ trả NCC sau khi được duyệt.'
-          : 'Lưu xong, hàng chuyển sang chờ trả NCC. Bước tiếp theo hiện ở cột “Tiến độ và việc tiếp theo”.'
+        ? 'Giữ hướng cũ cho đến khi Owner duyệt hướng mới.'
+        : blockedReason
 
   return (
     <section className="sd-board" aria-labelledby={ids + 'title'}>
       <header className="sd-board-head">
-        <div>
-          <h2 id={ids + 'title'}>Sai lệch theo phụ tùng</h2>
-          <p className="sd-muted">
-            Chốt hướng xử lý với nhà cung cấp cho từng dòng, rồi làm tiếp ở cột “Tiến độ và việc tiếp theo”.
-          </p>
-        </div>
+        <h2 id={ids + 'title'}>Hướng đề xuất xử lý với NCC</h2>
         {reopenable.length > 0 && (
           <button
             type="button"
@@ -160,7 +152,7 @@ export default function DecisionTable({
             disabled={busy}
             onClick={() => toggle(reopenable, true)}
           >
-            Sửa các dòng đã chốt
+            Sửa hướng đã chốt
           </button>
         )}
       </header>
@@ -169,7 +161,7 @@ export default function DecisionTable({
         <div className="sd-approval" role="region" aria-label="Duyệt hướng xử lý">
           <Icon name="info" />
           <p>
-            <b>{awaiting} dòng</b> đang chờ Owner duyệt hướng xử lý.
+            <b>{awaiting} dòng</b> chờ Owner duyệt.
           </p>
           <div className="sd-approval-buttons">
             <button
@@ -187,16 +179,17 @@ export default function DecisionTable({
               disabled={busy}
               onClick={() => void onApprove()}
             >
-              Duyệt {awaiting} dòng
+              Duyệt ({awaiting})
             </button>
           </div>
           {rejecting && (
             <div className="sd-approval-reject">
               <label className="sd-field">
-                <span>Lý do không duyệt (bắt buộc)</span>
+                <span>Lý do không duyệt *</span>
                 <input
                   value={reason}
                   maxLength={255}
+                  placeholder="Nhập lý do gửi lại BM"
                   onChange={(event) => setReason(event.target.value)}
                 />
               </label>
@@ -206,7 +199,7 @@ export default function DecisionTable({
                 disabled={busy || !reason.trim()}
                 onClick={() => void reject()}
               >
-                Gửi lại cho BM
+                Gửi lại BM
               </button>
             </div>
           )}
@@ -214,58 +207,73 @@ export default function DecisionTable({
       )}
 
       <div className="sd-board-scroll">
-        <table className="sd-grid">
+        <table className={'sd-grid' + (showCheckCol ? '' : ' sd-grid--no-check')}>
           <caption className="sd-visually-hidden">
-            Sai lệch, hướng xử lý và việc tiếp theo của từng phụ tùng trong phiếu nhập
+            Hướng đề xuất xử lý với NCC và tiến độ của từng phụ tùng trong phiếu nhập
           </caption>
           <colgroup>
-            <col className="sd-col-check" />
+            {showCheckCol && <col className="sd-col-check" />}
             <col className="sd-col-part" />
             <col span={3} className="sd-col-num" />
             <col className="sd-col-decision" />
-            <col className="sd-col-plan" />
-            <col className="sd-col-plan" />
-            <col className="sd-col-plan" />
+            <col span={3} className="sd-col-plan" />
             <col className="sd-col-progress" />
           </colgroup>
           <thead>
             <tr className="sd-grid-band">
-              <th colSpan={2} />
+              <th colSpan={showCheckCol ? 2 : 1} />
               <th colSpan={3} scope="colgroup">
                 Sai lệch khi nhận
               </th>
               <th colSpan={4} scope="colgroup" className="sd-band-plan">
-                Hướng xử lý với NCC
+                Hướng đề xuất xử lý với NCC
               </th>
               <th />
             </tr>
             <tr>
-              <th scope="col">
-                {selectable.length > 0 ? (
-                  <input
-                    type="checkbox"
-                    aria-label="Chọn mọi dòng chưa chốt"
-                    checked={allPicked}
-                    disabled={busy}
-                    onChange={(event) => toggle(selectable, event.target.checked)}
-                  />
-                ) : (
-                  <span className="sd-visually-hidden">Chọn</span>
-                )}
-              </th>
+              {showCheckCol && (
+                <th scope="col" className="sd-cell-check">
+                  {selectable.length > 0 ? (
+                    <input
+                      type="checkbox"
+                      aria-label="Chọn tất cả dòng chưa chốt"
+                      checked={allPicked}
+                      disabled={busy}
+                      onChange={(event) => toggle(selectable, event.target.checked)}
+                    />
+                  ) : (
+                    <span className="sd-visually-hidden">Chọn</span>
+                  )}
+                </th>
+              )}
               <th scope="col">Phụ tùng</th>
-              <th scope="col" className="sd-num">Thiếu</th>
-              <th scope="col" className="sd-num">Giao sai</th>
-              <th scope="col" className="sd-num">Hỏng</th>
-              <th scope="col" className="sd-band-plan">Hướng xử lý</th>
-              <th scope="col" className="sd-num sd-band-plan">Trả sai</th>
-              <th scope="col" className="sd-num sd-band-plan">Trả hỏng</th>
-              <th scope="col" className="sd-num sd-band-plan">Giao bù</th>
-              <th scope="col">Tiến độ và việc tiếp theo</th>
+              <th scope="col" className="sd-num">
+                Thiếu
+              </th>
+              <th scope="col" className="sd-num">
+                Sai
+              </th>
+              <th scope="col" className="sd-num">
+                Hỏng
+              </th>
+              <th scope="col" className="sd-band-plan">
+                Hướng xử lý
+              </th>
+              <th scope="col" className="sd-num sd-band-plan">
+                Trả sai
+              </th>
+              <th scope="col" className="sd-num sd-band-plan">
+                Trả hỏng
+              </th>
+              <th scope="col" className="sd-num sd-band-plan">
+                Giao bù
+              </th>
+              <th scope="col">Tiến độ &amp; thao tác</th>
             </tr>
           </thead>
           <tbody>
             {ordered.map((row) => {
+              const core = hasCoreDiscrepancy(row)
               const decidableRow = isDecidable(row)
               const open = editing.includes(row)
               const draft = draftOf(row)
@@ -276,7 +284,8 @@ export default function DecisionTable({
               const progress = caseProgress(row)
               const askOwner = chosen && decisionNeedsOwner(row, draft, owner)
               const status = row.decisionStatus ?? 'UNDECIDED'
-              const plain = (value: number): ReactNode => (open || row.decisionType ? value : '—')
+              const plain = (value: number): ReactNode =>
+                core && (open || row.decisionType) ? <Qty value={value} /> : <span className="sd-qty-zero">—</span>
               return (
                 <tr
                   key={row.id}
@@ -286,35 +295,39 @@ export default function DecisionTable({
                     (row.status !== 'OPEN' ? 'is-closed' : '')
                   }
                 >
-                  <td className="sd-cell-check">
-                    {open && (
-                      <input
-                        type="checkbox"
-                        aria-label={'Chọn dòng ' + row.sku}
-                        checked={chosen}
-                        disabled={busy}
-                        onChange={(event) => toggle([row], event.target.checked)}
-                      />
-                    )}
-                  </td>
+                  {showCheckCol && (
+                    <td className="sd-cell-check">
+                      {open && (
+                        <input
+                          type="checkbox"
+                          aria-label={'Chọn dòng ' + row.sku}
+                          checked={chosen}
+                          disabled={busy}
+                          onChange={(event) => toggle([row], event.target.checked)}
+                        />
+                      )}
+                    </td>
+                  )}
                   <th scope="row" className="sd-cell-part">
                     <b>{row.sku}</b>
                     <span>{row.partName}</span>
                     {row.rejectedExcessQty > 0 && (
-                      <small>Thừa từ chối {row.rejectedExcessQty}</small>
+                      <small>Thừa từ chối: {row.rejectedExcessQty}</small>
                     )}
                   </th>
                   <td className="sd-num" data-label="Thiếu">
-                    <Qty value={row.shortQty} />
+                    {core ? <Qty value={row.shortQty} /> : <span className="sd-qty-zero">—</span>}
                   </td>
                   <td className="sd-num" data-label="Giao sai">
-                    <Qty value={row.wrongItemQty} />
+                    {core ? <Qty value={row.wrongItemQty} /> : <span className="sd-qty-zero">—</span>}
                   </td>
                   <td className="sd-num" data-label="Hỏng">
-                    <Qty value={row.damagedQty} />
+                    {core ? <Qty value={row.damagedQty} /> : <span className="sd-qty-zero">—</span>}
                   </td>
                   <td className="sd-cell-decision sd-band-plan" data-label="Hướng xử lý">
-                    {open ? (
+                    {!core ? (
+                      <span className="sd-qty-zero">Trả hàng thừa</span>
+                    ) : open ? (
                       <select
                         aria-label={'Hướng xử lý ' + row.sku}
                         aria-invalid={error ? true : undefined}
@@ -342,9 +355,9 @@ export default function DecisionTable({
                         {error}
                       </p>
                     )}
-                    {askOwner && <p className="sd-cell-note">Cần Owner duyệt</p>}
-                    {!open && status === 'DECIDED' && row.approvedByName && (
-                      <p className="sd-cell-note">Owner {row.approvedByName} đã duyệt</p>
+                    {askOwner && <p className="sd-cell-note sd-cell-note--owner">Cần Owner duyệt</p>}
+                    {!open && core && status === 'DECIDED' && row.approvedByName && (
+                      <p className="sd-cell-note">Owner duyệt</p>
                     )}
                     {!open && decidableRow && row.canHandle && !row.decisionLocked && (
                       <button
@@ -357,10 +370,13 @@ export default function DecisionTable({
                         Sửa
                       </button>
                     )}
-                    {!open && row.status === 'OPEN' && row.decisionLocked && (
-                      <p className="sd-cell-note sd-locked">
+                    {!open && core && row.status === 'OPEN' && row.decisionLocked && (
+                      <p
+                        className="sd-cell-note sd-locked"
+                        title="Đã phát sinh trả hàng, giao bù, nhận kho hoặc miễn giao bù nên không sửa được"
+                      >
                         <Icon name="lock" />
-                        Đã khóa vì đã trả hàng, giao bù hoặc nhận vào kho
+                        Đã khóa
                       </p>
                     )}
                     {chosen && status !== 'UNDECIDED' && (
@@ -395,7 +411,7 @@ export default function DecisionTable({
                         )
                       : plain(shown.replacement)}
                   </td>
-                  <td className="sd-cell-progress" data-label="Tiến độ và việc tiếp theo">
+                  <td className="sd-cell-progress" data-label="Tiến độ & thao tác">
                     <span className={'mf-badge ' + toneBadge[progress.tone]}>{progress.label}</span>
                     {progress.lines.length > 0 && (
                       <ul>
@@ -421,19 +437,21 @@ export default function DecisionTable({
       {editing.length > 0 && (
         <div className={'sd-savebar' + (picked.length ? ' is-active' : '')}>
           <label className="sd-field sd-savebar-note">
-            <span>Ghi chú cho lần lưu này</span>
+            <span>Ghi chú</span>
             <input
               value={note}
               maxLength={255}
-              placeholder="Không bắt buộc"
+              placeholder="Tùy chọn"
               disabled={busy}
               onChange={(event) => setNote(event.target.value)}
             />
           </label>
           <div className="sd-savebar-actions">
-            <span className="sd-savebar-count" aria-live="polite">
-              {picked.length ? `Đã chọn ${picked.length} dòng` : 'Chưa chọn dòng nào'}
-            </span>
+            {picked.length > 0 && (
+              <span className="sd-savebar-count" aria-live="polite">
+                {picked.length} dòng
+              </span>
+            )}
             {buttons.propose && (
               <button
                 type="button"
@@ -453,16 +471,17 @@ export default function DecisionTable({
               {busy && !needsOwner ? 'Đang lưu…' : buttons.save.label}
             </button>
           </div>
-          <p className="sd-savebar-hint" role="status">
-            {blockedReason || hint}
-          </p>
+          {hint && (
+            <p className="sd-savebar-hint" role="status">
+              {hint}
+            </p>
+          )}
         </div>
       )}
     </section>
   )
 }
 
-/** Số lượng sai lệch: 0 hiện mờ để mắt dừng ở số khác 0. */
 function Qty({ value }: { value: number }) {
   return <span className={value ? 'sd-qty-on' : 'sd-qty-zero'}>{value}</span>
 }

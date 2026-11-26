@@ -12,8 +12,8 @@ export type DecisionType =
 export type DecisionStatus = 'UNDECIDED' | 'AWAITING_OWNER' | 'DECIDED'
 
 export const decisionLabels: Record<DecisionType, string> = {
-  RETURN_NO_REPLACEMENT: 'Trả hàng, không cần giao bù',
-  RETURN_AND_REPLACE: 'Trả hàng lỗi, yêu cầu giao bù',
+  RETURN_NO_REPLACEMENT: 'Trả hàng, không giao bù',
+  RETURN_AND_REPLACE: 'Trả hàng, yêu cầu giao bù',
   ACCEPT_NO_REPLACEMENT: 'Nhận hàng lỗi, không giao bù',
 }
 

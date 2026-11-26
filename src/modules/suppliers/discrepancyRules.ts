@@ -1,25 +1,8 @@
 // Chỉ import kiểu: file này được test bằng cách chuyển TypeScript sang JS (tests/discrepancy-rules.test.mjs).
-import type {
-  AcceptanceType,
-  Case,
-  DecisionType,
-  GoodsKind,
-} from './discrepancy/types'
+import type { AcceptanceType, Case, DecisionType, GoodsKind } from './discrepancy/types'
 
-/** Loại hàng mà BM nhập số trực tiếp trong thẻ hồ sơ. Hàng thừa bị từ chối chỉ ghi nhận ở hộp "Ghi nhận đã trả". */
+/** Loại hàng mà người dùng nhập số trả NCC trong bảng hướng xử lý. Hàng thừa từ chối chỉ ghi nhận khi trả. */
 export type ReturnKind = 'WRONG_ITEM' | 'DAMAGED'
-
-/** Nội dung đang sửa của một hồ sơ; replacement chưa sửa thì hiển thị số gợi ý. */
-export type CaseDraft = {
-  wrong: string
-  damaged: string
-  replacement?: string
-  note: string
-}
-
-export type Metric = [label: string, quantity: number]
-
-export type SummaryBox = { title: string; parts: Metric[]; warn: boolean }
 
 const digits = /^\d+$/
 
@@ -46,7 +29,7 @@ export function returnedOf(row: Case, kind: GoodsKind) {
   return Math.max(returnRequiredOf(row, kind) - outstandingReturnOf(row, kind), 0)
 }
 
-export function heldOf(row: Case, kind: ReturnKind) {
+function heldOf(row: Case, kind: ReturnKind) {
   return kind === 'WRONG_ITEM' ? row.wrongUndecidedQty : row.damagedUndecidedQty
 }
 
@@ -59,13 +42,6 @@ export function returnLimits(row: Case, kind: ReturnKind) {
     max: returnRequiredOf(row, kind) + heldOf(row, kind),
     floor: returnedOf(row, kind),
   }
-}
-
-/** Số giao bù tối đa: không quá số thiếu + số giao sai + số hỏng và không quá hạn mức BE; hàng giao thẳng thì 0. */
-export function replacementMax(row: Case) {
-  return row.replacementDelivery
-    ? 0
-    : Math.min(row.replacementLimitQty, row.shortQty + row.wrongItemQty + row.damagedQty)
 }
 
 /**
@@ -95,165 +71,6 @@ export function acceptanceOpenTypes(row: Case): AcceptanceType[] {
 }
 
 /**
- * Review 25/11 (R-05, plan B7): hồ sơ đang mở chưa có hướng xử lý thì chỉ báo "Chưa quyết định", không nêu số giao bù
- * hay số phải trả (BE chưa chuyển hàng sang chờ trả khi chưa chốt).
- */
-function undecided(row: Case) {
-  return row.status === 'OPEN' && row.decisionStatus === 'UNDECIDED'
-}
-
-/** Ba hộp tóm tắt của thẻ: nhận / đang giữ / còn phải trả, mỗi hộp tách Giao sai và Hỏng. */
-export function summaryBoxes(row: Case): SummaryBox[] {
-  const received: Metric[] = [
-    ['Giao sai', row.wrongItemQty],
-    ['Hỏng', row.damagedQty],
-  ]
-  if (row.shortQty > 0) received.push(['Thiếu', row.shortQty])
-  if (row.rejectedExcessQty > 0) received.push(['Thừa từ chối', row.rejectedExcessQty])
-  const held: Metric[] = [
-    ['Giao sai', row.wrongUndecidedQty],
-    ['Hỏng', row.damagedUndecidedQty],
-  ]
-  const owed: Metric[] = [
-    ['Giao sai', row.wrongOutstandingReturnQty],
-    ['Hỏng', row.damagedOutstandingReturnQty],
-  ]
-  if (row.excessOutstandingReturnQty > 0)
-    owed.push(['Thừa từ chối', row.excessOutstandingReturnQty])
-  const boxes: SummaryBox[] = [
-    { title: 'Sai lệch khi nhận', parts: received, warn: false },
-    {
-      title: 'Đang giữ tại kho, chưa quyết định',
-      parts: held,
-      warn: row.heldUndecidedQty > 0,
-    },
-  ]
-  // Chưa chốt hướng thì ẩn hộp phải trả, trừ khi thật sự còn hàng phải trả (vd. hàng thừa đã từ chối).
-  if (!undecided(row) || row.outstandingReturnQty > 0)
-    boxes.push({
-      title: 'Còn phải trả nhà cung cấp',
-      parts: owed,
-      warn: row.outstandingReturnQty > 0,
-    })
-  return boxes
-}
-
-/** Các việc còn dở của hồ sơ đang mở; rỗng khi đã xử lý đủ. */
-export function caseStatusParts(row: Case) {
-  if (undecided(row))
-    return row.outstandingReturnQty > 0
-      ? ['Chưa quyết định', `Còn phải trả ${row.outstandingReturnQty}`]
-      : ['Chưa quyết định']
-  const parts: string[] = []
-  if (row.heldUndecidedQty > 0)
-    parts.push(`Đang giữ ${row.heldUndecidedQty}, chờ quyết định`)
-  if (row.outstandingReturnQty > 0) parts.push(`Còn phải trả ${row.outstandingReturnQty}`)
-  const replacement = Math.max(row.outstandingReplacementQty, row.openReplacementQty)
-  if (replacement > 0) parts.push(`Chờ NCC giao bù ${replacement}`)
-  if (row.decisionStatus === 'AWAITING_OWNER' || row.pendingRequests?.length)
-    parts.push('Chờ Owner duyệt')
-  return parts
-}
-
-export function isCaseSettled(row: Case) {
-  return row.status !== 'OPEN' || caseStatusParts(row).length === 0
-}
-
-export function caseStatusLabel(row: Case) {
-  if (row.status !== 'OPEN') return 'Đã đóng'
-  const parts = caseStatusParts(row)
-  return parts.length ? parts.join(' · ') : 'Đã xử lý đủ'
-}
-
-export function caseDraft(row: Case): CaseDraft {
-  return {
-    wrong: String(row.wrongReturnRequiredQty),
-    damaged: String(row.damagedReturnRequiredQty),
-    // Chưa có hướng xử lý nào được thỏa thuận: hiện số gợi ý. Đã thỏa thuận thì hiện đúng số đang lưu (kể cả 0).
-    replacement:
-      row.wrongReturnRequiredQty + row.damagedReturnRequiredQty === 0 &&
-      row.replacementRequiredQty === 0
-        ? undefined
-        : String(row.replacementRequiredQty),
-    note: '',
-  }
-}
-
-/** Số giao bù đang hiển thị: số đã sửa, hoặc gợi ý = số thiếu + số giao sai/hỏng đang chọn trả, kẹp trong [tối thiểu, tối đa]. */
-export function shownReplacement(row: Case, draft: CaseDraft) {
-  if (row.replacementDelivery) return '0'
-  if (draft.replacement !== undefined) return draft.replacement
-  return String(
-    Math.min(
-      replacementMax(row),
-      Math.max(
-        replacementMin(row),
-        row.shortQty + count(draft.wrong) + count(draft.damaged),
-      ),
-    ),
-  )
-}
-
-export type CaseFieldErrors = { wrong: string; damaged: string; replacement: string }
-
-/** Lỗi của từng ô nhập, mỗi ô một câu; ô hợp lệ là chuỗi rỗng. */
-export function caseDraftFieldErrors(row: Case, draft: CaseDraft): CaseFieldErrors {
-  const notInt = 'Nhập số nguyên từ 0 trở lên.'
-  const returnError = (
-    value: string,
-    limit: { max: number; floor: number },
-    label: string,
-  ) => {
-    if (!digits.test(value.trim())) return notInt
-    const quantity = Number(value)
-    if (quantity > limit.max) return `${label} trả tối đa ${limit.max}.`
-    if (quantity < limit.floor)
-      return `Đã trả nhà cung cấp ${limit.floor} ${label.toLowerCase()}, không nhập thấp hơn.`
-    return ''
-  }
-  const replacementText = shownReplacement(row, draft)
-  let replacement = ''
-  if (!digits.test(replacementText.trim())) replacement = notInt
-  else if (Number(replacementText) > replacementMax(row))
-    replacement = `NCC giao bù tối đa ${replacementMax(row)}.`
-  else if (Number(replacementText) < replacementMin(row))
-    replacement = `NCC giao bù tối thiểu ${replacementMin(row)}.`
-  return {
-    wrong: returnError(draft.wrong, returnLimits(row, 'WRONG_ITEM'), 'Hàng giao sai'),
-    damaged: returnError(draft.damaged, returnLimits(row, 'DAMAGED'), 'Hàng hỏng'),
-    replacement,
-  }
-}
-
-/** Câu lỗi đầu tiên của một hồ sơ, rỗng nếu hợp lệ (chặn lưu). */
-export function caseDraftError(row: Case, draft: CaseDraft) {
-  const errors = caseDraftFieldErrors(row, draft)
-  return errors.wrong || errors.damaged || errors.replacement
-}
-
-/**
- * Có thay đổi số lượng so với hướng xử lý đang lưu. Chỉ ghi chú thì không tính là thay đổi:
- * BE bỏ qua dòng không đổi nên ghi chú chỉ được gửi kèm một thay đổi số lượng.
- */
-export function caseDraftChanged(row: Case, draft: CaseDraft) {
-  return (
-    Number(draft.wrong) !== row.wrongReturnRequiredQty ||
-    Number(draft.damaged) !== row.damagedReturnRequiredQty ||
-    Number(shownReplacement(row, draft)) !== row.replacementRequiredQty
-  )
-}
-
-/** Dòng gửi PUT /goods-receipt-notes/{id}/discrepancies: số trả theo từng loại, không gửi returnRequiredQty. */
-export function caseLine(row: Case, draft: CaseDraft) {
-  return {
-    caseId: row.id,
-    wrongReturnQty: Number(draft.wrong),
-    damagedReturnQty: Number(draft.damaged),
-    replacementRequiredQty: Number(shownReplacement(row, draft)),
-  }
-}
-
-/**
  * Tình trạng chung của một phiếu nhập trên màn xử lý sai lệch (PM 22/11, Q3).
  * Graphify #72/#73: không tải được hàng thừa (handlingComplete = null) thì không bao giờ báo "Đã xử lý xong".
  */
@@ -264,16 +81,16 @@ export function receiptHandlingStatus(input: {
   handlingComplete: boolean | null
 }): { done: boolean; text: string } {
   if (input.handlingComplete === null)
-    return { done: false, text: 'Chưa tải được hàng thừa của phiếu, chưa xác định được' }
+    return { done: false, text: 'Chưa xác định tình trạng hàng thừa' }
   if (input.handlingComplete) return { done: true, text: 'Đã xử lý xong' }
   const parts = [
-    input.openCases ? input.openCases + ' hồ sơ sai lệch đang mở' : '',
-    input.waitingExcess ? input.waitingExcess + ' dòng hàng thừa chờ Owner' : '',
+    input.openCases ? `Còn ${input.openCases} hồ sơ mở` : '',
+    input.waitingExcess ? `${input.waitingExcess} hàng thừa chờ Owner` : '',
   ].filter(Boolean)
   return { done: false, text: parts.join(' · ') || 'Chưa xử lý xong' }
 }
 
-// ---- GVHD 24/11: hướng xử lý cả phiếu trong một bảng ------------------------------------------------------------
+// ---- GVHD 24/11: bảng hướng đề xuất xử lý với NCC ---------------------------------------------------------------
 
 /** Một dòng của bảng hướng xử lý đang sửa; replacement chưa sửa thì dùng số chuẩn = thiếu + trả sai + trả hỏng. */
 export type DecisionDraft = {
@@ -341,7 +158,7 @@ export function decisionNumbers(row: Case, draft: DecisionDraft) {
 
 /** Câu lỗi của một dòng (rỗng nếu hợp lệ), cùng các điều kiện MSG35, MSG193, MSG354 của BE. */
 export function decisionDraftError(row: Case, draft: DecisionDraft) {
-  const notInt = 'Nhập số nguyên từ 0 trở lên.'
+  const notInt = 'Nhập số nguyên ≥ 0.'
   if (draft.type !== 'ACCEPT_NO_REPLACEMENT') {
     if (row.wrongItemQty > 0 && !digits.test(draft.wrong.trim())) return notInt
     if (row.damagedQty > 0 && !digits.test(draft.damaged.trim())) return notInt
@@ -354,19 +171,19 @@ export function decisionDraftError(row: Case, draft: DecisionDraft) {
     return notInt
   const { wrong, damaged, replacement } = decisionNumbers(row, draft)
   if (wrong > decisionReturnMax(row, 'WRONG_ITEM'))
-    return `Trả hàng giao sai tối đa ${decisionReturnMax(row, 'WRONG_ITEM')}.`
+    return `Trả hàng sai tối đa ${decisionReturnMax(row, 'WRONG_ITEM')}.`
   if (damaged > decisionReturnMax(row, 'DAMAGED'))
     return `Trả hàng hỏng tối đa ${decisionReturnMax(row, 'DAMAGED')}.`
   if (draft.type === 'RETURN_AND_REPLACE') {
     if (replacement > row.replacementLimitQty)
-      return `NCC giao bù tối đa ${row.replacementLimitQty}.`
+      return `Giao bù tối đa ${row.replacementLimitQty}.`
     if (replacement < replacementMin(row))
-      return `NCC giao bù tối thiểu ${replacementMin(row)}. Không cần giao bù thì chọn "Trả hàng, không cần giao bù".`
+      return `Giao bù tối thiểu ${replacementMin(row)} (hoặc chọn "Trả hàng, không giao bù").`
     if (wrong + damaged + replacement === 0 && row.shortQty === 0)
-      return 'Chưa có gì để trả hay giao bù: chọn "Nhận hàng lỗi, không giao bù".'
+      return 'Chọn "Nhận hàng lỗi, không giao bù" nếu không trả và không giao bù.'
   }
   if (draft.type === 'RETURN_NO_REPLACEMENT' && wrong + damaged + row.shortQty === 0)
-    return 'Chưa có gì để trả: chọn hướng khác.'
+    return 'Chưa có hàng trả — vui lòng chọn hướng khác.'
   return ''
 }
 
@@ -390,59 +207,63 @@ export function decisionLine(row: Case, draft: DecisionDraft) {
   }
 }
 
-/** Nhãn nút lưu duy nhất dưới bảng. */
 /**
- * Review 25/11 (R-06, plan B3): hai nút cố định. BM: "Lưu hướng xử lý" bị khóa khi có dòng phải qua Owner, "Đề nghị
- * Owner xử lý" bị khóa khi không dòng nào cần; mỗi nút khóa kèm lý do. Owner lưu là chốt nên chỉ có nút lưu.
+ * Review 25/11 (R-06): hai nút cố định. BM: "Lưu hướng xử lý" bị khóa khi có dòng cần Owner,
+ * "Đề nghị Owner duyệt" bị khóa khi số khớp chuẩn. Owner lưu là chốt luôn nên chỉ có 1 nút.
  */
 export function decisionSaveButtons(needsOwner: boolean, owner: boolean) {
   return {
     save: {
       label: 'Lưu hướng xử lý',
-      blocked: needsOwner
-        ? 'Có dòng phải qua Owner duyệt (hướng (1), (3) hoặc giao bù khác chuẩn), bấm "Đề nghị Owner xử lý".'
-        : '',
+      blocked: needsOwner ? 'Có dòng cần Owner duyệt — bấm "Đề nghị Owner duyệt".' : '',
     },
     propose: owner
       ? null
       : {
-          label: 'Đề nghị Owner xử lý',
-          blocked: needsOwner
-            ? ''
-            : 'Các dòng đã chọn không cần Owner duyệt, bấm "Lưu hướng xử lý".',
+          label: 'Đề nghị Owner duyệt',
+          blocked: needsOwner ? '' : 'Số khớp chuẩn — bấm "Lưu hướng xử lý".',
         },
   }
 }
 
-// ---- Ezy 26/11: một bảng duy nhất cho cả phiếu (bỏ thẻ ba hộp tóm tắt) --------------------------------------------
+// ---- Tiến độ từng dòng trong bảng gộp --------------------------------------------------------------------------
 
 export type CaseProgress = {
   /** Nhãn chính của cột Tiến độ. */
   label: string
   tone: 'warning' | 'info' | 'success' | 'muted'
-  /** Việc còn dở, mỗi dòng một ý; số 0 không hiện. */
+  /** Việc còn dở, mỗi dòng một ý ngắn; số 0 không hiện. */
   lines: string[]
 }
 
-/** Cột "Tiến độ" của bảng: trạng thái hướng xử lý và phần còn giữ / còn phải trả / chờ giao bù (thay ba hộp cũ). */
+/** Cột "Tiến độ & thao tác" của bảng: trạng thái hướng xử lý và việc còn lại theo từng loại hàng. */
 export function caseProgress(row: Case): CaseProgress {
   if (row.status !== 'OPEN') return { label: 'Đã đóng', tone: 'muted', lines: [] }
   const lines: string[] = []
   const status = row.decisionStatus ?? 'UNDECIDED'
-  if (status !== 'UNDECIDED' && row.heldUndecidedQty > 0)
-    lines.push(`Đang giữ ${row.heldUndecidedQty}, chờ quyết định`)
-  if (row.outstandingReturnQty > 0) lines.push(`Còn phải trả NCC ${row.outstandingReturnQty}`)
+  if (status !== 'UNDECIDED' && row.heldUndecidedQty > 0) {
+    const heldParts = [
+      row.wrongUndecidedQty > 0 ? `${row.wrongUndecidedQty} sai` : '',
+      row.damagedUndecidedQty > 0 ? `${row.damagedUndecidedQty} hỏng` : '',
+    ].filter(Boolean)
+    lines.push(
+      heldParts.length
+        ? `Đang giữ: ${heldParts.join(', ')}`
+        : `Đang giữ: ${row.heldUndecidedQty}`,
+    )
+  }
+  if (row.outstandingReturnQty > 0) lines.push(`Còn trả NCC: ${row.outstandingReturnQty}`)
   const replacement = Math.max(row.outstandingReplacementQty, row.openReplacementQty)
-  if (status !== 'UNDECIDED' && replacement > 0) lines.push(`Chờ NCC giao bù ${replacement}`)
+  if (status !== 'UNDECIDED' && replacement > 0) lines.push(`Chờ giao bù: ${replacement}`)
   row.pendingRequests?.forEach((request) =>
     lines.push(
-      (request.type === 'DAMAGED' ? 'Nhận hàng lỗi ' : 'Nhận hàng giao sai ') +
+      (request.type === 'DAMAGED' ? 'Nhận hàng lỗi ' : 'Nhận hàng sai ') +
         request.quantity +
-        ' chờ Owner duyệt',
+        ' (chờ duyệt)',
     ),
   )
   if (status === 'UNDECIDED') return { label: 'Chưa chốt', tone: 'warning', lines }
   if (status === 'AWAITING_OWNER') return { label: 'Chờ Owner duyệt', tone: 'info', lines }
-  if (isCaseSettled(row)) return { label: 'Đã xử lý đủ', tone: 'success', lines }
-  return { label: 'Đã chốt, đang xử lý', tone: 'info', lines }
+  if (lines.length === 0) return { label: 'Đã xử lý đủ', tone: 'success', lines }
+  return { label: 'Đã chốt', tone: 'info', lines }
 }

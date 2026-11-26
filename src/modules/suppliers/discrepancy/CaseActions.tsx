@@ -5,8 +5,7 @@ import type { CaseActionMode } from './CaseActionDialog'
 import type { Case } from './types'
 
 /**
- * Phần "việc tiếp theo" trong cột Tiến độ của bảng sai lệch (thay thẻ CaseCard cũ, Ezy 26/11): các nút của bước sau khi hướng đã chốt
- * (ghi nhận đã trả, nhập hàng giao bù, nhận hàng lỗi / giao sai, bỏ giao bù), việc đang chờ người khác, và lịch sử.
+ * Thao tác bước 2 trong cột Tiến độ của bảng sai lệch: chỉ mở hành động sau khi hướng đã chốt (GVHD 24/11).
  */
 export default function CaseActions({
   row,
@@ -37,7 +36,7 @@ export default function CaseActions({
   if (row.outstandingReturnQty > 0) {
     if (row.canRecordReturn)
       actions.push(button('return', 'Ghi nhận đã trả', () => onAction('return')))
-    else waiting.push('Chờ BM ghi nhận đã trả')
+    else waiting.push('Chờ BM trả hàng')
   }
   if (decided && row.openReplacementQty > 0 && row.purchaseOrderId) {
     if (row.canCreateReplacement)
@@ -47,31 +46,24 @@ export default function CaseActions({
           className="mf-btn mf-btn--sm mf-btn--secondary"
           to={'/purchase-orders/' + row.purchaseOrderId + '?replacement=' + row.id}
         >
-          Nhập hàng giao bù
+          Nhập giao bù
         </Link>,
       )
-    else waiting.push('Chờ BM nhập hàng giao bù')
+    else waiting.push('Chờ BM nhập bù')
   }
-  if (row.canApproveAcceptance && row.damagedUndecidedQty > 0)
-    actions.push(button('damaged', 'Nhận hàng lỗi vào kho', () => onAcceptance('damaged')))
-  if (row.canApproveAcceptance && row.wrongUndecidedQty > 0)
-    actions.push(button('wrong', 'Nhận hàng giao sai vào kho', () => onAcceptance('wrong')))
+  if (decided && row.canApproveAcceptance && row.damagedUndecidedQty > 0)
+    actions.push(button('damaged', 'Nhận hàng lỗi', () => onAcceptance('damaged')))
+  if (decided && row.canApproveAcceptance && row.wrongUndecidedQty > 0)
+    actions.push(button('wrong', 'Nhận hàng sai', () => onAcceptance('wrong')))
   if (decided && !row.canApproveAcceptance && row.heldUndecidedQty > 0)
-    waiting.push('Chờ Owner nhận hàng vào kho')
-  if (decided && row.openReplacementQty > 0) {
-    // Việc ít dùng: hiện như link cạnh "Lịch sử" để không thêm một nút to nữa trong cột hẹp.
-    if (row.canWaiveReplacement)
-      actions.push(button('waive', 'Không cần giao bù', () => onAction('waive'), true))
-    else waiting.push('Bỏ giao bù: chỉ Owner quyết định')
-  }
+    waiting.push('Chờ Owner nhận kho')
+  if (decided && row.openReplacementQty > 0 && row.canWaiveReplacement)
+    actions.push(button('waive', 'Bỏ giao bù', () => onAction('waive'), true))
+
   return (
     <div className="sd-next">
+      {waiting.length > 0 && <span className="sd-next-wait">{waiting.join(' · ')}</span>}
       {actions}
-      {waiting.map((text) => (
-        <span key={text} className="sd-next-wait">
-          {text}
-        </span>
-      ))}
       <button
         type="button"
         className="mf-btn mf-btn--link sd-next-link"

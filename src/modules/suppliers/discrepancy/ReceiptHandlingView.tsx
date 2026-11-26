@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -11,10 +11,6 @@ import CaseActionDialog, { type CaseActionMode } from './CaseActionDialog'
 import DecisionTable from './DecisionTable'
 import { errorMessage, type Case } from './types'
 
-/**
- * Dòng hàng thừa của phiếu nhập (BE #98: GET /discrepancy-cases/receipts/{id}/handling): Owner quyết nhận vào kho
- * hay trả nhà cung cấp. Review #72 (72-2): dùng API này để BE giữ luôn cách tính "đã xử lý xong".
- */
 type ExcessLine = {
   lineId: number
   sku: string
@@ -25,21 +21,19 @@ type ExcessLine = {
 type ReceiptHandling = { excessLines: ExcessLine[]; handlingComplete: boolean }
 
 const excessDecisionLabels: Record<string, string> = {
-  AWAITING_OWNER: 'Chờ Owner quyết',
-  ACCEPTED: 'Owner nhận vào kho',
-  REJECTED: 'Owner trả nhà cung cấp',
+  AWAITING_OWNER: 'Chờ Owner duyệt',
+  ACCEPTED: 'Đã nhận vào kho',
+  REJECTED: 'Trả nhà cung cấp',
 }
 
 /**
- * Xử lý sai lệch của một phiếu nhập. GVHD 24/11: chốt hướng xử lý cả phiếu trong một bảng (DecisionTable). Ezy 26/11:
- * bỏ các thẻ cũ theo phụ tùng, tiến độ và hành động tiếp theo nằm luôn trong bảng.
- * PM 22/11: hiện cả dòng hàng thừa; phiếu chỉ xong khi mọi hồ sơ đã đóng và không còn hàng thừa chờ Owner.
+ * Xử lý sai lệch của một phiếu nhập (GVHD 24/11): chốt hướng xử lý và làm bước tiếp theo trong cùng một bảng.
  */
 export default function ReceiptHandlingView({ receiptId }: { receiptId: string }) {
   const { user } = useAuth()
   const [rows, setRows] = useState<Case[]>([])
   const [excess, setExcess] = useState<ExcessLine[]>([])
-  // null = không tải được API hàng thừa (không được coi là không có hàng thừa).
+  // null = chưa tải được API hàng thừa (không tự coi là hoàn tất).
   const [handlingComplete, setHandlingComplete] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -48,6 +42,22 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const [saveError, setSaveError] = useState('')
   const [action, setAction] = useState<{ row: Case; mode: CaseActionMode }>()
   const [acceptance, setAcceptance] = useState<{ row: Case; mode: AcceptanceMode }>()
+
+  const refreshHandling = useCallback(
+    async (signal?: AbortSignal) => {
+      const handling = await axiosClient
+        .get<ReceiptHandling>('/discrepancy-cases/receipts/' + receiptId + '/handling', {
+          signal,
+        })
+        .then(({ data }) => data)
+        .catch(() => undefined)
+      if (!signal?.aborted) {
+        setExcess(handling?.excessLines ?? [])
+        setHandlingComplete(handling ? handling.handlingComplete : null)
+      }
+    },
+    [receiptId],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
@@ -66,18 +76,9 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           cases.push(...data.items)
           if (!data.items.length || cases.length >= data.totalItems) break
         }
-        // Hàng thừa nằm trên phiếu nhập, không phải hồ sơ sai lệch; lỗi tải phần này không chặn màn hình.
-        const handling = await axiosClient
-          .get<ReceiptHandling>(
-            '/discrepancy-cases/receipts/' + receiptId + '/handling',
-            { signal: controller.signal },
-          )
-          .then(({ data }) => data)
-          .catch(() => undefined)
+        await refreshHandling(controller.signal)
         if (!controller.signal.aborted) {
           setRows(cases)
-          setExcess(handling?.excessLines ?? [])
-          setHandlingComplete(handling ? handling.handlingComplete : null)
           setError('')
         }
       } catch (failure) {
@@ -88,11 +89,12 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
     }
     void load()
     return () => controller.abort()
-  }, [receiptId])
+  }, [receiptId, refreshHandling])
 
   function replaceRow(row: Case, message: string) {
     setRows((previous) => previous.map((item) => (item.id === row.id ? row : item)))
     setNotice(message)
+    void refreshHandling()
   }
 
   /** Lưu, duyệt hoặc không duyệt hướng xử lý: BE trả lại mọi hồ sơ của phiếu. */
@@ -108,6 +110,7 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
       const { data } = await request()
       setRows(data)
       setNotice(typeof message === 'string' ? message : message(data))
+      await refreshHandling()
       return true
     } catch (failure) {
       setSaveError(errorMessage(failure))
@@ -121,14 +124,13 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const saveDecisions = (lines: ReturnType<typeof decisionLine>[], note: string) =>
     decide(
       () => axiosClient.put<Case[]>(base, { lines, note: note || undefined }),
-      // Review 25/11 (R-12): chỉ nói đã gửi Owner khi thật sự có dòng chờ Owner.
       (data) =>
         data.some(
           (row) =>
             row.decisionStatus === 'AWAITING_OWNER' &&
             lines.some((line) => line.caseId === row.id),
         )
-          ? 'Đã lưu hướng xử lý. Dòng cần Owner duyệt đã được gửi Owner.'
+          ? 'Đã gửi đề nghị cho Owner duyệt.'
           : 'Đã lưu hướng xử lý.',
     )
   const approveDecisions = () =>
@@ -136,16 +138,14 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   const rejectDecisions = (reason: string) =>
     decide(
       () => axiosClient.post<Case[]>(base + '/reject', { reason }),
-      'Đã gửi lại cho BM chọn hướng khác.',
+      'Đã trả lại BM chọn hướng khác.',
     )
 
   const first = rows[0]
   const openCases = rows.filter((row) => row.status !== 'CLOSED').length
-  const waitingExcess = excess.filter(
-    (line) => line.decision === 'AWAITING_OWNER',
-  ).length
-  // BE quyết định (gồm cả phiếu đã xác nhận); không tải được thì tự tính như trước.
+  const waitingExcess = excess.filter((line) => line.decision === 'AWAITING_OWNER').length
   const status = receiptHandlingStatus({ openCases, waitingExcess, handlingComplete })
+
   return (
     <>
       <header className="sd-head">
@@ -217,14 +217,10 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
         !excess.length && (
           <section className="sd-panel">
             <EmptyState
-              message={
-                'Phiếu nhập ' +
-                documentCode('PN', Number(receiptId)) +
-                ' không có hồ sơ sai lệch.'
-              }
+              message={'Phiếu nhập ' + documentCode('PN', Number(receiptId)) + ' không có sai lệch.'}
               action={
                 <Link className="mf-btn mf-btn--secondary" to="/supplier-discrepancies">
-                  Xem các hồ sơ đang mở
+                  Xem danh sách sai lệch
                 </Link>
               }
             />
@@ -254,48 +250,40 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
       {!loading && excess.length > 0 && (
         <section className="sd-panel sd-excess" aria-label="Hàng thừa của phiếu nhập">
           <header className="sd-excess-head">
-            <div>
-              <h2>Hàng thừa</h2>
-              <p className="sd-muted">Hàng giao dư so với đơn nhập, Owner quyết nhận vào kho hay trả NCC.</p>
-            </div>
+            <h2>Hàng thừa</h2>
             {waitingExcess > 0 && user?.role === 'OWNER' && (
               <Link className="mf-btn mf-btn--primary mf-btn--sm" to="/goods-receipt-notes/excess">
-                Quyết định hàng thừa
+                Duyệt hàng thừa
               </Link>
             )}
           </header>
-          <table className="sd-grid sd-grid--simple">
-            <thead>
-              <tr>
-                <th scope="col">Phụ tùng</th>
-                <th scope="col" className="sd-num">Số thừa</th>
-                <th scope="col">Hướng xử lý</th>
-              </tr>
-            </thead>
-            <tbody>
-              {excess.map((line) => (
-                <tr key={line.lineId}>
-                  <th scope="row" className="sd-cell-part">
-                    <b>{line.sku}</b>
-                    <span>{line.partName}</span>
+          <div className="sd-board-scroll">
+            <table className="sd-grid sd-grid--simple">
+              <thead>
+                <tr>
+                  <th scope="col">Phụ tùng</th>
+                  <th scope="col" className="sd-num">
+                    Số thừa
                   </th>
-                  <td className="sd-num" data-label="Số thừa">
-                    {line.quantity}
-                  </td>
-                  <td data-label="Hướng xử lý">
-                    <span
-                      className={
-                        'mf-badge ' +
-                        (line.decision === 'AWAITING_OWNER' ? 'mf-badge--warning' : 'mf-badge--muted')
-                      }
-                    >
-                      {excessDecisionLabels[line.decision] ?? '—'}
-                    </span>
-                  </td>
+                  <th scope="col">Quyết định</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {excess.map((line) => (
+                  <tr key={line.lineId}>
+                    <th scope="row" className="sd-cell-part">
+                      <b>{line.sku}</b>
+                      <span>{line.partName}</span>
+                    </th>
+                    <td className="sd-num" data-label="Số thừa">
+                      <span className="sd-qty-on">{line.quantity}</span>
+                    </td>
+                    <td data-label="Quyết định">{excessDecisionLabels[line.decision] ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
@@ -306,7 +294,7 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           mode={action.mode}
           onClose={() => setAction(undefined)}
           onSaved={(row) => {
-            replaceRow(row, 'Đã cập nhật hồ sơ sai lệch.')
+            replaceRow(row, 'Đã cập nhật hồ sơ.')
             setAction(undefined)
           }}
         />
