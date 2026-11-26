@@ -157,7 +157,7 @@ export default function PartsSearchPage() {
               <input
                 type="search"
                 aria-label="Tìm phụ tùng"
-                placeholder="Tìm theo tên, SKU, mã OEM hoặc mã vạch"
+                placeholder="Tìm theo tên, SKU hoặc mã OEM"
                 value={q}
                 onChange={(e) => search(e.target.value)}
               />

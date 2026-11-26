@@ -227,7 +227,6 @@ export type Preparation = {
     sellableQty: number
     storageArea: string | null
     binLocation: string | null
-    barcodes: string[]
     shortQty: number | null
     pickFirst: PickLot[]
   }[]

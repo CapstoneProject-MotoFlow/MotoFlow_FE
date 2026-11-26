@@ -63,7 +63,7 @@
 }
 .part-create-codes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   padding: 24px;
 }
@@ -153,8 +153,7 @@
   }
 }
 @media (max-width: 550px) {
-  .part-create-fields,
-  .part-create-codes {
+  .part-create-fields {
     grid-template-columns: 1fr;
   }
 }

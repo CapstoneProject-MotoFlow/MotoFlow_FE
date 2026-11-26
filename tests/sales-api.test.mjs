@@ -51,7 +51,6 @@ test('sales adapter retains BE status, version, permissions, quantities and auth
         referencePrice: 200,
         actualUnitPrice: 195,
         shortReason: 'Thiếu hàng',
-        barcodes: ['123'],
         pickFirst: [{ lotId: 8, expiryDate: '2027-01-01', takeQty: 7 }],
       },
     ],

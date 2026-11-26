@@ -123,7 +123,6 @@ export type OrderDto = {
     actualUnitPrice: number | null
     binLocation: string | null
     shortReason: string | null
-    barcodes: string[]
     pickFirst: { lotId: number; expiryDate: string | null; takeQty: number }[]
   }[]
 }
@@ -220,7 +219,6 @@ export function orderFromDto(dto: OrderDto): SalesOrder {
       binLocation: l.binLocation,
       short: !!l.shortReason,
       shortReason: l.shortReason ?? '',
-      barcodes: l.barcodes,
       lotHint: l.pickFirst
         ?.map(
           (lot) =>

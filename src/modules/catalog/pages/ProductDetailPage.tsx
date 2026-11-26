@@ -37,7 +37,6 @@ type Product = {
   specifications: string | null
   status: string
   oemCodes: string[]
-  barcodes: string[]
   imageUrls: string[]
   vehicleModels: {
     id: number
@@ -296,7 +295,6 @@ export default function ProductDetailPage() {
                   ['Xuất xứ', data.countryOfOrigin],
                   ['Đơn vị tính', data.baseUnit],
                   ['Mã OEM', data.oemCodes.join(' · ')],
-                  ['Mã vạch', data.barcodes.join(' · ')],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <dt>{label}</dt>
