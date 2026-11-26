@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
 import ts from 'typescript'
+import { createServer } from 'vite'
 
 const source = readFileSync(
   new URL('../src/modules/suppliers/discrepancyRules.ts', import.meta.url),
@@ -265,4 +269,53 @@ test('caseProgress splits held goods by kind and only lists open work', () => {
   })
   assert.equal(caseProgress({ ...row, decisionStatus: 'AWAITING_OWNER' }).label, 'Chờ Owner duyệt')
   assert.equal(caseProgress({ ...row, status: 'CLOSED' }).label, 'Đã đóng')
+})
+
+test('Owner still sees Nhận hàng lỗi / Nhận hàng sai when case is UNDECIDED (R-01)', async () => {
+  const server = await createServer({
+    configFile: false,
+    server: { middlewareMode: true, hmr: false, watch: null },
+    appType: 'custom',
+  })
+  try {
+    const { default: CaseActions } = await server.ssrLoadModule(
+      '/src/modules/suppliers/discrepancy/CaseActions.tsx',
+    )
+    const render = (overrides) =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(CaseActions, {
+            row: fresh({
+              sku: 'BUGI-01',
+              decisionStatus: 'UNDECIDED',
+              damagedUndecidedQty: 1,
+              wrongUndecidedQty: 2,
+              heldUndecidedQty: 3,
+              openReplacementQty: 2,
+              purchaseOrderId: 10,
+              canCreateReplacement: true,
+              canWaiveReplacement: true,
+              ...overrides,
+            }),
+            saving: false,
+            onAction: () => {},
+            onAcceptance: () => {},
+          }),
+        ),
+      )
+
+    const ownerHtml = render({ canApproveAcceptance: true })
+    assert.match(ownerHtml, />Nhận hàng lỗi<\/button>/)
+    assert.match(ownerHtml, />Nhận hàng sai<\/button>/)
+    assert.doesNotMatch(ownerHtml, />Nhập giao bù</)
+    assert.doesNotMatch(ownerHtml, />Bỏ giao bù<\/button>/)
+
+    const bmHtml = render({ canApproveAcceptance: false })
+    assert.doesNotMatch(bmHtml, />Nhận hàng lỗi<\/button>/)
+    assert.doesNotMatch(bmHtml, /Chờ Owner nhận kho/)
+  } finally {
+    await server.close()
+  }
 })

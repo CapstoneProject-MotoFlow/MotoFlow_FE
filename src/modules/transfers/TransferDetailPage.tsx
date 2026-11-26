@@ -570,9 +570,15 @@ export default function TransferDetailPage() {
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th className="tf-num">KH</th>
-                    <th className="tf-num">Soạn</th>
-                    <th className="tf-num">Xuất</th>
+                    <th className="tf-num" title="Số lượng kế hoạch">
+                      Kế hoạch
+                    </th>
+                    <th className="tf-num" title="Số lượng đã soạn">
+                      Soạn
+                    </th>
+                    <th className="tf-num" title="Số lượng đã xuất">
+                      Xuất
+                    </th>
                     <th className="tf-num">Đạt</th>
                     <th className="tf-num">Hỏng</th>
                     <th className="tf-num">

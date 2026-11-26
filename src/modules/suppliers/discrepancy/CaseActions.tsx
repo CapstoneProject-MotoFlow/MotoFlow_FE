@@ -5,7 +5,8 @@ import type { CaseActionMode } from './CaseActionDialog'
 import type { Case } from './types'
 
 /**
- * Thao tác bước 2 trong cột Tiến độ của bảng sai lệch: chỉ mở hành động sau khi hướng đã chốt (GVHD 24/11).
+ * Thao tác bước 2 trong cột Tiến độ của bảng sai lệch: nhập giao bù/bỏ giao bù mở sau khi hướng đã chốt (GVHD 24/11);
+ * nút Owner nhận hàng lỗi/giao sai theo cờ canApproveAcceptance của BE (cho nhận một phần kể cả khi chưa chốt hướng).
  */
 export default function CaseActions({
   row,
@@ -51,9 +52,9 @@ export default function CaseActions({
       )
     else waiting.push('Chờ BM nhập bù')
   }
-  if (decided && row.canApproveAcceptance && row.damagedUndecidedQty > 0)
+  if (row.canApproveAcceptance && row.damagedUndecidedQty > 0)
     actions.push(button('damaged', 'Nhận hàng lỗi', () => onAcceptance('damaged')))
-  if (decided && row.canApproveAcceptance && row.wrongUndecidedQty > 0)
+  if (row.canApproveAcceptance && row.wrongUndecidedQty > 0)
     actions.push(button('wrong', 'Nhận hàng sai', () => onAcceptance('wrong')))
   if (decided && !row.canApproveAcceptance && row.heldUndecidedQty > 0)
     waiting.push('Chờ Owner nhận kho')

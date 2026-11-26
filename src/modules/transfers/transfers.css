@@ -1406,12 +1406,6 @@ section .tf-alert-error {
 section .tf-info-banner {
   margin: 12px 20px;
 }
-.mf-field-hint {
-  display: block;
-  margin-top: 4px;
-  color: #475467;
-  font-size: 12px;
-}
 
 /* Bảng chi tiết lệnh & sai lệch: gọn, đủ rộng trên 1360px có sidebar, số căn phải tabular-nums. */
 .tf-detail-lines-table table,
