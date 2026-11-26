@@ -37,6 +37,7 @@ const {
   decisionSaveButtons,
   standardReplacement,
   decisionNumbers,
+  caseProgress,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -469,4 +470,21 @@ test('a replacement delivery never asks for another replacement by default', () 
   })
   assert.equal(standardReplacement(row, 0, 1), 0)
   assert.equal(decisionNumbers(row, decisionDraft(row)).replacement, 0)
+})
+
+test('caseProgress names the stage and only the work still open', () => {
+  const row = fresh({ damagedQty: 2, heldUndecidedQty: 2, decisionStatus: 'UNDECIDED' })
+  assert.deepEqual(caseProgress(row), { label: 'Chưa chốt', tone: 'warning', lines: [] })
+  const decided = {
+    ...row,
+    heldUndecidedQty: 0,
+    decisionStatus: 'DECIDED',
+    outstandingReturnQty: 2,
+    outstandingReplacementQty: 2,
+    openReplacementQty: 2,
+  }
+  assert.deepEqual(caseProgress(decided).lines, ['Còn phải trả NCC 2', 'Chờ NCC giao bù 2'])
+  assert.equal(caseProgress(decided).label, 'Đã chốt, đang xử lý')
+  assert.equal(caseProgress({ ...row, decisionStatus: 'AWAITING_OWNER' }).label, 'Chờ Owner duyệt')
+  assert.equal(caseProgress({ ...row, status: 'CLOSED' }).label, 'Đã đóng')
 })

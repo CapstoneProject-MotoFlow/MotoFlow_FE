@@ -413,3 +413,36 @@ export function decisionSaveButtons(needsOwner: boolean, owner: boolean) {
         },
   }
 }
+
+// ---- Ezy 26/11: một bảng duy nhất cho cả phiếu (bỏ thẻ ba hộp tóm tắt) --------------------------------------------
+
+export type CaseProgress = {
+  /** Nhãn chính của cột Tiến độ. */
+  label: string
+  tone: 'warning' | 'info' | 'success' | 'muted'
+  /** Việc còn dở, mỗi dòng một ý; số 0 không hiện. */
+  lines: string[]
+}
+
+/** Cột "Tiến độ" của bảng: trạng thái hướng xử lý và phần còn giữ / còn phải trả / chờ giao bù (thay ba hộp cũ). */
+export function caseProgress(row: Case): CaseProgress {
+  if (row.status !== 'OPEN') return { label: 'Đã đóng', tone: 'muted', lines: [] }
+  const lines: string[] = []
+  const status = row.decisionStatus ?? 'UNDECIDED'
+  if (status !== 'UNDECIDED' && row.heldUndecidedQty > 0)
+    lines.push(`Đang giữ ${row.heldUndecidedQty}, chờ quyết định`)
+  if (row.outstandingReturnQty > 0) lines.push(`Còn phải trả NCC ${row.outstandingReturnQty}`)
+  const replacement = Math.max(row.outstandingReplacementQty, row.openReplacementQty)
+  if (status !== 'UNDECIDED' && replacement > 0) lines.push(`Chờ NCC giao bù ${replacement}`)
+  row.pendingRequests?.forEach((request) =>
+    lines.push(
+      (request.type === 'DAMAGED' ? 'Nhận hàng lỗi ' : 'Nhận hàng giao sai ') +
+        request.quantity +
+        ' chờ Owner duyệt',
+    ),
+  )
+  if (status === 'UNDECIDED') return { label: 'Chưa chốt', tone: 'warning', lines }
+  if (status === 'AWAITING_OWNER') return { label: 'Chờ Owner duyệt', tone: 'info', lines }
+  if (isCaseSettled(row)) return { label: 'Đã xử lý đủ', tone: 'success', lines }
+  return { label: 'Đã chốt, đang xử lý', tone: 'info', lines }
+}

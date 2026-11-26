@@ -8,7 +8,6 @@ import { formatDate } from '../../../shared/utils/format'
 import { decisionLine, receiptHandlingStatus } from '../discrepancyRules'
 import AcceptanceDialog, { type AcceptanceMode } from './AcceptanceDialog'
 import CaseActionDialog, { type CaseActionMode } from './CaseActionDialog'
-import CaseCard from './CaseCard'
 import DecisionTable from './DecisionTable'
 import { errorMessage, type Case } from './types'
 
@@ -32,8 +31,8 @@ const excessDecisionLabels: Record<string, string> = {
 }
 
 /**
- * Xử lý sai lệch của một phiếu nhập. GVHD 24/11: bước 1 chốt hướng xử lý cả phiếu trong một bảng (DecisionTable),
- * bước 2 mỗi phụ tùng một thẻ với các hành động khi hướng đã chốt.
+ * Xử lý sai lệch của một phiếu nhập. GVHD 24/11: chốt hướng xử lý cả phiếu trong một bảng (DecisionTable). Ezy 26/11:
+ * bỏ các thẻ cũ theo phụ tùng, tiến độ và hành động tiếp theo nằm luôn trong bảng.
  * PM 22/11: hiện cả dòng hàng thừa; phiếu chỉ xong khi mọi hồ sơ đã đóng và không còn hàng thừa chờ Owner.
  */
 export default function ReceiptHandlingView({ receiptId }: { receiptId: string }) {
@@ -150,45 +149,50 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
   return (
     <>
       <header className="sd-head">
-        <div>
+        <div className="sd-head-title">
           <h1>Xử lý sai lệch nhà cung cấp</h1>
-          <p className="sd-meta">
-            <span>
-              Phiếu nhập <b>{documentCode('PN', Number(receiptId))}</b>
+          {!loading && (rows.length > 0 || excess.length > 0 || handlingComplete === null) && (
+            <span
+              className={'mf-badge ' + (status.done ? 'mf-badge--success' : 'mf-badge--warning')}
+            >
+              {status.text}
             </span>
-            {first?.purchaseOrderId && (
-              <span>
-                Đơn nhập{' '}
+          )}
+        </div>
+        <dl className="sd-facts">
+          <div>
+            <dt>Phiếu nhập</dt>
+            <dd>{documentCode('PN', Number(receiptId))}</dd>
+          </div>
+          {first?.purchaseOrderId && (
+            <div>
+              <dt>Đơn nhập</dt>
+              <dd>
                 <Link to={'/purchase-orders/' + first.purchaseOrderId}>
                   {documentCode('DNH', first.purchaseOrderId)}
                 </Link>
-              </span>
-            )}
-            {first?.supplierName && (
-              <span>
-                Nhà cung cấp <b>{first.supplierName}</b>
-              </span>
-            )}
-            {first?.storeName && (
-              <span>
-                Kho <b>{first.storeName}</b>
-              </span>
-            )}
-            {first?.deliveryDate && (
-              <span>
-                Giao ngày <b>{formatDate(first.deliveryDate)}</b>
-              </span>
-            )}
-            {!loading && (rows.length > 0 || excess.length > 0 || handlingComplete === null) && (
-              <span>
-                Tình trạng phiếu{' '}
-                <b className={status.done ? 'sd-receipt-done' : 'sd-receipt-open'}>
-                  {status.text}
-                </b>
-              </span>
-            )}
-          </p>
-        </div>
+              </dd>
+            </div>
+          )}
+          {first?.supplierName && (
+            <div>
+              <dt>Nhà cung cấp</dt>
+              <dd>{first.supplierName}</dd>
+            </div>
+          )}
+          {first?.storeName && (
+            <div>
+              <dt>Kho</dt>
+              <dd>{first.storeName}</dd>
+            </div>
+          )}
+          {first?.deliveryDate && (
+            <div>
+              <dt>Giao ngày</dt>
+              <dd>{formatDate(first.deliveryDate)}</dd>
+            </div>
+          )}
+        </dl>
       </header>
 
       {notice && (
@@ -227,63 +231,67 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           </section>
         )
       ) : (
-        <>
-          <section className="sd-panel">
-            <DecisionTable
-              key={rows.map((row) => row.id + ':' + row.decisionStatus).join(',')}
-              rows={rows}
-              owner={user?.role === 'OWNER'}
-              busy={saving}
-              onSave={saveDecisions}
-              onApprove={approveDecisions}
-              onReject={rejectDecisions}
-            />
-            {saveError && (
-              <p role="alert" className="sd-error">
-                {saveError}
-              </p>
-            )}
-          </section>
-          <section className="sd-panel" aria-label="Hành động theo hướng đã chốt">
-            {rows.map((row) => (
-              <CaseCard
-                key={row.id}
-                row={row}
-                saving={saving}
-                onAction={(mode) => setAction({ row, mode })}
-                onAcceptance={(mode) => setAcceptance({ row, mode })}
-              />
-            ))}
-          </section>
-        </>
+        <section className="sd-panel">
+          <DecisionTable
+            key={rows.map((row) => row.id + ':' + row.decisionStatus).join(',')}
+            rows={rows}
+            owner={user?.role === 'OWNER'}
+            busy={saving}
+            onSave={saveDecisions}
+            onApprove={approveDecisions}
+            onReject={rejectDecisions}
+            onAction={(row, mode) => setAction({ row, mode })}
+            onAcceptance={(row, mode) => setAcceptance({ row, mode })}
+          />
+          {saveError && (
+            <p role="alert" className="sd-error sd-panel-error">
+              {saveError}
+            </p>
+          )}
+        </section>
       )}
 
       {!loading && excess.length > 0 && (
         <section className="sd-panel sd-excess" aria-label="Hàng thừa của phiếu nhập">
           <header className="sd-excess-head">
-            <h2>Hàng thừa</h2>
+            <div>
+              <h2>Hàng thừa</h2>
+              <p className="sd-muted">Hàng giao dư so với đơn nhập, Owner quyết nhận vào kho hay trả NCC.</p>
+            </div>
             {waitingExcess > 0 && user?.role === 'OWNER' && (
               <Link className="mf-btn mf-btn--primary mf-btn--sm" to="/goods-receipt-notes/excess">
                 Quyết định hàng thừa
               </Link>
             )}
           </header>
-          <table className="stock-table">
+          <table className="sd-grid sd-grid--simple">
             <thead>
               <tr>
-                <th>Phụ tùng</th>
-                <th>Số thừa</th>
-                <th>Hướng xử lý</th>
+                <th scope="col">Phụ tùng</th>
+                <th scope="col" className="sd-num">Số thừa</th>
+                <th scope="col">Hướng xử lý</th>
               </tr>
             </thead>
             <tbody>
               {excess.map((line) => (
                 <tr key={line.lineId}>
-                  <td>
-                    {line.sku} · {line.partName}
+                  <th scope="row" className="sd-cell-part">
+                    <b>{line.sku}</b>
+                    <span>{line.partName}</span>
+                  </th>
+                  <td className="sd-num" data-label="Số thừa">
+                    {line.quantity}
                   </td>
-                  <td>{line.quantity}</td>
-                  <td>{excessDecisionLabels[line.decision] ?? '—'}</td>
+                  <td data-label="Hướng xử lý">
+                    <span
+                      className={
+                        'mf-badge ' +
+                        (line.decision === 'AWAITING_OWNER' ? 'mf-badge--warning' : 'mf-badge--muted')
+                      }
+                    >
+                      {excessDecisionLabels[line.decision] ?? '—'}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

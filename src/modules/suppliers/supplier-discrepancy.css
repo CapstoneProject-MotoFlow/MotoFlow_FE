@@ -33,6 +33,30 @@
   font: inherit;
   font-size: var(--mf-fs-body);
 }
+/* Select: tự vẽ đúng một chevron, tắt mũi tên gốc ở mọi engine, chữ dài không xuống dòng. Trong trang, rule select của
+   ui.css (.admin-dashboard .dashboard-main, mạnh hơn) vẫn quyết định padding/nền; rule này lo phần ui.css không có
+   (-webkit-/-moz-appearance, nowrap) và select trong hộp thoại nằm ngoài .dashboard-main. */
+.supplier-discrepancy-page select:not([multiple]),
+.sd-dialog select:not([multiple]) {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 32px;
+  overflow: hidden;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%235b6b82' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 16px;
+  color: var(--mf-text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.supplier-discrepancy-page select::-ms-expand,
+.sd-dialog select::-ms-expand {
+  display: none;
+}
+.supplier-discrepancy-page select:disabled {
+  background-color: #f3f5f9;
+}
 .supplier-discrepancy-page textarea,
 .sd-dialog textarea {
   padding: 8px 10px;
@@ -197,6 +221,7 @@
 .supplier-discrepancy-page .sd-part-link {
   display: grid;
   color: var(--mf-text);
+  white-space: normal;
 }
 .supplier-discrepancy-page .sd-part-link b {
   color: var(--mf-primary);
@@ -213,7 +238,7 @@
   text-align: right;
 }
 .sd-table .sd-supplier-cell {
-  min-width: 180px;
+  min-width: 200px;
 }
 .sd-table td .sd-chips {
   min-width: 120px;
@@ -232,164 +257,6 @@
   margin-right: auto;
 }
 
-/* ---------- Thẻ hồ sơ theo phiếu ---------- */
-.sd-case {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-  padding: 20px;
-}
-/* Chip trạng thái được xuống dòng trong thẻ hẹp (375px), không tràn ngang. */
-.sd-case-head > div {
-  min-width: 0;
-  max-width: 100%;
-}
-.sd-case-tags .mf-badge {
-  display: inline-block;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: left;
-}
-.sd-case + .sd-case {
-  border-top: 1px solid var(--mf-border);
-}
-.sd-case-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px 16px;
-}
-.supplier-discrepancy-page .sd-case-head h2 {
-  margin: 0;
-}
-.sd-case-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-/* Ba hộp tóm tắt: nhận / đang giữ / còn phải trả. */
-.sd-flow {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  align-items: stretch;
-  gap: 10px;
-}
-.sd-flow-arrow {
-  align-self: center;
-  color: #a9b4c4;
-  font-size: 18px;
-}
-.sd-tile {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--mf-border-soft);
-  border-radius: var(--mf-radius);
-  background: #fbfcfe;
-}
-.sd-tile h3 {
-  margin: 0 0 8px;
-  color: var(--mf-muted);
-  font-size: var(--mf-fs-small);
-  font-weight: 600;
-}
-.sd-tile dl {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-  margin: 0;
-}
-.sd-tile dl div {
-  display: grid;
-}
-.sd-tile dd {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-.sd-tile dt {
-  color: var(--mf-text-2);
-  font-size: var(--mf-fs-small);
-}
-.sd-tile--todo {
-  border-color: #f5d4a8;
-  background: var(--mf-warning-soft);
-}
-.sd-tile--todo dd {
-  color: var(--mf-warning);
-}
-
-/* Hướng xử lý và nút việc của hồ sơ. */
-.sd-work {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px 24px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--mf-border);
-}
-.sd-plan {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.sd-plan legend {
-  margin-bottom: 8px;
-  padding: 0;
-  color: var(--mf-text);
-  font-size: 13px;
-  font-weight: 650;
-}
-.sd-plan-fields {
-  display: flex;
-  flex-wrap: wrap;
-  /* Ô nhập luôn thẳng hàng theo mép trên; chú thích bên dưới không đẩy ô nhập. */
-  align-items: flex-start;
-  gap: 12px 20px;
-}
-.sd-plan-note {
-  flex: 1 1 260px;
-}
-.sd-qty-field {
-  display: grid;
-  gap: 4px;
-}
-.sd-qty-field > span:first-child {
-  color: var(--mf-text-2);
-  font-size: var(--mf-fs-small);
-  font-weight: 500;
-}
-.sd-qty-input {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.supplier-discrepancy-page .sd-qty-input input {
-  width: 84px;
-  font-variant-numeric: tabular-nums;
-}
-.supplier-discrepancy-page .sd-qty-input input.is-changed {
-  border-color: var(--mf-primary);
-  box-shadow: 0 0 0 3px var(--mf-primary-soft);
-}
-.sd-qty-input small {
-  color: var(--mf-muted);
-  font-size: 13px;
-}
-/* Chú thích sàn luôn màu xám, không đổi theo lỗi của ô khác. */
-.sd-qty-hint {
-  color: var(--mf-muted);
-  font-size: var(--mf-fs-small);
-}
 .sd-field-error {
   color: var(--mf-danger);
   font-size: var(--mf-fs-small);
@@ -409,23 +276,6 @@
   opacity: 1;
   cursor: not-allowed;
 }
-.sd-actions {
-  display: grid;
-  justify-items: end;
-  gap: 6px;
-  margin-left: auto;
-}
-.sd-actions-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-}
-.sd-role-note {
-  text-align: right;
-}
-
 /* ---------- Hộp thoại ---------- */
 .sd-dialog-subtitle {
   margin: 0 0 12px;
@@ -601,90 +451,485 @@
   font-size: 13px;
 }
 
-/* ---------- Màn hẹp ---------- */
-@media (max-width: 900px) {
-  .sd-flow {
-    grid-template-columns: 1fr;
-  }
-  .sd-flow-arrow {
-    display: none;
-  }
-  .sd-actions {
-    justify-items: start;
-    margin-left: 0;
-  }
-  .sd-actions-buttons {
-    justify-content: flex-start;
-  }
-  .sd-role-note {
-    text-align: left;
-  }
-}
-@media (max-width: 600px) {
-  .sd-case {
-    padding: 16px;
-  }
-}
-.sd-receipt-done {
-  color: var(--mf-success);
-}
-.sd-receipt-open {
-  color: #b54708;
-}
-.sd-excess {
-  margin-top: 16px;
-  padding: 16px 20px;
-}
-.sd-excess-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-/* Review 25/11 (R-11): nút Sửa của bảng hướng xử lý nằm sát phải tiêu đề. */
-.sd-excess-head .sd-decision-edit-all {
-  margin-left: auto;
-}
-.sd-excess-head h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-/* GVHD 24/11: bảng hướng đề xuất xử lý với NCC của cả phiếu, một nút lưu. */
-.sd-decision {
+/* ---------- Đầu trang màn xử lý theo phiếu (Ezy 26/11) ---------- */
+.sd-head {
   display: grid;
   gap: 12px;
 }
-.sd-decision-scroll {
-  overflow-x: auto;
-}
-.sd-decision-table td,
-.sd-decision-table th {
-  vertical-align: top;
-  white-space: nowrap;
-}
-.sd-decision-table td:first-child {
-  white-space: normal;
-  min-width: 160px;
-}
-.sd-decision-table input[type='number'] {
-  width: 72px;
-}
-.sd-decision-table select {
-  max-width: 230px;
-}
-.sd-decision-table tr.is-editing td {
-  background: color-mix(in srgb, var(--mf-primary, #2563eb) 5%, transparent);
-}
-.sd-decision-save,
-.sd-reject {
+.sd-head-title {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
+  align-items: center;
+  gap: 8px 12px;
 }
-.sd-decision-save .sd-muted {
-  flex-basis: 100%;
+.sd-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 0;
   margin: 0;
+}
+.sd-facts > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 20px;
+  border-left: 1px solid var(--mf-border);
+}
+.sd-facts > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.sd-facts dt {
+  color: var(--mf-muted);
+  font-size: var(--mf-fs-small);
+}
+.sd-facts dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sd-panel-error {
+  padding: 0 20px 16px;
+}
+
+/* ---------- Bảng sai lệch của cả phiếu ---------- */
+.sd-board {
+  display: grid;
+  container-type: inline-size;
+}
+.sd-board-head,
+.sd-excess-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+}
+.sd-board-head h2,
+.sd-excess-head h2 {
+  margin: 0 0 2px;
+  font-size: var(--mf-fs-card);
+}
+.sd-approval {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 20px 16px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid #c9d4ff;
+  border-radius: var(--mf-radius);
+  background: var(--mf-primary-soft);
+}
+.sd-approval > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--mf-primary);
+}
+.sd-approval p {
+  flex: 1 1 220px;
+  margin: 0;
+}
+.sd-approval-buttons {
+  display: flex;
+  gap: 8px;
+}
+.sd-approval-reject {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+.sd-approval-reject .sd-field {
+  flex: 1 1 260px;
+}
+.sd-board-scroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--mf-border-soft);
+}
+.sd-grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+.sd-grid :is(th, td) {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--mf-border-soft);
+  vertical-align: top;
+}
+.sd-grid :is(th, td):first-child {
+  padding-left: 20px;
+}
+.sd-grid :is(th, td):last-child {
+  padding-right: 20px;
+}
+.sd-grid thead th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background: #f6f8fb;
+  color: var(--mf-text-2);
+  font-size: var(--mf-fs-th);
+  font-weight: 600;
+  vertical-align: bottom;
+}
+.sd-grid thead .sd-grid-band th {
+  padding-top: 12px;
+  padding-bottom: 6px;
+  color: var(--mf-text-2);
+  font-size: var(--mf-fs-small);
+  font-weight: 600;
+  border-bottom: 0;
+}
+.sd-grid thead .sd-grid-band th[colspan='3'],
+.sd-grid thead .sd-grid-band th[colspan='4'] {
+  text-align: center;
+}
+.sd-grid thead .sd-grid-band th[scope] {
+  background-image: linear-gradient(var(--mf-border), var(--mf-border));
+  background-repeat: no-repeat;
+  background-position: 10px 100%;
+  background-size: calc(100% - 20px) 2px;
+}
+.sd-grid thead .sd-grid-band th.sd-band-plan {
+  background-image: linear-gradient(var(--mf-primary), var(--mf-primary));
+  color: var(--mf-primary);
+}
+.sd-grid thead tr:not(.sd-grid-band) th {
+  padding-top: 8px;
+}
+.sd-grid tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+.sd-grid .sd-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.sd-grid tbody .sd-band-plan {
+  background: #fafbff;
+}
+.sd-col-check {
+  width: 44px;
+}
+.sd-col-num {
+  width: 56px;
+}
+.sd-col-plan {
+  width: 66px;
+}
+.sd-col-decision {
+  width: 214px;
+}
+.sd-col-progress {
+  width: 236px;
+}
+.sd-grid input[type='checkbox'] {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--mf-primary);
+  cursor: pointer;
+}
+.sd-grid thead input[type='checkbox'] {
+  margin: 0;
+}
+.sd-grid tbody tr:not(.is-picked):hover > :is(td, th) {
+  background-color: #f8f9fc;
+}
+.sd-grid .sd-cell-part {
+  display: table-cell;
+  min-width: 150px;
+  font-weight: 400;
+}
+.sd-cell-part b,
+.sd-cell-part span,
+.sd-cell-part small {
+  display: block;
+}
+.sd-cell-part b {
+  font-weight: 700;
+}
+.sd-cell-part span {
+  margin-top: 2px;
+  font-weight: 400;
+  color: var(--mf-text-2);
+  font-size: 13px;
+}
+.sd-cell-part small {
+  margin-top: 4px;
+  color: var(--mf-warning);
+  font-size: var(--mf-fs-small);
+}
+.sd-qty-zero {
+  color: #a3aec0;
+}
+.sd-qty-on {
+  font-weight: 700;
+}
+.sd-grid select {
+  width: 100%;
+}
+.sd-grid input[type='number'] {
+  width: 100%;
+  max-width: 60px;
+  padding: 0 6px;
+  text-align: right;
+}
+.sd-grid td.sd-num:has(input) {
+  padding-top: 8px;
+  padding-right: 6px;
+  padding-left: 6px;
+}
+.sd-grid td.sd-cell-decision:has(select) {
+  padding-top: 8px;
+}
+.sd-cell-decision > span {
+  display: block;
+  padding-top: 0;
+  font-weight: 500;
+}
+.sd-cell-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  color: var(--mf-muted);
+  font-size: var(--mf-fs-small);
+}
+.sd-cell-note svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+.sd-field-error {
+  margin: 6px 0 0;
+}
+.supplier-discrepancy-page .sd-cell-edit {
+  min-height: 24px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.sd-cell-progress ul {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 0;
+  color: var(--mf-text-2);
+  font-size: 13px;
+  list-style: none;
+}
+.sd-cell-progress .mf-badge,
+.sd-head-title .mf-badge {
+  border-radius: var(--mf-radius-sm);
+  white-space: normal;
+}
+.sd-cell-progress .sd-next {
+  margin-top: 8px;
+}
+.sd-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.sd-next .mf-btn {
+  justify-content: center;
+  white-space: nowrap;
+}
+.sd-next-wait {
+  order: -1;
+  flex-basis: 100%;
+  color: var(--mf-text-2);
+  font-size: var(--mf-fs-small);
+}
+.supplier-discrepancy-page .sd-next-link {
+  min-height: 24px;
+  padding-inline: 0;
+  font-size: 13px;
+}
+.sd-grid tr.is-editing > :is(td, th) {
+  background: #fcfcfe;
+}
+.sd-grid tr.is-picked > :is(td, th) {
+  background: var(--mf-primary-soft);
+}
+.sd-grid tr.is-picked > :first-child {
+  box-shadow: inset 3px 0 0 var(--mf-primary);
+}
+.sd-grid tr.is-closed > :is(td, th) {
+  color: var(--mf-muted);
+}
+
+/* Thanh lưu: dính đáy màn khi đã chọn dòng. */
+.sd-savebar {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) auto;
+  align-items: end;
+  gap: 8px 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--mf-border);
+  border-radius: 0 0 var(--mf-radius-lg) var(--mf-radius-lg);
+  background: #fff;
+}
+.sd-grid tbody tr {
+  scroll-margin-bottom: 160px;
+}
+.sd-savebar.is-active {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 -6px 16px rgb(20 33 58 / 8%);
+}
+.sd-savebar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+.sd-savebar-count {
+  color: var(--mf-text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sd-savebar-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--mf-muted);
+  font-size: 13px;
+}
+
+/* ---------- Hàng thừa ---------- */
+.sd-excess {
+  margin-top: 0;
+}
+.sd-grid--simple .sd-num {
+  width: 100px;
+}
+
+/* Màn hẹp (bảng không đủ chỗ): mỗi dòng thành một thẻ. Sáu số (sai lệch + số trả/giao bù) trên một hàng, hướng xử lý
+   và tiến độ chiếm cả chiều ngang; nhãn cột hiện trên giá trị. */
+@container (max-width: 979px) {
+  .sd-grid {
+    table-layout: auto;
+  }
+  .sd-grid thead,
+  .sd-grid colgroup {
+    display: none;
+  }
+  .sd-grid,
+  .sd-grid tbody {
+    display: block;
+  }
+  .sd-grid tbody tr {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--mf-border);
+  }
+  .sd-grid tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .sd-grid tbody tr > :is(td, th) {
+    display: block;
+    padding: 0 !important;
+    border: 0;
+    background: none !important;
+    box-shadow: none !important;
+  }
+  .sd-grid tbody tr > .sd-cell-check {
+    display: none;
+  }
+  .sd-grid tbody tr.has-check {
+    grid-template-columns: 24px repeat(6, minmax(0, 1fr));
+  }
+  .sd-grid tbody tr.has-check > .sd-cell-check {
+    display: block;
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .sd-grid tbody tr > .sd-cell-part {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .sd-grid tbody tr.has-check > .sd-cell-part {
+    grid-column: 2 / -1;
+  }
+  .sd-grid tbody tr.has-check > .sd-num:nth-child(3) {
+    grid-column-start: 2;
+  }
+  .sd-cell-decision {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+  .sd-cell-progress {
+    grid-column: 1 / -1;
+    order: 2;
+    padding-top: 12px !important;
+    border-top: 1px dashed var(--mf-border) !important;
+  }
+  .sd-grid tbody tr.has-check > :is(.sd-cell-decision, .sd-cell-progress) {
+    grid-column: 2 / -1;
+  }
+  .sd-grid tbody tr.is-picked {
+    background: var(--mf-primary-soft);
+  }
+  .sd-grid .sd-num {
+    text-align: left;
+  }
+  .sd-grid [data-label]::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--mf-muted);
+    font-size: var(--mf-fs-small);
+    font-weight: 500;
+    white-space: nowrap;
+    content: attr(data-label);
+  }
+  .sd-grid .sd-cell-progress::before {
+    display: none;
+  }
+  .sd-grid select {
+    max-width: 420px;
+  }
+  .sd-savebar {
+    grid-template-columns: 1fr;
+  }
+  .sd-savebar-actions {
+    justify-content: flex-start;
+  }
+  .sd-grid--simple tbody tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 560px) {
+  .sd-grid tbody tr,
+  .sd-grid tbody tr.has-check {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .sd-grid tbody tr.has-check > :is(.sd-cell-check, .sd-cell-part, .sd-cell-decision, .sd-cell-progress) {
+    grid-column: 1 / -1;
+  }
+  .sd-grid tbody tr.has-check > .sd-cell-check {
+    grid-row: auto;
+  }
+  .sd-grid tbody tr.has-check > .sd-num:nth-child(3) {
+    grid-column-start: auto;
+  }
+}
+@media (max-width: 600px) {
+  .sd-savebar {
+    grid-template-columns: 1fr;
+  }
+  .sd-savebar-actions {
+    justify-content: stretch;
+  }
+  .sd-savebar-actions .mf-btn {
+    flex: 1 1 100%;
+  }
 }
