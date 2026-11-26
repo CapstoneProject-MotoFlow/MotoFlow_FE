@@ -733,9 +733,6 @@ function WorkEditor({
                           <small>
                             {l.storageArea} / {l.binLocation} · Tồn kho{' '}
                             {l.sellableQty}
-                            {l.barcodes?.length
-                              ? ' · Mã vạch: ' + l.barcodes.join(', ')
-                              : ''}
                             {l.sellableQty < l.plannedQty && (
                               <small className="tf-validation-hint">
                                 Kho nguồn thiếu {l.plannedQty - l.sellableQty}{' '}

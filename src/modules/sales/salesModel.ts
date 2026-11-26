@@ -17,7 +17,6 @@ export type SalesLine = {
   sellableQty?: number
   heldByOthersQty?: number | null
   shortReason?: string
-  barcodes?: string[]
   actualUnitPrice?: number | null
   productId: number
   sku: string

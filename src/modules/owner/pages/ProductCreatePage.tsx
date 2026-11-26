@@ -2,7 +2,7 @@
  * File: modules/owner/pages/ProductCreatePage.tsx
  * Loại: MÀN HÌNH — Tạo mới / chỉnh sửa phụ tùng.
  * Đường dẫn: /owner/products/:id/edit, /owner/products/new, /branch-manager/products/new, /branch-manager/products/:id/edit.
- * Công dụng: Dùng chung cho tạo và sửa phụ tùng tùy URL có id; nhập mã, nhóm, thương hiệu, đơn vị, thông số, OEM/barcode, dòng xe và ảnh. Codes là component con quản lý danh sách mã nhập bằng Enter.
+ * Công dụng: Dùng chung cho tạo và sửa phụ tùng tùy URL có id; nhập mã, nhóm, thương hiệu, đơn vị, thông số, OEM, dòng xe và ảnh. Codes là component con quản lý danh sách mã nhập bằng Enter.
  */
 import { canEditCatalog } from '../../../shared/utils/roles'
 import { useAuth } from '../../../shared/hooks/useAuth'
@@ -27,7 +27,7 @@ type Model = {
   modelName: string
   status: string
 }
-/** Codes: Quản lý danh sách mã OEM hoặc barcode: nhập mã, thêm bằng Enter và bỏ mã. */
+/** Codes: Quản lý danh sách mã OEM: nhập mã, thêm bằng Enter và bỏ mã. */
 function Codes({
   label,
   values,
@@ -76,7 +76,7 @@ function Codes({
     </div>
   )
 }
-/** ProductCreatePage: Dùng chung cho tạo và sửa phụ tùng tùy URL có id; nhập mã, nhóm, thương hiệu, đơn vị, thông số, OEM/barcode, dòng xe và ảnh. Codes là component con quản lý danh sách mã nhập bằng Enter. */
+/** ProductCreatePage: Dùng chung cho tạo và sửa phụ tùng tùy URL có id; nhập mã, nhóm, thương hiệu, đơn vị, thông số, OEM, dòng xe và ảnh. Codes là component con quản lý danh sách mã nhập bằng Enter. */
 export default function ProductCreatePage() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -93,7 +93,6 @@ export default function ProductCreatePage() {
   const [oem, setOem] = useState<string[]>([])
   const [images, setImages] = useState<string[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
-  const [barcodes, setBarcodes] = useState<string[]>([])
   const [selected, setSelected] = useState<number[]>([])
   const [query, setQuery] = useState('')
 
@@ -112,7 +111,6 @@ export default function ProductCreatePage() {
         const product = r.data
         setInitial(product)
         setOem(product.oemCodes)
-        setBarcodes(product.barcodes)
         setSelected(product.vehicleModels.map((m: { id: number }) => m.id))
         setImages(product.imageUrls)
         function contains(node: Category): boolean {
@@ -180,7 +178,6 @@ export default function ProductCreatePage() {
           baseUnit: form.get('baseUnit'),
           specifications: form.get('specifications'),
           oemCodes: oem,
-          barcodes,
           vehicleModelIds: selected,
           imageUrls: images,
         },
@@ -327,14 +324,9 @@ export default function ProductCreatePage() {
                   </div>
                 </section>
                 <section className="owner-panel">
-                  <h2>Mã OEM và mã vạch</h2>
+                  <h2>Mã OEM</h2>
                   <div className="part-create-codes">
                     <Codes label="Mã OEM" values={oem} onChange={setOem} />
-                    <Codes
-                      label="Mã vạch"
-                      values={barcodes}
-                      onChange={setBarcodes}
-                    />
                   </div>
                 </section>
                 <section className="owner-panel">

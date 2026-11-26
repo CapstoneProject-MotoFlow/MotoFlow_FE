@@ -530,7 +530,7 @@ export function SalesOrderFormView({
       setHighlight((h) => Math.max(h - 1, 0))
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      // Quét mã vạch / gõ đúng SKU rồi Enter: thêm ngay dòng khớp.
+      // Gõ đúng SKU rồi Enter: thêm ngay dòng khớp.
       const exact = items.find(
         (p) => p.sku.toLocaleLowerCase() === query.trim().toLocaleLowerCase(),
       )
@@ -797,7 +797,7 @@ export function SalesOrderFormView({
                 onFocus={() => setProductOpen(true)}
                 onBlur={() => setTimeout(() => setProductOpen(false), 150)}
                 onKeyDown={onProductKey}
-                placeholder="Tìm phụ tùng theo tên, SKU hoặc quét mã vạch để thêm"
+                placeholder="Tìm phụ tùng theo tên hoặc SKU để thêm"
               />
               <kbd title="Nhấn F3 để quay lại ô tìm">F3</kbd>
               {productOpen && (
@@ -1088,7 +1088,7 @@ export function SalesOrderFormView({
                   <Icon name="box" />
                   <p>Chưa có phụ tùng nào trong đơn.</p>
                   <small>
-                    Gõ tên, SKU hoặc quét mã vạch ở ô phía trên rồi nhấn Enter.
+                    Gõ tên hoặc SKU ở ô phía trên rồi nhấn Enter.
                   </small>
                 </div>
               )}
