@@ -240,7 +240,7 @@ export default function ManagerTransferListPage() {
             </tbody>
           </table>
         </div>
-        {r.data && !rows.length && (
+        {!r.loading && r.data && !rows.length && (
           <p className="tf-empty">
             Không có lệnh phù hợp{search ? ' trong trang này' : ''}.
           </p>

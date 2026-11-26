@@ -171,7 +171,7 @@ export default function ReplenishmentListPage() {
               </tbody>
             </table>
           </div>
-          {r.data && !r.data.items.length && (
+          {!r.loading && r.data && !r.data.items.length && (
             <p className="tf-empty">Không có yêu cầu phù hợp.</p>
           )}
           <Pagination

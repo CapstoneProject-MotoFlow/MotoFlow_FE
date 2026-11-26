@@ -9,6 +9,7 @@ export default function CoordinationAction({
   canReturn = false,
   returnLines,
   inHead = false,
+  secondary = false,
 }: {
   id: number
   lines: {
@@ -28,6 +29,8 @@ export default function CoordinationAction({
   canReturn?: boolean
   /** Đặt nút trên dòng tiêu đề thẻ (CardHead) thay vì một khối riêng. */
   inHead?: boolean
+  /** Hiển thị dạng nút phụ khi đầu thẻ đã có nút chính khác. */
+  secondary?: boolean
   /** Hàng trả về nguồn: nhận id phiếu nhận vừa mở để chuyển ngay sang bước giao việc kiểm nhận. */
   onSaved: (receiptId?: number) => void
 }) {
@@ -57,12 +60,15 @@ export default function CoordinationAction({
     setReason('')
     setAction(next)
   }
+  const headBtnClass = inHead
+    ? 'mf-btn ' + (secondary ? 'mf-btn--secondary' : 'mf-btn--primary')
+    : undefined
   const buttons = (
     <>
       {canDecide && lines.length > 0 && (
         <button
           type="button"
-          className={inHead ? 'mf-btn mf-btn--primary' : undefined}
+          className={headBtnClass}
           onClick={() => open(replenishment ? 'purchase' : 'decision')}
         >
           {replenishment ? 'Chuyển phần thiếu sang mua' : 'Xử lý phần thiếu'}
@@ -71,7 +77,7 @@ export default function CoordinationAction({
       {!replenishment && canReturn && (returnLines ?? lines).length > 0 && (
         <button
           type="button"
-          className={inHead ? 'mf-btn mf-btn--primary' : undefined}
+          className={headBtnClass}
           onClick={() => open('return')}
         >
           Ghi nhận hàng trả về nguồn

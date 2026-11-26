@@ -18,6 +18,7 @@ export default function ReceivingAssignment({
   taskType,
   documentId,
   variant = 'head',
+  secondary = false,
   fallback = null,
   onSaved,
   onCurrentChange,
@@ -25,6 +26,8 @@ export default function ReceivingAssignment({
   taskType: ReceivingTaskType
   documentId: number
   variant?: 'row' | 'head'
+  /** Hiển thị nút phụ khi đầu thẻ đã có nút chính khác. */
+  secondary?: boolean
   fallback?: ReactNode
   onSaved?: (name: string) => void
   onCurrentChange?: (documentId: number, assigned: boolean) => void
@@ -52,7 +55,7 @@ export default function ReceivingAssignment({
   const button =
     'mf-btn ' +
     (row ? 'mf-btn--sm ' : '') +
-    (current ? 'mf-btn--secondary' : 'mf-btn--primary')
+    (current || secondary ? 'mf-btn--secondary' : 'mf-btn--primary')
   return (
     <>
       {current &&

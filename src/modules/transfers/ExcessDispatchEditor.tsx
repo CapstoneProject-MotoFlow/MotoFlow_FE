@@ -172,7 +172,11 @@ export default function ExcessDispatchEditor({
               void save()
             }}
           >
-            {error && <p role="alert">{error}</p>}
+            {error && (
+              <p role="alert" className="tf-alert-error">
+                {error}
+              </p>
+            )}
             <p>Số lượng dưới đây được cộng vào số hàng gửi dư đã xác nhận.</p>
             <ul>
               {lines.map((l) => (

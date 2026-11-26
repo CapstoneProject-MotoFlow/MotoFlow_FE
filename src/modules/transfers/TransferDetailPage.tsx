@@ -24,6 +24,7 @@ import {
   receiptAcceptsResult,
   reconciliationTimeline,
   WRONG_ITEM_TIP,
+  wrongParts,
 } from './transferRules'
 import InfoTip from '../../shared/ui/InfoTip'
 import { useReturnQuantities } from './useReturnQuantities'
@@ -115,38 +116,23 @@ function eventName(event: TransferEvent) {
               (event.rejectionReason ? ': ' + event.rejectionReason : '')
             : ' · Chờ kho gửi xác nhận')
     )
-  // GVHD 24/11: hàng giao sai trả lại kho gửi, tồn không đổi.
+  // GVHD 24/11 + R-14: hàng giao sai trả lại kho gửi, tồn không đổi; thể hiện rõ trạng thái xác nhận/từ chối.
   if (event.resolutionType === 'WRONG_ITEM_RETURNED')
-    return 'Hoàn trả hàng giao sai: ' + (event.receivedSku ?? 'phụ tùng khác')
+    return (
+      'Hoàn trả hàng giao sai: ' +
+      (event.receivedSku ?? 'phụ tùng khác') +
+      (event.status === 'CONFIRMED'
+        ? ' · Kho gửi đã xác nhận nhận lại'
+        : event.status === 'CANCELLED'
+          ? ' · Đã hủy'
+          : event.status === 'REJECTED'
+            ? ' · Kho gửi từ chối' +
+              (event.rejectionReason ? ': ' + event.rejectionReason : '')
+            : event.status === 'AWAITING_SOURCE'
+              ? ' · Chờ kho gửi xác nhận'
+              : '')
+    )
   return resolutionNames[event.resolutionType] ?? 'Bước xử lý khác'
-}
-
-/**
- * GVHD 24/11 (R3): giao sai thành mặt hàng gì, lấy từ phiếu nhận (chờ hoặc đã xác nhận) và hoàn trả của dòng, ví dụ
- * "XICH-XE x1 nhập kho, XICH-XE x1 hoàn trả".
- */
-function wrongParts(order: Transfer, productId: number) {
-  return order.discrepancies
-    .filter((item) => item.productId === productId)
-    .flatMap((item) => item.events)
-    .filter(
-      (event) =>
-        event.resolutionType === 'WRONG_ITEM_RETURNED' ||
-        (event.resolutionType === 'RECEIVED_AS_OTHER_PRODUCT' &&
-          (event.status === 'AWAITING_SOURCE' || event.status === 'CONFIRMED')),
-    )
-    .map(
-      (event) =>
-        (event.receivedSku ?? 'phụ tùng khác') +
-        ' x' +
-        event.quantity +
-        (event.resolutionType === 'WRONG_ITEM_RETURNED'
-          ? ' hoàn trả'
-          : event.status === 'CONFIRMED'
-            ? ' nhập kho'
-            : ' chờ kho gửi'),
-    )
-    .join(', ')
 }
 
 function miscountEvent(order: Transfer, productId: number) {
@@ -372,11 +358,12 @@ export default function TransferDetailPage() {
         key: 'confirm-reconciliation',
         label: 'Xác nhận đối soát',
         icon: 'check',
+        disabled: wrongOpen.total > 0,
         onClick: () => {
           setAckError('')
           setConfirmingReconciliation(true)
         },
-        primary: !actions.some((act) => act.primary),
+        primary: wrongOpen.total === 0 && !actions.some((act) => act.primary),
       })
     if (source && canConfirmExcess(d.status, d.lines))
       actions.push({
@@ -400,6 +387,11 @@ export default function TransferDetailPage() {
           ),
       }
   }
+  const hasPrimaryAction = actions.some((act) => act.primary)
+  const showNoReplacementCol = !!d?.lines.some((l) => (l.noReplacementQty ?? 0) > 0)
+  const showLossCol = !!d?.lines.some((l) => (l.lossQty ?? 0) > 0)
+  const showUnresolvedCol =
+    received && !!d?.lines.some((l) => (l.unresolvedQty ?? 0) > 0)
   return (
     <main className="dashboard-content tf-page tf-detail-page">
       <PageBackLink to="/transfer-orders" />
@@ -415,33 +407,34 @@ export default function TransferDetailPage() {
         </p>
       )}
       {ackError && (
-        <p className="stock-error" role="alert">
+        <p className="tf-alert-error" role="alert">
           {ackError}
         </p>
       )}
       {coordinator && needsAcknowledgement && (
-        <p className="tf-note" role="status">
-          Kho nhận chưa gửi yêu cầu đối soát hàng thiếu/hỏng/giao sai. Owner đóng phiếu sau khi kho gửi xác nhận đối soát.
+        <p className="tf-info-banner" role="status">
+          Kho nhận chưa gửi yêu cầu đối soát sai lệch. Owner đóng phiếu sau khi hai kho đối soát xong.
         </p>
       )}
       {dest && needsAcknowledgement && pendingReceipt && (
-        <p className="tf-note" role="status">
-          Xác nhận phiếu nhận điều chuyển trước, sau đó mới gửi yêu cầu đối soát.
+        <p className="tf-info-banner" role="status">
+          Xác nhận phiếu nhận điều chuyển trước khi gửi yêu cầu đối soát.
         </p>
       )}
       {coordinator && ownerOnlyClose && moving && (
-        <p className="tf-note" role="status">
+        <p className="tf-info-banner" role="status">
           {d?.reconciliationConfirmedAt
-            ? 'Hai kho đã đối soát. Chỉ Owner đóng phiếu.'
-            : 'Kho nhận đã gửi yêu cầu đối soát, chờ kho gửi xác nhận. Chỉ Owner đóng phiếu.'}
+            ? 'Hai kho đã đối soát xong. Chờ Owner đóng phiếu.'
+            : 'Kho nhận đã gửi yêu cầu đối soát, đang chờ kho gửi xác nhận.'}
         </p>
       )}
       {d && (
         <>
           <section>
             <CardHead
-              title={d.sourceStoreName + ' đến ' + d.destStoreName}
+              title={d.sourceStoreName + ' → ' + d.destStoreName}
               status={states[d.status]}
+              statusClass={'tf-status-' + d.status}
             >
               {actions.map((act) => (
                 <HeadButton key={act.key} action={act} />
@@ -451,6 +444,7 @@ export default function TransferDetailPage() {
                   key="receiving"
                   taskType="TRANSFER_RECEIVING"
                   documentId={d.id}
+                  secondary={hasPrimaryAction}
                   onSaved={(name) =>
                     setSuccess('Đã giao việc nhận hàng cho ' + name + '.')
                   }
@@ -459,6 +453,7 @@ export default function TransferDetailPage() {
               {coordinationInHead && (
                 <CoordinationAction
                   inHead
+                  secondary={hasPrimaryAction || (dest && awaitingArrival)}
                   // PM 23/11: BM kho nhận (hoặc Owner) chọn Nhận sau / Không cần giao bù.
                   canDecide={dest || scope.owner}
                   canReturn={source && !!returns.data?.length}
@@ -477,18 +472,18 @@ export default function TransferDetailPage() {
             {d.status === 'RECONCILING' &&
               (!!closeAction || canConfirmReconciliation) &&
               wrongOpen.total > 0 && (
-                <p className="tf-note" role="status">
-                  Còn {wrongOpen.total} hàng giao sai chưa xử lý xong (
+                <p className="tf-blocker-banner" role="status">
+                  <strong>Còn {wrongOpen.total} hàng giao sai chưa xử lý xong</strong> (
                   {wrongOpen.skus.join(', ')}):{' '}
                   {[
                     wrongOpen.pending > 0 &&
-                      wrongOpen.pending + ' chưa có phiếu nhận hay hoàn trả',
+                      wrongOpen.pending + ' chưa lập phiếu nhận hay hoàn trả',
                     wrongOpen.awaiting > 0 &&
                       wrongOpen.awaiting + ' chờ kho gửi xác nhận',
                   ]
                     .filter(Boolean)
                     .join(', ')}
-                  . Xử lý hết mới{' '}
+                  . Xử lý xong mới{' '}
                   {canConfirmReconciliation
                     ? 'xác nhận đối soát'
                     : 'đóng phiếu'}{' '}
@@ -570,28 +565,29 @@ export default function TransferDetailPage() {
                 </span>
               ))}
             </div>
-            <div className="tf-table">
+            <div className="tf-table tf-detail-lines-table">
               <table>
                 <thead>
                   <tr>
                     <th>Phụ tùng</th>
-                    <th>Kế hoạch</th>
-                    <th>Đã soạn</th>
-                    <th>Đã xuất</th>
-                    <th>Đạt</th>
-                    <th>Hỏng</th>
-                    {/* GVHD 24/11: tách rõ thiếu mặt hàng đặt và giao sai thành mặt hàng khác. */}
-                    <th>Thiếu (mặt hàng đặt)</th>
-                    <th>
-                      Giao sai (mặt hàng khác){' '}
-                      <InfoTip text={WRONG_ITEM_TIP} />
+                    <th className="tf-num">KH</th>
+                    <th className="tf-num">Soạn</th>
+                    <th className="tf-num">Xuất</th>
+                    <th className="tf-num">Đạt</th>
+                    <th className="tf-num">Hỏng</th>
+                    <th className="tf-num">
+                      Thiếu{' '}
+                      <InfoTip text="Thiếu mặt hàng đặt = đã xuất − đạt − hỏng − mất − không giao bù. Hàng giao sai không tính là thiếu." />
                     </th>
                     <th>
+                      Giao sai <InfoTip text={WRONG_ITEM_TIP} />
+                    </th>
+                    <th className="tf-num">
                       Thừa <InfoTip text={EXCESS_TIP} />
                     </th>
-                    <th>Không giao bù</th>
-                    <th>Mất</th>
-                    <th>Chờ quyết</th>
+                    {showNoReplacementCol && <th className="tf-num">Không bù</th>}
+                    {showLossCol && <th className="tf-num">Mất</th>}
+                    {showUnresolvedCol && <th className="tf-num">Chờ quyết</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -599,10 +595,11 @@ export default function TransferDetailPage() {
                     const miscount = l.receiverMiscounted
                       ? miscountEvent(d, l.productId)
                       : undefined
+                    const wrongSummary = wrongParts(d, l.productId)
                     return (
                       <tr key={l.productId}>
-                        <td>
-                          {l.sku}
+                        <td data-label="Phụ tùng" className="tf-part-cell">
+                          <strong>{l.sku}</strong>
                           <small>{l.partName}</small>
                           {l.receiverMiscounted && (
                             <small className="tf-line-flag">
@@ -611,30 +608,56 @@ export default function TransferDetailPage() {
                             </small>
                           )}
                         </td>
-                        <td>{l.plannedQty}</td>
-                        <td>{l.preparedQty ?? 'Chưa ghi'}</td>
-                        <td>{l.dispatchedQty ?? 'Chưa xuất'}</td>
-                        <td>{passedOf(l) ?? '—'}</td>
-                        <td>{l.damagedQty ?? '—'}</td>
-                        <td>
+                        <td data-label="Kế hoạch" className="tf-num">
+                          {l.plannedQty}
+                        </td>
+                        <td data-label="Đã soạn" className="tf-num">
+                          {l.preparedQty ?? 'Chưa ghi'}
+                        </td>
+                        <td data-label="Đã xuất" className="tf-num">
+                          {l.dispatchedQty ?? 'Chưa xuất'}
+                        </td>
+                        <td data-label="Đạt" className="tf-num">
+                          {passedOf(l) ?? '—'}
+                        </td>
+                        <td data-label="Hỏng" className="tf-num">
+                          {l.damagedQty ?? '—'}
+                        </td>
+                        <td data-label="Thiếu" className="tf-num">
                           {received ? (l.shortageQty ?? '—') : '—'}
                           {(l.latePendingQty ?? 0) > 0 && (
                             <small>{l.latePendingQty} nhận sau</small>
                           )}
                         </td>
-                        <td>
-                          {l.wrongItemQty ?? '—'}
-                          {wrongParts(d, l.productId) && (
-                            <small>{wrongParts(d, l.productId)}</small>
-                          )}
+                        <td data-label="Giao sai" className="tf-wrong-cell">
+                          <span className="tf-num-val">
+                            {l.wrongItemQty ?? '—'}
+                          </span>
+                          {wrongSummary && <small>{wrongSummary}</small>}
                           {(l.wrongPendingQty ?? 0) > 0 && (
-                            <small>{l.wrongPendingQty} chưa xử lý</small>
+                            <small className="tf-line-flag">
+                              {l.wrongPendingQty} chưa xử lý
+                            </small>
                           )}
                         </td>
-                        <td>{l.extraReceivedQty || (received ? 0 : '—')}</td>
-                        <td>{l.noReplacementQty ?? '—'}</td>
-                        <td>{l.lossQty ?? '—'}</td>
-                        <td>{received ? (l.unresolvedQty ?? '—') : '—'}</td>
+                        <td data-label="Thừa" className="tf-num">
+                          {l.extraReceivedQty || (received ? 0 : '—')}
+                        </td>
+                        {showNoReplacementCol && (
+                          <td data-label="Không giao bù" className="tf-num">
+                            {l.noReplacementQty ?? '—'}
+                          </td>
+                        )}
+                        {showLossCol && (
+                          <td data-label="Mất" className="tf-num">
+                            {l.lossQty ?? '—'}
+                          </td>
+                        )}
+                        {showUnresolvedCol && (
+                          <td data-label="Chờ quyết" className="tf-num">
+                            {received ? (l.unresolvedQty ?? '—') : '—'}
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -644,7 +667,7 @@ export default function TransferDetailPage() {
           </section>
           {/* PM 23/11 (UI-02): Sai lệch + Hàng giao sai đặt trên Các lần nhận hàng. */}
           {d.status === 'RECONCILING' && !coordinator && !dest && (
-            <p className="tf-note" role="status">
+            <p className="tf-info-banner" role="status">
               Kho nhận và kho gửi đang đối soát sai lệch.
             </p>
           )}
@@ -655,22 +678,21 @@ export default function TransferDetailPage() {
                 loading={returns.loading}
                 error={returns.error}
               />
-              <div className="stock-table-scroll">
-                <table className="tf-table tf-discrepancy-table">
+              <div className="tf-table tf-discrepancy-wrap">
+                <table className="tf-discrepancy-table">
                   <thead>
                     <tr>
                       <th>Phụ tùng</th>
-                      <th>Đã xuất</th>
-                      <th>Đạt</th>
-                      <th>Thiếu (mặt hàng đặt)</th>
+                      <th className="tf-num">Xuất</th>
+                      <th className="tf-num">Đạt</th>
+                      <th className="tf-num">Thiếu</th>
                       <th>
-                        Giao sai (mặt hàng khác){' '}
-                        <InfoTip text={WRONG_ITEM_TIP} />
+                        Giao sai <InfoTip text={WRONG_ITEM_TIP} />
                       </th>
-                      <th>
+                      <th className="tf-num">
                         Thừa <InfoTip text={EXCESS_TIP} />
                       </th>
-                      <th>Chờ quyết</th>
+                      <th className="tf-num">Chờ quyết</th>
                       <th>Trạng thái</th>
                       <th>Chi tiết</th>
                       {miscountAllowed && <th>Owner</th>}
@@ -681,22 +703,38 @@ export default function TransferDetailPage() {
                       const line = d.lines.find(
                         (item) => item.productId === c.productId,
                       )
+                      const wrongSummary = wrongParts(d, c.productId)
                       return (
                         <tr key={c.id}>
-                          <td>{line?.sku ?? '—'} · {line?.partName ?? 'Phụ tùng'}</td>
-                          <td>{line?.dispatchedQty ?? '—'}</td>
-                          <td>{(line && passedOf(line)) ?? '—'}</td>
-                          <td>{line?.shortageQty ?? c.shortQty}</td>
-                          <td>
-                            {line?.wrongItemQty ?? c.wrongItemQty ?? 0}
-                            {wrongParts(d, c.productId) && (
-                              <small>{wrongParts(d, c.productId)}</small>
-                            )}
+                          <td data-label="Phụ tùng" className="tf-part-cell">
+                            <strong>{line?.sku ?? '—'}</strong>
+                            <small>{line?.partName ?? 'Phụ tùng'}</small>
                           </td>
-                          <td>{line?.extraReceivedQty ?? '—'}</td>
-                          <td><strong>{line?.unresolvedQty ?? '—'}</strong></td>
-                          <td>{states[c.status] ?? c.status}</td>
-                          <td>
+                          <td data-label="Đã xuất" className="tf-num">
+                            {line?.dispatchedQty ?? '—'}
+                          </td>
+                          <td data-label="Đạt" className="tf-num">
+                            {(line && passedOf(line)) ?? '—'}
+                          </td>
+                          <td data-label="Thiếu" className="tf-num">
+                            {line?.shortageQty ?? c.shortQty}
+                          </td>
+                          <td data-label="Giao sai" className="tf-wrong-cell">
+                            <span className="tf-num-val">
+                              {line?.wrongItemQty ?? c.wrongItemQty ?? 0}
+                            </span>
+                            {wrongSummary && <small>{wrongSummary}</small>}
+                          </td>
+                          <td data-label="Thừa" className="tf-num">
+                            {line?.extraReceivedQty ?? '—'}
+                          </td>
+                          <td data-label="Chờ quyết" className="tf-num">
+                            <strong>{line?.unresolvedQty ?? '—'}</strong>
+                          </td>
+                          <td data-label="Trạng thái">
+                            {states[c.status] ?? c.status}
+                          </td>
+                          <td data-label="Chi tiết" className="tf-events-cell">
                             {c.events.length ? (
                               <details>
                                 <summary>{c.events.length} lần xử lý</summary>
@@ -714,7 +752,7 @@ export default function TransferDetailPage() {
                             ) : '—'}
                           </td>
                           {miscountAllowed && (
-                            <td>
+                            <td data-label="Owner">
                               {c.status === 'OPEN' && line && !line.receiverMiscounted ? (
                                 <ReceiverMiscountAction
                                   orderId={d.id}
@@ -766,7 +804,7 @@ export default function TransferDetailPage() {
                   const content = (
                     <>
                       <span className="tf-receipt-card-title">
-                        Phiếu nhận điều chuyển
+                        Phiếu nhận {documentCode('PN', receipt.id)}
                       </span>
                       <span className="tf-receipt-status">
                         {states[receipt.status] ?? receipt.status}
@@ -880,7 +918,9 @@ export default function TransferDetailPage() {
               )}
               {d.receipts.map((receipt) => (
                 <li key={receipt.id}>
-                  <strong>Hàng đến · Phiếu nhận điều chuyển</strong>
+                  <strong>
+                    Hàng đến · Phiếu nhận {documentCode('PN', receipt.id)}
+                  </strong>
                   <span>
                     {dateTime(receipt.arrivedAt)} ·{' '}
                     {states[receipt.status] ?? receipt.status}

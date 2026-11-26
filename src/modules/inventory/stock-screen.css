@@ -241,6 +241,11 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.stock-screen .stock-overview-table > thead > tr > th.stock-numeric {
+  white-space: normal;
+  word-break: keep-all;
+  text-wrap: balance;
+}
 .stock-screen .stock-available {
   font-size: 15px !important;
   font-weight: 600;
