@@ -530,6 +530,12 @@
     min-width: 0;
   }
 }
+.count-workspace .stock-panel:has(> .opening-count-add) {
+  overflow: visible;
+}
+.count-workspace .stock-panel:has(> .opening-count-add) > .stock-panel-heading {
+  border-radius: 15px 15px 0 0;
+}
 .opening-count-add {
   padding: 16px 20px;
   display: grid;
@@ -537,10 +543,40 @@
   align-items: center;
   gap: 14px;
 }
-.opening-count-add p {
+.opening-count-add > p {
   margin: 0;
   color: #667085;
   font-size: 13px;
+}
+.count-workspace .opening-count-add input[role='combobox'],
+.count-workspace .opening-count-table input[type='date'],
+.count-workspace .opening-count-table input[type='number'] {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid #d0d9e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #17243c;
+  font: inherit;
+}
+.count-workspace .opening-count-add input[role='combobox'] {
+  padding-inline-end: 36px;
+}
+.count-workspace .opening-count-table input[type='date'],
+.count-workspace .opening-count-table input[type='number'] {
+  width: 100%;
+  min-width: 112px;
+  max-width: 184px;
+  font-variant-numeric: tabular-nums;
+}
+.count-workspace .opening-count-table input:focus-visible {
+  outline: 2px solid #4658f3;
+  outline-offset: -2px;
+}
+.count-workspace .opening-count-table input:disabled {
+  background: #f5f7fa;
+  color: #667085;
 }
 .opening-cost-form .stock-table input[type='number'],
 .count-record-row input[type='date'] {

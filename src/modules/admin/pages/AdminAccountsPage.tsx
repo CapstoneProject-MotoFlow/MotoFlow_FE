@@ -499,7 +499,7 @@ export default function AccountsPage() {
             </div>
           </div>
           <div className="table-scroll accounts-table-wrap">
-            <table className="accounts-table">
+            <table className="accounts-table account-list-table">
               <thead>
                 <tr>
                   <th>Người dùng</th>
@@ -512,9 +512,7 @@ export default function AccountsPage() {
                     danh mục
                   </th>
                   <th>Trạng thái</th>
-                  <th>
-                    <span className="sr-only">Thao tác</span>
-                  </th>
+                  <th className="account-actions-heading">Thao tác</th>
                 </tr>
               </thead>
               <tbody>

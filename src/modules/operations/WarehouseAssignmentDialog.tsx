@@ -39,19 +39,20 @@ export default function WarehouseAssignmentDialog({
       revision,
       Number.isSafeInteger(documentId) && documentId > 0,
     ),
+    eligibleAssignees = r.data?.eligibleAssignees ?? [],
     choice =
       selected ??
-      (r.data?.eligibleAssignees.some(
+      (eligibleAssignees.some(
         (p) => p.id === r.data?.current?.assigneeId,
       )
-        ? String(r.data.current!.assigneeId)
-        : r.data?.eligibleAssignees.length === 1
-          ? String(r.data.eligibleAssignees[0].id)
+        ? String(r.data?.current?.assigneeId)
+        : eligibleAssignees.length === 1
+          ? String(eligibleAssignees[0].id)
           : ''),
     valid =
       !!r.data?.canAssign &&
       r.data.documentId === documentId &&
-      r.data.eligibleAssignees.some((p) => p.id === Number(choice))
+      eligibleAssignees.some((p) => p.id === Number(choice))
   return (
     <FormDialog
       title={title}
@@ -69,8 +70,8 @@ export default function WarehouseAssignmentDialog({
           if (lock.current) return
           if (!choice) {
             setError(
-              r.data?.eligibleAssignees.length
-                ? 'Vui lòng chọn nhân viên nhận hàng.'
+              eligibleAssignees.length
+                ? 'Vui lòng chọn nhân viên.'
                 : 'Không có nhân viên đủ điều kiện nhận việc.',
             )
             return
@@ -90,7 +91,7 @@ export default function WarehouseAssignmentDialog({
             })
             refreshNotifications()
             onSaved?.(
-              r.data?.eligibleAssignees.find((p) => p.id === Number(choice))
+              eligibleAssignees.find((p) => p.id === Number(choice))
                 ?.fullName ?? 'nhân viên',
             )
             onClose()
@@ -132,7 +133,7 @@ export default function WarehouseAssignmentDialog({
                 }}
               >
                 <option value="">Chọn nhân viên</option>
-                {r.data.eligibleAssignees.map((p) => (
+                {eligibleAssignees.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.fullName}
                     {p.username ? ' · ' + p.username : ''}
@@ -141,11 +142,11 @@ export default function WarehouseAssignmentDialog({
                 ))}
               </select>
               {r.data.canAssign &&
-                r.data.eligibleAssignees.length > 0 &&
+                eligibleAssignees.length > 0 &&
                 !choice && <small role="status">Chưa chọn nhân viên</small>}
             </label>
             <h3>Lịch sử giao việc</h3>
-            {!r.data.eligibleAssignees.length && (
+            {!eligibleAssignees.length && (
               <p role="status">Không có nhân viên đủ điều kiện nhận việc.</p>
             )}
             {r.data.history.map((h) => (

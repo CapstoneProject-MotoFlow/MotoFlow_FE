@@ -433,7 +433,11 @@ export default function CountLiveDetail() {
               >
                 <InventoryNotice error={error} />
                 {action === 'confirm' && (
-                  <Hint>Mỗi dòng chênh lệch số lượng hoặc thay đổi hàng hỏng cần ghi lý do.</Hint>
+                  <Hint>
+                    {opening
+                      ? 'Đối chiếu số đếm thực tế và số lượng hư hỏng trong bảng Kết quả kiểm kê, rồi bấm Xác nhận. Phiếu đầu kỳ không cần nhập lý do chênh lệch.'
+                      : 'Mỗi dòng chênh lệch số lượng hoặc thay đổi hàng hỏng cần ghi lý do.'}
+                  </Hint>
                 )}
                 <fieldset disabled={busy}>
                   {action === 'confirm' &&

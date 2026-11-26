@@ -64,6 +64,7 @@ type OpeningLine = {
   damagedQty: string
 }
 
+/** K1 (PM 26/11): BM được tự nhận việc đếm đầu kỳ, tự ghi số rồi tự xác minh như các phiếu khác. */
 function OpeningEditor({
   data,
   manager,
@@ -82,17 +83,21 @@ function OpeningEditor({
     countedQty: line.countedQty == null ? '' : String(line.countedQty),
     damagedQty: String(line.damagedQty ?? 0),
   })))
-  const [selected, setSelected] = useState<ProductOption>()
+  const nextRowKey = useRef(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [blocked, setBlocked] = useState(false)
   const lock = useRef(false)
+  // Chỉ BM đọc được /warehouse-tasks; Staff chỉ mở được phiếu mình được giao, BE chặn phần còn lại (MSG05).
   const assignment = useInventoryData<Assignment & { current: { assigneeId: number; assigneeName: string; status: string } | null }>(
     '/warehouse-tasks', { taskType: 'COUNTING', documentId: data.id }, 0, manager,
   )
   const allowed = !manager || assignment.data?.current?.assigneeId === userId
-  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities && allowed && assignment.data?.current?.status !== 'RESULT_SUBMITTED'
+  const alreadySent = sent || assignment.data?.current?.status === 'RESULT_SUBMITTED'
+  const editable = data.status === 'COUNTING' && !data.awaitingBookQuantities && allowed && !alreadySent && !blocked
   const valid = rows.length > 0 && rows.every((row, index) => {
     const quantity = Number(row.countedQty)
     const damaged = Number(row.damagedQty)
@@ -123,14 +128,19 @@ function OpeningEditor({
       })
       if (action === 'submit') {
         await axiosClient.post(`/stock-counts/${data.id}/submit`)
+        // Không nạp lại phiếu: trạng thái vẫn COUNTING nên form sẽ mở lại; giữ khóa tại chỗ như màn đếm thường.
+        setSent(true)
         setNotice('Đã gửi số đếm đầu kỳ cho quản lý xác nhận.')
         refreshNotifications()
-      } else {
-        setNotice('Đã lưu số đếm đầu kỳ.')
+        return
       }
+      setNotice('Đã lưu số đếm đầu kỳ.')
       onSaved()
     } catch (failure) {
       setError(inventoryError(failure))
+      if (isAxiosError<{ code?: string }>(failure) && ['MSG235', 'MSG238'].includes(failure.response?.data?.code ?? '')) {
+        setBlocked(true)
+      }
     } finally {
       lock.current = false
       setBusy(false)
@@ -140,20 +150,30 @@ function OpeningEditor({
   return <InventoryPanel title={documentCode('KK', data.id) + ' · ' + data.storeName}>
     <InventoryNotice loading={assignment.loading} error={error || assignment.error} />
     {notice && <p className="stock-notice" role="status">{notice}</p>}
+    {alreadySent && <p className="stock-notice">Đã gửi kết quả. Quản lý cần yêu cầu đếm lại trước khi sửa.</p>}
     {!allowed && <p className="count-unavailable">Chỉ người được giao mới có thể ghi số đếm.</p>}
     {(data.status === 'DRAFT' || data.awaitingBookQuantities) && allowed && <div className="stock-notice">
       <p>Kiểm kê đầu kỳ không có số sổ sách. Bắt đầu đếm để nhập số lượng thực tế và hạn sử dụng.</p>
       <button className="count-primary" disabled={busy || data.countDate > today()} onClick={() => void act('start')}>Bắt đầu đếm</button>
     </div>}
     {editable && <div className="opening-count-add">
-      <ProductPicker selected={selected} excludedIds={[]} label="Thêm phụ tùng" excludeDamagedVariants disabled={busy} onSelect={(product) => {
-        setSelected(product)
-        setRows((previous) => [...previous, { key: `${product.id}-${Date.now()}`, product, expiryDate: '', countedQty: '', damagedQty: '0' }])
-        setConfirmed(false)
-      }} />
+      <ProductPicker
+        excludedIds={[]}
+        label="Thêm phụ tùng"
+        excludeDamagedVariants
+        disabled={busy}
+        onSelect={(product) => {
+          const key = 'new-' + ++nextRowKey.current
+          setRows((previous) => [
+            ...previous,
+            { key, product, expiryDate: '', countedQty: '', damagedQty: '0' },
+          ])
+          setConfirmed(false)
+        }}
+      />
       <p>Mỗi dòng là một phụ tùng và hạn sử dụng. Có thể thêm nhiều lô/hạn dùng cho cùng một phụ tùng.</p>
     </div>}
-    <div className="stock-table-scroll"><table className="stock-table">
+    <div className="stock-table-scroll"><table className="stock-table opening-count-table">
       <thead><tr><th>Phụ tùng</th><th>Hạn sử dụng</th><th>Số đếm thực tế</th><th>Hư hỏng</th>{editable && <th />}</tr></thead>
       <tbody>{rows.map((row) => <tr key={row.key}>
         <td><strong><ProductQuickView productId={row.product.id} sku={row.product.sku} partName={row.product.partName} blindCount /></strong></td>
@@ -164,10 +184,11 @@ function OpeningEditor({
       </tr>)}{!rows.length && <tr><td colSpan={editable ? 5 : 4}>Thêm phụ tùng để bắt đầu lập tồn đầu kỳ.</td></tr>}</tbody>
     </table></div>
     {editable && <div className="stock-notice count-buttons">
-      {error && <p role="alert" className="count-validation-error">{error}</p>}
       <label><input type="checkbox" checked={confirmed} disabled={busy || !valid} onChange={(event) => setConfirmed(event.target.checked)} /> Tôi xác nhận số lượng và hạn sử dụng đã nhập chính xác.</label>
-      <button disabled={busy || !valid} onClick={() => void act('save')}>Lưu tạm</button>
-      <button className="count-primary" disabled={busy || !valid || !confirmed} onClick={() => void act('submit')}>Gửi quản lý xác nhận</button>
+      <div className="count-submit-group">
+        <button disabled={busy || !valid} onClick={() => void act('save')}>Lưu tạm</button>
+        <button className="count-primary" disabled={busy || !valid || !confirmed} onClick={() => void act('submit')}>Gửi quản lý xác nhận</button>
+      </div>
     </div>}
   </InventoryPanel>
 }

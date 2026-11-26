@@ -9,7 +9,6 @@ import type { Page, StockRow } from './types'
 import { today } from './presentation'
 import axiosClient from '../../shared/api/axiosClient'
 import { documentCode } from '../../shared/utils/documentCode'
-import { isDamagedVariant } from '../../shared/utils/damagedVariant'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
 import './stock-count.css'
 type Product = { id: number; sku: string; partName: string }
@@ -69,13 +68,15 @@ export function StockCountFormDialog({
       !!requestId && !owner,
     ),
     source = prefill.data
-  const actualScope = source?.scopeType ?? scope,
+  const opening = !owner && !requestId && countType === 'OPENING'
+  const actualScope = opening ? 'WHOLE' : (source?.scopeType ?? scope),
     actualArea = source?.scopeNote ?? area,
-    actualProducts = source
-      ? source.products.map((p) => p.productId)
-      : scope === 'GROUP'
+    actualProducts =
+      actualScope === 'GROUP'
         ? groupProducts.map((p) => p.id)
-        : picked.map((p) => p.id),
+        : actualScope === 'PRODUCTS'
+          ? source?.products.map((p) => p.productId) ?? picked.map((p) => p.id)
+          : [],
     actualStore = source?.storeId ?? Number(warehouse)
 
   useEffect(() => {
@@ -197,7 +198,7 @@ export function StockCountFormDialog({
   const openingPending =
     openingCount != null &&
     ['DRAFT', 'COUNTING', 'AWAITING_APPROVAL'].includes(openingCount.status)
-  const openingBlocked = !requestId && !!openingCount && (countType === 'OPENING' || openingPending)
+  const openingBlocked = !requestId && !!openingCount && (opening || openingPending)
   const areas = useInventoryData<string[]>(
       '/inventory/stock/storage-areas',
       { storeId: owner ? warehouse : undefined },
@@ -208,18 +209,13 @@ export function StockCountFormDialog({
       '/products',
       { q: query?.trim(), status: 'ACTIVE', size: 20 },
       0,
-      scope === 'PRODUCTS' && !source && query !== null,
+      actualScope === 'PRODUCTS' && !source && query !== null,
     )
   const categories = useInventoryData<Category[]>('/part-categories')
   const productOptions =
-    products.data?.items.filter(
-      (p) =>
-        !actualProducts.includes(p.id) &&
-        // BH8: phiếu tồn đầu kỳ không nhập mã hàng lỗi.
-        !(countType === 'OPENING' && isDamagedVariant(p)),
-    ) ?? []
+    products.data?.items.filter((p) => !actualProducts.includes(p.id)) ?? []
   useEffect(() => {
-    if (scope !== 'GROUP' || !groupId) {
+    if (actualScope !== 'GROUP' || !groupId) {
       setGroupProducts([])
       setGroupLoading(false)
       setGroupError('')
@@ -273,16 +269,15 @@ export function StockCountFormDialog({
       }
     })()
     return () => controller.abort()
-  }, [scope, groupId, owner, actualStore])
+  }, [actualScope, groupId, owner, actualStore])
   const valid =
     !!actualStore &&
     (!requestId || !!source) &&
     (!owner || !!reason.trim()) &&
     new Set(actualProducts).size === actualProducts.length &&
     (actualScope !== 'AREA' || !!actualArea.trim()) &&
-    ((scope !== 'PRODUCTS' && actualScope !== 'PRODUCTS') ||
-      actualProducts.length > 0) &&
-    (scope !== 'GROUP' || (!!groupId && groupProducts.length > 0 && !groupLoading)) &&
+    (actualScope !== 'PRODUCTS' || actualProducts.length > 0) &&
+    (actualScope !== 'GROUP' || (!!groupId && groupProducts.length > 0 && !groupLoading)) &&
     !!date &&
     (owner || date <= monthEnd()) &&
     (owner || (!!actualStore && !countCheckLoading && !lineCheckLoading && !countCheckError)) &&
@@ -403,6 +398,7 @@ export function StockCountFormDialog({
                 >
                   <option value="CYCLE">Định kỳ</option>
                   <option value="YEAR_END">Cuối năm</option>
+                  {!requestId && <option value="OPENING">Đầu kỳ</option>}
                 </select>
               </label>
               <label>
@@ -423,13 +419,16 @@ export function StockCountFormDialog({
               {source.reason}
             </p>
           )}
-          {!owner && countType === 'OPENING' && !openingCount && !countCheckLoading && !countCheckError && (
-            <p role="status">Chưa có phiếu tồn đầu kỳ ở kho này.</p>
+          {opening && (
+            <p>
+              Kiểm kê đầu kỳ áp dụng cho toàn kho chưa phát sinh biến động
+              tồn và chưa có phiếu kiểm kê đang mở.
+            </p>
           )}
           <label>
             Phạm vi
             <select
-              disabled={!!source}
+              disabled={opening || !!source}
               value={actualScope}
               onChange={(e) => setScope(e.target.value)}
             >
@@ -520,7 +519,7 @@ export function StockCountFormDialog({
                 </ul>
               </>
             ))}
-          {scope === 'GROUP' && !source && (
+          {actualScope === 'GROUP' && !source && (
             <div className="count-product-picker">
               <span>Nhóm phụ tùng</span>
               <SearchableFilter
