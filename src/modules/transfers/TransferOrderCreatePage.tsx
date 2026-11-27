@@ -152,7 +152,11 @@ export default function TransferOrderCreatePage() {
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
                   >
-                    <option value="">Chọn kho nguồn</option>
+                    <option value="">
+                      {!scope.owner && !options.length
+                        ? 'Chọn phụ tùng bên dưới để tải kho'
+                        : 'Chọn kho nguồn'}
+                    </option>
                     {options
                       .filter(
                         (s) =>
@@ -176,7 +180,11 @@ export default function TransferOrderCreatePage() {
                     value={destination}
                     onChange={(e) => setDest(e.target.value)}
                   >
-                    <option value="">Chọn kho đích</option>
+                    <option value="">
+                      {!scope.owner && !options.length
+                        ? 'Chọn phụ tùng bên dưới để tải kho'
+                        : 'Chọn kho đích'}
+                    </option>
                     {options
                       .filter(
                         (s) =>

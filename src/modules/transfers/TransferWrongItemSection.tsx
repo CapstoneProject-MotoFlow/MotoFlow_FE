@@ -477,7 +477,7 @@ export default function TransferWrongItemSection({
         </article>
       ))}
       {confirmError && (
-        <p role="alert" className="stock-error">
+        <p role="alert" className="tf-alert-error">
           {confirmError}
         </p>
       )}

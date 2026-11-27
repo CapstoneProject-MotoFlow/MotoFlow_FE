@@ -32,6 +32,7 @@ const {
   receiptExcess,
   reconciliationTimeline,
   openWrongItems,
+  wrongParts,
 } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 )
@@ -194,6 +195,30 @@ test('extra dispatch is available only for outstanding excess during reconciliat
     pendingExcess({ extraReceivedQty: null, extraDispatchedQty: null }),
     0,
   )
+  // Post-23/11 transfer excess uses Owner's decision flow, so BE sends legacyExcessQty: 0.
+  assert.equal(
+    pendingExcess({
+      extraReceivedQty: 3,
+      extraDispatchedQty: 0,
+      legacyExcessQty: 0,
+    }),
+    0,
+  )
+  assert.equal(
+    canConfirmExcess('RECONCILING', [
+      { extraReceivedQty: 3, extraDispatchedQty: 0, legacyExcessQty: 0 },
+    ]),
+    false,
+  )
+  // Pre-23/11 legacy excess remains confirmable when legacyExcessQty > extraDispatchedQty.
+  assert.equal(
+    pendingExcess({
+      extraReceivedQty: 5,
+      extraDispatchedQty: 1,
+      legacyExcessQty: 3,
+    }),
+    2,
+  )
 })
 
 test('returns subtract open receipts and exclude settled or unrelated decisions', () => {
@@ -353,5 +378,45 @@ test('wrong items still blocking the close are counted beside the button (review
       { sku: 'C', wrongPendingQty: null, wrongAwaitingSourceQty: 1 },
     ]),
     { pending: 1, awaiting: 3, total: 4, skus: ['A x3', 'C x1'] },
+  )
+})
+
+test('wrongParts excludes rejected or cancelled wrong-item returns and receipts (T-03)', () => {
+  const order = {
+    discrepancies: [
+      {
+        productId: 10,
+        events: [
+          {
+            resolutionType: 'WRONG_ITEM_RETURNED',
+            quantity: 1,
+            receivedSku: 'BUGI-A',
+            status: 'REJECTED',
+          },
+          {
+            resolutionType: 'WRONG_ITEM_RETURNED',
+            quantity: 1,
+            receivedSku: 'BUGI-A',
+            status: 'AWAITING_SOURCE',
+          },
+          {
+            resolutionType: 'RECEIVED_AS_OTHER_PRODUCT',
+            quantity: 2,
+            receivedSku: 'BUGI-B',
+            status: 'CONFIRMED',
+          },
+          {
+            resolutionType: 'RECEIVED_AS_OTHER_PRODUCT',
+            quantity: 1,
+            receivedSku: 'BUGI-C',
+            status: 'CANCELLED',
+          },
+        ],
+      },
+    ],
+  }
+  assert.equal(
+    wrongParts(order, 10),
+    'BUGI-A x1 hoàn trả (chờ kho gửi), BUGI-B x2 nhập kho',
   )
 })

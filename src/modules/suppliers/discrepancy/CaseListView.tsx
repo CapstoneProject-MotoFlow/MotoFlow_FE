@@ -144,13 +144,18 @@ export default function CaseListView({
   return (
     <>
       <header className="sd-head">
-        <div>
-          <h1>Xử lý sai lệch nhà cung cấp</h1>
-          <p className="sd-lead">
-            Hồ sơ theo phụ tùng. Xem theo đơn nhập ở{' '}
-            <Link to="/purchase-orders?tab=DISCREPANCY_OPEN">tab Sai lệch của Đơn nhập hàng</Link>.
-          </p>
+        <div className="sd-head-title">
+          <h1>Sai lệch nhà cung cấp</h1>
+          {filtered && (
+            <button type="button" className="mf-btn mf-btn--sm mf-btn--secondary" onClick={reset}>
+              Xóa bộ lọc
+            </button>
+          )}
         </div>
+        <p className="sd-lead">
+          Xem gộp theo đơn nhập tại{' '}
+          <Link to="/purchase-orders?tab=DISCREPANCY_OPEN">Đơn nhập hàng → Sai lệch</Link>.
+        </p>
       </header>
 
       <section className="sd-filters" aria-label="Bộ lọc">
@@ -317,7 +322,7 @@ export default function CaseListView({
                   <th>Chứng từ</th>
                   <th>{scope.owner ? 'Nhà cung cấp · Cửa hàng' : 'Nhà cung cấp'}</th>
                   <th>Sai lệch</th>
-                  <th>Còn phải trả</th>
+                  <th>Tình trạng</th>
                   <th>Mở lúc</th>
                   <th>
                     <span className="sd-visually-hidden">Thao tác</span>

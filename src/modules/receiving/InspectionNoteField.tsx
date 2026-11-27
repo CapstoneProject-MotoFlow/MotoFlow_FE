@@ -5,14 +5,17 @@ export default function InspectionNoteField({
   onChange,
   required,
   disabled,
+  showError = true,
 }: {
   value: string
   onChange: (value: string) => void
   required: boolean
   disabled: boolean
+  showError?: boolean
 }) {
   const errorId = useId()
   const missing = required && !value.trim()
+  const showMissingError = missing && showError
   return (
     <label>
       Ghi chú kiểm hàng{required ? ' *' : ' (không bắt buộc)'}
@@ -22,15 +25,19 @@ export default function InspectionNoteField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-required={required}
-        aria-invalid={missing}
+        aria-invalid={showMissingError}
         aria-describedby={missing ? errorId : undefined}
         disabled={disabled}
       />
-      {missing && (
+      {showMissingError ? (
         <small id={errorId} className="stock-error">
           Nhập ghi chú khi có hàng thiếu, thừa, giao sai hoặc hư hỏng.
         </small>
-      )}
+      ) : required && !value.trim() ? (
+        <small id={errorId} className="mf-field-hint">
+          Bắt buộc khi có hàng thiếu, thừa, giao sai hoặc hư hỏng.
+        </small>
+      ) : null}
     </label>
   )
 }

@@ -43,11 +43,13 @@ export function purchaseQuantityLimit(
 export function pendingExcess(line: {
   extraReceivedQty: number | null
   extraDispatchedQty: number | null
+  legacyExcessQty?: number | null
 }) {
-  return Math.max(
-    0,
-    (line.extraReceivedQty ?? 0) - (line.extraDispatchedQty ?? 0),
-  )
+  const base =
+    line.legacyExcessQty !== undefined
+      ? (line.legacyExcessQty ?? 0)
+      : (line.extraReceivedQty ?? 0)
+  return Math.max(0, base - (line.extraDispatchedQty ?? 0))
 }
 export function canConfirmExcess(
   status: string,
@@ -283,4 +285,59 @@ export function openWrongItems(
         ((l.wrongPendingQty ?? 0) + (l.wrongAwaitingSourceQty ?? 0)),
     )
   return { pending, awaiting, total: pending + awaiting, skus }
+}
+
+/**
+ * Tóm tắt hàng giao sai đang hiệu lực của một dòng (phiếu nhận và hoàn trả đang chờ hoặc đã xác nhận; bỏ phiếu đã bị
+ * từ chối hoặc đã hủy).
+ */
+export function wrongParts(
+  order: {
+    discrepancies: {
+      productId: number
+      events: {
+        resolutionType: string
+        quantity: number
+        receivedSku?: string | null
+        status?: string | null
+      }[]
+    }[]
+  },
+  productId: number,
+) {
+  return order.discrepancies
+    .filter((item) => item.productId === productId)
+    .flatMap((item) => item.events)
+    .filter((event) => {
+      if (event.resolutionType === 'WRONG_ITEM_RETURNED')
+        return (
+          event.status == null ||
+          event.status === 'AWAITING_SOURCE' ||
+          event.status === 'CONFIRMED'
+        )
+      if (event.resolutionType === 'RECEIVED_AS_OTHER_PRODUCT')
+        return (
+          event.status === 'AWAITING_SOURCE' || event.status === 'CONFIRMED'
+        )
+      return false
+    })
+    .map((event) => {
+      const sku = event.receivedSku ?? 'phụ tùng khác'
+      if (event.resolutionType === 'WRONG_ITEM_RETURNED')
+        return (
+          sku +
+          ' x' +
+          event.quantity +
+          (event.status === 'AWAITING_SOURCE'
+            ? ' hoàn trả (chờ kho gửi)'
+            : ' hoàn trả')
+        )
+      return (
+        sku +
+        ' x' +
+        event.quantity +
+        (event.status === 'CONFIRMED' ? ' nhập kho' : ' chờ kho gửi')
+      )
+    })
+    .join(', ')
 }

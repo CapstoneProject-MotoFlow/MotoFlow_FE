@@ -726,15 +726,22 @@ input::placeholder {
 /* Select gốc của trình duyệt: cùng kiểu với dropdown tự vẽ (nền trắng, mũi tên, bo 8px, cao 40px). */
 .admin-dashboard.admin-dashboard .dashboard-main select:not([multiple]) {
   min-height: var(--mf-control-h);
-  padding: 0 34px 0 12px;
+  padding: 0 32px 0 12px;
   border: 1px solid var(--mf-border);
   border-radius: var(--mf-radius);
   color: var(--mf-text);
   background: #fff
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%235b6b82' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
     no-repeat right 10px center / 16px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--mf-fs-body);
+}
+.admin-dashboard.admin-dashboard .dashboard-main select:not([multiple])::picker-icon {
+  display: none;
 }
 .admin-dashboard.admin-dashboard .dashboard-main td select:not([multiple]) {
   min-height: var(--mf-control-h-sm);
@@ -1140,5 +1147,12 @@ input[type='checkbox'] {
   color: #b42318;
   font-size: 13px;
   font-weight: 400;
+  line-height: 1.4;
+}
+.mf-field-hint {
+  display: block;
+  margin-top: 4px;
+  color: #475467;
+  font-size: 12px;
   line-height: 1.4;
 }

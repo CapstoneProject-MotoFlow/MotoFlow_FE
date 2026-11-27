@@ -52,7 +52,7 @@ export default function AcceptanceDialog({
       ? { id: pending.productId, sku: pending.sku, partName: pending.partName ?? '' }
       : undefined,
   )
-  const [replacementNeeded, setReplacementNeeded] = useState(true)
+  const [replacementNeeded, setReplacementNeeded] = useState(row.openReplacementQty > 0)
   const [manufactureDate, setManufactureDate] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
   const [rejectReason, setRejectReason] = useState('')
@@ -303,15 +303,17 @@ export default function AcceptanceDialog({
                   />
                 </label>
               </div>
-              <label className="sd-check">
-                <input
-                  type="checkbox"
-                  checked={replacementNeeded}
-                  disabled={saving}
-                  onChange={(event) => setReplacementNeeded(event.target.checked)}
-                />
-                Cần nhà cung cấp giao bù phụ tùng đã đặt
-              </label>
+              {row.openReplacementQty > 0 && (
+                <label className="sd-check">
+                  <input
+                    type="checkbox"
+                    checked={replacementNeeded}
+                    disabled={saving}
+                    onChange={(event) => setReplacementNeeded(event.target.checked)}
+                  />
+                  Vẫn cần nhà cung cấp giao bù phụ tùng đã đặt
+                </label>
+              )}
             </>
           )}
           {requesting && (

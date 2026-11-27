@@ -1358,3 +1358,239 @@ p.tf-validation-hint {
 .tf-wrong-item-confirm {
   margin-left: 12px;
 }
+
+/* ---- 26/11: tối ưu bảng chi tiết điều chuyển, phản hồi trạng thái, mobile responsive ---- */
+.admin-dashboard > .dashboard-main > main.dashboard-content.tf-detail-page {
+  box-sizing: border-box;
+  width: min(100% - 32px, 1360px);
+  max-width: 1360px;
+}
+.tf-alert-error {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #fecdca;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+section .tf-alert-error {
+  margin: 12px 20px;
+}
+.tf-blocker-banner {
+  margin: 12px 20px;
+  padding: 12px 16px;
+  border: 1px solid #fedf89;
+  border-radius: 10px;
+  background: #fffaeb;
+  color: #93370d;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.tf-blocker-banner strong {
+  color: #7a2e0e;
+  font-weight: 600;
+}
+.tf-info-banner {
+  margin: 0;
+  padding: 11px 16px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #344054;
+  font-size: 14px;
+  line-height: 1.5;
+}
+section .tf-info-banner {
+  margin: 12px 20px;
+}
+
+/* Bảng chi tiết lệnh & sai lệch: gọn, đủ rộng trên 1360px có sidebar, số căn phải tabular-nums. */
+.tf-detail-lines-table table,
+.tf-discrepancy-wrap table,
+.tf-pending-wrong-table table {
+  white-space: normal;
+}
+.tf-detail-lines-table th,
+.tf-detail-lines-table td,
+.tf-discrepancy-wrap th,
+.tf-discrepancy-wrap td {
+  padding: 11px 8px;
+  font-size: 13px;
+  vertical-align: top;
+}
+.tf-detail-lines-table th:first-child,
+.tf-detail-lines-table td:first-child,
+.tf-discrepancy-wrap th:first-child,
+.tf-discrepancy-wrap td:first-child {
+  padding-left: 16px;
+}
+.tf-detail-lines-table th:last-child,
+.tf-detail-lines-table td:last-child,
+.tf-discrepancy-wrap th:last-child,
+.tf-discrepancy-wrap td:last-child {
+  padding-right: 16px;
+}
+.tf-detail-lines-table th,
+.tf-discrepancy-wrap th,
+.tf-pending-wrong-table th {
+  font-size: 12px;
+  line-height: 1.35;
+  text-wrap: balance;
+  white-space: normal;
+  vertical-align: middle;
+}
+.tf-table .tf-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tf-table .tf-part-cell {
+  min-width: 145px;
+  max-width: 220px;
+}
+.tf-table .tf-part-cell strong {
+  display: block;
+  color: #101828;
+  font-weight: 600;
+}
+.tf-table .tf-wrong-cell {
+  min-width: 120px;
+  max-width: 210px;
+}
+.tf-table .tf-wrong-cell .tf-num-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.tf-table .tf-events-cell {
+  min-width: 110px;
+  max-width: 240px;
+}
+.tf-table .tf-events-cell summary {
+  cursor: pointer;
+  color: #3641f5;
+  font-weight: 500;
+}
+.tf-table .tf-events-cell ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #475467;
+  display: grid;
+  gap: 4px;
+}
+
+/* Chờ xác nhận hàng giao sai (T-04) */
+.tf-pending-wrong-table th,
+.tf-pending-wrong-table td {
+  padding: 12px 12px;
+  font-size: 13px;
+  vertical-align: top;
+}
+.tf-pending-wrong-table td:first-child {
+  white-space: nowrap;
+}
+.tf-pending-wrong-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #475467;
+  font-size: 12px;
+  white-space: normal;
+}
+.tf-kind-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: baseline;
+}
+.tf-kind-tag--receive {
+  background: #eef4ff;
+  color: #3538cd;
+}
+.tf-kind-tag--return {
+  background: #fffaeb;
+  color: #b54708;
+}
+.tf-pending-evidence {
+  margin-top: 8px;
+}
+.tf-wrong-item {
+  margin: 0 20px 12px;
+}
+.tf-wrong-item:last-of-type {
+  margin-bottom: 20px;
+}
+
+/* Mobile stacked cards cho bảng chi tiết điều chuyển, sai lệch và hàng giao sai chờ xác nhận */
+@media (max-width: 760px) {
+  .admin-dashboard > .dashboard-main > main.dashboard-content.tf-detail-page {
+    width: calc(100% - 20px);
+  }
+  .tf-detail-lines-table thead,
+  .tf-discrepancy-wrap thead,
+  .tf-pending-wrong-table thead {
+    display: none;
+  }
+  .tf-detail-lines-table table,
+  .tf-detail-lines-table tbody,
+  .tf-discrepancy-wrap table,
+  .tf-discrepancy-wrap tbody,
+  .tf-pending-wrong-table table,
+  .tf-pending-wrong-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .tf-detail-lines-table tbody tr,
+  .tf-discrepancy-wrap tbody tr,
+  .tf-pending-wrong-table tbody tr {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border-top: 1px solid #eaecf0;
+  }
+  .tf-detail-lines-table tbody td,
+  .tf-discrepancy-wrap tbody td,
+  .tf-pending-wrong-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 2px 0 !important;
+    border: 0;
+    min-width: 0;
+    max-width: none;
+    text-align: right;
+  }
+  .tf-detail-lines-table tbody td::before,
+  .tf-discrepancy-wrap tbody td::before,
+  .tf-pending-wrong-table tbody td::before {
+    content: attr(data-label);
+    color: #475467;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    flex: 0 0 auto;
+  }
+  .tf-detail-lines-table tbody td.tf-part-cell,
+  .tf-discrepancy-wrap tbody td.tf-part-cell,
+  .tf-pending-wrong-table tbody td:first-child {
+    display: block;
+    text-align: left;
+    padding-bottom: 6px !important;
+    border-bottom: 1px dashed #eaecf0;
+  }
+  .tf-detail-lines-table tbody td.tf-part-cell::before,
+  .tf-discrepancy-wrap tbody td.tf-part-cell::before,
+  .tf-pending-wrong-table tbody td:first-child::before {
+    display: none;
+  }
+  .tf-wrong-item {
+    margin: 0 12px 12px;
+  }
+}

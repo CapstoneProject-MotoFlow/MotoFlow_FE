@@ -19,6 +19,8 @@ export type PartLine = {
   lossQty: number | null
   extraReceivedQty: number | null
   extraDispatchedQty: number | null
+  /** Hàng thừa cũ trước 23/11 cần xác nhận qua /extra-dispatch; phiếu mới dùng quyết định hàng thừa của Owner. */
+  legacyExcessQty?: number | null
   unresolvedQty: number | null
   /** BE #98: số hỏng khi nhận (Đã nhận = số đạt); null với Staff. */
   damagedQty?: number | null
@@ -191,6 +193,7 @@ export type Receipt = ReceiptDocumentInfo & {
   confirmedAt: string | null
   submittedAt: string | null
   confirmedBy: number | null
+  confirmedByName?: string | null
   arrivedAt: string
   recountReason: string | null
   inspectionNote?: string | null

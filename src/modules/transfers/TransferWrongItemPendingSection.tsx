@@ -128,7 +128,7 @@ function PendingRow({
   }
   return (
     <tr>
-      <td>
+      <td data-label="Lệnh">
         <Link to={'/transfer-orders/' + item.transferOrderId}>
           {documentCode('DC', item.transferOrderId)}
         </Link>
@@ -136,36 +136,54 @@ function PendingRow({
           {item.sourceStoreName} → {item.destStoreName}
         </small>
       </td>
-      <td>
-        {item.sku} · {item.partName}
+      <td data-label="Phụ tùng yêu cầu" className="tf-part-cell">
+        <strong>{item.sku}</strong>
+        <small>{item.partName}</small>
       </td>
-      <td>
-        {handBack && <strong>Hoàn trả: </strong>}
-        {item.receivedSku} · {item.receivedPartName}
+      <td data-label="Phụ tùng thực nhận" className="tf-part-cell">
+        <div>
+          <span
+            className={
+              handBack
+                ? 'tf-kind-tag tf-kind-tag--return'
+                : 'tf-kind-tag tf-kind-tag--receive'
+            }
+          >
+            {handBack ? 'Hoàn trả' : 'Nhập kho'}
+          </span>{' '}
+          <strong>{item.receivedSku}</strong>
+        </div>
+        <small>{item.receivedPartName}</small>
         {item.reason && <small>{item.reason}</small>}
-        <DebtEvidence files={item.attachments} />
+        {!!item.attachments?.length && (
+          <div className="tf-pending-evidence">
+            <DebtEvidence files={item.attachments} />
+          </div>
+        )}
       </td>
-      <td>{item.quantity}</td>
-      <td>
+      <td data-label="Số lượng" className="tf-num">
+        {item.quantity}
+      </td>
+      <td data-label="HSD bên nhận ghi">
         {handBack
           ? '—'
           : (day(item.expiryDate) ?? 'Không ghi (trừ lô nhập trước)')}
       </td>
-      <td>
+      <td data-label="Lô kho gửi sẽ trừ">
         {handBack ? (
-          'Không trừ lô (hàng chưa rời sổ kho gửi)'
+          'Không trừ lô (hàng chưa rời sổ)'
         ) : blocked ? (
           <span className="tf-excess-blocked">{blocked}</span>
         ) : (
           lotText || '—'
         )}
         {error && (
-          <p role="alert" className="stock-error">
+          <p role="alert" className="tf-alert-error">
             {error}
           </p>
         )}
       </td>
-      <td>
+      <td data-label={canAct ? 'Xác nhận' : 'Trạng thái'}>
         {canAct ? (
           <div className="mf-row-actions">
             <button
@@ -305,30 +323,34 @@ export default function TransferWrongItemPendingSection({
       </header>
       <p className="tf-excess-hint">
         {canAct
-          ? 'Kho nhận đã lập phiếu nhận hàng giao sai hoặc hoàn trả hàng giao sai từ lệnh kho bạn gửi; tồn chưa đổi. Phiếu nhận, khi xác nhận: cộng vào kho nhận, trừ ở tồn khả dụng kho bạn (lô cùng hạn sử dụng bên nhận ghi, không ghi thì lô nhập trước). Hoàn trả, khi xác nhận: kho bạn đã nhận lại hàng, tồn không đổi. Không đúng thì Từ chối và ghi lý do.'
-          : 'Kho nhận đã lập phiếu nhận hàng giao sai; tồn chưa đổi cho tới khi BM kho gửi xác nhận. Owner chỉ xem; thấy kho nhận ghi sai thì mở lệnh và dùng "Bên nhận kiểm sai" ở bảng Sai lệch.'}
+          ? 'Xác nhận phiếu nhận sẽ cộng tồn kho nhận và trừ tồn kho bạn; xác nhận hoàn trả giữ nguyên tồn. Sai thông tin thì Từ chối kèm lý do.'
+          : 'Tồn kho chỉ đổi khi quản lý kho gửi xác nhận. Nếu kho nhận ghi sai, mở lệnh và chọn "Bên nhận kiểm sai".'}
       </p>
       {notice && (
         <p className="mf-success-notice" role="status">
           {notice}
         </p>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="tf-alert-error">
+          {error}
+        </p>
+      )}
       {items && !items.length && (
         <p className="receiving-empty-cell">
           Không có phiếu nhận hàng giao sai chờ xác nhận.
         </p>
       )}
       {!!items?.length && (
-        <div className="table-scroll">
+        <div className="tf-table tf-pending-wrong-table">
           <table>
             <thead>
               <tr>
                 <th>Lệnh</th>
                 <th>Phụ tùng yêu cầu</th>
                 <th>Phụ tùng thực nhận</th>
-                <th>Số lượng</th>
-                <th>HSD bên nhận ghi</th>
+                <th className="tf-num">SL</th>
+                <th>HSD</th>
                 <th>Lô kho gửi sẽ trừ</th>
                 <th>{canAct ? 'Xác nhận' : 'Trạng thái'}</th>
               </tr>

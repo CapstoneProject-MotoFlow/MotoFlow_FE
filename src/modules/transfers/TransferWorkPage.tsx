@@ -28,6 +28,7 @@ import ReceiptDocumentSummary from './ReceiptDocumentSummary'
 import ProductQuickView from '../catalog/components/ProductQuickView'
 import PassAllButton from '../receiving/PassAllButton'
 import InfoTip from '../../shared/ui/InfoTip'
+import { documentCode } from '../../shared/utils/documentCode'
 import { states, type Preparation, type Receipt, type Transfer } from './types'
 import './transfers.css'
 
@@ -308,6 +309,8 @@ function WorkEditor({
     ),
     [files, setFiles] = useState<File[]>([]),
     [inspectionNote, setInspectionNote] = useState(receipt?.inspectionNote ?? ''),
+    [noteTouched, setNoteTouched] = useState(false),
+    [submitAttempted, setSubmitAttempted] = useState(false),
     [reason, setReason] = useState(''),
     [action, setAction] = useState(''),
     [busy, setBusy] = useState(false),
@@ -410,6 +413,7 @@ function WorkEditor({
     })
   async function save() {
     if (lock.current || !valid || !canRecord) return
+    setSubmitAttempted(true)
     if (mode === 'receipt' && noteRequired && !inspectionNote.trim()) {
       setError('Nhập ghi chú kiểm hàng trước khi gửi kết quả.')
       return
@@ -482,7 +486,11 @@ function WorkEditor({
     <>
       <section className={mode === 'receipt' ? 'tf-work-card tf-work-card--receipt' : 'tf-work-card'}>
         <CardHead
-          title={receipt ? 'Phiếu nhận điều chuyển' : 'Kết quả thực tế'}
+          title={
+            receipt
+              ? 'Phiếu nhận ' + documentCode('PN', receipt.id)
+              : 'Kết quả thực tế'
+          }
           status={
             receipt ? (states[receipt.status] ?? receipt.status) : undefined
           }
@@ -522,11 +530,13 @@ function WorkEditor({
             />
           )}
         </CardHead>
-        {receipt?.recountReason && (
-          <p className="tf-note">Yêu cầu đếm lại: {receipt.recountReason}</p>
+        {receipt?.status === 'AWAITING_RECOUNT' && receipt.recountReason && (
+          <p className="tf-blocker-banner" role="alert">
+            <strong>Yêu cầu kiểm lại:</strong> {receipt.recountReason}
+          </p>
         )}
-        {receipt?.submittedAt && receipt.recordedBy === scope.user?.id && (
-          <p className="tf-note" role="status">
+        {bm && receipt?.submittedAt && receipt.recordedBy === scope.user?.id && (
+          <p className="tf-info-banner" role="status">
             Bạn tự kiểm nhận; Owner sẽ được báo để xác nhận kết quả.
           </p>
         )}
@@ -644,8 +654,8 @@ function WorkEditor({
             {receipt.confirmedAt && (
               <>
                 {' '}
-                · Xác nhận: {dateTime(receipt.confirmedAt)} · Người xác nhận #
-                {receipt.confirmedBy}
+                · Xác nhận: {dateTime(receipt.confirmedAt)} · Người xác nhận:{' '}
+                {receipt.confirmedByName ?? '#' + receipt.confirmedBy}
               </>
             )}
           </p>
@@ -922,9 +932,13 @@ function WorkEditor({
               <div className={mode === 'receipt' ? 'tf-note tf-inspection-note' : 'tf-note'}>
                 <InspectionNoteField
                   value={inspectionNote}
-                  onChange={setInspectionNote}
+                  onChange={(value) => {
+                    setNoteTouched(true)
+                    setInspectionNote(value)
+                  }}
                   required={noteRequired}
                   disabled={busy}
+                  showError={submitAttempted || noteTouched}
                 />
               </div>
             )}
