@@ -1,7 +1,8 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
+import { useLiveReload } from '../../shared/live/useLiveReload'
 import { apiMessage } from '../suppliers/supplierService'
 import { documentCode } from '../../shared/utils/documentCode'
 import TransferExcessSection from '../transfers/TransferExcessSection'
@@ -22,11 +23,19 @@ export default function ExcessReceiptsPage() {
   const [data, setData] = useState<{ items: Row[]; totalItems: number }>()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [liveRevision, setLiveRevision] = useState(0)
+  const quietNext = useRef(false)
+  useLiveReload(() => {
+    quietNext.current = true
+    setLiveRevision((n) => n + 1)
+  })
   useEffect(() => {
+    const quiet = quietNext.current
+    quietNext.current = false
     const controller = new AbortController()
     const signal = controller.signal
     async function load() {
-      setLoading(true)
+      if (!quiet) setLoading(true)
       try {
         const response = await axiosClient.get<{
           items: Row[]
@@ -40,14 +49,14 @@ export default function ExcessReceiptsPage() {
           setError('')
         }
       } catch (error) {
-        if (!signal.aborted) setError(apiMessage(error))
+        if (!signal.aborted && !quiet) setError(apiMessage(error))
       } finally {
         if (!signal.aborted) setLoading(false)
       }
     }
     void load()
     return () => controller.abort()
-  }, [page])
+  }, [page, liveRevision])
   return (
     <main className="dashboard-content receiving-page">
       <PageBackLink to="/purchase-orders" />

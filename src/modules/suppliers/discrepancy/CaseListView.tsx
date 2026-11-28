@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axiosClient from '../../../shared/api/axiosClient'
+import { useLiveReload } from '../../../shared/live/useLiveReload'
 import EmptyState from '../../../shared/ui/EmptyState'
 import { documentCode } from '../../../shared/utils/documentCode'
 import { formatDateTime } from '../../../shared/utils/format'
@@ -53,11 +54,20 @@ export default function CaseListView({
     !!fromDate ||
     !!toDate
 
+  const [liveRevision, setLiveRevision] = useState(0)
+  const quietNext = useRef(false)
+  useLiveReload(() => {
+    quietNext.current = true
+    setLiveRevision((n) => n + 1)
+  })
+
   useEffect(() => {
+    const quiet = quietNext.current
+    quietNext.current = false
     if (invalidOrder || dateRangeError) return
     const controller = new AbortController()
     const timer = setTimeout(async () => {
-      setLoading(true)
+      if (!quiet) setLoading(true)
       try {
         const { data } = await axiosClient.get<{ items: Case[]; totalItems: number }>(
           '/discrepancy-cases',
@@ -83,7 +93,8 @@ export default function CaseListView({
           setError('')
         }
       } catch (failure) {
-        if (!controller.signal.aborted) setError(errorMessage(failure))
+        if (!controller.signal.aborted && !quiet)
+          setError(errorMessage(failure))
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
@@ -92,7 +103,20 @@ export default function CaseListView({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [page, status, decisionStatus, scope.storeId, purchaseOrderId, invalidOrder, supplierId, productQuery, fromDate, toDate, dateRangeError])
+  }, [
+    page,
+    status,
+    decisionStatus,
+    scope.storeId,
+    purchaseOrderId,
+    invalidOrder,
+    supplierId,
+    productQuery,
+    fromDate,
+    toDate,
+    dateRangeError,
+    liveRevision,
+  ])
 
   // Danh sách NCC cho bộ lọc: Owner đọc danh mục NCC; BM không có quyền đó nên lấy từ đơn nhập hàng của kho mình.
   useEffect(() => {

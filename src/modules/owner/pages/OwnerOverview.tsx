@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getHome } from '../../../shared/api/homeService'
+import { useQuietRefresh } from '../../../shared/live/useLiveReload'
 import { InventoryNotice } from '../../inventory/components'
 import OwnerMonitoring from '../../operations/OwnerMonitoring'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
@@ -70,6 +71,18 @@ export default function OwnerOverview() {
       active = false
     }
   }, [])
+  useQuietRefresh((signal) => {
+    getHome()
+      .then((r) => {
+        if (!signal.aborted) {
+          setCounts(
+            Object.fromEntries(r.data.shortcuts.map((s) => [s.key, s.count])),
+          )
+          setLoaded(true)
+        }
+      })
+      .catch(() => {})
+  }, true)
   const waiting = metrics.filter((m) => (counts[m.key] ?? 0) > 0)
   return (
     <div className="owner-overview">
