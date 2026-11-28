@@ -33,6 +33,7 @@ export function CreditDialog({
       title={grant ? 'Cấp quyền mua chịu' : 'Thu hồi quyền mua chịu'}
       formId="customer-credit"
       className="rv-dialog"
+      danger={!grant}
       submitLabel={grant ? 'Cấp quyền mua chịu' : 'Thu hồi quyền'}
       busy={busy}
       submitDisabled={!reason.trim()}

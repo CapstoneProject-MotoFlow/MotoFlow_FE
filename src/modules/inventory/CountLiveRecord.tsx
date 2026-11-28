@@ -262,13 +262,16 @@ function Editor({
           Number.isSafeInteger(Number(damaged)) &&
           Number(damaged) <= (counted === '' ? 0 : Number(counted))
         )
-      })
+      }),
+    allCounted =
+      rows.length > 0 &&
+      rows.every((l) => validCountQuantity(values[l.id] ?? ''))
   async function act(action: 'start' | 'lines' | 'submit') {
     if (
       lock.current ||
       !allowed ||
       (action !== 'start' && (!editable || !valid)) ||
-      (action === 'submit' && !confirmed)
+      (action === 'submit' && (!confirmed || !allCounted))
     )
       return
     lock.current = true
@@ -521,19 +524,30 @@ function Editor({
             </button>
             <button
               className="count-primary"
-              disabled={busy || importing || !valid || !confirmed}
+              disabled={busy || importing || !valid || !allCounted || !confirmed}
               aria-describedby={
-                valid && !confirmed ? 'count-submit-hint' : undefined
+                valid && (!allCounted || !confirmed)
+                  ? 'count-submit-hint'
+                  : undefined
               }
               onClick={() => void act('submit')}
             >
               Gửi kết quả
             </button>
           </div>
-          {valid && !confirmed && !busy && !importing && (
+          {valid && !allCounted && !busy && !importing ? (
             <p id="count-submit-hint" className="count-submit-hint">
-              Đánh dấu xác nhận số đếm để gửi.
+              Nhập đủ số đếm thực tế cho mọi dòng trước khi gửi kết quả.
             </p>
+          ) : (
+            valid &&
+            !confirmed &&
+            !busy &&
+            !importing && (
+              <p id="count-submit-hint" className="count-submit-hint">
+                Đánh dấu xác nhận số đếm để gửi.
+              </p>
+            )
           )}
         </div>
       )}

@@ -18,6 +18,7 @@ export default function FormDialog({
   footerExtra,
   hideSubmit = false,
   closeLabel = 'Hủy',
+  danger = false,
 }: {
   title: string
   formId: string
@@ -27,6 +28,7 @@ export default function FormDialog({
   submitDisabled?: boolean
   hideSubmit?: boolean
   closeLabel?: string
+  danger?: boolean
   footerExtra?: ReactNode
   className?: string
   onClose: () => void
@@ -110,7 +112,7 @@ export default function FormDialog({
               type="submit"
               form={formId}
               disabled={busy || submitDisabled}
-              className="ui-confirm-button"
+              className={'ui-confirm-button' + (danger ? ' ui-confirm-button--danger' : '')}
             >
               {submitLabel}
             </button>

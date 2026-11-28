@@ -54,7 +54,7 @@ export function ReceivableListPage() {
     revision,
   )
   // Review C3 + góp ý cô Hoài ("Phải thu" -> "Tổng nợ"): số tổng lấy cùng nguồn với Tổng quan.
-  const totals = useOwnerDebtTotals(scope.storeId)
+  const totals = useOwnerDebtTotals(scope.storeId, revision)
   const shown = (value: number | undefined) =>
     totals.loading ? 'Đang tải…' : totals.error ? '—' : formatMoney(value ?? 0)
   return (

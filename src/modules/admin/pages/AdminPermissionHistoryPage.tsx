@@ -175,7 +175,7 @@ export default function AdminPermissionHistoryPage() {
     <>
       <HeaderSearch
         loading={loading}
-        placeholder="Tìm tài khoản trong lịch sử phân quyền..."
+        placeholder="Tìm tài khoản trong lịch sử phân quyền…"
         items={accounts.map((item) => ({
           id: item.id,
           label: item.fullName,
@@ -384,6 +384,20 @@ function changeDetail(
     if (item.changeType === 'STORE_CHANGED')
       return stores.get(value) || '(không rõ tên)'
     return value
+  }
+  if (item.changeType === 'PERMISSION_GRANTED' && !item.oldValue && !item.newValue) {
+    return {
+      before: 'Chưa cấp',
+      after: 'Đã cấp',
+      permission: managerPermissionLabel(item.permissionCode),
+    }
+  }
+  if (item.changeType === 'PERMISSION_REVOKED' && !item.oldValue && !item.newValue) {
+    return {
+      before: 'Đang cấp',
+      after: 'Đã thu hồi',
+      permission: managerPermissionLabel(item.permissionCode),
+    }
   }
   return {
     before: format(item.oldValue),

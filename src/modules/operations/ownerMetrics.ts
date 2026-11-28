@@ -24,9 +24,10 @@ async function readPages<T>(url: string, signal: AbortSignal) {
 function useTotals<T>(
   url: string,
   load: (url: string, signal: AbortSignal) => Promise<T>,
+  revision = 0,
 ) {
   const [attempt, setAttempt] = useState(0)
-  const key = url + '#' + attempt
+  const key = url + '#' + attempt + '#' + revision
   const [result, setResult] = useState<{
     key: string
     data?: T
@@ -100,10 +101,13 @@ export function useOwnerSalesTotals(day: string) {
 }
 
 /** Review C3: Tổng quan và màn Công nợ dùng chung một cách tính, nên số luôn khớp nhau. */
-export function useOwnerDebtTotals(storeId?: number | string) {
+export function useOwnerDebtTotals(
+  storeId?: number | string,
+  revision = 0,
+) {
   const scope =
     storeId === undefined || storeId === '' ? '' : `?storeId=${storeId}`
-  return useTotals('/receivables/customers' + scope, debtTotals)
+  return useTotals('/receivables/customers' + scope, debtTotals, revision)
 }
 
 type SaleRow = { id: number; storeId: number; total: number | null }

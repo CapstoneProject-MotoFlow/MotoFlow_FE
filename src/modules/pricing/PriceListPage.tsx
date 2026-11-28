@@ -37,7 +37,7 @@ export default function PriceListPage() {
     [notice, setNotice] = useState(''),
     [limit, setLimit] = useState<'DISCOUNT_THRESHOLD' | 'MINIMUM_MARGIN'>()
   const page = Math.max(0, Number(params.get('page')) || 0),
-    diff = edit && params.get('diff') !== '0'
+    diff = edit && params.get('diff') === '1'
   const prices = useInventoryData<Page<Price>>(
     '/pricing/retail-prices',
     {

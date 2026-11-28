@@ -45,7 +45,12 @@ export default function NotificationBell() {
         >
           <Icon name="bell" />
           {!!data?.unread && (
-            <span className="notification-count">{data.unread}</span>
+            <span
+              className="notification-count"
+              title={`${data.unread} thông báo chưa đọc`}
+            >
+              {data.unread > 99 ? '99+' : data.unread}
+            </span>
           )}
         </button>
         {open && (

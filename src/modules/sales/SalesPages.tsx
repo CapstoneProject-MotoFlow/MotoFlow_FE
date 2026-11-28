@@ -14,7 +14,7 @@ import {
   WarehouseFilter,
 } from '../inventory/components'
 import type { Page } from '../inventory/types'
-import { money, dateTime, today } from '../inventory/presentation'
+import { money, dateTime } from '../inventory/presentation'
 import type { Customer } from '../customers/types'
 import PageBackLink from '../../shared/ui/PageBackLink'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
@@ -108,8 +108,9 @@ export function SalesOrderListPage({
     awaiting = canWait && tab === 'AWAITING_STOCK',
     // PM 17/11: tab "Nháp" ngoài cùng bên phải (Owner, BM) thay cho mục "Đơn nháp" trên sidebar.
     drafts = !staff && tab === 'DRAFT'
-  const from = p.get('from') ?? today(),
-    to = p.get('to') ?? today()
+  const from = p.get('from') ?? '',
+    to = p.get('to') ?? ''
+  const invalidDates = !!from && !!to && from > to
   const page = Math.max(0, Number(p.get('page')) || 0)
   const resource = useSalesList(
     {
@@ -129,7 +130,7 @@ export function SalesOrderListPage({
         : staff && tab === 'OPEN'
           ? 'AWAITING_PICKING'
           : (p.get('status') ?? ''),
-    !drafts && (!closed || from <= to),
+    !drafts && (!closed || !invalidDates),
   )
   const matches: SalesOrderRow[] = orders.length
     ? orders
@@ -270,7 +271,7 @@ export function SalesOrderListPage({
                 <input
                   type="date"
                   value={from}
-                  max={to}
+                  max={to || undefined}
                   onChange={(e) => scope.filter({ from: e.target.value })}
                 />
               </label>
@@ -279,7 +280,7 @@ export function SalesOrderListPage({
                 <input
                   type="date"
                   value={to}
-                  min={from}
+                  min={from || undefined}
                   onChange={(e) => scope.filter({ to: e.target.value })}
                 />
               </label>
@@ -289,7 +290,7 @@ export function SalesOrderListPage({
         <InventoryNotice
           error={
             scope.storesError ??
-            (from > to
+            (invalidDates
               ? 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.'
               : undefined)
           }
@@ -703,12 +704,18 @@ export function SalesOrderDetailView({
                     {order.status !== 'AWAITING_STOCK' &&
                       order.actions?.canConfirm && (
                         <button
-                          className="sales-action-primary"
+                          className={
+                            order.status === 'CONFIRMED'
+                              ? undefined
+                              : 'sales-action-primary'
+                          }
                           onClick={() => setAction('confirm')}
                         >
-                          Xác nhận đơn
+                          {order.status === 'CONFIRMED'
+                            ? 'Xác nhận lại'
+                            : 'Xác nhận đơn'}
                         </button>
-                    )}
+                      )}
                     {order.status !== 'AWAITING_STOCK' &&
                       (order.actions?.canRecordPayment ||
                         order.actions?.canRecordCredit) && (
@@ -1293,6 +1300,14 @@ export function RecordPickedView({
                             )
                           }
                         />
+                        {l.picked != null &&
+                          (l.picked > l.requested ||
+                            l.picked < 0 ||
+                            !Number.isInteger(l.picked)) && (
+                            <small className="stock-error" role="alert">
+                              Số lượng phải là số nguyên từ 0 đến {l.requested}.
+                            </small>
+                          )}
                       </td>
                       {awaitingStock && (
                         <td>
@@ -1427,6 +1442,33 @@ export function RecordPickedView({
             >
               {busy ? 'Đang gửi…' : 'Gửi số đã lấy'}
             </button>
+            {(() => {
+              const badQty = lines.find(
+                (l) =>
+                  l.picked != null &&
+                  (l.picked > l.requested ||
+                    l.picked < 0 ||
+                    !Number.isInteger(l.picked)),
+              )
+              const reason = !editable
+                ? 'Đơn hiện không ở trạng thái cho phép ghi số lấy hàng.'
+                : badQty
+                  ? `Số lượng ${badQty.sku} không được vượt quá ${badQty.requested}.`
+                  : !pickedReady(lines)
+                    ? 'Nhập đủ số lượng hợp lệ cho từng dòng.'
+                    : lines.some(
+                          (l) =>
+                            (l.picked ?? 0) < l.requested &&
+                            !l.shortReason?.trim(),
+                        )
+                      ? 'Nhập lý do thiếu hàng cho các dòng lấy ít hơn yêu cầu.'
+                      : ''
+              return reason ? (
+                <small className="sales-action-reason" role="status">
+                  {reason}
+                </small>
+              ) : null
+            })()}
           </div>
         </footer>
       </div>

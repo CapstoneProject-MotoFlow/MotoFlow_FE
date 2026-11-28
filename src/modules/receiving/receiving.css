@@ -925,6 +925,20 @@
   accent-color: #4658f3;
 }
 
+.receiving-inline-error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #fecdca;
+  border-radius: 0.5rem;
+  background: #fef3f2;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.receiving-staff-inspection {
+  padding-bottom: 5.5rem;
+}
+
 .receiving-layout-actions.receiving-staff-footer {
   position: sticky;
   bottom: 0;
@@ -967,7 +981,7 @@
 .receiving-replacement-hint {
   margin: 0;
   padding: 0.75rem 1rem;
-  border-left: 4px solid #4658f3;
+  border: 1px solid #c7d2fe;
   border-radius: 0.5rem;
   background: #eef0ff;
   color: #1f2a44;

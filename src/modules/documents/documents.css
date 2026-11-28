@@ -302,8 +302,8 @@
   list-style: none;
 }
 .docs-history li {
-  padding: 0 0 15px 14px;
-  border-left: 2px solid #e4e7ec;
+  padding: 0 0 15px;
+  border-bottom: 1px solid #eef0f3;
   overflow-wrap: anywhere;
 }
 .docs-history small {

@@ -43,26 +43,55 @@ export default function OpeningDebtPicker({
   const warehouse = scope.storeId
     ? scope.stores.find((store) => String(store.id) === scope.storeId)
     : scope.stores.find((store) => store.central)
+  const [selectedStoreId, setSelectedStoreId] = useState(
+    () => scope.storeId ?? '',
+  )
+  const resolvedStoreId =
+    selectedStoreId ||
+    (warehouse ? String(warehouse.id) : scope.stores[0] ? String(scope.stores[0].id) : '')
+  const activeStore = scope.stores.find(
+    (store) => String(store.id) === resolvedStoreId,
+  )
   const late = due && due < today(),
     valid =
       customer &&
+      !!resolvedStoreId &&
       Number.isSafeInteger(Number(amount)) &&
       Number(amount) > 0 &&
       Number(amount) <= 100000000000 &&
-      due
+      due &&
+      files.length > 0 &&
+      note.trim().length > 0
   async function save() {
-    if (lock.current || !valid) return
+    if (lock.current) return
+    if (!customer) {
+      setError('Vui lòng chọn khách hàng.')
+      return
+    }
+    if (!resolvedStoreId) {
+      setError('Vui lòng chọn cửa hàng ghi nợ.')
+      return
+    }
+    if (!files.length) {
+      setError('Vui lòng đính kèm ít nhất 1 tệp chứng từ.')
+      return
+    }
+    if (!note.trim()) {
+      setError('Vui lòng nhập ghi chú cho khoản nợ đầu kỳ.')
+      return
+    }
+    if (!valid) return
     lock.current = true
     setBusy(true)
     setError('')
     try {
       const evidence = []
       for (const file of files) evidence.push(await uploadAttachment(file))
-      await axiosClient.post(`/customers/${customer!.id}/opening-debts`, {
-        storeId: scope.storeId ? Number(scope.storeId) : undefined,
+      await axiosClient.post(`/customers/${customer.id}/opening-debts`, {
+        storeId: Number(resolvedStoreId),
         amount: Number(amount),
         dueDate: due,
-        note: note.trim() || undefined,
+        note: note.trim(),
         evidence,
       })
       onSaved()
@@ -156,6 +185,24 @@ export default function OpeningDebtPicker({
             )}
             <FieldError message={validation.errors.customer} />
           </label>
+          <label className="rv-full">
+            Cửa hàng ghi nợ <span>*</span>
+            <select
+              name="storeId"
+              required
+              disabled={busy}
+              value={resolvedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+            >
+              {!resolvedStoreId && <option value="">Chọn cửa hàng</option>}
+              {scope.stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.storeName}
+                </option>
+              ))}
+            </select>
+            <FieldError message={validation.errors.storeId} />
+          </label>
           <label>
             Số tiền nợ <span>*</span>
             <div className="rv-money-input">
@@ -188,7 +235,9 @@ export default function OpeningDebtPicker({
             )}
           </label>
           <div className="rv-full rv-evidence">
-            <label htmlFor="opening-files">Chứng cứ</label>
+            <label htmlFor="opening-files">
+              Chứng cứ <span>*</span>
+            </label>
             {files.map((file, index) => (
               <div className="rv-file" key={index}>
                 <span className="rv-file-icon">▧</span>
@@ -222,20 +271,23 @@ export default function OpeningDebtPicker({
             <small>JPG, PNG, WebP hoặc PDF, tối đa 10 MB/tệp.</small>
           </div>
           <label className="rv-full">
-            Ghi chú
+            Ghi chú <span>*</span>
             <textarea
+              name="note"
+              required
               rows={2}
               maxLength={500}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Diễn giải khoản nợ và nguồn chứng từ"
             />
+            <FieldError message={validation.errors.note} />
           </label>
           {customer && amount && (
             <p className="rv-opening-recap rv-full">
               Sẽ ghi nợ đầu kỳ <strong>{money.format(Number(amount))}</strong>{' '}
               cho {customer.customerName}
-              {warehouse && ' tại ' + warehouse.storeName}
+              {activeStore && ' tại ' + activeStore.storeName}
               {due && (
                 <>
                   , hạn trả{' '}

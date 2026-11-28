@@ -22,6 +22,8 @@ export function inventoryError(error: unknown) {
     const status = error.response?.status
     if (error.code === 'ERR_NETWORK' || [502, 503, 504].includes(status ?? 0))
       return 'Kết nối đến máy chủ bị gián đoạn.'
+    if (status === 500 && error.config?.method?.toLowerCase() === 'get')
+      return 'Không tải được dữ liệu do lỗi máy chủ. Vui lòng thử lại sau.'
     return (
       error.response?.data?.message ??
       'Không tải được dữ liệu. Vui lòng thử lại.'

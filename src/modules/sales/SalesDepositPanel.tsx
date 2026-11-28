@@ -232,6 +232,7 @@ export default function SalesDepositPanel({
       )}
       {dialog === 'record' && (
         <FormDialog
+          className="sales-transaction-dialog"
           title={deposit.status === 'NONE' ? 'Nhận cọc' : 'Thu thêm cọc'}
           formId="deposit-record"
           submitLabel="Ghi nhận cọc"
@@ -288,6 +289,7 @@ export default function SalesDepositPanel({
       )}
       {dialog === 'expiry' && (
         <FormDialog
+          className="sales-transaction-dialog"
           title="Sửa hạn cọc"
           formId="deposit-expiry"
           submitLabel="Lưu hạn cọc"

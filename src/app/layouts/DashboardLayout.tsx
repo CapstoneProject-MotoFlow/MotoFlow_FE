@@ -95,6 +95,9 @@ export default function DashboardLayout() {
         role !== 'ADMIN' ? 'owner-dashboard' : 'admin-role-dashboard',
       ].join(' ')}
     >
+      <a href="#main-content" className="skip-link">
+        Bỏ qua menu
+      </a>
       <aside
         id="admin-sidebar"
         ref={sidebarRef}
@@ -151,7 +154,7 @@ export default function DashboardLayout() {
           }}
         />
       )}
-      <div className="dashboard-main" inert={drawerShown}>
+      <div id="main-content" tabIndex={-1} className="dashboard-main" inert={drawerShown}>
         <header className="dashboard-header">
           <div className="header-tools">
             <button
@@ -165,6 +168,15 @@ export default function DashboardLayout() {
               }
               aria-expanded={phone ? drawerOpen : !collapsed}
               aria-controls="admin-sidebar"
+              title={
+                phone
+                  ? drawerOpen
+                    ? 'Đóng menu'
+                    : 'Mở menu'
+                  : collapsed
+                    ? 'Mở rộng menu'
+                    : 'Thu gọn menu'
+              }
               aria-label={
                 phone
                   ? drawerOpen
@@ -253,7 +265,7 @@ export default function DashboardLayout() {
         {location.state?.accessDenied && (
           <section className="access-denied-card" role="alert">
             <h2>Không có quyền truy cập</h2>
-            <p>Bạn chưa được cấp quyền sử dụng chức năng này. (MSG05)</p>
+            <p>Bạn chưa được cấp quyền sử dụng chức năng này.</p>
             <Link className="mf-btn mf-btn--secondary" to="/">
               Về trang chủ
             </Link>
