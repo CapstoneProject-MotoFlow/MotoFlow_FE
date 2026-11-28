@@ -88,26 +88,41 @@ export default function OwnerMonitoring() {
   const range = periodRange(period)
   const sales = useOwnerSalesPeriod(range.from, range.to)
   const debt = useOwnerDebtTotals()
-  const counts = useInventoryData<CountList>('/stock-counts', {
-      status: 'AWAITING_APPROVAL',
-      page: 0,
-      size: 5,
-    }),
-    excess = useInventoryData<Page<Pending>>('/goods-receipt-notes', {
-      excessAwaiting: true,
-      page: 0,
-      size: 5,
-    }),
+  const counts = useInventoryData<CountList>(
+      '/stock-counts',
+      { status: 'AWAITING_APPROVAL', page: 0, size: 5 },
+      0,
+      true,
+      { live: true },
+    ),
+    excess = useInventoryData<Page<Pending>>(
+      '/goods-receipt-notes',
+      { excessAwaiting: true, page: 0, size: 5 },
+      0,
+      true,
+      { live: true },
+    ),
     replenishments = useInventoryData<Page<ReplenishmentRow>>(
       '/replenishment-requests',
       { status: 'AWAITING_COORDINATION', page: 0, size: 5 },
+      0,
+      true,
+      { live: true },
     ),
-    summary = useInventoryData<StockSummary>('/inventory/stock/summary'),
-    lots = useInventoryData<{ page: Page<unknown> }>('/inventory/lots', {
-      tab: 'NEAR_EXPIRY',
-      page: 0,
-      size: 1,
-    }),
+    summary = useInventoryData<StockSummary>(
+      '/inventory/stock/summary',
+      {},
+      0,
+      true,
+      { live: true },
+    ),
+    lots = useInventoryData<{ page: Page<unknown> }>(
+      '/inventory/lots',
+      { tab: 'NEAR_EXPIRY', page: 0, size: 1 },
+      0,
+      true,
+      { live: true },
+    ),
     stores = useInventoryData<Store[]>('/stores')
   const work = [
     ...(counts.data?.counts.items ?? []).map((r) => ({
@@ -361,9 +376,13 @@ function StoreLine({
   salesLoaded: boolean
 }) {
   const debt = useOwnerDebtTotals(store.id)
-  const stock = useInventoryData<StockSummary>('/inventory/stock/summary', {
-    storeId: store.id,
-  })
+  const stock = useInventoryData<StockSummary>(
+    '/inventory/stock/summary',
+    { storeId: store.id },
+    0,
+    true,
+    { live: true },
+  )
   const debtCell = (value: number | undefined) =>
     debt.loading ? 'Đang tải…' : formatMoney(value)
   return (

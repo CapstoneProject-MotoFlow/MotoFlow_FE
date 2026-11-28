@@ -1,6 +1,6 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
 import { isAxiosError } from 'axios'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
@@ -26,6 +26,11 @@ import { useReceivingTasks } from '../operations/useReceivingTasks'
 import { receivingWork } from '../operations/receivingTaskModel'
 import { documentCode } from '../../shared/utils/documentCode'
 import { supplierDiscrepancyStatusLabels } from '../../shared/labels/status'
+import {
+  useLiveReload,
+  useLiveReloadPause,
+  useQuietRefresh,
+} from '../../shared/live/useLiveReload'
 import './receiving.css'
 
 /** GET /purchase-orders/drafts (Mạnh, việc D1 17/11): nháp của chính người dùng, mới nhất trước. */
@@ -351,11 +356,22 @@ export default function PurchaseOrdersPage() {
   } | null>(null)
   const [revision, setRevision] = useState(0)
   const [assigned, setAssigned] = useState('')
-  const receivingTasks = useReceivingTasks(['SUPPLIER_RECEIVING'], staff)
+  const receivingTasks = useReceivingTasks(
+    ['SUPPLIER_RECEIVING'],
+    staff,
+    0,
+    true,
+  )
   const [orders, setOrders] = useState<Page<Order>>()
   const [assignments, setAssignments] = useState<Page<Assignment>>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [liveRevision, setLiveRevision] = useState(0)
+  const quietNext = useRef(false)
+  useLiveReload(() => {
+    quietNext.current = true
+    setLiveRevision((n) => n + 1)
+  })
 
   useEffect(() => {
     if (staff) return
@@ -426,11 +442,15 @@ export default function PurchaseOrdersPage() {
   }, [owner])
 
   useEffect(() => {
+    const quiet = quietNext.current
+    quietNext.current = false
     if (dateRangeError || drafts) return
     const controller = new AbortController()
     const timer = window.setTimeout(async () => {
-      setLoading(true)
-      setError('')
+      if (!quiet) {
+        setLoading(true)
+        setError('')
+      }
       try {
         if (staff && !staffClosed) {
           const { data } = await axiosClient.get<Page<Assignment>>(
@@ -506,7 +526,8 @@ export default function PurchaseOrdersPage() {
           }
         }
       } catch (error) {
-        if (!controller.signal.aborted) setError(receivingError(error))
+        if (!controller.signal.aborted && !quiet)
+          setError(receivingError(error))
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
@@ -531,6 +552,7 @@ export default function PurchaseOrdersPage() {
     drafts,
     discrepancyView,
     staffClosed,
+    liveRevision,
   ])
 
   const total = dateRangeError
@@ -1235,6 +1257,8 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
   const validId = /^[1-9]\d*$/.test(id ?? '')
+  // Form hủy đơn là khối nhập liệu trong trang, không phải popup nên tự tạm giữ tín hiệu live.
+  useLiveReloadPause(cancelOpen)
   useEffect(() => {
     if (!validId) return
     const controller = new AbortController()
@@ -1248,6 +1272,17 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
       })
     return () => controller.abort()
   }, [id, validId])
+  useQuietRefresh((signal) => {
+    axiosClient
+      .get<Detail>('/purchase-orders/' + id, { signal })
+      .then(({ data }) => {
+        if (!signal.aborted)
+          setDetail((previous) =>
+            previous && previous.id === data.id ? data : previous,
+          )
+      })
+      .catch(() => {})
+  }, validId)
   useEffect(() => {
     if (!id || !detail?.receipts.some((receipt) => !receipt.recordedByName))
       return

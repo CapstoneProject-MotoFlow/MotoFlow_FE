@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon, { type IconName } from '../../../shared/ui/Icon'
 import { loadBranchHome, type BranchHome } from '../services/branchHomeService'
+import { useQuietRefresh } from '../../../shared/live/useLiveReload'
 import './branch-overview.css'
 const cards: {
   label: string
@@ -89,6 +90,13 @@ export default function BranchManagerOverview() {
       active = false
     }
   }, [revision])
+  useQuietRefresh((signal) => {
+    loadBranchHome()
+      .then((value) => {
+        if (!signal.aborted) setData(value)
+      })
+      .catch(() => {})
+  }, true)
   const work = useBranchWork(
     !!data?.shortcuts.some(
       (s) => s.key === 'REPLENISHMENTS_AWAITING_COORDINATION',
