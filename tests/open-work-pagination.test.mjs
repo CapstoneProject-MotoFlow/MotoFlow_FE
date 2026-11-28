@@ -22,6 +22,7 @@ test('open work pagination excludes finished documents before slicing each merge
           export function reset() { state = undefined; effect = undefined; requests = [] }
           export function useState() { return [state, value => { state = value }] }
           export function useEffect(fn) { effect = fn }
+          export function useQuietRefresh() {}
           export async function settle() {
             const cleanup = effect();
             const deadline = Date.now() + 5000;
@@ -63,6 +64,10 @@ test('open work pagination excludes finished documents before slicing each merge
             .replace(
               /import axiosClient from '[^']+';/,
               "import { client as axiosClient } from 'test:work-runtime';",
+            )
+            .replace(
+              /import .* from '[^']*\/live\/useLiveReload';/,
+              "import { useQuietRefresh } from 'test:work-runtime';",
             )
             .replace(
               /import .* from '[^']*\/api';/,

@@ -33,25 +33,46 @@ type Work = {
 }
 export function useBranchWork(coordinator: boolean) {
   const { user } = useAuth()
-  const sales = useInventoryData<Page<SummaryDto>>('/sales-orders', {
-      view: 'OPEN',
-      page: 0,
-      size: 5,
-    }),
+  const sales = useInventoryData<Page<SummaryDto>>(
+      '/sales-orders',
+      {
+        view: 'OPEN',
+        page: 0,
+        size: 5,
+      },
+      0,
+      true,
+      { live: true },
+    ),
     purchaseOrders = useInventoryData<Page<PurchaseOrderRow>>(
       '/purchase-orders',
       { view: 'AWAITING_RECEIVING_ASSIGNMENT', page: 0, size: 5 },
+      0,
+      true,
+      { live: true },
     ),
-    receipts = useInventoryData<Page<ReceiptRow>>('/goods-receipt-notes', {
-      status: 'AWAITING_CONFIRMATION',
-      page: 0,
-      size: 5,
-    }),
-    unassigned = useInventoryData<Page<ReceiptRow>>('/goods-receipt-notes', {
-      unassigned: true,
-      page: 0,
-      size: 5,
-    }),
+    receipts = useInventoryData<Page<ReceiptRow>>(
+      '/goods-receipt-notes',
+      {
+        status: 'AWAITING_CONFIRMATION',
+        page: 0,
+        size: 5,
+      },
+      0,
+      true,
+      { live: true },
+    ),
+    unassigned = useInventoryData<Page<ReceiptRow>>(
+      '/goods-receipt-notes',
+      {
+        unassigned: true,
+        page: 0,
+        size: 5,
+      },
+      0,
+      true,
+      { live: true },
+    ),
     transfers = useInventoryData<Page<TransferRow>>(
       '/transfer-orders',
       {
@@ -62,29 +83,55 @@ export function useBranchWork(coordinator: boolean) {
       },
       0,
       user?.storeId != null,
+      { live: true },
     ),
-    drafts = useInventoryData<CountList>('/stock-counts', {
-      status: 'DRAFT',
-      page: 0,
-      size: 5,
-    }),
-    counts = useInventoryData<CountList>('/stock-counts', {
-      status: 'COUNTING',
-      page: 0,
-      size: 5,
-    }),
+    drafts = useInventoryData<CountList>(
+      '/stock-counts',
+      {
+        status: 'DRAFT',
+        page: 0,
+        size: 5,
+      },
+      0,
+      true,
+      { live: true },
+    ),
+    counts = useInventoryData<CountList>(
+      '/stock-counts',
+      {
+        status: 'COUNTING',
+        page: 0,
+        size: 5,
+      },
+      0,
+      true,
+      { live: true },
+    ),
     replenishments = useInventoryData<Page<ReplenishmentRow>>(
       '/replenishment-requests',
       { status: 'AWAITING_COORDINATION', page: 0, size: 5 },
       0,
       coordinator,
+      { live: true },
     )
-  const summary = useInventoryData<StockSummary>('/inventory/stock/summary'),
-    lots = useInventoryData<{ page: Page<unknown> }>('/inventory/lots', {
-      tab: 'NEAR_EXPIRY',
-      page: 0,
-      size: 1,
-    })
+  const summary = useInventoryData<StockSummary>(
+      '/inventory/stock/summary',
+      {},
+      0,
+      true,
+      { live: true },
+    ),
+    lots = useInventoryData<{ page: Page<unknown> }>(
+      '/inventory/lots',
+      {
+        tab: 'NEAR_EXPIRY',
+        page: 0,
+        size: 1,
+      },
+      0,
+      true,
+      { live: true },
+    )
   const work: Work[] = [
     ...saleWork(sales.data?.items ?? [], (id) => documentCode('DB', id)),
     ...(purchaseOrders.data?.items ?? []).map((order) => ({

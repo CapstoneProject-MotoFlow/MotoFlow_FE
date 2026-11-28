@@ -1,10 +1,25 @@
 import { useEffect, useState } from 'react'
 import axiosClient from '../../shared/api/axiosClient'
+import { useQuietRefresh } from '../../shared/live/useLiveReload'
 import { inventoryError, type Query } from '../inventory/api'
 import type { Page } from '../inventory/types'
 import type { SummaryDto } from './salesApi'
+
+async function loadSalesList(params: Query, signal: AbortSignal) {
+  const { data } = await axiosClient.get<Page<SummaryDto>>('/sales-orders', {
+    params,
+    signal,
+  })
+  return data
+}
+
 /** Status filtering and pagination are performed by the server. */
-export function useSalesList(params: Query, status: string, enabled = true) {
+export function useSalesList(
+  params: Query,
+  status: string,
+  enabled = true,
+  live = false,
+) {
   const key = JSON.stringify({ ...params, status: status || undefined })
   const [response, setResponse] = useState<{
     key: string
@@ -15,12 +30,8 @@ export function useSalesList(params: Query, status: string, enabled = true) {
     if (!enabled) return
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      void axiosClient
-        .get<Page<SummaryDto>>('/sales-orders', {
-          params: JSON.parse(key),
-          signal: controller.signal,
-        })
-        .then(({ data }) => {
+      loadSalesList(JSON.parse(key), controller.signal)
+        .then((data) => {
           if (!controller.signal.aborted) setResponse({ key, data })
         })
         .catch((error) => {
@@ -33,12 +44,24 @@ export function useSalesList(params: Query, status: string, enabled = true) {
       controller.abort()
     }
   }, [key, enabled])
+  useQuietRefresh((signal) => {
+    const k = key
+    loadSalesList(JSON.parse(k), signal)
+      .then((data) => {
+        if (!signal.aborted)
+          setResponse((p) =>
+            p?.key === k ? { ...p, data, error: undefined } : p,
+          )
+      })
+      .catch(() => {})
+  }, enabled && live)
   return {
     data: enabled && response?.key === key ? response.data : undefined,
     error: enabled && response?.key === key ? response.error : undefined,
     loading: enabled && response?.key !== key,
   }
 }
+
 /** Searchable option lists fetch additional pages only when requested. */
 export function useChoicePages<T extends { id: number }>(
   path: string,

@@ -53,6 +53,7 @@ export default function AdjustmentListPage() {
     },
     0,
     !dateError,
+    { live: true },
   )
   return (
     <div className="docs-page">

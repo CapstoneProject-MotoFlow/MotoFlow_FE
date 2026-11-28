@@ -61,6 +61,8 @@ export default function StockCountListPage() {
     },
     revision,
     !invalid,
+    undefined,
+    true,
   )
   const totalQuery = { ...filters, page: 0, size: 1 }
   const all = useInventoryData<CountList>(
@@ -68,18 +70,21 @@ export default function StockCountListPage() {
     totalQuery,
     revision,
     !invalid,
+    { live: true },
   )
   const completed = useInventoryData<CountList>(
     '/stock-counts',
     { ...totalQuery, status: 'COMPLETED' },
     revision,
     !invalid,
+    { live: true },
   )
   const cancelled = useInventoryData<CountList>(
     '/stock-counts',
     { ...totalQuery, status: 'CANCELLED' },
     revision,
     !invalid,
+    { live: true },
   )
   const allTotal = all.data?.counts.totalItems
   const completedTotal = completed.data?.counts.totalItems
@@ -98,6 +103,7 @@ export default function StockCountListPage() {
     { storeId: scope.storeId },
     revision,
     scope.owner,
+    { live: true },
   )
   const requests = scope.owner
     ? ownerRequests

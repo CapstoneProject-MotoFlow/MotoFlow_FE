@@ -182,6 +182,7 @@ export default function TransferDetailPage() {
       {},
       revision,
       !!id && /^\d+$/.test(id),
+      { live: true },
     ),
     d = r.data,
     coordinator = canCoordinateTransfers(scope.user),

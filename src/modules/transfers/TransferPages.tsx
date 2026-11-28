@@ -32,6 +32,7 @@ export function ReplenishmentDetailPage() {
     {},
     revision,
     !!id && /^\d+$/.test(id),
+    { live: true },
   )
   const canCoordinate = canCoordinateTransfers(scope.user)
   const open = data?.status !== 'CLOSED'

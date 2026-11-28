@@ -1,8 +1,8 @@
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
 import axiosClient from '../../shared/api/axiosClient'
 import { useAuth } from '../../shared/hooks/useAuth'
-import { useLiveReload } from '../../shared/live/useLiveReload'
+import { useQuietRefresh } from '../../shared/live/useLiveReload'
 import { useSearchParams } from 'react-router-dom'
 import type { DashboardStore } from '../../shared/types/store'
 
@@ -75,33 +75,21 @@ export function useInventoryData<T>(
       controller.abort()
     }
   }, [path, query, key, enabled])
-  // Quiet reload: liveTick is not in key, so data and loading stay as they are.
-  const [liveTick, setLiveTick] = useState(0)
-  useLiveReload(() => setLiveTick((n) => n + 1), enabled && !!options.live)
-  // Reads key/path/query from the latest render, so the effect below does not re-run on them.
-  const liveRequest = useEffectEvent((signal: AbortSignal) => {
+  // Quiet reload: not in key, so data and loading stay as they are.
+  useQuietRefresh((signal) => {
     const requestKey = key
     void axiosClient
       .get<T>(path + (query ? '?' + query : ''), { signal })
       .then(({ data }) => {
-        if (signal.aborted) return
-        setResponse((previous) =>
-          previous?.key === requestKey ? { key: requestKey, data } : previous,
-        )
+        if (!signal.aborted)
+          setResponse((previous) =>
+            previous?.key === requestKey ? { key: requestKey, data } : previous,
+          )
       })
       .catch(() => {
         // Keep the old data quietly; a failed background reload shows nothing.
       })
-  })
-  useEffect(() => {
-    if (liveTick === 0 || !enabled) return
-    const controller = new AbortController()
-    const timer = setTimeout(() => liveRequest(controller.signal), 200)
-    return () => {
-      clearTimeout(timer)
-      controller.abort()
-    }
-  }, [liveTick, enabled])
+  }, enabled && !!options.live)
   function updateData(update: (data: T) => T) {
     setResponse((previous) =>
       previous?.key === key && previous.data
