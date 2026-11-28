@@ -4,6 +4,7 @@ import axiosClient from '../../shared/api/axiosClient'
 import { formatDateTime, formatMoney } from '../../shared/utils/format'
 import { useInventoryData, useInventoryScope, inventoryError } from './api'
 import { InventoryHeader, InventoryNotice, Pagination } from './components'
+import { stockCountStatusLabels } from '../../shared/labels/status'
 import SearchableFilter from '../../shared/ui/SearchableFilter'
 import { categoryOptions, type Category } from '../catalog/api/searchProducts'
 import type { Page } from './types'
@@ -191,7 +192,7 @@ export default function InventoryPeriodsPage() {
         <div className="period-modal-body"><InventoryNotice loading={preview.loading} error={error || preview.error} onRetry={preview.reload} />
           {preview.data && <>
             <p className={preview.data.canClose ? 'period-check-ok' : 'period-check-error'}>{preview.data.canClose ? 'Kỳ đủ điều kiện đóng.' : `Chưa thể đóng kỳ (${preview.data.reason ?? 'cần xử lý điều kiện trước'}).`}</p>
-            <h3>Phiếu kiểm kê chưa xong ({preview.data.blockingCounts.length})</h3>{preview.data.blockingCounts.map((item) => <p key={item.id}>KK-{item.id} · {item.storeName} · {shortDate(item.countDate)} · {item.status}</p>)}
+            <h3>Phiếu kiểm kê chưa xong ({preview.data.blockingCounts.length})</h3>{preview.data.blockingCounts.map((item) => <p key={item.id}>KK-{item.id} · {item.storeName} · {shortDate(item.countDate)} · {stockCountStatusLabels[item.status] ?? item.status}</p>)}
             <h3>Phiếu nhập chưa xác nhận ({preview.data.unconfirmedReceipts.length})</h3>{preview.data.unconfirmedReceipts.map((item) => <p key={item.id}>PN-{item.id} · {item.storeName} · {formatDateTime(item.arrivedAt)}</p>)}
             <h3>Lệnh hàng còn trên đường ({preview.data.transfersInTransit.length})</h3>{preview.data.transfersInTransit.map((item) => <p key={item.id}>ĐC-{item.id} · {item.sourceStoreName} → {item.destStoreName} · {formatDateTime(item.dispatchedAt)}</p>)}
             <div className="period-modal-total"><span>{preview.data.balanceRows} dòng tồn cuối kỳ</span><strong>{formatMoney(preview.data.totals.closingValue)}</strong></div>

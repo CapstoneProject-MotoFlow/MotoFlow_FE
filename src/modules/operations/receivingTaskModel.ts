@@ -60,7 +60,9 @@ export function receivingWork(task: ReceivingTask) {
     task: supplier ? 'Nhận hàng nhập từ nhà cung cấp' : 'Nhận hàng điều chuyển',
     code: supplier
       ? receivingCode(task.taskType, task.documentId)
-      : task.documentCode || receivingCode(task.taskType, task.documentId),
+      : task.documentCode && !task.documentCode.startsWith('#')
+        ? task.documentCode
+        : receivingCode(task.taskType, task.documentId),
     description: [
       task.partnerName,
       task.lineCount != null ? task.lineCount + ' dòng' : null,

@@ -433,7 +433,11 @@ export default function TransferDetailPage() {
           <section>
             <CardHead
               title={d.sourceStoreName + ' → ' + d.destStoreName}
-              status={states[d.status]}
+              status={
+                d.status === 'RECONCILING' && !d.hasDiscrepancy
+                  ? 'Chờ đóng lệnh'
+                  : states[d.status]
+              }
               statusClass={'tf-status-' + d.status}
             >
               {actions.map((act) => (
@@ -585,7 +589,7 @@ export default function TransferDetailPage() {
                       Thiếu{' '}
                       <InfoTip text="Thiếu mặt hàng đặt = đã xuất − đạt − hỏng − mất − không giao bù. Hàng giao sai không tính là thiếu." />
                     </th>
-                    <th>
+                    <th className="tf-num">
                       Giao sai <InfoTip text={WRONG_ITEM_TIP} />
                     </th>
                     <th className="tf-num">
@@ -691,8 +695,9 @@ export default function TransferDetailPage() {
                       <th>Phụ tùng</th>
                       <th className="tf-num">Xuất</th>
                       <th className="tf-num">Đạt</th>
+                      <th className="tf-num">Hỏng</th>
                       <th className="tf-num">Thiếu</th>
-                      <th>
+                      <th className="tf-num">
                         Giao sai <InfoTip text={WRONG_ITEM_TIP} />
                       </th>
                       <th className="tf-num">
@@ -721,6 +726,9 @@ export default function TransferDetailPage() {
                           </td>
                           <td data-label="Đạt" className="tf-num">
                             {(line && passedOf(line)) ?? '—'}
+                          </td>
+                          <td data-label="Hỏng" className="tf-num">
+                            {line?.damagedQty ?? '—'}
                           </td>
                           <td data-label="Thiếu" className="tf-num">
                             {line?.shortageQty ?? c.shortQty}
@@ -962,6 +970,7 @@ export default function TransferDetailPage() {
           )}
           {action && (
             <TransferAction
+              className={action === 'close' ? 'tf-close-dialog' : ''}
               title={
                 action === 'dispatch'
                   ? 'Xác nhận xuất kho'

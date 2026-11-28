@@ -252,7 +252,11 @@ export default function ReceiptHandlingView({ receiptId }: { receiptId: string }
           <header className="sd-excess-head">
             <h2>Hàng thừa</h2>
             {waitingExcess > 0 && user?.role === 'OWNER' && (
-              <Link className="mf-btn mf-btn--primary mf-btn--sm" to="/goods-receipt-notes/excess">
+              <Link
+                className="mf-btn mf-btn--primary mf-btn--sm"
+                to={'/goods-receipt-notes/' + receiptId}
+                state={{ backTo: '/supplier-discrepancies?receipt=' + receiptId }}
+              >
                 Duyệt hàng thừa
               </Link>
             )}

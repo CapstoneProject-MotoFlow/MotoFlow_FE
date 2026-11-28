@@ -264,6 +264,7 @@ export default function SalesSettlementDialog({
       title={titles[action] + ' · ' + order.code}
       formId="sales-transaction"
       closeLabel={action === 'cancel' ? 'Không hủy' : undefined}
+      danger={action === 'cancel' || action === 'reject'}
       busy={busy}
       submitDisabled={
         !allowed ||

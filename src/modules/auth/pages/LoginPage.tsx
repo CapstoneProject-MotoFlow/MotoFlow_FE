@@ -66,7 +66,7 @@ export default function LoginPage() {
           name="username"
           type="text"
           autoComplete="username"
-          placeholder="Ví dụ: ha.tt..."
+          placeholder="Ví dụ: ha.tt…"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           required

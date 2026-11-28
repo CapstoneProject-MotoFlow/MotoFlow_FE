@@ -369,7 +369,7 @@ export default function AccountsPage() {
     <>
       <HeaderSearch
         loading={loading}
-        placeholder="Tìm tài khoản..."
+        placeholder="Tìm tài khoản…"
         items={accounts.map((item) => ({
           id: item.id,
           label: item.fullName,

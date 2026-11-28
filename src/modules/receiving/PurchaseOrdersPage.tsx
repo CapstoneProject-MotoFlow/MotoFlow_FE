@@ -1369,8 +1369,19 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
           {cancelError && <p role="alert">{cancelError}</p>}
           <div className="receiving-layout-actions">
             <button
+              type="button"
+              className="mf-btn mf-btn--secondary"
+              disabled={cancelling}
+              onClick={() => {
+                setCancelOpen(false)
+                setCancelError('')
+              }}
+            >
+              Đóng
+            </button>
+            <button
               type="submit"
-              className="receiving-layout-primary"
+              className="mf-btn mf-btn--danger"
               disabled={cancelling}
             >
               Xác nhận hủy
@@ -1589,7 +1600,7 @@ function PurchaseOrderDetail({ id }: { id?: string }) {
             {!history.length ? (
               <p>Chưa có lịch sử.</p>
             ) : (
-              <ol className="receiving-timeline">
+              <ol className="receiving-timeline" reversed>
                 {history.map((entry, index) => (
                   <li key={index}>
                     <strong>

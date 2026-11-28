@@ -84,8 +84,8 @@ export default function DashboardPage() {
         loading={loading}
         placeholder={
           role === 'ADMIN'
-            ? 'Tìm tài khoản theo tên đăng nhập, họ tên...'
-            : 'Tìm phụ tùng theo SKU, tên...'
+            ? 'Tìm tài khoản theo tên đăng nhập, họ tên…'
+            : 'Tìm phụ tùng theo SKU, tên…'
         }
         items={searchItems}
         onClear={() => setSelectedAccount(null)}

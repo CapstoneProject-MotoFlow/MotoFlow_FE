@@ -199,7 +199,7 @@
   color: #344054;
 }
 .sales-workspace:has(.sales-detail-layout) {
-  max-width: 1120px;
+  max-width: none;
   margin-inline: auto;
   gap: 20px;
   padding-top: 4px;
@@ -528,7 +528,7 @@
   }
 }
 .sales-workspace:has(.sales-pick-screen) {
-  max-width: 1120px;
+  max-width: none;
   margin-inline: auto;
   gap: 20px;
   padding-top: 4px;
@@ -687,7 +687,7 @@
   }
 }
 .sales-workspace:has(.sales-unmet) {
-  max-width: 1200px;
+  max-width: none;
   margin-inline: auto;
   gap: 20px;
   padding-top: 4px;
@@ -1424,7 +1424,7 @@
 }
 .pos-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(330px, 30vw, 440px);
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 410px);
   align-items: stretch;
   gap: 20px;
   min-height: calc(100vh - 170px);
@@ -1941,7 +1941,7 @@
   justify-self: center;
   font-size: 14px;
 }
-@media (max-width: 1100px) {
+@media (max-width: 960px) {
   .pos-layout {
     grid-template-columns: 1fr;
     min-height: 0;

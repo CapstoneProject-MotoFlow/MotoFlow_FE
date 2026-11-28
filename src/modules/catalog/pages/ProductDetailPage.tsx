@@ -10,6 +10,7 @@ import { mapConcurrent } from '../../../shared/utils/mapConcurrent'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../shared/hooks/useAuth'
+import { canEditCatalog } from '../../../shared/utils/roles'
 import axiosClient from '../../../shared/api/axiosClient'
 import { apiMessage } from '../../suppliers/supplierService'
 import ImageViewer from '../../../shared/ui/ImageViewer'
@@ -145,6 +146,11 @@ export default function ProductDetailPage() {
       <PageBackLink to={base} />
       <header>
         <h1>{data?.partName || 'Chi tiết phụ tùng'}</h1>
+        {data && canEditCatalog(user) && id && (
+          <Link className="mf-btn mf-btn--secondary" to={`${base}/${id}/edit`}>
+            Sửa
+          </Link>
+        )}
         {data && damagedVariantBaseSku(data) && (
           <p className="product-variant-label">
             Hàng lỗi của{' '}

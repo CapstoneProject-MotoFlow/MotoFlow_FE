@@ -1,5 +1,5 @@
 import PageBackLink from '../../shared/ui/PageBackLink'
-import { hasExistingPurchase, unplannedQuantity } from './transferRules'
+import { unplannedQuantity } from './transferRules'
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axiosClient from '../../shared/api/axiosClient'
@@ -112,7 +112,7 @@ function AllocationEditor({
       (sum, v) => sum + (v.qty === '' ? 0 : Number(v.qty)),
       0,
     )
-  const canHandOff = !hasExistingPurchase(request.purchaseOrders)
+  const canHandOff = lines.some((l) => unplannedQuantity(l) > 0)
   const remaining = lines.reduce(
       (sum, l) => sum + Math.max(0, l.remainingQty - taken(l.productId)),
       0,

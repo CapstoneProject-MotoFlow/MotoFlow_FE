@@ -53,17 +53,20 @@ export function Pagination({
   return (
     <footer className="stock-pagination">
       <span>
-        {total
-          ? page * size +
-            1 +
-            '–' +
-            Math.min((page + 1) * size, total) +
-            ' trên ' +
-            total
-          : 'Không có kết quả'}
+        {loading
+          ? 'Đang tải…'
+          : total
+            ? page * size +
+              1 +
+              '–' +
+              Math.min((page + 1) * size, total) +
+              ' trên ' +
+              total
+            : 'Không có kết quả'}
       </span>
       <button
         type="button"
+        title="Trang trước"
         aria-label="Trang trước"
         disabled={!page || loading}
         onClick={() => onPage(page - 1)}
@@ -73,6 +76,7 @@ export function Pagination({
       <span>{page + 1}</span>
       <button
         type="button"
+        title="Trang sau"
         aria-label="Trang sau"
         disabled={loading || (page + 1) * size >= total}
         onClick={() => onPage(page + 1)}

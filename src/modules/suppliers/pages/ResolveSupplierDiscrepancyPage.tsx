@@ -14,7 +14,7 @@ export default function ResolveSupplierDiscrepancyPage() {
   const valid = /^[1-9]\d*$/.test(receiptId)
   return (
     <main className="dashboard-content supplier-discrepancy-page">
-      <PageBackLink to="/purchase-orders" />
+      <PageBackLink to={receiptId ? '/supplier-discrepancies' : '/purchase-orders'} />
       {receiptId && !valid && (
         <p className="sd-alert" role="alert">
           Mã phiếu nhập không hợp lệ.

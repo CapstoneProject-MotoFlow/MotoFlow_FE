@@ -24,6 +24,8 @@ const {
   receiptAcceptsResult,
   unplannedQuantity,
   purchaseQuantityLimit,
+  remainingToPurchase,
+  remainingToBuy,
   pendingExcess,
   canConfirmExcess,
   returnableQuantities,
@@ -87,6 +89,14 @@ test('planning excludes quantities already planned and assigned to purchasing', 
   // Purchasing replaces its previous total, so the limit includes that old total.
   assert.equal(purchaseQuantityLimit(demand), 4)
   assert.equal(unplannedQuantity({ ...demand, plannedQty: 12 }), 0)
+  assert.equal(
+    remainingToPurchase({ ...demand, orderedQty: 1 }),
+    2,
+  )
+  assert.equal(
+    remainingToBuy({ requestedQty: 10, plannedQty: 2, toPurchaseQty: 5, orderedQty: 3 }),
+    5,
+  )
 })
 
 test('the replenishment purchase URL renders after the lazy route loads', async () => {

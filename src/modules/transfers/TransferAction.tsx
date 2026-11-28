@@ -8,6 +8,7 @@ export default function TransferAction({
   method = 'post',
   payload,
   children,
+  className = '',
   disabled = false,
   hideSubmit = false,
   onClose,
@@ -18,6 +19,7 @@ export default function TransferAction({
   method?: 'post' | 'put'
   payload: (form: HTMLFormElement) => unknown
   children: ReactNode
+  className?: string
   disabled?: boolean
   hideSubmit?: boolean
   onClose: () => void
@@ -30,7 +32,7 @@ export default function TransferAction({
     <FormDialog
       title={title}
       formId="transfer-action"
-      className="tf-dialog"
+      className={'tf-dialog' + (className ? ' ' + className : '')}
       submitLabel="Xác nhận"
       busy={busy}
       submitDisabled={disabled}

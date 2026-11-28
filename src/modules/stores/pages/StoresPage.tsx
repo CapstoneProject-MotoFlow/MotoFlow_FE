@@ -418,10 +418,10 @@ export default function StoresPage() {
                 ) : visibleStores.length ? (
                   visibleStores.map((store) => (
                     <tr key={store.id}>
-                      <td>
+                      <td data-label="Cửa hàng" className="store-cell-main">
                         <strong>{store.storeName}</strong>
                       </td>
-                      <td>
+                      <td data-label="Người quản lý">
                         {store.managers?.length
                           ? store.managers.map((manager) => (
                               <div key={manager.id}>
@@ -433,9 +433,11 @@ export default function StoresPage() {
                             ))
                           : 'Chưa có quản lý'}
                       </td>
-                      <td>{store.address}</td>
-                      <td>{store.phone || '—'}</td>
-                      <td>
+                      <td data-label="Địa chỉ" className="store-cell-wide">
+                        {store.address}
+                      </td>
+                      <td data-label="Điện thoại">{store.phone || '—'}</td>
+                      <td data-label="Loại kho">
                         <span
                           className={
                             store.central ? 'change-badge tone-blue' : ''
@@ -444,14 +446,14 @@ export default function StoresPage() {
                           {store.central ? 'Kho tổng' : 'Kho cửa hàng'}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Trạng thái">
                         <span
                           className={`status-badge store-${store.status.toLowerCase()}`}
                         >
                           {formatStatus(store.status)}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Thao tác" className="store-cell-actions">
                         <div className="mf-row-actions store-row-actions">
                           <button
                             className="mf-btn mf-btn--sm mf-btn--secondary"

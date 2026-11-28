@@ -72,6 +72,7 @@ export type Replenishment = Omit<
     plannedQty: number
     fulfilledQty: number
     toPurchaseQty: number
+    orderedQty: number
     remainingQty: number
   }[]
   transferOrders: { id: number; sourceStoreName: string; status: string }[]
@@ -93,6 +94,7 @@ export type TransferRow = {
   dispatchedAt: string | null
   closedAt: string | null
   awaitingReceiptConfirmation: boolean
+  hasDiscrepancy: boolean
 }
 /** UC73 detail response has people and lines rather than list aggregates. */
 export type Transfer = Omit<

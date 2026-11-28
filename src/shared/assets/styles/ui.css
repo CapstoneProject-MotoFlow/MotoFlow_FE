@@ -519,6 +519,12 @@ input::placeholder {
   font: inherit;
   cursor: pointer;
 }
+.ui-confirm-button--danger {
+  background: #d92d20;
+}
+.ui-confirm-button--danger:hover:not(:disabled) {
+  background: #b42318;
+}
 .ui-confirm-dialog button:disabled {
   opacity: 0.6;
   cursor: wait;
@@ -1155,4 +1161,65 @@ input[type='checkbox'] {
   color: #475467;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.search-box:focus-within {
+  outline: 2px solid #4b5eff;
+  outline-offset: 1px;
+}
+
+.stock-table-scroll,
+.table-scroll,
+.rv-table,
+.cp-table {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .admin-dashboard .dashboard-main {
+    min-width: 0;
+    overflow-x: clip;
+  }
+  .admin-dashboard.admin-dashboard
+    .dashboard-main
+    :is(
+      select:not([multiple]),
+      input:not([type='checkbox'], [type='radio'], [type='file']),
+      .stock-tabs button,
+      .tf-tabs button,
+      .tf-status-tabs button,
+      .receiving-views button,
+      .receiving-tabs button,
+      .rv-tabs button,
+      .stock-pagination button,
+      .mf-pagination button,
+      .tf-pagination button,
+      .receiving-pagination button,
+      .accounts-pagination button,
+      .parts-pagination button,
+      .report-pagination button,
+      .sd-pagination button,
+      .mf-btn,
+      .secondary-button,
+      .ui-confirm-button,
+      .stock-filters button
+    ) {
+    min-height: 44px;
+    height: auto;
+  }
+  .admin-dashboard.admin-dashboard
+    .dashboard-main
+    :is(
+      .stock-pagination button,
+      .mf-pagination button,
+      .tf-pagination button,
+      .receiving-pagination button,
+      .accounts-pagination button,
+      .parts-pagination button,
+      .report-pagination button
+    ) {
+    min-width: 44px;
+  }
 }

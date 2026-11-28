@@ -504,6 +504,7 @@ export function SalesOrderFormView({
       setError('Phụ tùng đã ngừng kinh doanh.')
       return
     }
+    setError('')
     setLines((previous) =>
       previous.some((l) => l.product.id === product.id)
         ? previous.map((l) =>
@@ -979,7 +980,8 @@ export function SalesOrderFormView({
                             max="100000"
                             step="1"
                             value={Number.isFinite(quantity) ? quantity : ''}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              setError('')
                               setLines((previous) =>
                                 previous.map((l) =>
                                   l.product.id === product.id
@@ -987,11 +989,12 @@ export function SalesOrderFormView({
                                     : l,
                                 ),
                               )
-                            }
+                            }}
                             onBlur={(e) => {
                               const normalized = Number(e.currentTarget.value)
                               if (Number.isFinite(normalized)) {
                                 e.currentTarget.value = String(normalized)
+                                setError('')
                                 setLines((previous) =>
                                   previous.map((l) =>
                                     l.product.id === product.id
@@ -1020,7 +1023,8 @@ export function SalesOrderFormView({
                                 max={quantity}
                                 step="1"
                                 value={split?.takeNow ?? quantity}
-                                onChange={(event) =>
+                                onChange={(event) => {
+                                  setError('')
                                   setLines((previous) =>
                                     previous.map((line) =>
                                       line.product.id === product.id
@@ -1034,7 +1038,7 @@ export function SalesOrderFormView({
                                         : line,
                                     ),
                                   )
-                                }
+                                }}
                               />
                             </td>
                             <td className="pos-col-split-qty">
@@ -1067,13 +1071,14 @@ export function SalesOrderFormView({
                             type="button"
                             className="mf-btn mf-btn--secondary mf-btn--sm"
                             aria-label={'Bỏ ' + product.sku}
-                            onClick={() =>
+                            onClick={() => {
+                              setError('')
                               setLines((previous) =>
                                 previous.filter(
                                   (l) => l.product.id !== product.id,
                                 ),
                               )
-                            }
+                            }}
                           >
                             Bỏ
                           </button>
@@ -1188,6 +1193,7 @@ export function SalesOrderFormView({
                       e.preventDefault()
                       setCustomerTouched(true)
                       setCustomer(undefined)
+                      setError('')
                       // Khách lẻ không đặt trước: bỏ tích để khi chọn lại khách có hồ sơ không tự bật lại.
                       setPreorder(false)
                       setCustomerOpen(false)
@@ -1209,6 +1215,7 @@ export function SalesOrderFormView({
                         e.preventDefault()
                         setCustomerTouched(true)
                         setCustomer(c)
+                        setError('')
                         setCustomerOpen(false)
                         customerInput.current?.blur()
                       }}
@@ -1458,7 +1465,7 @@ export function SalesOrderFormView({
                     ? 'Tạo đơn đặt trước'
                     : 'Tạo đơn'}
             </button>
-            {blocker && blocker !== 'Đang tính giá…' && (
+            {blocker && (
               <p className="pos-blocker" role="status">
                 {blocker}
               </p>
@@ -1543,6 +1550,7 @@ export function SalesOrderFormView({
           onSaved={(value) => {
             setCustomerTouched(true)
             setCustomer(value)
+            setError('')
             setQuick(false)
           }}
         />

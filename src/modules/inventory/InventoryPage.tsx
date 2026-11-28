@@ -453,12 +453,6 @@ export default function InventoryPage() {
             ? ' · ' + (scope.storeId ? scope.warehouse : 'toàn chuỗi')
             : '')
         }
-        action={
-          <button disabled title="Chưa thể xuất tệp lúc này">
-            <Icon name="download" />
-            Xuất Excel
-          </button>
-        }
       >
         <div className="stock-filters">
           <label className="stock-inline-search">

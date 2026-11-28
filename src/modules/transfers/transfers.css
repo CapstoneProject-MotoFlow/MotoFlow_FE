@@ -620,8 +620,9 @@
 .tf-order-history li {
   display: grid;
   gap: 8px;
-  border-left: 2px solid #dde9ff;
-  padding-left: 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 12px 14px;
   font-size: 14px;
 }
 .tf-order-history span {
@@ -1457,12 +1458,25 @@ section .tf-info-banner {
   font-weight: 600;
 }
 .tf-table .tf-wrong-cell {
-  min-width: 120px;
+  min-width: 110px;
   max-width: 210px;
+  text-align: right;
 }
 .tf-table .tf-wrong-cell .tf-num-val {
+  display: block;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+}
+.tf-table .tf-wrong-cell small {
+  display: block;
+}
+.tf-close-dialog {
+  width: min(96vw, 1080px);
+  max-width: 1080px;
+}
+.tf-dialog .tf-table {
+  overflow-x: auto;
+  max-width: 100%;
 }
 .tf-table .tf-events-cell {
   min-width: 110px;

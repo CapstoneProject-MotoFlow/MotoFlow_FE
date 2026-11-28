@@ -205,7 +205,8 @@ export default function CountLiveDetail() {
                 <div>
                   <dt>Người đếm</dt>
                   <dd>
-                    {assignment.data?.current?.assigneeName ?? 'Chưa giao'}
+                    {assignment.data?.current?.assigneeName ??
+                      (d.status === 'COMPLETED' ? 'Đã hoàn tất' : 'Chưa giao')}
                   </dd>
                 </div>
               )}

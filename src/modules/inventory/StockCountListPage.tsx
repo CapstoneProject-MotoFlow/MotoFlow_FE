@@ -239,7 +239,8 @@ export default function StockCountListPage() {
                   <td>
                     {staff
                       ? (c.lineCount ?? '—')
-                      : c.counterNames?.join(', ') || 'Chưa ghi nhận'}
+                      : c.counterNames?.join(', ') ||
+                        (c.status === 'COMPLETED' ? 'Đã hoàn tất' : 'Chưa ghi nhận')}
                   </td>
                   {!staff && (
                     <td>

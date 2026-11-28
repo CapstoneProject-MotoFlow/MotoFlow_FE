@@ -81,6 +81,9 @@ const status: Record<string, string> = {
   ...paymentMethodLabels,
   ORDER_PAYMENT: 'Thanh toán đơn bán',
   DEBT_PAYMENT: 'Thu nợ',
+  DEPOSIT: 'Tiền cọc',
+  DEPOSIT_PAYMENT: 'Thu tiền cọc',
+  DEPOSIT_FORFEIT: 'Mất cọc',
   REFUND: 'Hoàn tiền',
   CREDIT_SALE: 'Mua chịu',
   OPENING_BALANCE: 'Nợ đầu kỳ',
@@ -327,6 +330,16 @@ export default function CustomerDetailPage() {
             <Link className="cp-button" to={`${base}/${id}/debts`}>
               Xem công nợ
             </Link>
+            {(owner || user?.role === 'BRANCH_MANAGER') && (
+              <Link
+                className="cp-button mf-btn mf-btn--secondary"
+                to={`/receivables/customers/${id}`}
+              >
+                {c.creditStatus === 'ELIGIBLE'
+                  ? 'Quản lý quyền mua chịu'
+                  : 'Cấp quyền mua chịu'}
+              </Link>
+            )}
             {debtResource.error && (
               <small role="alert">{debtResource.error}</small>
             )}

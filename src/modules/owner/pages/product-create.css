@@ -61,6 +61,9 @@
   color: inherit;
   background: white;
 }
+.part-create select {
+  padding-right: 34px;
+}
 .part-create-codes {
   display: grid;
   grid-template-columns: 1fr;

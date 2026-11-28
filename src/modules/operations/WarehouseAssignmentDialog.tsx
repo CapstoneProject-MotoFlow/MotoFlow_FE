@@ -59,7 +59,7 @@ export default function WarehouseAssignmentDialog({
       formId="warehouse-assignment"
       busy={busy}
       submitLabel="Xác nhận giao việc"
-      submitDisabled={r.loading || !r.data?.canAssign}
+      submitDisabled={r.loading || !r.data?.canAssign || !choice}
       onClose={onClose}
     >
       <form

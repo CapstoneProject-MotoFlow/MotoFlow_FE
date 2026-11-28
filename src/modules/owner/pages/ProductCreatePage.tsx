@@ -163,6 +163,26 @@ export default function ProductCreatePage() {
     event.preventDefault()
     if (saving || uploadingImage || !canEdit) return
     const form = new FormData(event.currentTarget)
+    const partName = String(form.get('partName') ?? '').trim()
+    const sku = String(form.get('sku') ?? '').trim()
+    const baseUnit = String(form.get('baseUnit') ?? '').trim()
+    const catId = Number(form.get('categoryId') || parent)
+    if (!partName) {
+      setError('Vui lòng nhập tên phụ tùng.')
+      return
+    }
+    if (!sku) {
+      setError('Vui lòng nhập mã SKU.')
+      return
+    }
+    if (!catId) {
+      setError('Vui lòng chọn nhóm phụ tùng.')
+      return
+    }
+    if (!baseUnit) {
+      setError('Vui lòng nhập đơn vị tính.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -207,7 +227,7 @@ export default function ProductCreatePage() {
         </p>
       )}
       {ready && (
-        <form onSubmit={save}>
+        <form noValidate onSubmit={save}>
           <fieldset disabled={saving || loading || !canEdit}>
             <div className="part-create-grid">
               <div className="part-create-main">
