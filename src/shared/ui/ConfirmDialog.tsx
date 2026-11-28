@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useLiveReloadPause } from '../live/useLiveReload'
 /** ConfirmDialog: Popup xác nhận hành động; trạng thái đang xử lý, focus, Escape, Tab và khôi phục focus sau đóng. */
 export default function ConfirmDialog({
   confirmLabel = 'Xác nhận',
@@ -27,6 +28,7 @@ export default function ConfirmDialog({
   const [busy, setBusy] = useState(false)
   const latest = useRef({ busy, onCancel })
   latest.current = { busy, onCancel }
+  useLiveReloadPause()
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow

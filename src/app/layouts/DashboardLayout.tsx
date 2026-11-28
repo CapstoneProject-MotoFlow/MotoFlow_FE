@@ -14,6 +14,7 @@ import { HeaderSearchTarget } from '../../shared/ui/HeaderSearchTarget'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/hooks/useAuth'
+import { useNotificationPoller } from '../../modules/notifications/useNotificationPoller'
 import Brand from '../../shared/ui/Brand'
 import Icon from '../../shared/ui/Icon'
 import { roleNames } from '../../shared/utils/roles'
@@ -42,6 +43,7 @@ function usePhoneLayout(setDrawerOpen: (open: boolean) => void) {
 /** DashboardLayout: Khung sau đăng nhập: sidebar, header, menu tài khoản, chuông, ô tìm kiếm và Outlet chứa page; quản lý thu gọn menu và thông báo giao diện. */
 export default function DashboardLayout() {
   const { user, signOut } = useAuth()
+  useNotificationPoller()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -109,7 +111,8 @@ export default function DashboardLayout() {
         ].join(' ')}
         onClick={(event) => {
           // Chọn một mục menu trên điện thoại thì đóng ngăn kéo.
-          if (phone && (event.target as Element).closest('a')) setDrawerOpen(false)
+          if (phone && (event.target as Element).closest('a'))
+            setDrawerOpen(false)
         }}
       >
         <div className="sidebar-brand">
@@ -118,14 +121,20 @@ export default function DashboardLayout() {
         {role === 'ADMIN' ? (
           <AdminSidebarNav collapsed={menuCollapsed} />
         ) : role === 'OWNER' ? (
-          <OwnerSidebarNav collapsed={menuCollapsed} onNotice={setOwnerNotice} />
+          <OwnerSidebarNav
+            collapsed={menuCollapsed}
+            onNotice={setOwnerNotice}
+          />
         ) : role === 'BRANCH_MANAGER' ? (
           <BranchManagerSidebarNav
             collapsed={menuCollapsed}
             onNotice={setOwnerNotice}
           />
         ) : role === 'STAFF' ? (
-          <StaffSidebarNav collapsed={menuCollapsed} onNotice={setOwnerNotice} />
+          <StaffSidebarNav
+            collapsed={menuCollapsed}
+            onNotice={setOwnerNotice}
+          />
         ) : (
           <AdminSidebarNav collapsed={menuCollapsed} />
         )}

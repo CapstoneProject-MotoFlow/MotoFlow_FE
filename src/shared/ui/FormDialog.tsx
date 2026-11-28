@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useLiveReloadPause } from '../live/useLiveReload'
 /** FormDialog: Khung popup chứa form; header/body/footer, nút submit theo formId, focus, khóa đóng/lưu lúc busy và portal lên body. Form nghiệp vụ được truyền bằng children. */
 export default function FormDialog({
   title,
@@ -36,6 +37,7 @@ export default function FormDialog({
   const ref = useRef<HTMLElement>(null)
   const callback = useRef({ onClose, busy })
   callback.current = { onClose, busy }
+  useLiveReloadPause()
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow
