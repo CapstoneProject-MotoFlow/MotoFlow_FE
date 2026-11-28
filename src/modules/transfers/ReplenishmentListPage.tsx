@@ -50,8 +50,14 @@ export default function ReplenishmentListPage() {
     },
     0,
     activeStatus !== 'OPEN' && !drafts,
+    { live: true },
   )
-  const open = useOpenReplenishments(filters, page, activeStatus === 'OPEN')
+  const open = useOpenReplenishments(
+    filters,
+    page,
+    activeStatus === 'OPEN',
+    true,
+  )
   const r = activeStatus === 'OPEN' ? open : base
   return (
     <main

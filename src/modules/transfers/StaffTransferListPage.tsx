@@ -21,10 +21,11 @@ export default function StaffTransferListPage() {
       },
       0,
       done,
+      { live: true },
     ),
-    open = useOpenTransfers({}, page, !done),
+    open = useOpenTransfers({}, page, !done, true),
     r = done ? base : open,
-    receiving = useReceivingTasks(['TRANSFER_RECEIVING'], !done)
+    receiving = useReceivingTasks(['TRANSFER_RECEIVING'], !done, 0, true)
   const receivingIds = new Set(receiving.tasks.map((task) => task.documentId))
   return (
     <main className="dashboard-content tf-page tf-staff-list">
@@ -153,6 +154,7 @@ function StaffRowAction({
       {},
       0,
       open && !preparing && !receiving,
+      { live: true },
     ),
     receipt = detail.data?.receipts.find(
       (r) =>

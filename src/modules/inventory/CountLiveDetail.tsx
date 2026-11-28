@@ -42,6 +42,7 @@ export default function CountLiveDetail() {
       {},
       revision,
       !!id,
+      { live: true },
     ),
     d = r.data,
     c = d ? countFromDto(d) : undefined,

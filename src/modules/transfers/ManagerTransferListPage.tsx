@@ -29,6 +29,7 @@ export default function ManagerTransferListPage() {
       },
       0,
       status !== 'OPEN',
+      { live: true },
     )
   const open = useOpenTransfers(
     {
@@ -37,6 +38,7 @@ export default function ManagerTransferListPage() {
     },
     page,
     status === 'OPEN',
+    true,
   )
   const r = status === 'OPEN' ? open : base
   const coordinator = canCoordinateTransfers(scope.user)

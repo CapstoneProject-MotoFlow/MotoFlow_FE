@@ -131,6 +131,7 @@ export function SalesOrderListPage({
           ? 'AWAITING_PICKING'
           : (p.get('status') ?? ''),
     !drafts && (!closed || !invalidDates),
+    true,
   )
   const matches: SalesOrderRow[] = orders.length
     ? orders
@@ -536,6 +537,7 @@ function SalesOrderDetailContent() {
     {},
     revision,
     !!id && /^[1-9]\d*$/.test(id),
+    { live: true },
   )
   return (
     <>

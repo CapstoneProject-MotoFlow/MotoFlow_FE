@@ -284,6 +284,7 @@ export default function AdjustmentDetailPage() {
     {},
     reload?.revision ?? 0,
     valid,
+    { live: true },
   )
   const data = request.data
   return (

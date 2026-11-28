@@ -36,22 +36,34 @@ export default function StaffWorkTable() {
   const [page, setPage] = useState(0)
   const [sortMode, setSortMode] = useState<'due' | 'recent'>('due')
   const { user } = useInventoryScope()
-  const sales = useInventoryData<Page<SummaryDto>>('/sales-orders', {
-      view: 'OPEN',
-      page,
-      size: 20,
-    }),
+  const sales = useInventoryData<Page<SummaryDto>>(
+      '/sales-orders',
+      {
+        view: 'OPEN',
+        page,
+        size: 20,
+      },
+      0,
+      true,
+      { live: true },
+    ),
     receipts = useInventoryData<Page<AssignedReceipt>>(
       '/goods-receipt-notes/assigned-to-me',
       { page, size: 20 },
+      0,
+      true,
+      { live: true },
     ),
-    transfers = useOpenTransfers({}, page, true),
-    counts = useCountList({ status: 'OPEN', page, size: 20 }, 0, true, [
-      'DRAFT',
-      'COUNTING',
-    ]),
+    transfers = useOpenTransfers({}, page, true, true),
+    counts = useCountList(
+      { status: 'OPEN', page, size: 20 },
+      0,
+      true,
+      ['DRAFT', 'COUNTING'],
+      true,
+    ),
     // Việc nhận hàng (BM giao, Staff lập phiếu nhận) không phân trang: chỉ hiện ở trang đầu.
-    receiving = useReceivingTasks(undefined, page === 0)
+    receiving = useReceivingTasks(undefined, page === 0, 0, true)
   const receivingTransfers = new Set(
     receiving.tasks
       .filter((task) => task.taskType === 'TRANSFER_RECEIVING')
