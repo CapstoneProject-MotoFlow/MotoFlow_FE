@@ -25,6 +25,8 @@ type Figures = {
   orderPayments: number
   refunds: number
   debtCollected: number
+  cashCollected: number
+  transferCollected: number
   totalCollected: number
   creditSales: number
   revenueCorrections: number
@@ -416,9 +418,8 @@ export function SalesReportPage() {
         'Số đơn',
         'Doanh số',
         'Bán chịu',
-        'Thu tiền đơn',
-        'Hoàn tiền',
-        'Thu nợ',
+        'Tiền mặt',
+        'Chuyển khoản',
         'Tổng thu',
         'Điều chỉnh doanh số',
         'Điều chỉnh tiền thu',
@@ -428,9 +429,8 @@ export function SalesReportPage() {
         row.figures.completedOrders,
         row.figures.revenue,
         row.figures.creditSales,
-        row.figures.orderPayments,
-        -row.figures.refunds,
-        row.figures.debtCollected,
+        row.figures.cashCollected,
+        row.figures.transferCollected,
         row.figures.totalCollected,
         row.figures.revenueCorrections,
         row.figures.collectionCorrections,
@@ -856,7 +856,7 @@ export function SalesReportPage() {
                     <th colSpan={3} className="sr-group">
                       Bán hàng
                     </th>
-                    <th colSpan={4} className="sr-group">
+                    <th colSpan={3} className="sr-group">
                       Thu tiền
                     </th>
                     <th colSpan={2} className="sr-group">
@@ -867,12 +867,11 @@ export function SalesReportPage() {
                     <th>Số đơn</th>
                     <th>Doanh số</th>
                     <th>Bán chịu</th>
-                    <th>Thu tiền đơn</th>
-                    <th>Hoàn tiền</th>
-                    <th>Thu nợ</th>
+                    <th>Tiền mặt</th>
+                    <th>Chuyển khoản</th>
                     <th>
                       Tổng thu{' '}
-                      <InfoTip text="Thu tiền đơn − hoàn tiền + thu nợ." />
+                      <InfoTip text="Tiền mặt + chuyển khoản (đã trừ hoàn tiền và gồm thu nợ)." />
                     </th>
                     <th>Doanh số</th>
                     <th>Tiền thu</th>
@@ -890,9 +889,8 @@ export function SalesReportPage() {
                         <Cell value={f.completedOrders} />
                         <Cell value={f.revenue} strong />
                         <Cell value={f.creditSales} />
-                        <Cell value={f.orderPayments} />
-                        <Cell value={-f.refunds} />
-                        <Cell value={f.debtCollected} />
+                        <Cell value={f.cashCollected} />
+                        <Cell value={f.transferCollected} />
                         <Cell value={f.totalCollected} strong />
                         <Cell value={f.revenueCorrections} />
                         <Cell value={f.collectionCorrections} />
@@ -906,9 +904,8 @@ export function SalesReportPage() {
                     <td>{num(total.completedOrders)}</td>
                     <td>{num(total.revenue)}</td>
                     <td>{num(total.creditSales)}</td>
-                    <td>{num(total.orderPayments)}</td>
-                    <td>{num(-total.refunds)}</td>
-                    <td>{num(total.debtCollected)}</td>
+                    <td>{num(total.cashCollected)}</td>
+                    <td>{num(total.transferCollected)}</td>
                     <td>{num(total.totalCollected)}</td>
                     <td>{num(total.revenueCorrections)}</td>
                     <td>{num(total.collectionCorrections)}</td>

@@ -74,14 +74,17 @@ export default function LiveReceiptPage({
   screen?: Screen
 }) {
   const { user } = useAuth()
+  const location = useLocation()
+  const backTo = (location.state as { backTo?: string } | null)?.backTo
   const [receipt, setReceipt] = useState<Receipt>()
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
   const validId = /^[1-9]\d*$/.test(id ?? '')
   const back =
-    user?.role !== 'STAFF' && receipt
+    backTo ??
+    (user?.role !== 'STAFF' && receipt
       ? '/purchase-orders/' + receipt.purchaseOrderId
-      : '/purchase-orders'
+      : '/purchase-orders')
 
   useEffect(() => {
     if (!validId) return
@@ -235,11 +238,12 @@ function ReceiptForm({
             totals.checked++
             totals.short += result.shortQty
             totals.excess += result.excessQty
+            totals.wrongItem += result.wrongItemQty
             totals.damaged += result.damagedQty
           }
           return totals
         },
-        { checked: 0, short: 0, excess: 0, damaged: 0 },
+        { checked: 0, short: 0, excess: 0, wrongItem: 0, damaged: 0 },
       )
     : null
   const noteRequired = editing && rows.some((row) => {
@@ -670,7 +674,7 @@ function ReceiptForm({
           </div>
         </section>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert" className="receiving-inline-error">{error}</p>}
       {(editing || recounting || reviewing || confirming) && (
         <div
           className={`receiving-layout-actions${editing ? ' receiving-staff-footer' : ''}`}
@@ -686,6 +690,7 @@ function ReceiptForm({
                 <b>{inspectionTotals.checked}/{receipt.lines.length}</b>{' '}
                 · thiếu <b>{inspectionTotals.short}</b>{' '}
                 · thừa <b>{inspectionTotals.excess}</b>{' '}
+                · giao sai <b>{inspectionTotals.wrongItem}</b>{' '}
                 · hư hỏng <b>{inspectionTotals.damaged}</b>
                 . {arrivedAt ? '' : 'Chọn thời điểm hàng đến.'}
               </p>

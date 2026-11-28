@@ -13,7 +13,8 @@ import { states, type Replenishment } from './types'
 import './transfers.css'
 import {
   purchaseQuantityLimit,
-  hasExistingPurchase,
+  remainingToBuy,
+  remainingToPurchase,
   unplannedQuantity,
 } from './transferRules'
 
@@ -35,20 +36,19 @@ export function ReplenishmentDetailPage() {
   const canCoordinate = canCoordinateTransfers(scope.user)
   const open = data?.status !== 'CLOSED'
   const hasUnplanned = data?.lines.some((line) => unplannedQuantity(line) > 0)
-  const hasPurchaseLines = data?.lines.some((line) => line.toPurchaseQty > 0)
-  const existingPurchase = hasExistingPurchase(data?.purchaseOrders ?? [])
+  const hasRemainingToBuy = data?.lines.some(
+    (line) => remainingToBuy(line) > 0,
+  )
   const canHandOff =
     open &&
     canCoordinate &&
     !scope.owner &&
-    !existingPurchase &&
-    (hasUnplanned || hasPurchaseLines)
+    hasRemainingToBuy
   const handoff = scope.params.get('action') === 'purchase'
   const canPurchase =
     open &&
     scope.owner &&
-    !existingPurchase &&
-    (hasPurchaseLines || hasUnplanned)
+    hasRemainingToBuy
 
   function finishHandoff() {
     scope.filter({ action: undefined }, true)
@@ -173,10 +173,13 @@ function ReplenishmentProgress({
                 line.plannedQty - line.fulfilledQty,
               )
               const unplanned = unplannedQuantity(line)
+              const remainingPurchase = remainingToPurchase(line)
               const progress = [
                 awaitingReceipt > 0 && `${awaitingReceipt} chờ nhận`,
                 unplanned > 0 && `${unplanned} chưa điều phối`,
-                line.toPurchaseQty > 0 && `${line.toPurchaseQty} chuyển mua`,
+                line.orderedQty > 0 && `${line.orderedQty} đã đặt mua`,
+                remainingPurchase > 0 &&
+                  `${remainingPurchase} chuyển mua chưa đặt`,
               ].filter(Boolean)
               return (
                 <tr key={line.productId}>
@@ -225,9 +228,12 @@ function PurchaseHandoff({
   })
   const quantityError = (line: (typeof lines)[number]) => {
     const qty = quantities[line.productId]
+    const minQty = line.orderedQty ?? 0
     const limit = purchaseQuantityLimit(line)
     if (!Number.isInteger(qty) || qty < 0)
       return 'Số lượng phải là số nguyên không âm.'
+    if (qty < minQty)
+      return `Số lượng không được nhỏ hơn đã đặt mua (${minQty}).`
     if (qty > limit)
       return `Số lượng không được vượt phần còn thiếu (${limit}).`
     return ''
@@ -255,7 +261,7 @@ function PurchaseHandoff({
           {line.partName} · {line.sku}
           <input
             type="number"
-            min={0}
+            min={line.orderedQty ?? 0}
             max={purchaseQuantityLimit(line)}
             value={quantities[line.productId]}
             onChange={(e) =>

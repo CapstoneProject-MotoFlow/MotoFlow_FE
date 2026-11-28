@@ -604,8 +604,67 @@
 .stores-page .stores-table th, .stores-page .stores-table td { padding: 12px 10px; font-size: 0.875rem; white-space: normal; overflow-wrap: anywhere; }
 .stores-page .stores-table td strong { font-size: 0.875rem; }
 .stores-page .store-row-actions { flex-direction: column; align-items: stretch; gap: 6px; }
-.stores-page .stores-table .status-badge { white-space: normal; text-align: center; }
-@media (max-width: 760px) { .stores-page .stores-table { min-width: 760px; } }
+.stores-page .stores-table .status-badge { white-space: nowrap; text-align: center; }
+.store-filter-search:focus-within {
+  outline: 2px solid #4b5eff;
+  outline-offset: 1px;
+}
+@media (max-width: 760px) {
+  .owner-dashboard .stores-page {
+    width: calc(100% - 24px);
+  }
+  .stores-page .table-scroll {
+    overflow-x: visible;
+  }
+  .stores-page .stores-table {
+    min-width: 0;
+    table-layout: auto;
+    display: block;
+  }
+  .stores-page .stores-table thead {
+    display: none;
+  }
+  .stores-page .stores-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .stores-page .stores-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 14px;
+    border: 1px solid #e1e6ee;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .stores-page .stores-table th,
+  .stores-page .stores-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .stores-page .stores-table td[data-label]::before {
+    display: block;
+    margin-bottom: 3px;
+    color: #667085;
+    font-size: 13px;
+    font-weight: 500;
+    content: attr(data-label);
+  }
+  .stores-page .stores-table td.store-cell-main,
+  .stores-page .stores-table td.store-cell-wide,
+  .stores-page .stores-table td.store-cell-actions {
+    grid-column: 1 / -1;
+  }
+  .stores-page .stores-table td.store-cell-main::before,
+  .stores-page .stores-table td.store-cell-actions::before {
+    display: none;
+  }
+  .stores-page .store-row-actions > * {
+    min-height: 44px;
+  }
+}
 
 .stores-page .store-row-actions {
   flex-direction: row;

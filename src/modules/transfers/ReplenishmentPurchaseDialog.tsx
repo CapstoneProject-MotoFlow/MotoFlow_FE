@@ -9,7 +9,10 @@ import { useChoicePages } from '../sales/useSalesList'
 import { date, money } from '../inventory/presentation'
 import { purchaseOrderCode } from '../receiving/receivingPresentation'
 import type { Replenishment } from './types'
-import { hasExistingPurchase, unplannedQuantity } from './transferRules'
+import {
+  purchaseQuantityLimit,
+  remainingToBuy,
+} from './transferRules'
 import { purchaseOrderFormError } from '../receiving/receivingRules'
 import { documentCode } from '../../shared/utils/documentCode'
 type SupplierChoice = {
@@ -50,7 +53,7 @@ export default function ReplenishmentPurchaseDialog({
     lines = request.lines
       .map((line) => ({
         ...line,
-        availableQty: line.toPurchaseQty + unplannedQuantity(line),
+        availableQty: remainingToBuy(line),
       }))
       .filter((line) => line.availableQty > 0)
       .map((line) => ({
@@ -61,7 +64,6 @@ export default function ReplenishmentPurchaseDialog({
     edited = lines.some((line) => Number(line.quantity) !== line.availableQty),
     valid =
       request.status !== 'CLOSED' &&
-      !hasExistingPurchase(request.purchaseOrders) &&
       !!supplier &&
       orderedLines.length > 0 &&
       lines.every(
@@ -89,10 +91,7 @@ export default function ReplenishmentPurchaseDialog({
   async function saveEditedAllocation() {
     const path = '/replenishment-requests/' + request.id
     const { data: latest } = await axiosClient.get<Replenishment>(path)
-    if (
-      latest.status === 'CLOSED' ||
-      hasExistingPurchase(latest.purchaseOrders)
-    )
+    if (latest.status === 'CLOSED')
       throw new Error('Yêu cầu đã thay đổi. Đóng popup và tải lại để kiểm tra.')
     const baseline = new Map(
       savedAllocation.current.lines.map((line) => [line.productId, line]),
@@ -104,12 +103,15 @@ export default function ReplenishmentPurchaseDialog({
       latest.lines.length !== baseline.size ||
       latest.lines.some((line) => {
         const prior = baseline.get(line.productId)
+        const qty = selected.get(line.productId)
         return (
           !prior ||
           prior.requestedQty !== line.requestedQty ||
           prior.plannedQty !== line.plannedQty ||
+          prior.orderedQty !== line.orderedQty ||
           (prior.toPurchaseQty !== line.toPurchaseQty &&
-            selected.get(line.productId) !== line.toPurchaseQty)
+            (qty === undefined ||
+              (line.orderedQty ?? 0) + qty !== line.toPurchaseQty))
         )
       })
     ) {
@@ -119,9 +121,14 @@ export default function ReplenishmentPurchaseDialog({
     }
     const changes = latest.lines.flatMap((line) => {
       const quantity = selected.get(line.productId)
-      return quantity === undefined || quantity === line.toPurchaseQty
+      if (quantity === undefined) return []
+      const target = Math.min(
+        (line.orderedQty ?? 0) + quantity,
+        purchaseQuantityLimit(line),
+      )
+      return target === line.toPurchaseQty
         ? []
-        : [{ productId: line.productId, toPurchaseQty: quantity }]
+        : [{ productId: line.productId, toPurchaseQty: target }]
     })
     savedAllocation.current = changes.length
       ? (
@@ -142,7 +149,7 @@ export default function ReplenishmentPurchaseDialog({
       // Mục 1: nút không khóa khi thiếu dữ liệu, bấm sẽ báo đúng ô còn thiếu.
       submitDisabled={
         request.status === 'CLOSED' ||
-        hasExistingPurchase(request.purchaseOrders)
+        !lines.length
       }
       hideSubmit={!!created}
       closeLabel={created ? 'Đóng' : 'Để sau'}
@@ -237,10 +244,9 @@ export default function ReplenishmentPurchaseDialog({
             {error}
           </p>
         )}
-        {hasExistingPurchase(request.purchaseOrders) && (
-          <p role="alert">
-            Yêu cầu bổ sung này đã có đơn nhập hàng. Vui lòng kiểm tra đơn
-            nhập hàng liên quan để tránh lập trùng.
+        {request.purchaseOrders.some((o) => o.status !== 'CANCELLED') && (
+          <p role="status">
+            Yêu cầu đã có đơn nhập trước đó; biểu mẫu này chỉ lập đơn cho phần còn lại.
           </p>
         )}
         {created ? (

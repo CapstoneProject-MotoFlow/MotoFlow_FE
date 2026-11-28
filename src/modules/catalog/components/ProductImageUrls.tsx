@@ -19,14 +19,9 @@ export default function ProductImageUrls({
   uploading: boolean
   onUploadingChange: (uploading: boolean) => void
 }) {
-  const [url, setUrl] = useState('')
   const [error, setError] = useState('')
   const [fileUploadUnavailable, setFileUploadUnavailable] = useState(false)
   function add(value: string) {
-    if (!/^https:\/\/\S{1,492}$/.test(value)) {
-      setError('Ảnh phải là đường dẫn HTTPS, tối đa 500 ký tự.')
-      return
-    }
     if (values.includes(value)) {
       setError('Ảnh này đã được thêm.')
       return
@@ -36,7 +31,6 @@ export default function ProductImageUrls({
       return
     }
     onChange([...values, value])
-    setUrl('')
     setError('')
   }
   async function upload(file: File) {
@@ -51,7 +45,7 @@ export default function ProductImageUrls({
       ) {
         setFileUploadUnavailable(true)
       } else {
-        setError('Không tải được ảnh. Vui lòng thử lại hoặc nhập URL HTTPS.')
+        setError('Không tải được ảnh. Vui lòng thử lại.')
       }
     } finally {
       onUploadingChange(false)
@@ -60,7 +54,7 @@ export default function ProductImageUrls({
   return (
     <div className="part-create-body">
       <p>
-        Thêm tối đa 3 ảnh từ máy hoặc bằng URL HTTPS. Ảnh đầu tiên là ảnh chính.
+        Tải lên tối đa 3 ảnh từ máy. Ảnh đầu tiên là ảnh chính.
       </p>
       <LocalizedFileInput
         buttonText="Chọn ảnh"
@@ -74,32 +68,9 @@ export default function ProductImageUrls({
         }}
       />
       {fileUploadUnavailable && (
-        <p role="status">
-          Môi trường này chưa bật tải tệp ảnh. Bạn có thể thêm ảnh bằng URL
-          HTTPS.
-        </p>
+        <p role="alert">Môi trường này chưa bật tải tệp ảnh.</p>
       )}
       {uploading && <p role="status">Đang tải ảnh…</p>}
-      <input
-        aria-label="Đường dẫn ảnh"
-        placeholder="https://…"
-        value={url}
-        disabled={uploading}
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            add(url.trim())
-          }
-        }}
-      />
-      <button
-        type="button"
-        disabled={uploading || values.length >= 3}
-        onClick={() => add(url.trim())}
-      >
-        Thêm ảnh
-      </button>
       {values.map((value, i) => (
         <div className="part-image" key={value}>
           <img src={value} alt={`Ảnh phụ tùng ${i + 1}`} />

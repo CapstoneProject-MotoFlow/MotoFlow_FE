@@ -274,7 +274,6 @@ export default function DecisionTable({
           <tbody>
             {ordered.map((row) => {
               const core = hasCoreDiscrepancy(row)
-              const decidableRow = isDecidable(row)
               const open = editing.includes(row)
               const draft = draftOf(row)
               const shown = decisionNumbers(row, draft)
@@ -358,17 +357,6 @@ export default function DecisionTable({
                     {askOwner && <p className="sd-cell-note sd-cell-note--owner">Cần Owner duyệt</p>}
                     {!open && core && status === 'DECIDED' && row.approvedByName && (
                       <p className="sd-cell-note">Owner duyệt</p>
-                    )}
-                    {!open && decidableRow && row.canHandle && !row.decisionLocked && (
-                      <button
-                        type="button"
-                        className="mf-btn mf-btn--link sd-cell-edit"
-                        aria-label={'Sửa hướng xử lý ' + row.sku}
-                        disabled={busy}
-                        onClick={() => patch(row, {})}
-                      >
-                        Sửa
-                      </button>
                     )}
                     {!open && core && row.status === 'OPEN' && row.decisionLocked && (
                       <p

@@ -24,10 +24,21 @@ type Demand = {
   requestedQty: number
   plannedQty: number
   toPurchaseQty: number
+  orderedQty?: number
 }
 /** Only cancelled purchase orders permit starting another purchase for the request. */
 export function hasExistingPurchase(orders: { status: string }[]) {
   return orders.some((order) => order.status !== 'CANCELLED')
+}
+/** Quantity already allocated to purchase that has not yet been placed on a non-cancelled PO. */
+export function remainingToPurchase(line: Demand | undefined) {
+  return line
+    ? Math.max(0, line.toPurchaseQty - (line.orderedQty ?? 0))
+    : 0
+}
+/** Total quantity still available to include in a new PO for this line. */
+export function remainingToBuy(line: Demand | undefined) {
+  return remainingToPurchase(line) + unplannedQuantity(line)
 }
 /** Outstanding receipt quantities must not be reused to plan another dispatch. */
 export function unplannedQuantity(line: Demand | undefined) {

@@ -321,11 +321,11 @@ export default function TransferWrongItemPendingSection({
             : 'Hàng giao sai điều chuyển (chờ kho gửi xác nhận)'}
         </h2>
       </header>
-      <p className="tf-excess-hint">
-        {canAct
-          ? 'Xác nhận phiếu nhận sẽ cộng tồn kho nhận và trừ tồn kho bạn; xác nhận hoàn trả giữ nguyên tồn. Sai thông tin thì Từ chối kèm lý do.'
-          : 'Tồn kho chỉ đổi khi quản lý kho gửi xác nhận. Nếu kho nhận ghi sai, mở lệnh và chọn "Bên nhận kiểm sai".'}
-      </p>
+      {!canAct && (
+        <p className="tf-excess-hint">
+          Tồn kho chỉ đổi khi quản lý kho gửi xác nhận. Nếu kho nhận ghi sai, mở lệnh và chọn &ldquo;Bên nhận kiểm sai&rdquo;.
+        </p>
+      )}
       {notice && (
         <p className="mf-success-notice" role="status">
           {notice}

@@ -118,7 +118,11 @@ function StaffRow({
         {row.lineCount} mã · {row.totalPlannedQty} phụ tùng
       </td>
       <td>
-        <span className="tf-badge">{states[row.status] ?? row.status}</span>
+        <span className="tf-badge">
+          {row.status === 'RECONCILING' && !row.hasDiscrepancy
+            ? 'Chờ đóng lệnh'
+            : (states[row.status] ?? row.status)}
+        </span>
       </td>
       <td>
         <div className="mf-row-actions">

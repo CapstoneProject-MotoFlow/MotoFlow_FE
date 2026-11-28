@@ -37,6 +37,9 @@ export default function CaseListView({
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(
+    () => !!(supplierId || productQuery || purchaseOrderQuery || fromDate || toDate),
+  )
   const purchaseOrderId = purchaseOrderSearch(purchaseOrderQuery)
   const invalidOrder = !!purchaseOrderId && !/^[1-9]\d*$/.test(purchaseOrderId)
   const dateRangeError = !!fromDate && !!toDate && fromDate > toDate
@@ -207,6 +210,15 @@ export default function CaseListView({
             </select>
           </label>
         )}
+        <button
+          type="button"
+          className="mf-btn mf-btn--secondary mf-btn--sm sd-more-toggle"
+          aria-expanded={moreFiltersOpen}
+          onClick={() => setMoreFiltersOpen((open) => !open)}
+        >
+          {moreFiltersOpen ? 'Thu gọn bộ lọc' : 'Bộ lọc nâng cao'}
+        </button>
+        <div className={'sd-more-fields' + (moreFiltersOpen ? ' is-open' : '')}>
         <label className="sd-field">
           <span>Nhà cung cấp</span>
           <select
@@ -276,6 +288,7 @@ export default function CaseListView({
             <small className="sd-error">Phải từ ngày bắt đầu trở đi.</small>
           )}
         </label>
+        </div>
         {scope.storesError && (
           <p role="alert" className="sd-error">
             {scope.storesError}
@@ -350,13 +363,13 @@ export default function CaseListView({
                   const to = '/supplier-discrepancies?receipt=' + row.goodsReceiptNoteId
                   return (
                     <tr key={row.id}>
-                      <td>
+                      <td data-label="Phụ tùng" className="sd-cell-main">
                         <Link to={to} className="sd-part-link">
                           <b>{row.sku}</b>
                           <small>{row.partName}</small>
                         </Link>
                       </td>
-                      <td className="mf-nowrap">
+                      <td data-label="Chứng từ" className="mf-nowrap">
                         {documentCode('PN', row.goodsReceiptNoteId)}
                         {row.purchaseOrderId && (
                           <small>
@@ -366,11 +379,11 @@ export default function CaseListView({
                           </small>
                         )}
                       </td>
-                      <td className="sd-supplier-cell">
+                      <td data-label="Nhà cung cấp" className="sd-supplier-cell">
                         {row.supplierName ?? '—'}
                         {scope.owner && row.storeName && <small>{row.storeName}</small>}
                       </td>
-                      <td>
+                      <td data-label="Sai lệch">
                         <span className="sd-chips">
                           {kinds.map(([label, quantity]) => (
                             <span key={label} className="mf-badge mf-badge--muted">
@@ -379,7 +392,7 @@ export default function CaseListView({
                           ))}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Tình trạng">
                         <span className="sd-chips">
                           {!open ? (
                             <span className="mf-badge mf-badge--success">Đã đóng</span>
@@ -406,10 +419,10 @@ export default function CaseListView({
                           )}
                         </span>
                       </td>
-                      <td className="mf-nowrap">
+                      <td data-label="Mở lúc" className="mf-nowrap">
                         {row.openedAt ? formatDateTime(row.openedAt) : '—'}
                       </td>
-                      <td>
+                      <td data-label="Thao tác" className="sd-cell-action">
                         <Link
                           className={
                             'mf-btn mf-btn--sm ' +
