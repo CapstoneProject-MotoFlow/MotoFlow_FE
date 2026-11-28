@@ -1184,18 +1184,42 @@ input[type='checkbox'] {
   }
   .admin-dashboard.admin-dashboard
     .dashboard-main
-    :is(.stock-pagination, .mf-pagination)
-    button,
-  .mf-btn,
-  .secondary-button,
-  .ui-confirm-button,
-  .stock-filters :is(input, select, button) {
+    :is(
+      select:not([multiple]),
+      input:not([type='checkbox'], [type='radio'], [type='file']),
+      .stock-tabs button,
+      .tf-tabs button,
+      .tf-status-tabs button,
+      .receiving-views button,
+      .receiving-tabs button,
+      .rv-tabs button,
+      .stock-pagination button,
+      .mf-pagination button,
+      .tf-pagination button,
+      .receiving-pagination button,
+      .accounts-pagination button,
+      .parts-pagination button,
+      .report-pagination button,
+      .sd-pagination button,
+      .mf-btn,
+      .secondary-button,
+      .ui-confirm-button,
+      .stock-filters button
+    ) {
     min-height: 44px;
+    height: auto;
   }
   .admin-dashboard.admin-dashboard
     .dashboard-main
-    :is(.stock-pagination, .mf-pagination)
-    button {
+    :is(
+      .stock-pagination button,
+      .mf-pagination button,
+      .tf-pagination button,
+      .receiving-pagination button,
+      .accounts-pagination button,
+      .parts-pagination button,
+      .report-pagination button
+    ) {
     min-width: 44px;
   }
 }
