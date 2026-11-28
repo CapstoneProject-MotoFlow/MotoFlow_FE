@@ -47,15 +47,7 @@ export default function TransferReceiptCreatePage() {
   const d = order.data
   // Staff không xem được số đã nhận/chưa xử lý (BE trả null): khi đó hiện số đã xuất, để BE kiểm phần còn chờ nhận.
   const counted = !!d?.lines.some((l) => l.unresolvedQty != null)
-  const hasAnyDiscrepancy =
-    !counted ||
-    (d?.lines ?? []).some(
-      (line) =>
-        (line.shortageQty ?? 0) > 0 ||
-        (line.damagedQty ?? 0) > 0 ||
-        (line.wrongItemQty ?? 0) > 0 ||
-        (line.extraReceivedQty ?? 0) > 0,
-    )
+  const hasAnyDiscrepancy = !counted || !!d?.hasDiscrepancy
   const pending = (d?.lines ?? []).filter((l) =>
     counted ? (l.unresolvedQty ?? 0) > 0 : (l.dispatchedQty ?? 0) > 0,
   )

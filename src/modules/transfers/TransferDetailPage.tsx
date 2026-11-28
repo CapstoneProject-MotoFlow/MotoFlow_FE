@@ -387,9 +387,6 @@ export default function TransferDetailPage() {
           ),
       }
   }
-  const hasAnyDiscrepancy =
-    reconcilingWithDiscrepancy ||
-    !!d?.lines.some((l) => (l.extraReceivedQty ?? 0) > 0)
   const hasPrimaryAction = actions.some((act) => act.primary)
   const showNoReplacementCol = !!d?.lines.some((l) => (l.noReplacementQty ?? 0) > 0)
   const showLossCol = !!d?.lines.some((l) => (l.lossQty ?? 0) > 0)
@@ -437,7 +434,7 @@ export default function TransferDetailPage() {
             <CardHead
               title={d.sourceStoreName + ' → ' + d.destStoreName}
               status={
-                d.status === 'RECONCILING' && !hasAnyDiscrepancy
+                d.status === 'RECONCILING' && !d.hasDiscrepancy
                   ? 'Chờ đóng lệnh'
                   : states[d.status]
               }
